@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { loginSchema, type LoginInput } from "../../../../domain/models/auth.schema";
 import { authRepo } from "../../../../gateways/supabase/repositories/auth/authRepo";
-import { AppError } from "../../../../domain/errors/errors";
+import { normalizeError } from "../../../../domain/errors/errors";
 
 export function SignInForm() {
   const [form, setForm] = useState<LoginInput>({
@@ -43,12 +43,12 @@ export function SignInForm() {
       await authRepo.signIn(parsed.data);
       // succès → AuthProvider prendra le relais via onAuthStateChange
     } catch (e) {
-      if (e instanceof AppError) {
-        setSubmitError(e.message);
-      } else {
-        setSubmitError("Erreur inconnue.");
-      }
-    } finally {
+
+    const err = normalizeError(e, "Erreur inconnue.");
+    setSubmitError(err.message);
+    }
+
+     finally {
       setLoading(false);
     }
   }

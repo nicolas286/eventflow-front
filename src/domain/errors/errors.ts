@@ -33,12 +33,31 @@ export class AppError extends Error implements AppErrorShape {
   }
 }
 
+const APP_ERROR_CODES = new Set<AppErrorCode>([
+  "UNAUTHENTICATED",
+  "FORBIDDEN",
+  "NOT_FOUND",
+  "VALIDATION",
+  "CONFLICT",
+  "NETWORK",
+  "UNKNOWN",
+]);
+
 export function isAppError(err: unknown): err is AppError {
+  if (err instanceof AppError) return true;
+
+  if (typeof err !== "object" || err === null) return false;
+
+  const anyErr = err as any;
+
   return (
-    err instanceof AppError ||
-    (typeof err === "object" && err !== null && "code" in err && "message" in err)
+    anyErr.name === "AppError" &&
+    typeof anyErr.message === "string" &&
+    typeof anyErr.code === "string" &&
+    APP_ERROR_CODES.has(anyErr.code)
   );
 }
+
 
 function looksLikeNetworkError(e: unknown): boolean {
   if (e instanceof TypeError) {
@@ -74,6 +93,43 @@ function mapRpcMessageToAppCode(msg: string): AppErrorCode | null {
 
   if (/VALIDATION_ERROR/i.test(m) || /VALIDATION\b/i.test(m)) return "VALIDATION";
   if (/CONFLICT/i.test(m)) return "CONFLICT";
+
+  return null;
+}
+
+type SupabaseAuthErrorLike = {
+  message: string;
+  code?: string;
+  status?: number;
+};
+
+function isSupabaseAuthError(e: unknown): e is SupabaseAuthErrorLike {
+  return (
+    typeof e === "object" &&
+    e !== null &&
+    typeof (e as any).message === "string" &&
+    (
+      typeof (e as any).code === "string" ||
+      typeof (e as any).status === "number"
+    )
+  );
+}
+
+function mapAuthToAppError(e: SupabaseAuthErrorLike) {
+  const code = (e.code || "").toLowerCase();
+  const msg = e.message.toLowerCase();
+
+  if (code === "invalid_credentials" || msg.includes("invalid login credentials")) {
+    return { code: "UNAUTHENTICATED" as const, message: "Email ou mot de passe incorrect." };
+  }
+
+  if (code === "email_not_confirmed" || msg.includes("email not confirmed")) {
+    return { code: "FORBIDDEN" as const, message: "Ton email n’a pas encore été confirmé." };
+  }
+
+  if (code === "user_already_exists" || msg.includes("user already registered")) {
+    return { code: "CONFLICT" as const, message: "Un compte existe déjà avec cet email." };
+  }
 
   return null;
 }
@@ -211,6 +267,18 @@ export function normalizeError(e: unknown, fallbackMessage: string): AppError {
     });
   }
 
+     if (isSupabaseAuthError(e)) {
+    const mapped = mapAuthToAppError(e);
+    if (mapped) {
+      return new AppError({
+        ...mapped,
+        cause: e,
+        meta: { kind: "auth", rawCode: (e as any).code ?? null, rawMessage: e.message },
+      });
+    }
+  }
+
+
     if (isPostgrestError(e)) {
     const rpcCode = mapRpcMessageToAppCode(e.message);
     const code = rpcCode ?? mapSqlStateToAppCode(e.code);
@@ -253,6 +321,10 @@ export function normalizeError(e: unknown, fallbackMessage: string): AppError {
       },
     });
   }
+
+
+
+
 
   return new AppError({
     code: "UNKNOWN",
