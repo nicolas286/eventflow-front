@@ -1,16 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session, User, AuthChangeEvent } from "@supabase/supabase-js";
 import { supabase } from "../../gateways/supabase/supabaseClient";
+import { authRepo } from "../../gateways/supabase/repositories/auth/authRepo";
 import { AuthContext, type AuthContextValue } from "./AuthContext";
-import { AppError } from "../../domain/errors/errors";
-
-type AuthContextInternal = {
-  user: User | null;
-  session: Session | null;
-  bootstrapError: AppError | null;
-  loading: boolean;
-  signOut: () => Promise<void>;
-};
+import type { AppError } from "../../domain/errors/errors";
+import { normalizeError } from "../../domain/errors/errors";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -23,40 +17,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     mountedRef.current = true;
 
-    const init = async () => {
+    (async () => {
       try {
-        const { data, error } = await supabase.auth.getSession();
+        const s = await authRepo.getSession();
         if (!mountedRef.current) return;
 
-        if (error) {
-          setBootstrapError(new AppError({
-            code: "UNKNOWN",
-            message: "Impossible de récupérer la session.",
-            cause: error,
-            }));
-
-        } else {
-          setSession(data.session);
-          setUser(data.session?.user ?? null);
-          setBootstrapError(null);
-        }
+        setSession(s);
+        setUser(s?.user ?? null);
+        setBootstrapError(null);
       } catch (e) {
-        console.error("getSession failed:", e);
+        if (!mountedRef.current) return;
+        setBootstrapError(normalizeError(e, "Impossible d'initialiser la session."));
       } finally {
         if (mountedRef.current) setLoading(false);
       }
-    };
-
-    init();
+    })();
 
     const { data: sub } = supabase.auth.onAuthStateChange(
-    (_event: AuthChangeEvent, newSession: Session | null) => {
+      (_event: AuthChangeEvent, newSession: Session | null) => {
         setSession(newSession);
         setUser(newSession?.user ?? null);
         setBootstrapError(null);
-    }
+      },
     );
-
 
     return () => {
       mountedRef.current = false;
@@ -65,12 +48,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-  const { error } = await supabase.auth.signOut();
-  if (error) throw error; 
-}, []);
+    await authRepo.signOut();
+  }, []);
 
-
-  const value: AuthContextInternal = {
+  const value: AuthContextValue = {
     user,
     session,
     bootstrapError,
@@ -78,5 +59,5 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signOut,
   };
 
-  return <AuthContext.Provider value={value as AuthContextValue}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
