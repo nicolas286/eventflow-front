@@ -1,3 +1,5 @@
+// TODO rework with components, logo, styles, etc.
+
 import { useState } from "react";
 import { loginSchema, type LoginInput } from "../../../../domain/models/auth.schema";
 import { authRepo } from "../../../../gateways/supabase/repositories/auth/authRepo";
