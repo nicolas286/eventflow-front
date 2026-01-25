@@ -8,7 +8,9 @@ export const loginSchema = z.object({
 export const signupSchema = z.object({
   email: z.email("Email invalide"),
   password: z.string().min(8, "Mot de passe trop court"),
-  acceptTerms: z.literal(true, { message: "Tu dois accepter les conditions" }),
+  acceptTerms: z.boolean().refine((v) => v === true, {
+    message: "Tu dois accepter les conditions",
+  }),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;

@@ -15,6 +15,7 @@ import { PublicLayout } from "./components/layouts/PublicLayout";
 
 /* Misc */
 import { NotFoundPage } from "./pages/public/NotFoundPage";
+import { AdminAuthLayout } from "./components/layouts/AdminAuthLayout";
 
 function App() {
   return (
@@ -22,8 +23,11 @@ function App() {
       {/* =========================
           ADMIN – AUTH
          ========================= */}
-      <Route path="/admin/login" element={<AdminLoginPage />} />
-      <Route path="/admin/signup" element={<AdminSignUpPage />} />
+      <Route element={<AdminAuthLayout />}>
+        <Route path="/admin/login" element={<AdminLoginPage />} />
+        <Route path="/admin/signup" element={<AdminSignUpPage />} />
+      </Route>
+
 
       {/* =========================
           ADMIN – PROTÉGÉ
