@@ -1,0 +1,33 @@
+.ui-field {
+  display: block;
+}
+
+.ui-field__label {
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 650;
+  color: #374151;
+}
+
+.ui-textArea {
+  width: 100%;
+  min-height: 120px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  padding: 10px 12px;
+  font-size: 14px;
+  outline: none;
+  resize: vertical;
+
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.ui-textArea:focus {
+  border-color: #d1d5db;
+  box-shadow: 0 0 0 4px rgba(var(--primary, 37 99 235), 0.14);
+}
+
+.ui-textArea::placeholder {
+  color: #9ca3af;
+}

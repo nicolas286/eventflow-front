@@ -1,9 +1,11 @@
-// TODO rework with components, logo, styles, etc.
+import "../../../styles/auth.css";
 
 import { useState } from "react";
-import { signupSchema, type SignupInput } from "../../../../domain/models/auth.schema";
-import { authRepo } from "../../../../gateways/supabase/repositories/auth/authRepo";
-import { normalizeError } from "../../../../domain/errors/errors";
+import { signupSchema, type SignupInput } from "../../../domain/models/auth.schema";
+import { authRepo } from "../../../gateways/supabase/repositories/auth/authRepo";
+import { normalizeError } from "../../../domain/errors/errors";
+import Button from "../button/Button";
+import Input from "../inputs/Input";
 
 export function SignUpForm() {
   const [form, setForm] = useState<SignupInput>({
@@ -31,7 +33,6 @@ export function SignUpForm() {
     setSubmitError(null);
     setSuccessMessage(null);
 
-    // 1️⃣ validation locale
     const parsed = signupSchema.safeParse(form);
     if (!parsed.success) {
       const errors: typeof fieldErrors = {};
@@ -43,7 +44,6 @@ export function SignUpForm() {
       return;
     }
 
-    // 2️⃣ appel repo
     try {
       setLoading(true);
       const res = await authRepo.signUp(parsed.data);
@@ -53,7 +53,6 @@ export function SignUpForm() {
           "Compte créé. Un email de confirmation vient d’être envoyé. Confirme-le, puis reviens te connecter.",
         );
       } else {
-        // si tu n'as pas la confirmation email (ou en dev), session directe
         setSuccessMessage("Compte créé, connexion en cours…");
       }
     } catch (e) {
@@ -65,48 +64,46 @@ export function SignUpForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label>Email</label>
-        <input
-          type="email"
-          value={form.email}
-          onChange={(e) => handleChange("email", e.target.value)}
-        />
-        {fieldErrors.email && <p className="text-red-500">{fieldErrors.email}</p>}
-      </div>
+    <form onSubmit={handleSubmit} className="auth-form">
+      <Input
+        label="Email"
+        type="email"
+        placeholder="Adresse email"
+        value={form.email}
+        onChange={(e) => handleChange("email", e.target.value)}
+        autoComplete="email"
+      />
+      {fieldErrors.email && <p className="auth-error">{fieldErrors.email}</p>}
 
-      <div>
-        <label>Mot de passe</label>
-        <input
-          type="password"
-          value={form.password}
-          onChange={(e) => handleChange("password", e.target.value)}
-        />
-        {fieldErrors.password && <p className="text-red-500">{fieldErrors.password}</p>}
-      </div>
+      <Input
+        label="Mot de passe"
+        type="password"
+        value={form.password}
+        placeholder="Votre mot de passe"
+        onChange={(e) => handleChange("password", e.target.value)}
+        autoComplete="new-password"
+      />
+      {fieldErrors.password && <p className="auth-error">{fieldErrors.password}</p>}
 
-      <div className="flex items-center gap-2">
+      <div className="auth-row">
         <input
           id="acceptTerms"
           type="checkbox"
           checked={form.acceptTerms}
           onChange={(e) => handleChange("acceptTerms", e.target.checked)}
         />
-        <label htmlFor="acceptTerms" className="text-sm">
+        <label htmlFor="acceptTerms" className="auth-checkbox-label">
           J’accepte les conditions
         </label>
       </div>
-      {fieldErrors.acceptTerms && (
-        <p className="text-red-500">{fieldErrors.acceptTerms}</p>
-      )}
+      {fieldErrors.acceptTerms && <p className="auth-error">{fieldErrors.acceptTerms}</p>}
 
-      {submitError && <p className="text-red-600">{submitError}</p>}
-      {successMessage && <p className="text-green-600">{successMessage}</p>}
+      {submitError && <p className="auth-error">{submitError}</p>}
+      {successMessage && <p className="auth-success">{successMessage}</p>}
 
-      <button type="submit" disabled={loading}>
+      <Button type="submit" variant="primary" disabled={loading}>
         {loading ? "Création..." : "Créer un compte"}
-      </button>
+      </Button>
     </form>
   );
 }

@@ -1,0 +1,75 @@
+.eventEditor{
+  display:grid;
+  gap:16px;
+}
+
+.eventEditor__grid{
+  display:grid;
+  gap:12px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.eventEditor__label{
+  margin-bottom:6px;
+  font-size:13px;
+  font-weight:650;
+  color:#374151;
+}
+
+.eventEditor__select{
+  width:100%;
+  border-radius:12px;
+  border:1px solid #e5e7eb;
+  background:#fff;
+  padding:10px 12px;
+  font-size:14px;
+  outline:none;
+}
+
+.eventEditor__select:focus{
+  border-color:#d1d5db;
+  box-shadow: 0 0 0 4px rgba(var(--primary, 37 99 235), .14);
+}
+
+.eventEditor__ticketsBox{
+  border-radius:16px;
+  border:1px solid rgba(229,231,235,.7);
+  overflow:hidden;
+}
+
+.eventEditor__ticketsHeader{
+  padding:16px;
+  border-bottom:1px solid #f3f4f6;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.eventEditor__ticketsTitle{
+  font-size:14px;
+  font-weight:900;
+  color:#111827;
+}
+
+.eventEditor__ticketsSub{
+  font-size:12px;
+  color:#6b7280;
+  margin-top:2px;
+}
+
+.eventEditor__ticketsBody{
+  padding:16px;
+  display:grid;
+  gap:12px;
+}
+
+.eventEditor__empty{
+  font-size:14px;
+  color:#6b7280;
+}
+
+.eventEditor__hint{
+  font-size:12px;
+  color:#6b7280;
+}

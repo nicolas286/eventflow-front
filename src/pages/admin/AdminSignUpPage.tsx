@@ -1,20 +1,26 @@
+import "../../styles/auth.css";
 import { Link } from "react-router-dom";
-import { SignUpForm } from "../../components/ui/components/forms/SignupForm";
+import { SignUpForm } from "../../ui/components/forms/SignupForm";
 
 export function AdminSignUpPage() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-      <SignUpForm />
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-header">
+          <h1 className="auth-title">Créer un compte Eventflow</h1>
+          <p className="auth-subtitle">
+            Inscrivez-vous pour commencer à gérer vos événements
+          </p>
+        </div>
 
-      <p className="text-sm text-slate-600">
-        Déjà un compte ?{" "}
-        <Link
-          to="/admin/login"
-          className="text-blue-600 hover:underline"
-        >
-          Se connecter
-        </Link>
-      </p>
+        <SignUpForm />
+
+        <div className="auth-links">
+          <Link to="/admin/login" className="auth-link">
+            Déjà un compte ? Se connecter
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

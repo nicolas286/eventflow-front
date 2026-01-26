@@ -1,0 +1,55 @@
+.ui-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  /* ⬇️ padding VRAIMENT compact et fluide */
+  padding: clamp(1px, 0.4vw, 3px) clamp(4px, 1vw, 8px);
+
+  /* ⬇️ texte fluide */
+  font-size: clamp(9px, 2vw, 12px);
+
+  /* ⬇️ CLÉ : line-height serré */
+  line-height: 1;
+
+  font-weight: 600;
+  white-space: nowrap;
+
+  border-radius: 999px;
+  border: 1px solid transparent;
+
+  /* ⬇️ CLÉ : aucune hauteur forcée */
+  min-height: unset;
+}
+
+
+
+.ui-badge--neutral {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #e5e7eb;
+}
+
+.ui-badge--success {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.ui-badge--warn {
+  background: #fffbeb;
+  color: #b45309;
+  border-color: #fde68a;
+}
+
+.ui-badge--danger {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.ui-badge--info {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}

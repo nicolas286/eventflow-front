@@ -3,21 +3,24 @@ import { Routes, Route, Navigate } from "react-router-dom";
 /* Admin pages */
 import { AdminLoginPage } from "./pages/admin/AdminLoginPage";
 import { AdminSignUpPage } from "./pages/admin/AdminSignUpPage";
-import { AdminHomePage } from "./pages/admin/AdminHomePage";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+
 
 /* Public pages */
 import { OrgPublicPage } from "./pages/public/OrgPublicPage";
 import { EventPublicPage } from "./pages/public/EventPublicPage";
 
 /* Layouts */
-import { AdminLayout } from "./components/layouts/AdminLayout";
-import { PublicLayout } from "./components/layouts/PublicLayout";
+import { AdminLayout } from "./ui/layouts/AdminLayout";
+import { PublicLayout } from "./ui/layouts/PublicLayout";
 
 /* Misc */
 import { NotFoundPage } from "./pages/public/NotFoundPage";
-import { AdminAuthLayout } from "./components/layouts/AdminAuthLayout";
+import { AdminAuthLayout } from "./ui/layouts/AdminAuthLayout";
+
 
 function App() {
+  
   return (
     <Routes>
       {/* =========================
@@ -33,7 +36,7 @@ function App() {
           ADMIN – PROTÉGÉ
          ========================= */}
       <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<AdminHomePage />} />
+        <Route index element={ <AdminDashboard/>} />
         {/* plus tard :
             <Route path="events/:eventId" element={<AdminEventPage />} />
         */}

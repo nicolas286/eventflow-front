@@ -1,0 +1,22 @@
+.adminPage{
+  display: grid;
+  gap: 16px;
+}
+
+.adminPageGrid{
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(320px, 420px) 1fr;
+  align-items: start;
+}
+
+.adminPageRight{
+  display: grid;
+  gap: 16px;
+}
+
+@media (max-width: 1000px){
+  .adminPageGrid{
+    grid-template-columns: 1fr;
+  }
+}

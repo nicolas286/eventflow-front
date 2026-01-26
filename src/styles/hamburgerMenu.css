@@ -1,0 +1,218 @@
+.hamburgerMenu {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* ---------- Burger button ---------- */
+.hamburgerMenu__button {
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+
+  border: 1px solid rgba(229,231,235,.8);
+  background: rgba(255,255,255,.7);
+
+  cursor: pointer;
+
+  /* ✅ important : container relatif */
+  position: relative;
+
+  transition: box-shadow .15s ease, transform .06s ease, background .15s ease, border-color .15s ease;
+}
+
+html.dark .hamburgerMenu__button{
+  border-color: rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+}
+
+.hamburgerMenu__button:active {
+  transform: scale(.98);
+}
+
+.hamburgerMenu__button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgb(var(--primary) / .18);
+}
+
+/* ✅ barres centrées et contrôlées */
+.hamburgerMenu__bar {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+
+  width: 18px;
+  height: 2px;
+  border-radius: 999px;
+
+  background: #111827;
+
+  transform: translateX(-50%);
+  transform-origin: center;
+
+  transition: transform .18s ease, opacity .16s ease, width .16s ease;
+}
+
+html.dark .hamburgerMenu__bar { background: #fff; }
+
+/* positions initiales : 3 barres bien serrées */
+.hamburgerMenu__bar:nth-child(1) {
+  transform: translateX(-50%) translateY(-6px);
+}
+.hamburgerMenu__bar:nth-child(2) {
+  transform: translateX(-50%) translateY(0px);
+}
+.hamburgerMenu__bar:nth-child(3) {
+  transform: translateX(-50%) translateY(6px);
+}
+
+/* ---------- Animation vers X (croix parfaite) ---------- */
+.hamburgerMenu__button.isOpen .hamburgerMenu__bar:nth-child(1) {
+  transform: translateX(-50%) rotate(45deg);
+}
+.hamburgerMenu__button.isOpen .hamburgerMenu__bar:nth-child(2) {
+  opacity: 0;
+  width: 0;
+}
+.hamburgerMenu__button.isOpen .hamburgerMenu__bar:nth-child(3) {
+  transform: translateX(-50%) rotate(-45deg);
+}
+
+/* ---------- Dropdown panel ---------- */
+.hamburgerMenu__panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  width: 260px;
+
+  border-radius: 18px;
+  border: 1px solid rgba(229,231,235,.8);
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 16px 40px rgba(0,0,0,.12);
+
+  padding: 10px;
+
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+
+  transition: opacity .16s ease, transform .16s ease;
+}
+
+html.dark .hamburgerMenu__panel{
+  border-color: rgba(255,255,255,.14);
+  background: rgba(15,23,42,.92);
+  box-shadow: 0 16px 40px rgba(0,0,0,.35);
+}
+
+.hamburgerMenu__panel.isOpen{
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* ---------- Content styling ---------- */
+.hamburgerMenu__header{
+  font-size: 11px;
+  font-weight: 900;
+  color: #6b7280;
+  padding: 8px 10px 6px 10px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+html.dark .hamburgerMenu__header{ color: rgba(255,255,255,.55); }
+
+.hamburgerMenu__divider{
+  height: 1px;
+  background: rgba(229,231,235,.9);
+  margin: 8px 6px;
+}
+
+html.dark .hamburgerMenu__divider{ background: rgba(255,255,255,.12); }
+
+.hamburgerMenu__item{
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+
+  padding: 10px 10px;
+  border-radius: 14px;
+
+  transition: background .12s ease;
+}
+
+.hamburgerMenu__item:hover{
+  background: rgba(243,244,246,.9);
+}
+
+html.dark .hamburgerMenu__item:hover{
+  background: rgba(255,255,255,.08);
+}
+
+.hamburgerMenu__label{
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hamburgerMenu__labelMain{
+  font-size: 13px;
+  font-weight: 800;
+  color: #111827;
+}
+
+html.dark .hamburgerMenu__labelMain{ color: #fff; }
+
+.hamburgerMenu__hint{
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+html.dark .hamburgerMenu__hint{ color: rgba(255,255,255,.6); }
+
+/* Toggle row */
+.hamburgerMenu__itemRow{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hamburgerMenu__toggle{
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid rgba(229,231,235,.9);
+  background: rgba(243,244,246,.9);
+  position: relative;
+  flex: 0 0 auto;
+}
+
+html.dark .hamburgerMenu__toggle{
+  border-color: rgba(255,255,255,.14);
+  background: rgba(255,255,255,.08);
+}
+
+.hamburgerMenu__dot{
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #111827;
+  transition: transform .16s ease, background .16s ease;
+}
+
+html.dark .hamburgerMenu__dot{ background: #fff; }
+
+.hamburgerMenu__dot.isOn{
+  transform: translateY(-50%) translateX(20px);
+  background: rgb(var(--primary));
+}

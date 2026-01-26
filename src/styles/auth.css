@@ -1,0 +1,136 @@
+.auth-header {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.auth-title {
+  margin: 0 0 6px 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.auth-subtitle {
+  margin: 0;
+  font-size: 0.95rem;
+  opacity: 0.75;
+}
+
+.auth-links {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.auth-link {
+  font-size: 0.9rem;
+  color: rgb(var(--primary-bg) / 1);
+  text-decoration: none;
+}
+
+.auth-link:hover {
+  text-decoration: underline;
+}
+
+.auth-link.muted {
+  opacity: 0.7;
+}
+
+
+/* petit ajustement desktop */
+@media (min-width: 640px) {
+  .auth-header {
+    margin-bottom: 22px;
+  }
+
+  .auth-links {
+    margin-top: 22px;
+  }
+}
+
+
+/* important : évite les 100% qui débordent à cause des borders/paddings */
+.auth-page,
+.auth-page * {
+  box-sizing: border-box;
+}
+
+/* wrapper */
+.auth-page {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+/* card */
+.auth-card {
+  width: 100%;
+  max-width: 520px;
+  padding: 20px;              /* padding uniforme (pas 18/16) */
+  border-radius: 14px;
+  border: 1px solid rgb(var(--primary-bg) / 0.55);
+  background: rgb(var(--surface, 255 255 255) / 1);
+  overflow: hidden;           /* évite que focus shadow “colle” au bord visuellement */
+
+  box-shadow:
+    0 0 0 3px rgb(var(--primary-bg) / 0.10),
+    0 10px 24px rgb(0 0 0 / 0.10);
+}
+
+/* form */
+.auth-form {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+}
+
+/* force les enfants à ne jamais dépasser en grid/flex */
+.auth-form > * {
+  min-width: 0;
+}
+
+.auth-checkbox-label {
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+
+
+/* checkbox row */
+.auth-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* Tablet */
+@media (min-width: 640px) {
+  .auth-page { padding: 24px; }
+  .auth-card {
+    max-width: 480px;
+    padding: 28px;
+    border-radius: 16px;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+  .auth-page { padding: 32px; }
+  .auth-card {
+    max-width: 420px;
+    padding: 30px;
+    border-radius: 18px;
+    box-shadow:
+      0 0 0 4px rgb(var(--primary-bg) / 0.12),
+      0 14px 40px rgb(0 0 0 / 0.12);
+  }
+}
+
+/* Very small phones */
+@media (max-width: 360px) {
+  .auth-page { padding: 12px; }
+  .auth-card { padding: 16px; }
+}
