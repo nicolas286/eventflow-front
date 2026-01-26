@@ -1,12 +1,8 @@
 import type { ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 import "../../../styles/topNav.css";
 
-import HamburgerMenu, {
-  MenuDivider,
-  MenuHeader,
-  MenuItem,
-  MenuToggle,
-} from "../menus/HamburgerMenu";
+import HamburgerMenu, { MenuDivider, MenuHeader, MenuItem, MenuToggle } from "../menus/HamburgerMenu";
 
 export type OrgInfo = {
   name?: string;
@@ -14,25 +10,31 @@ export type OrgInfo = {
 };
 
 export type TopNavMode = "public" | "admin";
+export type AdminNavKey = "event" | "branding" | "structure" | "profil" | "abonnement";
 
 export type TopNavProps = {
   org?: OrgInfo | null;
   mode: TopNavMode;
-  onToggleMode?: () => void;
   darkMode?: boolean;
   onToggleDarkMode?: () => void;
 };
 
+const adminKeyToPath: Record<AdminNavKey, string> = {
+  event: "/admin/events",
+  branding: "/admin/branding",
+  structure: "/admin/structure",
+  profil: "/admin/profil",
+  abonnement: "/admin/abonnement",
+};
 
-export default function TopNav({
-  org,
-  mode,
-  onToggleMode,
-  darkMode,
-  onToggleDarkMode,
-}: TopNavProps) {
+export default function TopNav({ org, mode, darkMode, onToggleDarkMode }: TopNavProps) {
+  const navigate = useNavigate();
   const title = org?.name ?? "Billetterie";
   const subtitle: ReactNode = mode === "public" ? "Espace public" : "Espace admin";
+    const go = (key: AdminNavKey, close: () => void) => {
+    navigate(adminKeyToPath[key]);
+    close();
+  };
 
   return (
     <header className="topNav">
@@ -41,9 +43,7 @@ export default function TopNav({
           {org?.logoUrl ? (
             <img className="topNav__logo" src={org.logoUrl} alt="Logo" />
           ) : (
-            <div className="topNav__logoFallback">
-              {(title?.[0] || "A").toUpperCase()}
-            </div>
+             <div className="topNav__logoFallback">{(title?.[0] || "A").toUpperCase()}</div>
           )}
 
           <div className="topNav__titles">
@@ -57,22 +57,20 @@ export default function TopNav({
             <>
               <MenuHeader>Menu</MenuHeader>
 
-              <MenuItem
-                label={mode === "public" ? "Passer en admin" : "Passer en public"}
-                hint={mode === "public" ? "Gestion billetterie" : "Vue utilisateur"}
-                onClick={() => {
-                  onToggleMode?.();
-                  close();
-                }}
-              />
+                {mode === "admin" ? (
+                <>
+                  <MenuItem label="event" onClick={() => go("event", close)} />
+                  <MenuItem label="branding" onClick={() => go("branding", close)} />
+                  <MenuItem label="structure" onClick={() => go("structure", close)} />
+                  <MenuItem label="profil" onClick={() => go("profil", close)} />
+                  <MenuItem label="abonnement" onClick={() => go("abonnement", close)} />
+                  <MenuDivider />
+                </>
+              ) : null}
 
               <MenuDivider />
 
-              <MenuToggle
-                label="Mode sombre"
-                value={!!darkMode}
-                onToggle={() => onToggleDarkMode?.()}
-              />
+              <MenuToggle label="Mode sombre" value={!!darkMode} onToggle={() => onToggleDarkMode?.()} />
             </>
           )}
         </HamburgerMenu>

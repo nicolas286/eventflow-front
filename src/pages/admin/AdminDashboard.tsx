@@ -1,50 +1,36 @@
-import { useMemo, useState } from "react";
+import { Outlet } from "react-router-dom";
 import "../../styles/adminDashBoard.css";
 
-import { AdminStats, BrandingPanel, EventEditor, EventTable } from "../../features/admin";
+import TopNav, { type OrgInfo } from "../../ui/components/navigation/TopNav";
 import { supabase } from "../../gateways/supabase/supabaseClient";
 import { useAdminDashboardData } from "../../features/admin/hooks/useAdminDashboardData";
+
 import type { EventOverviewRow } from "../../domain/models/eventOverviewRow.schema";
+import type { DashboardBootstrap } from "../../domain/models/dashboardBootstrap.schema";
+
+
+export type AdminOutletContext = {
+  org: OrgInfo | null;
+  orgId: string;
+  bootstrap: DashboardBootstrap;
+  events: EventOverviewRow[];
+};
+
 
 export default function AdminDashboard() {
   const { loading, error, bootstrap, orgId, events } = useAdminDashboardData({ supabase });
 
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-
-  const effectiveSelectedId =
-    selectedEventId ?? (events.length > 0 ? events[0].event.id : null);
-
-  const selectedRow = useMemo(() => {
-    if (!effectiveSelectedId) return null;
-    return events.find((e) => e.event.id === effectiveSelectedId) ?? null;
-  }, [events, effectiveSelectedId]);
-
-  const stats = useMemo(() => {
-    const active = events.length;
-    return { active, open: 0, soldout: 0 };
-  }, [events]);
-
-  const branding = useMemo(() => {
-    const p = bootstrap?.organizationProfile;
-    return {
-      displayName: p?.displayName ?? (bootstrap?.organization?.name ?? ""),
-      primaryColor: p?.primaryColor ?? null,
-      logoUrl: p?.logoUrl ?? null,
-    };
-  }, [bootstrap]);
-
-  const updateEvent = (
-    _id: string,
-    _patch: Partial<Pick<EventOverviewRow["event"], "title" | "isPublished">>
-  ) => {};
-
-  const deleteEvent = (id: string) => {
-    if (effectiveSelectedId === id) setSelectedEventId(null);
-  };
+    const topNavOrg: OrgInfo | null = bootstrap
+  ? {
+      name: bootstrap.organizationProfile?.displayName ?? bootstrap.organization?.name,
+      logoUrl: bootstrap.organizationProfile?.logoUrl ?? undefined,
+    }
+  : null;
 
   if (loading) {
     return (
       <div className="adminPage">
+        <TopNav mode="admin" org={topNavOrg} />
         <div className="adminPageGrid">
           <div className="adminPageRight">Chargement…</div>
         </div>
@@ -55,8 +41,9 @@ export default function AdminDashboard() {
   if (error) {
     return (
       <div className="adminPage">
+        <TopNav mode="admin" org={topNavOrg} />
         <div className="adminPageGrid">
-          <div className="adminPageRight">Erreur : {error}</div>
+          <div className="adminPageRight">Erreur : {String(error)}</div>
         </div>
       </div>
     );
@@ -65,6 +52,7 @@ export default function AdminDashboard() {
   if (!orgId) {
     return (
       <div className="adminPage">
+        <TopNav mode="admin" org={topNavOrg} />
         <div className="adminPageGrid">
           <div className="adminPageRight">
             <h2>Bienvenue 👋</h2>
@@ -75,30 +63,26 @@ export default function AdminDashboard() {
     );
   }
 
+  // Sécurité runtime : si orgId existe, bootstrap devrait exister.
+  // Mais on évite les crashs si hook renvoie temporairement null.
+  if (!bootstrap) {
+    return (
+      <div className="adminPage">
+        <TopNav mode="admin" org={topNavOrg} />
+        <div className="adminPageGrid">
+          <div className="adminPageRight">Chargement…</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="adminPage">
-      <AdminStats stats={stats} />
+      <TopNav mode="admin" org={topNavOrg} />
 
       <div className="adminPageGrid">
-        <BrandingPanel branding={branding} onChange={() => {}} />
-
         <div className="adminPageRight">
-          <EventTable
-            events={events}
-            editingId={effectiveSelectedId ?? undefined}
-            onSelect={setSelectedEventId}
-            onDelete={deleteEvent}
-            newTitle=""
-            setNewTitle={() => {}}
-            onAdd={() => {}}
-          />
-
-          <EventEditor
-            event={selectedRow}
-            onUpdateEvent={(patch) =>
-              effectiveSelectedId && updateEvent(effectiveSelectedId, patch)
-            }
-          />
+          <Outlet context={{ org: topNavOrg, orgId, bootstrap, events } satisfies AdminOutletContext} />
         </div>
       </div>
     </div>
