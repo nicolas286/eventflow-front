@@ -16,8 +16,15 @@ export type AdminOutletContext = {
   events: EventOverviewRow[];
 };
 
+// Structure de données disponible à ce stade (à partir de useAdminDashboardData) : 
+// bootstrap : DashboardBootstrap qui contient profile, membership, organization,
+// organizationProfile, subscription, planLimits
+// orgId : string, juste l'ID de l'organisation
+// events : EventOverviewRow[] avec event + ordersCount + paidCents
+// Pour détail des types (par ex.organization) voir dans domain/models (ex. organization.schema.ts)
 
 export default function AdminDashboard() {
+
   const { loading, error, bootstrap, orgId, events } = useAdminDashboardData({ supabase });
 
     const topNavOrg: OrgInfo | null = bootstrap
