@@ -2,17 +2,10 @@ import "../../../styles/eventTable.css";
 
 import { Badge, Button, Card, CardBody, CardHeader, Input } from "../../../ui/components";
 import { getStatusInfo } from "../../../domain/helpers/status";
-
-export type EventRow = {
-  id: string;
-  title: string;
-  status: string;
-  ordersCount: number;
-  paidCents: number;
-};
+import type { EventOverviewRow } from "../../../domain/models/eventOverviewRow.schema";
 
 type EventTableProps = {
-  events: EventRow[];
+  events: EventOverviewRow[];
   editingId?: string;
   newTitle: string;
   setNewTitle: (v: string) => void;
@@ -21,8 +14,13 @@ type EventTableProps = {
   onAdd: () => void;
 };
 
+function formatEUR(cents: number) {
+  return `${(cents / 100).toFixed(2)} €`;
+}
+
 export default function EventTable({
   events,
+  editingId,
   onSelect,
   onDelete,
   newTitle,
@@ -66,26 +64,31 @@ export default function EventTable({
               </tr>
             )}
 
-            {events.map((ev) => {
-              const s = getStatusInfo(ev.status ?? "draft");
+            {events.map((row) => {
+              const ev = row.event;
+              const statusKey = ev.isPublished ? "open" : "draft";
+              const s = getStatusInfo(statusKey);
+              const isEditing = ev.id === editingId;
 
               return (
-                <tr key={ev.id}>
+                <tr
+                  key={ev.id}
+                  className={isEditing ? "eventTable-row--active" : undefined}
+                >
                   <td className="eventTable-title">{ev.title}</td>
 
                   <td>
                     <Badge tone={s.tone} label={s.label} />
                   </td>
 
-                  <td>{ev.ordersCount}</td>
+                  <td>{row.ordersCount}</td>
 
-                  <td>
-                    {(ev.paidCents / 100).toFixed(2)} €
-                  </td>
+                  <td>{formatEUR(row.paidCents)}</td>
 
                   <td className="eventTable-actions">
                     <Button
-                      label="Éditer"
+                      label={isEditing ? "En cours" : "Éditer"}
+                      disabled={isEditing}
                       onClick={() => onSelect(ev.id)}
                     />
                     <Button

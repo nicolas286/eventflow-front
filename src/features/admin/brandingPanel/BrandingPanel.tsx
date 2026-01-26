@@ -1,18 +1,18 @@
-import "../../../styles/brandingPanel.css"
+import "../../../styles/brandingPanel.css";
 import { Button, Card, CardBody, CardHeader, Input, Badge } from "../../../ui/components";
 
-type Org = {
-  name: string;
-  primaryColor: string;
-  logoUrl?: string;
+export type BrandingDraft = {
+  displayName: string;
+  primaryColor: string | null;
+  logoUrl: string | null;
 };
 
 type BrandingPanelProps = {
-  org: Org;
-  setOrg: React.Dispatch<React.SetStateAction<Org>>;
+  branding: BrandingDraft;
+  onChange: (patch: Partial<BrandingDraft>) => void;
 };
 
-export default function BrandingPanel({ org, setOrg }: BrandingPanelProps) {
+export default function BrandingPanel({ branding, onChange }: BrandingPanelProps) {
   return (
     <Card>
       <CardHeader title="Branding billetterie" subtitle="Couleur + logo" />
@@ -20,8 +20,8 @@ export default function BrandingPanel({ org, setOrg }: BrandingPanelProps) {
         <div className="brandingPanel">
           <Input
             label="Nom (ASBL / Organisateur)"
-            value={org.name}
-            onChange={(e) => setOrg(o => ({ ...o, name: e.target.value }))}
+            value={branding.displayName}
+            onChange={(e) => onChange({ displayName: e.target.value })}
           />
 
           <div>
@@ -29,19 +29,23 @@ export default function BrandingPanel({ org, setOrg }: BrandingPanelProps) {
             <div className="brandingPanel__row">
               <input
                 type="color"
-                value={org.primaryColor}
-                onChange={(e) => setOrg(o => ({ ...o, primaryColor: e.target.value }))}
+                value={branding.primaryColor ?? "#2563eb"}
+                onChange={(e) => onChange({ primaryColor: e.target.value })}
                 className="brandingPanel__color"
               />
+
               <Input
-                value={org.primaryColor}
-                onChange={(e) => setOrg(o => ({ ...o, primaryColor: e.target.value }))}
+                value={branding.primaryColor ?? ""}
+                onChange={(e) => onChange({ primaryColor: e.target.value })}
                 placeholder="#2563eb"
               />
             </div>
           </div>
 
-          <LogoUploader org={org} setOrg={setOrg} />
+          <LogoUploader
+            logoUrl={branding.logoUrl}
+            onChangeLogoUrl={(logoUrl) => onChange({ logoUrl })}
+          />
 
           <div className="brandingPanel__preview">
             <Button variant="primary" label="Action primaire" />
@@ -55,11 +59,11 @@ export default function BrandingPanel({ org, setOrg }: BrandingPanelProps) {
 }
 
 type LogoUploaderProps = {
-  org: Org;
-  setOrg: React.Dispatch<React.SetStateAction<Org>>;
+  logoUrl: string | null;
+  onChangeLogoUrl: (v: string | null) => void;
 };
 
-function LogoUploader({ org, setOrg }: LogoUploaderProps) {
+function LogoUploader({ logoUrl, onChangeLogoUrl }: LogoUploaderProps) {
   return (
     <div>
       <div className="brandingPanel__label">Logo</div>
@@ -74,17 +78,16 @@ function LogoUploader({ org, setOrg }: LogoUploaderProps) {
             if (file.size > 2 * 1024 * 1024) return alert("Logo trop lourd (max 2MB)");
 
             const reader = new FileReader();
-            reader.onload = () =>
-              setOrg(o => ({ ...o, logoUrl: String(reader.result) }));
+            reader.onload = () => onChangeLogoUrl(String(reader.result));
             reader.readAsDataURL(file);
           }}
         />
 
-        {org.logoUrl && (
+        {logoUrl && (
           <Button
             variant="secondary"
             label="Retirer"
-            onClick={() => setOrg(o => ({ ...o, logoUrl: "" }))}
+            onClick={() => onChangeLogoUrl(null)}
           />
         )}
       </div>
