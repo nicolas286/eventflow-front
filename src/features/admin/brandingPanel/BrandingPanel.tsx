@@ -1,7 +1,7 @@
-import "../../../styles/brandingPanel.css"
+import "../../../styles/brandingPanel.css";
 import { Button, Card, CardBody, CardHeader, Input, Badge } from "../../../ui/components";
 
-type Org = {
+export type Org = {
   name: string;
   primaryColor: string;
   logoUrl?: string;
@@ -21,7 +21,7 @@ export default function BrandingPanel({ org, setOrg }: BrandingPanelProps) {
           <Input
             label="Nom (ASBL / Organisateur)"
             value={org.name}
-            onChange={(e) => setOrg(o => ({ ...o, name: e.target.value }))}
+            onChange={(e) => setOrg((o) => ({ ...o, name: e.target.value }))}
           />
 
           <div>
@@ -30,12 +30,12 @@ export default function BrandingPanel({ org, setOrg }: BrandingPanelProps) {
               <input
                 type="color"
                 value={org.primaryColor}
-                onChange={(e) => setOrg(o => ({ ...o, primaryColor: e.target.value }))}
+                onChange={(e) => setOrg((o) => ({ ...o, primaryColor: e.target.value }))}
                 className="brandingPanel__color"
               />
               <Input
                 value={org.primaryColor}
-                onChange={(e) => setOrg(o => ({ ...o, primaryColor: e.target.value }))}
+                onChange={(e) => setOrg((o) => ({ ...o, primaryColor: e.target.value }))}
                 placeholder="#2563eb"
               />
             </div>
@@ -74,19 +74,14 @@ function LogoUploader({ org, setOrg }: LogoUploaderProps) {
             if (file.size > 2 * 1024 * 1024) return alert("Logo trop lourd (max 2MB)");
 
             const reader = new FileReader();
-            reader.onload = () =>
-              setOrg(o => ({ ...o, logoUrl: String(reader.result) }));
+            reader.onload = () => setOrg((o) => ({ ...o, logoUrl: String(reader.result) }));
             reader.readAsDataURL(file);
           }}
         />
 
-        {org.logoUrl && (
-          <Button
-            variant="secondary"
-            label="Retirer"
-            onClick={() => setOrg(o => ({ ...o, logoUrl: "" }))}
-          />
-        )}
+        {org.logoUrl ? (
+          <Button variant="secondary" label="Retirer" onClick={() => setOrg((o) => ({ ...o, logoUrl: "" }))} />
+        ) : null}
       </div>
     </div>
   );

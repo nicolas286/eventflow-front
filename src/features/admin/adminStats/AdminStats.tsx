@@ -1,4 +1,4 @@
-import "../../../styles/adminStats.css"
+import "../../../styles/adminStats.css";
 import { Card, CardBody } from "../../../ui/components";
 
 type Stats = {
@@ -21,12 +21,7 @@ export default function AdminStats({ stats }: AdminStatsProps) {
   );
 }
 
-type StatProps = {
-  label: string;
-  value: number;
-};
-
-function Stat({ label, value }: StatProps) {
+function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="adminStats__stat">
       <div className="adminStats__label">{label}</div>
