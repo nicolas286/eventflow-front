@@ -1,24 +1,20 @@
 import { z } from "zod";
+import { eventSchema } from "../db/db.event.schema";
 
-export const publicEventOverviewSchema = z.object({
-  id: z.uuid(),
-  slug: z.string().min(1).max(200),
-  title: z.string().min(3).max(200),
-  location: z.string().max(5000).nullable().optional(),
-
-  description: z.string().max(5000).nullable().optional(),
-  bannerUrl: z.string().nullable().optional(),
-
-  startsAt: z.string().nullable().optional(),
-  endsAt: z.string().nullable().optional(),
+export const publicEventOverviewSchema = eventSchema.omit({
+  orgId: true,
+  description: true,
+  bannerUrl: true, 
+  isPublished: true,
+  createdAt: true,
+  updatedAt: true,
+  depositCents: true
 });
 
 export const publicOrgEventsOverviewSchema = z.object({
-  orgSlug: z.string().min(1),
+  orgSlug: z.string().min(3, "Le slug est trop court").max(80, "Le slug est trop long"),
   events: z.array(publicEventOverviewSchema),
 });
 
 export type PublicEventOverview = z.infer<typeof publicEventOverviewSchema>;
-export type PublicOrgEventsOverview = z.infer<
-  typeof publicOrgEventsOverviewSchema
->;
+export type PublicOrgEventsOverview = z.infer<typeof publicOrgEventsOverviewSchema>;

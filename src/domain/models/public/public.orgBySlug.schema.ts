@@ -1,34 +1,24 @@
 import { z } from "zod";
+import { organizationSchema } from "../db/db.organization.schema";
+import { organizationProfileSchema } from "../db/db.organizationProfile.schema";
 
-export const publicOrganizationSchema = z.object({
-  id: z.uuid(),
-  type: z.enum(["association", "person"]),
-  name: z.string().min(3).max(120),
+export const publicOrganizationOverviewSchema = organizationSchema.pick({
+  id: true,
+  type: true,
+  name: true
 });
 
-export const publicOrganizationProfileSchema = z.object({
-  slug: z.string().min(3).max(80),
-
-
-  displayName: z.string().min(3).max(120).nullable(),
-
-  description: z.string().max(1000).nullable(),
-  publicEmail: z.email().nullable(),
-  phone: z.string().min(3).max(32).nullable(),
-  website: z.string().min(5).max(2048).nullable(),
-
-  logoUrl: z.string().min(5).max(2048).nullable(),
-  primaryColor: z.string().min(4).max(20).nullable(),
-  defaultEventBannerUrl: z.string().min(5).max(2048).nullable(),
+export const publicOrganizationProfileSchema = organizationProfileSchema.omit({
+  orgId: true,
+  createdAt: true,
+  updatedAt: true
 });
 
 export const publicOrgBySlugSchema = z.object({
-  org: publicOrganizationSchema,
+  org: publicOrganizationOverviewSchema,
   profile: publicOrganizationProfileSchema,
 });
 
-export type PublicOrganization = z.infer<typeof publicOrganizationSchema>;
-export type PublicOrganizationProfile = z.infer<
-  typeof publicOrganizationProfileSchema
->;
+export type PublicOrganizationOverview = z.infer<typeof publicOrganizationOverviewSchema>;
+export type PublicOrganizationProfile = z.infer<typeof publicOrganizationProfileSchema>;
 export type PublicOrgBySlug = z.infer<typeof publicOrgBySlugSchema>;

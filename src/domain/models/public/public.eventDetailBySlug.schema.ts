@@ -1,35 +1,38 @@
 import { z } from "zod";
+import { eventProductSchema } from "../db/db.eventProducts.schema";
+import { eventSchema } from "../db/db.event.schema";
+import { organizationProfileSchema } from "../db/db.organizationProfile.schema";
 
-const isoDateTimeNullable = z.string().datetime().nullable();
 
-export const publicOrgProfileOverviewSchema = z.object({
-  slug: z.string().min(1),
-  logoUrl: z.string(),
-  defaultEventBannerUrl: z.string(),
+export const publicOrgProfileOverviewForEventPageSchema = organizationProfileSchema.pick({
+  slug: true,
+  defaultEventBannerUrl: true,
+  logoUrl: true,
 });
 
-export const publicEventSchema = z.object({
-  id: z.uuid(),
-  slug: z.string().min(1),
-  title: z.string().min(1).max(120),
-  description: z.string().max(5000).nullable(),
-  location: z.string().max(180).nullable(),
-  bannerUrl: z.string().url(),
-  startsAt: isoDateTimeNullable,
-  endsAt: isoDateTimeNullable,
+export const publicEventSchema = eventSchema.pick({
+  id: true,
+  slug: true,
+  title: true,
+  description: true,
+  location: true,
+  bannerUrl: true,
+  startsAt: true,
+  endsAt: true,
 });
 
-export const publicEventProductSchema = z.object({
-  id: z.uuid(),
-  name: z.string().min(1),
-  description: z.string().nullable(),
-  priceCents: z.number().int().nonnegative(),
-  currency: z.string().min(1).max(10),
-  stockQty: z.number().int().nonnegative().nullable(), // null = illimité
-  createsAttendees: z.boolean(),
-  attendeesPerUnit: z.number().int().positive(),
-  sortOrder: z.number().int(),
+export const publicEventProductSchema = eventProductSchema.pick({
+  id: true,
+  name: true,
+  description: true,
+  currency: true,
+  priceCents: true,
+  stockQty: true,
+  createsAttendees: true,
+  attendeesPerUnit: true,
+  sortOrder: true,
 });
+
 
 export const publicFormFieldOptionsSchema = z.union([
   z.array(z.string()),
@@ -49,7 +52,7 @@ export const publicEventFormFieldSchema = z.object({
 });
 
 export const publicEventDetailSchema = z.object({
-  org: publicOrgProfileOverviewSchema,
+  org: publicOrgProfileOverviewForEventPageSchema,
   event: publicEventSchema,
   products: z.array(publicEventProductSchema),
   formFields: z.array(publicEventFormFieldSchema),

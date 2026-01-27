@@ -13,7 +13,6 @@ export const dashboardBootstrapSchema = z.object({
   organizationProfile: organizationProfileSchema.nullable(),
   subscription: subscriptionSchema.nullable(),
   planLimits: planLimitsSchema,
-
 });
 
 export type DashboardBootstrap = z.infer<typeof dashboardBootstrapSchema>;
