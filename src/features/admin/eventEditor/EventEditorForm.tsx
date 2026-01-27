@@ -1,147 +1,136 @@
-import { useEffect, useMemo, useState } from "react";
-import "../../../styles/eventEditor.css";
-
+import { useMemo, useState } from "react";
+import { z } from "zod";
+import {
+  updateEventPatchSchema,
+  type UpdateEventPatch,
+} from "../../../domain/models/admin/admin.updateEventPatch.schema";
 import { Button, Input } from "../../../ui/components";
-import { isoToLocalInput, localInputToIso } from "../../../domain/helpers/dateTime";
-import type { EventOverviewRow } from "../../../domain/models/admin/admin.eventsOverview.schema";
-
-type EditableEventFields = Partial<
-  Pick<EventOverviewRow["event"], "title" | "isPublished" | "startsAt" | "endsAt">
-> & { location?: string | null };
 
 type Props = {
-  event: EventOverviewRow["event"] & { location?: string | null };
-  onConfirm: (patch: EditableEventFields) => void;
+  event: {
+    id: string;
+    title: string;
+    location?: string | null;
+    startsAt?: string | null; // ISO
+    endsAt?: string | null;   // ISO
+    isPublished: boolean;
+  };
+  onConfirm: (patch: UpdateEventPatch) => void;
 };
 
-export default function EventEditorForm({ event, onConfirm }: Props) {
-  const initialDraft = useMemo(
-    () => ({
-      title: String((event as any).title ?? ""),
-      location: String((event as any).location ?? ""),
-      startsAt: isoToLocalInput((event as any).startsAt),
-      endsAt: isoToLocalInput((event as any).endsAt),
-      isPublished: !!(event as any).isPublished,
-    }),
-    [event]
+type FieldErrors = Partial<Record<keyof UpdateEventPatch, string>>;
+
+function zodErrorsToFieldErrors(err: z.ZodError): FieldErrors {
+  const out: FieldErrors = {};
+  for (const issue of err.issues) {
+    const key = issue.path[0] as keyof UpdateEventPatch | undefined;
+    if (key && !out[key]) out[key] = issue.message;
+  }
+  return out;
+}
+
+// ISO -> "YYYY-MM-DDTHH:mm" (local) pour datetime-local
+function isoToLocalInputValue(iso?: string | null) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+    `T${pad(d.getHours())}:${pad(d.getMinutes())}`
   );
+}
 
-  const [draft, setDraft] = useState(initialDraft);
+// "YYYY-MM-DDTHH:mm" (local) -> ISO (UTC instant)
+function localInputValueToIso(v: string) {
+  if (!v) return null;
+  const d = new Date(v); // interprété comme local
+  if (!Number.isFinite(d.getTime())) return null;
+  return d.toISOString();
+}
 
-  useEffect(() => {
-    setDraft(initialDraft);
-  }, [initialDraft]);
+export default function EventEditorForm({ event, onConfirm }: Props) {
+  const [draft, setDraft] = useState<UpdateEventPatch>(() => ({
+    title: event.title,
+    location: event.location ?? null,
+    startsAt: event.startsAt ?? null,
+    endsAt: event.endsAt ?? null,
+    isPublished: event.isPublished,
+  }));
 
-  const startDate = draft.startsAt ? new Date(draft.startsAt) : null;
-  const endDate = draft.endsAt ? new Date(draft.endsAt) : null;
+  const validation = useMemo(
+    () => updateEventPatchSchema.safeParse(draft),
+    [draft]
+  );
+  const fieldErrors: FieldErrors = validation.success
+    ? {}
+    : zodErrorsToFieldErrors(validation.error);
 
-  const isDateInvalid =
-    startDate !== null &&
-    endDate !== null &&
-    startDate.getTime() > endDate.getTime();
+  const isValid = validation.success;
 
-  const isDirty =
-    draft.title !== initialDraft.title ||
-    draft.location !== initialDraft.location ||
-    draft.startsAt !== initialDraft.startsAt ||
-    draft.endsAt !== initialDraft.endsAt ||
-    draft.isPublished !== initialDraft.isPublished;
+  function submit() {
+    const parsed = updateEventPatchSchema.parse(draft);
 
-  const canSubmit = isDirty && !isDateInvalid;
+    const patch: UpdateEventPatch = {};
+    if (parsed.title !== event.title) patch.title = parsed.title;
+    if ((parsed.location ?? null) !== (event.location ?? null))
+      patch.location = parsed.location ?? null;
+    if ((parsed.startsAt ?? null) !== (event.startsAt ?? null))
+      patch.startsAt = parsed.startsAt ?? null;
+    if ((parsed.endsAt ?? null) !== (event.endsAt ?? null))
+      patch.endsAt = parsed.endsAt ?? null;
+    if (parsed.isPublished !== event.isPublished)
+      patch.isPublished = parsed.isPublished;
 
-  const submit = () => {
-    if (!canSubmit) return;
-
-    const patch: EditableEventFields = {};
-
-    if (draft.title !== initialDraft.title) patch.title = draft.title;
-    if (draft.location !== initialDraft.location) patch.location = draft.location;
-    if (draft.isPublished !== initialDraft.isPublished) patch.isPublished = draft.isPublished;
-
-    if (draft.startsAt !== initialDraft.startsAt) {
-      const iso = localInputToIso(draft.startsAt);
-      if (iso) patch.startsAt = iso as any;
-    }
-
-    if (draft.endsAt !== initialDraft.endsAt) {
-      const iso = localInputToIso(draft.endsAt);
-      if (iso) patch.endsAt = iso as any;
-    }
-
+    if (Object.keys(patch).length === 0) return;
     onConfirm(patch);
-  };
+  }
 
   return (
-    <div className="eventEditor">
-      <div className="eventEditor__row2">
-        <Input
-          label="Titre"
-          value={draft.title}
-          onChange={(e) => setDraft((s) => ({ ...s, title: e.target.value }))}
-        />
-        <Input
-          label="Lieu"
-          value={draft.location}
-          onChange={(e) => setDraft((s) => ({ ...s, location: e.target.value }))}
-        />
-      </div>
+    <div>
+      <Input
+        value={draft.title ?? ""}
+        onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
+        placeholder="Titre"
+      />
+      {fieldErrors.title && <div className="formError">{fieldErrors.title}</div>}
 
-      <div className="eventEditor__row2">
-        <div>
-          <div className="eventEditor__label">Début</div>
-          <input
-            className={`eventEditor__datetime ${isDateInvalid ? "isError" : ""}`}
-            type="datetime-local"
-            value={draft.startsAt}
-            onChange={(e) => setDraft((s) => ({ ...s, startsAt: e.target.value }))}
-          />
-        </div>
+      <Input
+        value={draft.location ?? ""}
+        onChange={(e) =>
+          setDraft((d) => ({ ...d, location: e.target.value || null }))
+        }
+        placeholder="Lieu"
+      />
+      {fieldErrors.location && <div className="formError">{fieldErrors.location}</div>}
 
-        <div>
-          <div className="eventEditor__label">Fin</div>
-          <input
-            className={`eventEditor__datetime ${isDateInvalid ? "isError" : ""}`}
-            type="datetime-local"
-            value={draft.endsAt}
-            onChange={(e) => setDraft((s) => ({ ...s, endsAt: e.target.value }))}
-          />
-        </div>
-      </div>
+      {/* ✅ Date/heure avec datetime-local */}
+      <Input
+        type="datetime-local"
+        value={isoToLocalInputValue(draft.startsAt ?? null)}
+        onChange={(e) =>
+          setDraft((d) => ({
+            ...d,
+            startsAt: localInputValueToIso(e.target.value),
+          }))
+        }
+      />
+      {fieldErrors.startsAt && <div className="formError">{fieldErrors.startsAt}</div>}
 
-      {isDateInvalid && (
-        <div className="eventEditor__error">
-          La date de fin doit être postérieure à la date de début.
-        </div>
-      )}
+      <Input
+        type="datetime-local"
+        value={isoToLocalInputValue(draft.endsAt ?? null)}
+        onChange={(e) =>
+          setDraft((d) => ({
+            ...d,
+            endsAt: localInputValueToIso(e.target.value),
+          }))
+        }
+      />
+      {fieldErrors.endsAt && <div className="formError">{fieldErrors.endsAt}</div>}
 
-      <div className="eventEditor__row1">
-        <div>
-          <div className="eventEditor__label">Publication</div>
-          <select
-            className="eventEditor__select"
-            value={draft.isPublished ? "published" : "draft"}
-            onChange={(e) =>
-              setDraft((s) => ({ ...s, isPublished: e.target.value === "published" }))
-            }
-          >
-            <option value="draft">Brouillon</option>
-            <option value="published">Publié</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="eventEditor__footer">
-        <Button
-          variant="secondary"
-          label="Réinitialiser"
-          disabled={!isDirty}
-          onClick={() => setDraft(initialDraft)}
-        />
-        <Button
-          label="Confirmer"
-          disabled={!canSubmit}
-          onClick={submit}
-        />
+      <div style={{ marginTop: 12 }}>
+        <Button label="Enregistrer" onClick={submit} disabled={!isValid} />
       </div>
     </div>
   );

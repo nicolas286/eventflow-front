@@ -1,13 +1,6 @@
 import "../../../styles/eventTable.css";
 
-import {
-  Badge,
-  Button,
-  Card,
-  CardBody,
-  CardHeader,
-  Input,
-} from "../../../ui/components";
+import { Badge, Button, Card, CardBody, CardHeader } from "../../../ui/components";
 import { getStatusInfo } from "../../../domain/helpers/status";
 import { formatDateTimeHuman } from "../../../domain/helpers/dateTime";
 import type { EventOverviewRow } from "../../../domain/models/admin/admin.eventsOverview.schema";
@@ -15,11 +8,8 @@ import type { EventOverviewRow } from "../../../domain/models/admin/admin.events
 type EventTableProps = {
   events: EventOverviewRow[];
   editingId?: string;
-  newTitle: string;
-  setNewTitle: (v: string) => void;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
-  onAdd: () => void;
 };
 
 function safeStr(v: unknown) {
@@ -32,75 +22,66 @@ export default function EventTable({
   editingId,
   onSelect,
   onDelete,
-  newTitle,
-  setNewTitle,
-  onAdd,
 }: EventTableProps) {
   return (
     <Card>
-      <CardHeader
-        title="Événements"
-        right={
-          <div className="eventTable__headerRight">
-            <Input
-              className="eventTable__newInput"
-              placeholder="Nouvel événement"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-            />
-            <Button label="Ajouter" onClick={onAdd} />
-          </div>
-        }
-      />
+      <CardHeader title="Événements" />
 
       <CardBody>
         <div className="eventTable__mobileList">
-  {events.length === 0 && (
-    <div className="eventTable-empty">Aucun événement pour le moment</div>
-  )}
+          {events.length === 0 && (
+            <div className="eventTable-empty">Aucun événement pour le moment</div>
+          )}
 
-  {events.map((row) => {
-    const ev = row.event as any;
-    const s = getStatusInfo(ev.isPublished ? "open" : "draft");
-    const isSelected = ev.id === editingId;
+          {events.map((row) => {
+            const ev = row.event as any;
+            const s = getStatusInfo(ev.isPublished ? "open" : "draft");
+            const isSelected = ev.id === editingId;
 
-    return (
-      <div key={ev.id} className={`eventCard ${isSelected ? "isSelected" : ""}`}>
-        <div className="eventCard__top">
-          <div className="eventCard__title">{safeStr(ev.title)}</div>
-          <Badge tone={s.tone} label={s.label} />
+            return (
+              <div
+                key={ev.id}
+                className={`eventCard ${isSelected ? "isSelected" : ""}`}
+              >
+                <div className="eventCard__top">
+                  <div className="eventCard__title">{safeStr(ev.title)}</div>
+                  <Badge tone={s.tone} label={s.label} />
+                </div>
+
+                <div className="eventCard__meta">
+                  <div className="eventCard__row">
+                    <span className="eventCard__label">Début</span>
+                    <span className="eventCard__value">
+                      {formatDateTimeHuman(ev.startsAt)}
+                    </span>
+                  </div>
+                  <div className="eventCard__row">
+                    <span className="eventCard__label">Fin</span>
+                    <span className="eventCard__value">
+                      {formatDateTimeHuman(ev.endsAt)}
+                    </span>
+                  </div>
+                  <div className="eventCard__row">
+                    <span className="eventCard__label">Lieu</span>
+                    <span className="eventCard__value">{safeStr(ev.location)}</span>
+                  </div>
+                </div>
+
+                <div className="eventCard__actions">
+                  <Button
+                    label={isSelected ? "Fermer" : "Éditer"}
+                    onClick={() => onSelect(ev.id)}
+                  />
+                  <Button
+                    variant="danger"
+                    label="Suppr."
+                    onClick={() => onDelete(ev.id)}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
-
-        <div className="eventCard__meta">
-          <div className="eventCard__row">
-            <span className="eventCard__label">Début</span>
-            <span className="eventCard__value">{formatDateTimeHuman(ev.startsAt)}</span>
-          </div>
-          <div className="eventCard__row">
-            <span className="eventCard__label">Fin</span>
-            <span className="eventCard__value">{formatDateTimeHuman(ev.endsAt)}</span>
-          </div>
-          <div className="eventCard__row">
-            <span className="eventCard__label">Lieu</span>
-            <span className="eventCard__value">{safeStr(ev.location)}</span>
-          </div>
-        </div>
-
-        <div className="eventCard__actions">
-          <Button
-            label={isSelected ? "Fermer" : "Éditer"}
-            onClick={() => onSelect(ev.id)}
-          />
-          <Button
-            variant="danger"
-            label="Suppr."
-            onClick={() => onDelete(ev.id)}
-          />
-        </div>
-      </div>
-    );
-  })}
-</div>
 
         <div className="eventTable__wrap">
           <table className="eventTable__table">
@@ -130,7 +111,10 @@ export default function EventTable({
                 const isSelected = ev.id === editingId;
 
                 return (
-                  <tr key={ev.id} className={isSelected ? "isSelected" : undefined}>
+                  <tr
+                    key={ev.id}
+                    className={isSelected ? "isSelected" : undefined}
+                  >
                     <td className="title">{safeStr(ev.title)}</td>
                     <td>
                       <Badge tone={s.tone} label={s.label} />

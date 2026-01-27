@@ -18,7 +18,10 @@ export default function EventEditor({ event, onUpdateEvent }: Props) {
   if (!event) {
     return (
       <Card>
-        <CardHeader title="Éditeur d’événement" subtitle="Sélectionne un événement" />
+        <CardHeader
+          title="Éditeur d’événement"
+          subtitle="Sélectionne un événement"
+        />
         <CardBody>
           <div className="eventEditor__empty">Aucun événement sélectionné.</div>
         </CardBody>
@@ -31,9 +34,13 @@ export default function EventEditor({ event, onUpdateEvent }: Props) {
 
   return (
     <Card>
-      <CardHeader title="Éditeur d’événement" right={<Badge tone={status.tone} label={status.label} />} />
+      <CardHeader
+        title="Éditeur d’événement"
+        right={<Badge tone={status.tone} label={status.label} />}
+      />
       <CardBody>
-        <EventEditorForm event={ev} onConfirm={onUpdateEvent} />
+        {/* ✅ reset form state on event change */}
+        <EventEditorForm key={ev.id} event={ev} onConfirm={onUpdateEvent} />
       </CardBody>
     </Card>
   );

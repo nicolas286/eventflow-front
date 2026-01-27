@@ -14,7 +14,9 @@ export type AdminOutletContext = {
   orgId: string;
   bootstrap: DashboardBootstrap;
   events: EventOverviewRow[];
+  refetch: () => Promise<void>;
 };
+
 
 // Structure de données disponible à ce stade (à partir de useAdminDashboardData) : 
 // bootstrap : DashboardBootstrap qui contient profile, membership, organization,
@@ -26,7 +28,7 @@ export type AdminOutletContext = {
 
 export default function AdminDashboard() {
 
-  const { loading, error, bootstrap, orgId, events } = useAdminDashboardData({ supabase });
+  const { loading, error, bootstrap, orgId, events, refetch } = useAdminDashboardData({ supabase });
 
     const topNavOrg: OrgInfo | null = bootstrap
   ? {
@@ -90,7 +92,7 @@ export default function AdminDashboard() {
 
       <div className="adminPageGrid">
         <div className="adminPageRight">
-          <Outlet context={{ org: topNavOrg, orgId, bootstrap, events } satisfies AdminOutletContext} />
+          <Outlet context={{ org: topNavOrg, orgId, bootstrap, events, refetch } satisfies AdminOutletContext} />
         </div>
       </div>
     </div>

@@ -91,11 +91,30 @@ function mapRpcMessageToAppCode(msg: string): AppErrorCode | null {
   if (m === "FORBIDDEN" || /FORBIDDEN/i.test(m)) return "FORBIDDEN";
   if (m === "NOT_FOUND" || /NOT_FOUND/i.test(m)) return "NOT_FOUND";
 
+  if (m === "PLAN_LIMIT_REACHED") return "FORBIDDEN"; // ✅ blocage plan (métier)
+
   if (/VALIDATION_ERROR/i.test(m) || /VALIDATION\b/i.test(m)) return "VALIDATION";
   if (/CONFLICT/i.test(m)) return "CONFLICT";
 
   return null;
 }
+
+
+function humanBusinessMessage(msg: string): string | null {
+  const m = msg.trim();
+
+  // plan / billing
+  if (m === "PLAN_LIMIT_REACHED") {
+    return "Limite de ton abonnement atteinte : tu ne peux plus créer d’événements. Passe sur un plan supérieur pour continuer.";
+  }
+
+  // tu peux en ajouter d’autres au fur et à mesure
+  if (m === "FORBIDDEN") return "Accès refusé : tu n’as pas les droits nécessaires.";
+  if (m === "NOT_AUTHENTICATED") return "Ta session a expiré. Reconnecte-toi.";
+
+  return null;
+}
+
 
 type SupabaseAuthErrorLike = {
   message: string;
@@ -279,17 +298,36 @@ export function normalizeError(e: unknown, fallbackMessage: string): AppError {
   }
 
 
-    if (isPostgrestError(e)) {
-    const rpcCode = mapRpcMessageToAppCode(e.message);
-    const code = rpcCode ?? mapSqlStateToAppCode(e.code);
+   if (isPostgrestError(e)) {
+  const rpcCode = mapRpcMessageToAppCode(e.message);
+  const code = rpcCode ?? mapSqlStateToAppCode(e.code);
 
-    return new AppError({
-        code,
-        message: rpcCode ? e.message.replace(/^VALIDATION_ERROR:\s*/i, "") : humanDbMessage(e, fallbackMessage),
-        cause: e,
-        meta: { kind: "postgrest", sqlstate: e.code ?? null, rawMessage: e.message, details: e.details ?? null, hint: e.hint ?? null },
-    });
-    }
+  // ✅ message humain si business error connue
+  const business = humanBusinessMessage(e.message);
+
+  // ✅ validation_error: on enlève le prefix
+  const validationMsg = e.message.replace(/^VALIDATION_ERROR:\s*/i, "");
+
+  const message =
+    business ??
+    (rpcCode
+      ? validationMsg // ex: VALIDATION_ERROR: title too long -> title too long
+      : humanDbMessage(e, fallbackMessage));
+
+  return new AppError({
+    code,
+    message,
+    cause: e,
+    meta: {
+      kind: "postgrest",
+      sqlstate: e.code ?? null,
+      rawMessage: e.message,
+      details: e.details ?? null,
+      hint: e.hint ?? null,
+    },
+  });
+}
+
 
 
   if (isStorageErrorLike(e)) {

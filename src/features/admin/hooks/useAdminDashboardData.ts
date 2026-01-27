@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { makeDashboardRepo } from "../../../gateways/supabase/repositories/dashboard/makeDashboardRepo";
@@ -18,82 +18,106 @@ type State = {
   events: EventOverviewRow[];
 };
 
-export function useAdminDashboardData(params: { supabase: SupabaseClient }) {
-  const { supabase } = params;
-
-  const dashboardRepo = useMemo(() => makeDashboardRepo(supabase), [supabase]);
-  const eventsRepo = useMemo(() => makeEventsRepo(supabase), [supabase]);
-
-  const [state, setState] = useState<State>({
+// mini store (external system)
+function createAdminDashboardStore(loadFn: () => Promise<State>) {
+  let state: State = {
     loading: true,
     error: null,
     bootstrap: null,
     orgId: null,
     eventsOverview: null,
     events: [],
-  });
+  };
 
-  useEffect(() => {
-    let cancelled = false;
+  const listeners = new Set<() => void>();
+  const emit = () => listeners.forEach((l) => l());
 
-    async function run() {
-      try {
-        setState((s) => ({ ...s, loading: true, error: null }));
+  let started = false;
 
-        // 1) bootstrap (org via membership)
-        const bootstrap = await dashboardRepo.getDashboardBootstrap();
-        const orgId = bootstrap.organization?.id
-          ? String(bootstrap.organization.id)
-          : null;
+  async function load() {
+    // set loading
+    state = { ...state, loading: true, error: null };
+    emit();
 
-        if (cancelled) return;
+    try {
+      const next = await loadFn();
+      state = next;
+      emit();
+    } catch (e: unknown) {
+      const ne = normalizeError(e, "Impossible de charger les données du dashboard");
+      state = { ...state, loading: false, error: ne.message };
+      emit();
+    }
+  }
 
-        // onboarding: pas d’orga -> pas d’appel events
-        if (!orgId) {
-          setState({
-            loading: false,
-            error: null,
-            bootstrap,
-            orgId: null,
-            eventsOverview: null,
-            events: [],
-          });
-          return;
-        }
+  function ensureStarted() {
+    if (started) return;
+    started = true;
+    void load();
+  }
 
-        // 2) events overview
-        const eventsOverview = await eventsRepo.getEventsOverview(orgId);
-        if (cancelled) return;
+  return {
+    // react external store API
+    subscribe(cb: () => void) {
+      ensureStarted();
+      listeners.add(cb);
+      return () => listeners.delete(cb);
+    },
+    getSnapshot() {
+      return state;
+    },
 
-        setState({
-          loading: false,
-          error: null,
-          bootstrap,
-          orgId,
-          eventsOverview,
-          events: eventsOverview.events,
-        });
-      } catch (e: unknown) {
-        if (cancelled) return;
+    // action
+    refetch() {
+      return load();
+    },
+  };
+}
 
-        const ne = normalizeError(
-          e,
-          "Impossible de charger les données du dashboard"
-        );
+export function useAdminDashboardData(params: { supabase: SupabaseClient }) {
+  const { supabase } = params;
 
-        setState((s) => ({
-          ...s,
-          loading: false,
-          error: ne.message,
-        }));
-      }
+  const dashboardRepo = useMemo(() => makeDashboardRepo(supabase), [supabase]);
+  const eventsRepo = useMemo(() => makeEventsRepo(supabase), [supabase]);
+
+  // load function (returns full next state)
+  const loadFn = useCallback(async (): Promise<State> => {
+    // 1) bootstrap
+    const bootstrap = await dashboardRepo.getDashboardBootstrap();
+    const orgId = bootstrap.organization?.id ? String(bootstrap.organization.id) : null;
+
+    // onboarding: pas d’orga
+    if (!orgId) {
+      return {
+        loading: false,
+        error: null,
+        bootstrap,
+        orgId: null,
+        eventsOverview: null,
+        events: [],
+      };
     }
 
-    run();
-    return () => {
-      cancelled = true;
+    // 2) events overview
+    const eventsOverview = await eventsRepo.getEventsOverview(orgId);
+
+    return {
+      loading: false,
+      error: null,
+      bootstrap,
+      orgId,
+      eventsOverview,
+      events: eventsOverview.events,
     };
   }, [dashboardRepo, eventsRepo]);
 
-  return state;
+  // store stable for this hook instance
+  const store = useMemo(() => createAdminDashboardStore(loadFn), [loadFn]);
+
+  const state = useSyncExternalStore(store.subscribe, store.getSnapshot);
+
+  return {
+    ...state,
+    refetch: store.refetch,
+  };
 }
