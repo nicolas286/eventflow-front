@@ -1,0 +1,79 @@
+.adminEventsGrid{
+  width:100%;
+  display:grid;
+  gap:32px;
+  align-items:start;
+  grid-template-columns:60% 40%;
+  padding:24px 32px !important;
+  box-sizing:border-box;
+}
+
+.adminEventsLeft,
+.adminEventsRight{
+  min-width:0;
+  box-sizing:border-box;
+}
+
+.adminEventsLeft{
+  padding-left:0 !important;
+}
+
+.adminEventsRight{
+  box-sizing:border-box;
+  padding-left:16px !important;
+  padding-right:0 !important;
+  border-left:1px solid rgba(0,0,0,0.06) !important;
+}
+
+.adminEventsEditorPanel{
+  margin-right:16px !important;
+  transform-origin:top right;
+  animation-duration:180ms;
+  animation-fill-mode:both;
+}
+
+.adminEventsEditorPanel.isOpen{
+  animation-name:editorIn;
+}
+
+.adminEventsEditorPanel.isClosing{
+  animation-name:editorOut;
+}
+
+@keyframes editorIn{
+  from{
+    opacity:0;
+    transform:translateY(8px) scale(0.98);
+  }
+  to{
+    opacity:1;
+    transform:translateY(0) scale(1);
+  }
+}
+
+@keyframes editorOut{
+  from{
+    opacity:1;
+    transform:translateY(0) scale(1);
+  }
+  to{
+    opacity:0;
+    transform:translateY(8px) scale(0.98);
+  }
+}
+
+@media (max-width:1050px){
+  .adminEventsGrid{
+    grid-template-columns:1fr;
+    padding:16px !important;
+  }
+
+  .adminEventsRight{
+    padding-left:0 !important;
+    border-left:0 !important;
+  }
+
+  .adminEventsEditorPanel{
+    margin-right:0 !important;
+  }
+}
