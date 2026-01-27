@@ -4,6 +4,7 @@ export const eventOverviewEventSchema = z.object({
   id: z.uuid(),
   orgId: z.uuid(),
   title: z.string().min(3).max(200),
+  location: z.string().max(5000, "L'emplacement est trop long").nullable(),
   startsAt: z.string(),
   endsAt: z.string(),
   isPublished: z.boolean(),

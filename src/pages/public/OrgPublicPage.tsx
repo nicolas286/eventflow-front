@@ -35,6 +35,7 @@ export function OrgPublicPage() {
    *   id: string (uuid)
    *   slug: string
    *   title: string
+   *   location?: string | null
    *   description?: string | null
    *   bannerUrl?: string | null
    *   startsAt?: string | null (ISO)
@@ -110,6 +111,7 @@ export function OrgPublicPage() {
                     <div className="text-sm opacity-70">
                       startsAt: {e.startsAt}
                       {e.endsAt ? ` · endsAt: ${e.endsAt}` : ""}
+                   {e.location ? ` · location: ${e.location}` : ""}
                     </div>
                   ) : null}
 

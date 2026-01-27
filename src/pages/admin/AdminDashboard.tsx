@@ -21,6 +21,7 @@ export type AdminOutletContext = {
 // organizationProfile, subscription, planLimits
 // orgId : string, juste l'ID de l'organisation
 // events : EventOverviewRow[] avec event + ordersCount + paidCents
+// ATTENTION j'ai ajouté location dans les events !!!
 // Pour détail des types (par ex.organization) voir dans domain/models (ex. organization.schema.ts)
 
 export default function AdminDashboard() {
