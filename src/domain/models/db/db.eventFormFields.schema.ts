@@ -18,8 +18,7 @@ export const publicFormFieldOptionsSchema = z.union([
   z.null(),
 ]);
 
-
-export const publicEventFormFieldSchema = z.object({
+export const eventFormFieldSchema = z.object({
   id: z.uuid(),
   label: z.string().min(1),
   fieldKey: z.string().min(1),

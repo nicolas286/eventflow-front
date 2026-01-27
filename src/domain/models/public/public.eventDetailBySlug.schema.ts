@@ -2,6 +2,7 @@ import { z } from "zod";
 import { eventProductSchema } from "../db/db.eventProducts.schema";
 import { eventSchema } from "../db/db.event.schema";
 import { organizationProfileSchema } from "../db/db.organizationProfile.schema";
+import { eventFormFieldSchema } from "../db/db.eventFormFields.schema";
 
 
 export const publicOrgProfileOverviewForEventPageSchema = organizationProfileSchema.pick({
@@ -33,29 +34,11 @@ export const publicEventProductSchema = eventProductSchema.pick({
   sortOrder: true,
 });
 
-
-export const publicFormFieldOptionsSchema = z.union([
-  z.array(z.string()),
-  z.array(z.object({ label: z.string(), value: z.string() })),
-  z.record(z.string(), z.any()),
-  z.null(),
-]);
-
-export const publicEventFormFieldSchema = z.object({
-  id: z.uuid(),
-  label: z.string().min(1),
-  fieldKey: z.string().min(1),
-  fieldType: z.string().min(1), 
-  isRequired: z.boolean(),
-  options: publicFormFieldOptionsSchema.optional().nullable(),
-  sortOrder: z.number().int(),
-});
-
 export const publicEventDetailSchema = z.object({
   org: publicOrgProfileOverviewForEventPageSchema,
   event: publicEventSchema,
   products: z.array(publicEventProductSchema),
-  formFields: z.array(publicEventFormFieldSchema),
+  formFields: z.array(eventFormFieldSchema),
 });
 
 export type PublicEventDetail = z.infer<typeof publicEventDetailSchema>;
