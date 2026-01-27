@@ -1,31 +1,28 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
 import "../../styles/adminEventsPage.css";
 
-import { AdminStats, EventTable, EventEditor } from "../../features/admin";
+import {
+  AdminStats,
+  EventEditor,
+  EventTable,
+  useEventEditorPanel,
+} from "../../features/admin";
 import type { AdminOutletContext } from "./AdminDashboard";
 import type { EventOverviewRow } from "../../domain/models/admin/admin.eventsOverview.schema";
+
+type EditableEventFields = Partial<
+  Pick<EventOverviewRow["event"], "title" | "isPublished" | "startsAt" | "endsAt">
+> & { location?: string | null };
 
 export default function AdminEventsPage() {
   const { events } = useOutletContext<AdminOutletContext>();
 
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const [editorEventId, setEditorEventId] = useState<string | null>(null);
-  const [isClosing, setIsClosing] = useState(false);
   const [newTitle, setNewTitle] = useState("");
 
-  useEffect(() => {
-    if (selectedEventId) {
-      setEditorEventId(selectedEventId);
-      setIsClosing(false);
-    }
-  }, [selectedEventId]);
-
-  const selectedRow: EventOverviewRow | null = useMemo(() => {
-    if (!editorEventId) return null;
-    return events.find((e) => e.event.id === editorEventId) ?? null;
-  }, [events, editorEventId]);
+  const { selectedRow, editingId, select, closeIf, onAnimEnd, panelClassName } =
+    useEventEditorPanel(events);
 
   const stats = useMemo(() => {
     const active = events.length;
@@ -34,19 +31,13 @@ export default function AdminEventsPage() {
     return { active, open, soldout };
   }, [events]);
 
-  const updateEvent = (
-    _id: string,
-    _patch: Partial<Pick<EventOverviewRow["event"], "title" | "isPublished">>
-  ) => {
+  const updateEvent = (_id: string, _patch: EditableEventFields) => {
     void _id;
     void _patch;
   };
 
   const deleteEvent = (id: string) => {
-    if (editorEventId === id) {
-      setIsClosing(true);
-      setSelectedEventId(null);
-    }
+    closeIf(id);
     void id;
   };
 
@@ -54,32 +45,18 @@ export default function AdminEventsPage() {
     void newTitle;
   };
 
-  const handleSelect = (id: string) => {
-    if (editorEventId === id) {
-      setIsClosing(true);
-      setSelectedEventId(null);
-      return;
-    }
-    setSelectedEventId(id);
-  };
-
-  const handleEditorAnimEnd = () => {
-    if (isClosing) {
-      setIsClosing(false);
-      setEditorEventId(null);
-    }
-  };
+  const isEditorVisible = !!selectedRow;
 
   return (
     <>
       <AdminStats stats={stats} />
 
-      <div className="adminEventsGrid">
+      <div className={`adminEventsShell ${isEditorVisible ? "isEditorOpen" : ""}`}>
         <div className="adminEventsLeft">
           <EventTable
             events={events}
-            editingId={editorEventId ?? undefined}
-            onSelect={handleSelect}
+            editingId={editingId}
+            onSelect={select}
             onDelete={deleteEvent}
             newTitle={newTitle}
             setNewTitle={setNewTitle}
@@ -90,17 +67,13 @@ export default function AdminEventsPage() {
         {selectedRow && (
           <div className="adminEventsRight">
             <div
-              className={`adminEventsEditorPanel ${
-                isClosing ? "isClosing" : "isOpen"
-              }`}
-              key={editorEventId ?? "editor"}
-              onAnimationEnd={handleEditorAnimEnd}
+              className={`adminEventsEditorPanel ${panelClassName}`}
+              key={selectedRow.event.id}
+              onAnimationEnd={onAnimEnd}
             >
               <EventEditor
                 event={selectedRow}
-                onUpdateEvent={(patch) =>
-                  (editorEventId && updateEvent(editorEventId, patch)) || undefined
-                }
+                onUpdateEvent={(patch) => updateEvent(selectedRow.event.id, patch)}
               />
             </div>
           </div>
