@@ -172,3 +172,23 @@
     flex: 1;
   }
 }
+
+@media (max-width: 700px) {
+  .eventCard__actions > * {
+    flex: 1;
+  }
+
+  /* ✅ le Link doit être un vrai “bloc bouton” */
+  .eventCard__actionLink {
+    display: flex;
+    flex: 1;
+  }
+
+  /* ✅ le Button doit remplir le Link */
+  .eventCard__actionBtn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  
+}

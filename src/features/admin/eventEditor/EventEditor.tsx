@@ -19,7 +19,7 @@ export default function EventEditor({ event, onUpdateEvent }: Props) {
     return (
       <Card>
         <CardHeader
-          title="Éditeur d’événement"
+          title="Modifier un événement"
           subtitle="Sélectionne un événement"
         />
         <CardBody>
@@ -35,7 +35,7 @@ export default function EventEditor({ event, onUpdateEvent }: Props) {
   return (
     <Card>
       <CardHeader
-        title="Éditeur d’événement"
+        title="Modifier un événement"
         right={<Badge tone={status.tone} label={status.label} />}
       />
       <CardBody>

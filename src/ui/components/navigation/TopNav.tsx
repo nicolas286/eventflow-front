@@ -59,11 +59,11 @@ export default function TopNav({ org, mode, darkMode, onToggleDarkMode }: TopNav
 
                 {mode === "admin" ? (
                 <>
-                  <MenuItem label="event" onClick={() => go("event", close)} />
-                  <MenuItem label="branding" onClick={() => go("branding", close)} />
-                  <MenuItem label="structure" onClick={() => go("structure", close)} />
-                  <MenuItem label="profil" onClick={() => go("profil", close)} />
-                  <MenuItem label="abonnement" onClick={() => go("abonnement", close)} />
+                  <MenuItem label="Mes événements" onClick={() => go("event", close)} />
+                  <MenuItem label="Apparence" onClick={() => go("branding", close)} />
+                  <MenuItem label="Profil d'organisateur" onClick={() => go("structure", close)} />
+                  <MenuItem label="Profil personnel" onClick={() => go("profil", close)} />
+                  <MenuItem label="Mon abonnement" onClick={() => go("abonnement", close)} />
                   <MenuDivider />
                 </>
               ) : null}

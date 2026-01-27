@@ -2,7 +2,6 @@ import { z } from "zod";
 import { eventSchema } from "../db/db.event.schema";
 
 export const eventOverviewEventSchema = eventSchema.omit({
-  slug: true,
   description: true,
   bannerUrl: true,
   depositCents: true,

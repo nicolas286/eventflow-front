@@ -10,7 +10,7 @@ export type StatusOption = {
 
 export const statusOptions: StatusOption[] = [
   { value: "draft", label: "Brouillon", tone: "neutral" },
-  { value: "open", label: "Ouvert", tone: "success" },
+  { value: "open", label: "Publié", tone: "success" },
   { value: "soon", label: "Bientôt complet", tone: "warn" },
   { value: "soldout", label: "Complet", tone: "danger" },
 ];

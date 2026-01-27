@@ -17,6 +17,7 @@ import { Button } from "../../ui/components";
 import { supabase } from "../../gateways/supabase/supabaseClient";
 import { useCreateEvent } from "../../features/admin/hooks/useCreateEvent";
 import { useUpdateEvent } from "../../features/admin/hooks/useUpdateEvent";
+import { PlusIcon } from "../../ui/components/icon/Icons";
 
 type EditableEventFields = Partial<
   Pick<EventOverviewRow["event"], "title" | "isPublished" | "startsAt" | "endsAt">
@@ -98,11 +99,11 @@ export default function AdminEventsPage() {
       <AdminStats stats={stats} />
 
       <div className="adminEventsActions">
+        
         <Button
           label={creating ? "Création…" : "Nouvel événement"}
           onClick={addEvent}
-          disabled={creating}
-        />
+          disabled={creating}><PlusIcon/>Nouvel événement</Button>
       </div>
 
       {(createError || saveError) && (

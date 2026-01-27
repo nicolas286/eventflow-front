@@ -77,8 +77,6 @@ export default function EventEditorForm({ event, onConfirm }: Props) {
       patch.location = parsed.location ?? null;
     if ((parsed.startsAt ?? null) !== (event.startsAt ?? null))
       patch.startsAt = parsed.startsAt ?? null;
-    if ((parsed.endsAt ?? null) !== (event.endsAt ?? null))
-      patch.endsAt = parsed.endsAt ?? null;
     if (parsed.isPublished !== event.isPublished)
       patch.isPublished = parsed.isPublished;
 
@@ -91,7 +89,8 @@ export default function EventEditorForm({ event, onConfirm }: Props) {
       <Input
         value={draft.title ?? ""}
         onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
-        placeholder="Titre"
+        placeholder="Nom de l'événement"
+        label="Nom de l'événement"
       />
       {fieldErrors.title && <div className="formError">{fieldErrors.title}</div>}
 
@@ -100,11 +99,11 @@ export default function EventEditorForm({ event, onConfirm }: Props) {
         onChange={(e) =>
           setDraft((d) => ({ ...d, location: e.target.value || null }))
         }
-        placeholder="Lieu"
+        placeholder="Lieu de l'événement"
+        label="Lieu de l'événement"
       />
       {fieldErrors.location && <div className="formError">{fieldErrors.location}</div>}
 
-      {/* ✅ Date/heure avec datetime-local */}
       <Input
         type="datetime-local"
         value={isoToLocalInputValue(draft.startsAt ?? null)}
@@ -114,20 +113,9 @@ export default function EventEditorForm({ event, onConfirm }: Props) {
             startsAt: localInputValueToIso(e.target.value),
           }))
         }
+        label="Date et heure de début"
       />
       {fieldErrors.startsAt && <div className="formError">{fieldErrors.startsAt}</div>}
-
-      <Input
-        type="datetime-local"
-        value={isoToLocalInputValue(draft.endsAt ?? null)}
-        onChange={(e) =>
-          setDraft((d) => ({
-            ...d,
-            endsAt: localInputValueToIso(e.target.value),
-          }))
-        }
-      />
-      {fieldErrors.endsAt && <div className="formError">{fieldErrors.endsAt}</div>}
 
       <div style={{ marginTop: 12 }}>
         <Button label="Enregistrer" onClick={submit} disabled={!isValid} />
