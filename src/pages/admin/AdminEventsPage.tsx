@@ -25,10 +25,10 @@ export default function AdminEventsPage() {
     useEventEditorPanel(events);
 
   const stats = useMemo(() => {
-    const active = events.length;
-    const open = events.filter((e) => e.event.isPublished).length;
-    const soldout = events.filter((e) => !e.event.isPublished).length;
-    return { active, open, soldout };
+    const totalEvents = events.length;
+    const publishedEvents = events.filter((e) => e.event.isPublished).length;
+    const draftEvents = events.filter((e) => !e.event.isPublished).length;
+    return { totalEvents, publishedEvents, draftEvents };
   }, [events]);
 
   const updateEvent = (_id: string, _patch: EditableEventFields) => {

@@ -13,3 +13,55 @@
   font-weight:900;
   color:#111827;
 }
+
+.adminStatsMobileBody {
+  padding: 10px 12px;
+}
+
+.adminStatsBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.adminStatsItem {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+
+.adminStatsItem__value {
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1;
+  color: #111827;
+}
+
+.adminStatsItem__label {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.adminStatsDivider {
+  width: 1px;
+  height: 26px;
+  background: #e5e7eb;
+}
+
+
+.adminStatsMobile {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .adminStatsDesktop {
+    display: none;
+  }
+
+  .adminStatsMobile {
+    display: block;
+  }
+}
+
