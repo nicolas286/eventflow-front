@@ -7,7 +7,17 @@
 }
 
 html, body, #root {
-  min-height: 100%;
+  width: 100%;
+  max-width: 100%;
+}
+
+
+* {
+  box-sizing: border-box;
+}
+
+img, svg, video, canvas {
+  max-width: 100%;
 }
 
 body {
@@ -39,4 +49,11 @@ html.dark body {
       rgb(16 185 129 / 0.10),
       transparent 55%
     );
+}
+
+/* ✅ mobile / small screens : désactiver fixed (Chrome bug) */
+@media (max-width: 1050px) {
+  body {
+    background-attachment: scroll;
+  }
 }

@@ -6,11 +6,17 @@
   position:relative;
   padding: 12px 0;
   box-sizing:border-box;
+  min-width: 0;
 }
 
 .adminEventsLeft{
   width:100%;
+  min-width: 0;
   transition: transform 180ms ease, width 180ms ease;
+}
+
+.adminEventsLeft * {
+    min-width: 0;
 }
 
 .adminEventsRight{

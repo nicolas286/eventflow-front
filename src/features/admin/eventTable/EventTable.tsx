@@ -54,6 +54,54 @@ export default function EventTable({
       />
 
       <CardBody>
+        <div className="eventTable__mobileList">
+  {events.length === 0 && (
+    <div className="eventTable-empty">Aucun événement pour le moment</div>
+  )}
+
+  {events.map((row) => {
+    const ev = row.event as any;
+    const s = getStatusInfo(ev.isPublished ? "open" : "draft");
+    const isSelected = ev.id === editingId;
+
+    return (
+      <div key={ev.id} className={`eventCard ${isSelected ? "isSelected" : ""}`}>
+        <div className="eventCard__top">
+          <div className="eventCard__title">{safeStr(ev.title)}</div>
+          <Badge tone={s.tone} label={s.label} />
+        </div>
+
+        <div className="eventCard__meta">
+          <div className="eventCard__row">
+            <span className="eventCard__label">Début</span>
+            <span className="eventCard__value">{formatDateTimeHuman(ev.startsAt)}</span>
+          </div>
+          <div className="eventCard__row">
+            <span className="eventCard__label">Fin</span>
+            <span className="eventCard__value">{formatDateTimeHuman(ev.endsAt)}</span>
+          </div>
+          <div className="eventCard__row">
+            <span className="eventCard__label">Lieu</span>
+            <span className="eventCard__value">{safeStr(ev.location)}</span>
+          </div>
+        </div>
+
+        <div className="eventCard__actions">
+          <Button
+            label={isSelected ? "Fermer" : "Éditer"}
+            onClick={() => onSelect(ev.id)}
+          />
+          <Button
+            variant="danger"
+            label="Suppr."
+            onClick={() => onDelete(ev.id)}
+          />
+        </div>
+      </div>
+    );
+  })}
+</div>
+
         <div className="eventTable__wrap">
           <table className="eventTable__table">
             <thead>
