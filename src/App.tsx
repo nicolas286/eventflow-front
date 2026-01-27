@@ -44,7 +44,7 @@ function App() {
         <Route element={<AdminDashboard />}>
           <Route index element={<Navigate to="events" replace />} />
           <Route path="events" element={<AdminEventsPage />} />
-            <Route path="/:eventSlug" element={<AdminSingleEventPage />} />
+            <Route path="events/:eventSlug" element={<AdminSingleEventPage />} />
           <Route path="branding" element={<AdminBrandingPage />} />
           <Route path="structure" element={<AdminStructurePage />} />
           <Route path="profil" element={<AdminProfilPage />} />
