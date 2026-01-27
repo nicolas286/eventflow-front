@@ -10,6 +10,8 @@
 
 .eventTable__wrap{
   overflow-x:auto;
+  margin-left:-6px;
+  margin-right:-6px;
 }
 
 .eventTable__table{
@@ -25,9 +27,11 @@
   padding:10px 10px;
   border-bottom:1px solid #f3f4f6;
 }
+
 .eventTable__table thead th:first-child{
   padding-left:0;
 }
+
 .eventTable__actionsHead{
   text-align:right !important;
   padding-right:0 !important;
@@ -40,6 +44,10 @@
 
 .eventTable__table tbody td:first-child{
   padding-left:0;
+}
+
+.eventTable__table tbody tr{
+  cursor:pointer;
 }
 
 .eventTable__table tbody tr:hover{
@@ -55,10 +63,6 @@
   color:#111827;
 }
 
-.eventTable__table .muted{
-  color:#4b5563;
-}
-
 .eventTable__actions{
   padding-right:0 !important;
   text-align:right;
@@ -66,6 +70,23 @@
   display:flex;
   gap:8px;
   justify-content:flex-end;
+  align-items:center;
+}
+
+.eventRowToggle{
+  width:34px;
+  height:34px;
+  padding:0 !important;
+  border-radius:10px;
+  font-weight:900;
+  line-height:1;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.eventRowToggle.isActive{
+  background:rgba(0,0,0,0.06);
 }
 
 .eventTable__hint{

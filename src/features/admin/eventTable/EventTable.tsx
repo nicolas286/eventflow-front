@@ -1,6 +1,13 @@
 import "../../../styles/eventTable.css";
 
-import { Badge, Button, Card, CardBody, CardHeader, Input } from "../../../ui/components";
+import {
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  Input,
+} from "../../../ui/components";
 import { getStatusInfo } from "../../../domain/helpers/status";
 import type { EventOverviewRow } from "../../../domain/models/admin/admin.eventsOverview.schema";
 
@@ -32,76 +39,74 @@ export default function EventTable({
       <CardHeader
         title="Événements"
         right={
-          <>
+          <div className="eventTable__headerRight">
             <Input
+              className="eventTable__newInput"
               placeholder="Nouvel événement"
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
             />
             <Button label="Ajouter" onClick={onAdd} />
-          </>
+          </div>
         }
       />
 
       <CardBody>
-        <table className="eventTable">
-          <thead>
-            <tr>
-              <th>Titre</th>
-              <th>Statut</th>
-              <th>Commandes</th>
-              <th>Total encaissé</th>
-              <th />
-            </tr>
-          </thead>
-
-          <tbody>
-            {events.length === 0 && (
+        <div className="eventTable__wrap">
+          <table className="eventTable__table">
+            <thead>
               <tr>
-                <td colSpan={5} className="eventTable-empty">
-                  Aucun événement pour le moment
-                </td>
+                <th>Titre</th>
+                <th>Statut</th>
+                <th>Commandes</th>
+                <th>Total encaissé</th>
+                <th className="eventTable__actionsHead" />
               </tr>
-            )}
+            </thead>
 
-            {events.map((row) => {
-              const ev = row.event;
-              const statusKey = ev.isPublished ? "open" : "draft";
-              const s = getStatusInfo(statusKey);
-              const isEditing = ev.id === editingId;
+            <tbody>
+              {events.map((row) => {
+                const ev = row.event;
+                const s = getStatusInfo(ev.isPublished ? "open" : "draft");
+                const isSelected = ev.id === editingId;
 
-              return (
-                <tr
-                  key={ev.id}
-                  className={isEditing ? "eventTable-row--active" : undefined}
-                >
-                  <td className="eventTable-title">{ev.title}</td>
+                return (
+                  <tr
+                    key={ev.id}
+                    className={isSelected ? "isSelected" : undefined}
+                    onClick={() => onSelect(ev.id)}
+                  >
+                    <td className="title">{ev.title}</td>
+                    <td>
+                      <Badge tone={s.tone} label={s.label} />
+                    </td>
+                    <td>{row.ordersCount}</td>
+                    <td>{formatEUR(row.paidCents)}</td>
 
-                  <td>
-                    <Badge tone={s.tone} label={s.label} />
-                  </td>
+                    <td className="eventTable__actions">
+                      <Button
+                        variant="danger"
+                        label="Suppr."
+                        onClick={() => onDelete(ev.id)}
+                      />
+                      <Button
+                        variant="ghost"
+                        className={`eventRowToggle ${isSelected ? "isActive" : ""}`}
+                        onClick={() => onSelect(ev.id)}
+                      >
+                        {isSelected ? "×" : ">"}
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
 
-                  <td>{row.ordersCount}</td>
-
-                  <td>{formatEUR(row.paidCents)}</td>
-
-                  <td className="eventTable-actions">
-                    <Button
-                      label={isEditing ? "En cours" : "Éditer"}
-                      disabled={isEditing}
-                      onClick={() => onSelect(ev.id)}
-                    />
-                    <Button
-                      variant="danger"
-                      label="Suppr."
-                      onClick={() => onDelete(ev.id)}
-                    />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className="eventTable__hint">
+          Clique sur un événement pour ouvrir ou fermer l’éditeur.
+        </div>
       </CardBody>
     </Card>
   );

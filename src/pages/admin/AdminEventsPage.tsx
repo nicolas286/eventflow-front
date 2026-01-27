@@ -1,8 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
-import Container from "../../ui/components/container/Container";
-import Card, { CardBody, CardHeader } from "../../ui/components/card/Card";
+import "../../styles/adminEventsPage.css";
 
 import { AdminStats, EventTable, EventEditor } from "../../features/admin";
 import type { AdminOutletContext } from "./AdminDashboard";
@@ -12,26 +11,26 @@ export default function AdminEventsPage() {
   const { events } = useOutletContext<AdminOutletContext>();
 
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [editorEventId, setEditorEventId] = useState<string | null>(null);
+  const [isClosing, setIsClosing] = useState(false);
   const [newTitle, setNewTitle] = useState("");
 
-  const firstId = events.length > 0 ? events[0].event.id : null;
-
-  const effectiveSelectedId = useMemo(() => {
-    if (!selectedEventId) return firstId;
-    const exists = events.some((e) => e.event.id === selectedEventId);
-    return exists ? selectedEventId : firstId;
-  }, [selectedEventId, events, firstId]);
+  useEffect(() => {
+    if (selectedEventId) {
+      setEditorEventId(selectedEventId);
+      setIsClosing(false);
+    }
+  }, [selectedEventId]);
 
   const selectedRow: EventOverviewRow | null = useMemo(() => {
-    if (!effectiveSelectedId) return null;
-    return events.find((e) => e.event.id === effectiveSelectedId) ?? null;
-  }, [events, effectiveSelectedId]);
+    if (!editorEventId) return null;
+    return events.find((e) => e.event.id === editorEventId) ?? null;
+  }, [events, editorEventId]);
 
-  // Stats : publié vs brouillon (pas de "status")
   const stats = useMemo(() => {
     const active = events.length;
-    const open = events.filter((e) => e.event.isPublished).length; // publié
-    const soldout = events.filter((e) => !e.event.isPublished).length; // brouillon
+    const open = events.filter((e) => e.event.isPublished).length;
+    const soldout = events.filter((e) => !e.event.isPublished).length;
     return { active, open, soldout };
   }, [events]);
 
@@ -39,61 +38,74 @@ export default function AdminEventsPage() {
     _id: string,
     _patch: Partial<Pick<EventOverviewRow["event"], "title" | "isPublished">>
   ) => {
-    // TODO RPC
+    void _id;
+    void _patch;
   };
 
   const deleteEvent = (id: string) => {
-    if (effectiveSelectedId === id) setSelectedEventId(null);
-    // TODO RPC
+    if (editorEventId === id) {
+      setIsClosing(true);
+      setSelectedEventId(null);
+    }
+    void id;
   };
 
   const addEvent = () => {
     void newTitle;
-    // TODO RPC
+  };
+
+  const handleSelect = (id: string) => {
+    if (editorEventId === id) {
+      setIsClosing(true);
+      setSelectedEventId(null);
+      return;
+    }
+    setSelectedEventId(id);
+  };
+
+  const handleEditorAnimEnd = () => {
+    if (isClosing) {
+      setIsClosing(false);
+      setEditorEventId(null);
+    }
   };
 
   return (
-    <Container>
-      <AdminStats
-        stats={{
-          active: stats.active,
-          open: stats.open, // publié
-          soldout: stats.soldout, // brouillon
-        }}
-      />
+    <>
+      <AdminStats stats={stats} />
 
       <div className="adminEventsGrid">
         <div className="adminEventsLeft">
-          <Card>
-            <CardHeader title="Événements" />
-            <CardBody>
-              <EventTable
-                events={events}
-                editingId={effectiveSelectedId ?? undefined}
-                onSelect={setSelectedEventId}
-                onDelete={deleteEvent}
-                newTitle={newTitle}
-                setNewTitle={setNewTitle}
-                onAdd={addEvent}
-              />
-            </CardBody>
-          </Card>
+          <EventTable
+            events={events}
+            editingId={editorEventId ?? undefined}
+            onSelect={handleSelect}
+            onDelete={deleteEvent}
+            newTitle={newTitle}
+            setNewTitle={setNewTitle}
+            onAdd={addEvent}
+          />
         </div>
 
-        <div className="adminEventsRight">
-          <Card>
-            <CardHeader title="Éditeur d’événement" />
-            <CardBody>
+        {selectedRow && (
+          <div className="adminEventsRight">
+            <div
+              className={`adminEventsEditorPanel ${
+                isClosing ? "isClosing" : "isOpen"
+              }`}
+              key={editorEventId ?? "editor"}
+              onAnimationEnd={handleEditorAnimEnd}
+            >
               <EventEditor
                 event={selectedRow}
                 onUpdateEvent={(patch) =>
-                  effectiveSelectedId && updateEvent(effectiveSelectedId, patch)
+                  (editorEventId && updateEvent(editorEventId, patch)) || undefined
                 }
               />
-            </CardBody>
-          </Card>
-        </div>
+            </div>
+          </div>
+        )}
       </div>
-    </Container>
+    </>
   );
 }
