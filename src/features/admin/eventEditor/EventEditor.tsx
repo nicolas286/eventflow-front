@@ -1,21 +1,20 @@
 import "../../../styles/eventEditor.css";
 
-import { Badge, Card, CardBody, CardHeader, Input } from "../../../ui/components";
+import { Badge, Card, CardBody, CardHeader } from "../../../ui/components";
 import { getStatusInfo } from "../../../domain/helpers/status";
 import type { EventOverviewRow } from "../../../domain/models/admin/admin.eventsOverview.schema";
+import EventEditorForm from "./EventEditorForm";
 
-type EventEditorProps = {
+type EditableEventFields = Partial<
+  Pick<EventOverviewRow["event"], "title" | "isPublished" | "startsAt" | "endsAt">
+> & { location?: string | null };
+
+type Props = {
   event: EventOverviewRow | null;
-  onUpdateEvent: (
-    patch: Partial<Pick<EventOverviewRow["event"], "title" | "isPublished">>
-  ) => void;
+  onUpdateEvent: (patch: EditableEventFields) => void;
 };
 
-function formatEUR(cents: number) {
-  return `${(cents / 100).toFixed(2)} €`;
-}
-
-export default function EventEditor({ event, onUpdateEvent }: EventEditorProps) {
+export default function EventEditor({ event, onUpdateEvent }: Props) {
   if (!event) {
     return (
       <Card>
@@ -27,67 +26,14 @@ export default function EventEditor({ event, onUpdateEvent }: EventEditorProps) 
     );
   }
 
-  const ev = event.event;
-  const derivedStatus = ev.isPublished ? "open" : "draft";
-  const status = getStatusInfo(derivedStatus);
+  const ev = event.event as any;
+  const status = getStatusInfo(ev.isPublished ? "open" : "draft");
 
   return (
     <Card>
-      <CardHeader
-        title="Éditeur d’événement"
-        subtitle={`ID: ${ev.id}`}
-        right={<Badge tone={status.tone} label={status.label} />}
-      />
-
+      <CardHeader title="Éditeur d’événement" right={<Badge tone={status.tone} label={status.label} />} />
       <CardBody>
-        <div className="eventEditor">
-          <div className="eventEditor__grid">
-            <Input
-              label="Titre"
-              value={ev.title}
-              onChange={(e) => onUpdateEvent({ title: e.target.value })}
-            />
-
-            <div>
-              <div className="eventEditor__label">Publication</div>
-              <select
-                className="eventEditor__select"
-                value={ev.isPublished ? "published" : "draft"}
-                onChange={(e) =>
-                  onUpdateEvent({ isPublished: e.target.value === "published" })
-                }
-              >
-                <option value="draft">Brouillon</option>
-                <option value="published">Publié</option>
-              </select>
-            </div>
-
-            <div className="eventEditor__stat">
-              <div className="eventEditor__label">Commandes</div>
-              <div className="eventEditor__value">{event.ordersCount}</div>
-            </div>
-
-            <div className="eventEditor__stat">
-              <div className="eventEditor__label">Total encaissé</div>
-              <div className="eventEditor__value">{formatEUR(event.paidCents)}</div>
-            </div>
-
-            <div className="eventEditor__stat">
-              <div className="eventEditor__label">Début</div>
-              <div className="eventEditor__value">{ev.startsAt}</div>
-            </div>
-
-            <div className="eventEditor__stat">
-              <div className="eventEditor__label">Fin</div>
-              <div className="eventEditor__value">{ev.endsAt}</div>
-            </div>
-          </div>
-
-          <div className="eventEditor__hint">
-            Les infos détaillées (slug, description, billets, etc.)
-            viendront avec une RPC <code>get_event_detail</code>.
-          </div>
-        </div>
+        <EventEditorForm event={ev} onConfirm={onUpdateEvent} />
       </CardBody>
     </Card>
   );

@@ -2,7 +2,6 @@
   position: sticky;
   top: 0;
   z-index: 80;
-
   border-bottom: 1px solid rgba(229,231,235,.7);
   background: rgba(255,255,255,.72);
   backdrop-filter: blur(14px);
@@ -14,9 +13,10 @@ html.dark .topNav{
 }
 
 .topNav__inner{
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 12px 16px;
+  width: 100%;
+  margin: 0;
+  padding: 24px 32px;
+  box-sizing: border-box;
 
   display: flex;
   align-items: center;
@@ -78,7 +78,9 @@ html.dark .topNav__logoFallback{
   max-width: 520px;
 }
 
-html.dark .topNav__title{ color: #fff; }
+html.dark .topNav__title{
+  color: #fff;
+}
 
 .topNav__subtitle{
   margin-top: 2px;
@@ -86,4 +88,12 @@ html.dark .topNav__title{ color: #fff; }
   color: #6b7280;
 }
 
-html.dark .topNav__subtitle{ color: rgba(255,255,255,.65); }
+html.dark .topNav__subtitle{
+  color: rgba(255,255,255,.65);
+}
+
+@media (max-width: 1000px){
+  .topNav__inner{
+    padding: 16px;
+  }
+}

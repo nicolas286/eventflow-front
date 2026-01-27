@@ -46,10 +46,6 @@
   padding-left:0;
 }
 
-.eventTable__table tbody tr{
-  cursor:pointer;
-}
-
 .eventTable__table tbody tr:hover{
   background:#f9fafb;
 }
@@ -71,22 +67,6 @@
   gap:8px;
   justify-content:flex-end;
   align-items:center;
-}
-
-.eventRowToggle{
-  width:34px;
-  height:34px;
-  padding:0 !important;
-  border-radius:10px;
-  font-weight:900;
-  line-height:1;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-}
-
-.eventRowToggle.isActive{
-  background:rgba(0,0,0,0.06);
 }
 
 .eventTable__hint{

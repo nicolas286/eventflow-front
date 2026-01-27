@@ -9,6 +9,7 @@ import {
   Input,
 } from "../../../ui/components";
 import { getStatusInfo } from "../../../domain/helpers/status";
+import { formatDateTimeHuman } from "../../../domain/helpers/dateTime";
 import type { EventOverviewRow } from "../../../domain/models/admin/admin.eventsOverview.schema";
 
 type EventTableProps = {
@@ -21,8 +22,9 @@ type EventTableProps = {
   onAdd: () => void;
 };
 
-function formatEUR(cents: number) {
-  return `${(cents / 100).toFixed(2)} €`;
+function safeStr(v: unknown) {
+  if (v === null || v === undefined || v === "") return "—";
+  return String(v);
 }
 
 export default function EventTable({
@@ -58,44 +60,47 @@ export default function EventTable({
               <tr>
                 <th>Titre</th>
                 <th>Statut</th>
-                <th>Commandes</th>
-                <th>Total encaissé</th>
+                <th>Début</th>
+                <th>Fin</th>
+                <th>Lieu</th>
                 <th className="eventTable__actionsHead" />
               </tr>
             </thead>
 
             <tbody>
+              {events.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="eventTable-empty">
+                    Aucun événement pour le moment
+                  </td>
+                </tr>
+              )}
+
               {events.map((row) => {
-                const ev = row.event;
+                const ev = row.event as any;
                 const s = getStatusInfo(ev.isPublished ? "open" : "draft");
                 const isSelected = ev.id === editingId;
 
                 return (
-                  <tr
-                    key={ev.id}
-                    className={isSelected ? "isSelected" : undefined}
-                    onClick={() => onSelect(ev.id)}
-                  >
-                    <td className="title">{ev.title}</td>
+                  <tr key={ev.id} className={isSelected ? "isSelected" : undefined}>
+                    <td className="title">{safeStr(ev.title)}</td>
                     <td>
                       <Badge tone={s.tone} label={s.label} />
                     </td>
-                    <td>{row.ordersCount}</td>
-                    <td>{formatEUR(row.paidCents)}</td>
+                    <td>{formatDateTimeHuman(ev.startsAt)}</td>
+                    <td>{formatDateTimeHuman(ev.endsAt)}</td>
+                    <td>{safeStr(ev.location)}</td>
 
                     <td className="eventTable__actions">
+                      <Button
+                        label={isSelected ? "Fermer" : "Éditer"}
+                        onClick={() => onSelect(ev.id)}
+                      />
                       <Button
                         variant="danger"
                         label="Suppr."
                         onClick={() => onDelete(ev.id)}
                       />
-                      <Button
-                        variant="ghost"
-                        className={`eventRowToggle ${isSelected ? "isActive" : ""}`}
-                        onClick={() => onSelect(ev.id)}
-                      >
-                        {isSelected ? "×" : ">"}
-                      </Button>
                     </td>
                   </tr>
                 );
@@ -105,7 +110,7 @@ export default function EventTable({
         </div>
 
         <div className="eventTable__hint">
-          Clique sur un événement pour ouvrir ou fermer l’éditeur.
+          Utilise “Éditer” pour ouvrir ou fermer le panneau d’édition.
         </div>
       </CardBody>
     </Card>
