@@ -10,14 +10,16 @@
   align-items: start;
 }
 
-
 .adminPageRight{
   display: grid;
   gap: 16px;
+  width: 100%;
+  padding: 24px 32px;
+  box-sizing: border-box;
 }
 
 @media (max-width: 1000px){
-  .adminPageGrid{
-    grid-template-columns: 1fr;
+  .adminPageRight{
+    padding: 16px;
   }
 }

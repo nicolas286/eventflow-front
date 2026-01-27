@@ -1,79 +1,91 @@
-.adminEventsGrid{
-  width:100%;
-  display:grid;
-  gap:32px;
-  align-items:start;
-  grid-template-columns:60% 40%;
-  padding:24px 32px !important;
-  box-sizing:border-box;
-}
+.adminEventsShell{
+  --editor-w: 440px;
+  --editor-gap: 24px;
 
-.adminEventsLeft,
-.adminEventsRight{
-  min-width:0;
+  width:100%;
+  position:relative;
+  padding: 12px 0;
   box-sizing:border-box;
 }
 
 .adminEventsLeft{
-  padding-left:0 !important;
+  width:100%;
+  transition: transform 180ms ease, width 180ms ease;
 }
 
 .adminEventsRight{
+  position:absolute;
+  right:0;
+  top:12px;
+  width:var(--editor-w);
   box-sizing:border-box;
-  padding-left:16px !important;
-  padding-right:0 !important;
-  border-left:1px solid rgba(0,0,0,0.06) !important;
+}
+
+.adminEventsShell.isEditorOpen .adminEventsLeft{
+  width: calc(100% - (var(--editor-w) + var(--editor-gap)));
+  transform: translateX(0);
 }
 
 .adminEventsEditorPanel{
-  margin-right:16px !important;
-  transform-origin:top right;
+  transform-origin: top right;
   animation-duration:180ms;
   animation-fill-mode:both;
 }
 
 .adminEventsEditorPanel.isOpen{
   animation-name:editorIn;
+  animation-timing-function:ease-out;
 }
 
 .adminEventsEditorPanel.isClosing{
   animation-name:editorOut;
+  animation-timing-function:ease-in;
 }
 
 @keyframes editorIn{
   from{
     opacity:0;
-    transform:translateY(8px) scale(0.98);
+    transform: translateX(8px) scale(0.98);
   }
   to{
     opacity:1;
-    transform:translateY(0) scale(1);
+    transform: translateX(0) scale(1);
   }
 }
 
 @keyframes editorOut{
   from{
     opacity:1;
-    transform:translateY(0) scale(1);
+    transform: translateX(0) scale(1);
   }
   to{
     opacity:0;
-    transform:translateY(8px) scale(0.98);
+    transform: translateX(8px) scale(0.98);
   }
 }
 
-@media (max-width:1050px){
-  .adminEventsGrid{
-    grid-template-columns:1fr;
-    padding:16px !important;
+@media (max-width: 1050px){
+  .adminEventsShell{
+    padding: 12px 0;
+  }
+
+  .adminEventsLeft{
+    width:100%;
+    transform:none;
+  }
+
+  .adminEventsShell.isEditorOpen .adminEventsLeft{
+    width:100%;
+    transform:none;
   }
 
   .adminEventsRight{
-    padding-left:0 !important;
-    border-left:0 !important;
+    position:static;
+    width:100%;
+    margin-top:16px;
   }
 
   .adminEventsEditorPanel{
-    margin-right:0 !important;
+    transform-origin: top center;
   }
 }
