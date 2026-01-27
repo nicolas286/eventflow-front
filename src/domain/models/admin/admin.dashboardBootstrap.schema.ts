@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { profileSchema } from "./profile.schema";
-import { membershipSchema } from "./membership.schema";
-import { organizationSchema } from "./organization.schema";
-import { organizationProfileSchema } from "./organizationProfile.schema";
-import { subscriptionSchema } from "./subscription.schema";
-import { planLimitsSchema } from "./planLimits.schema";
+import { profileSchema } from "../db/db.profile.schema";
+import { membershipSchema } from "../db/db.membership.schema";
+import { organizationSchema } from "../db/db.organization.schema";
+import { organizationProfileSchema } from "../db/db.organizationProfile.schema";
+import { subscriptionSchema } from "../db/db.subscription.schema";
+import { planLimitsSchema } from "../db/db.planLimits.schema";
 
 export const dashboardBootstrapSchema = z.object({
   profile: profileSchema,

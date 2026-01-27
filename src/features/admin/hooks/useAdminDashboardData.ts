@@ -3,9 +3,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { makeDashboardRepo } from "../../../gateways/supabase/repositories/dashboard/makeDashboardRepo";
 import { makeEventsRepo } from "../../../gateways/supabase/repositories/dashboard/makeEventsRepo";
-import type { DashboardBootstrap } from "../../../domain/models/dashboardBootstrap.schema";
-import type { EventsOverview } from "../../../domain/models/eventsOverview.schema";
-import type { EventOverviewRow } from "../../../domain/models/eventOverviewRow.schema";
+import type { DashboardBootstrap } from "../../../domain/models/admin/admin.dashboardBootstrap.schema";
+import type { EventsOverview } from "../../../domain/models/admin/admin.eventsOverview.schema";
+import type { EventOverviewRow } from "../../../domain/models/admin/admin.eventsOverview.schema";
 
 type State = {
   loading: boolean;

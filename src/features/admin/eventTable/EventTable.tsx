@@ -2,7 +2,7 @@ import "../../../styles/eventTable.css";
 
 import { Badge, Button, Card, CardBody, CardHeader, Input } from "../../../ui/components";
 import { getStatusInfo } from "../../../domain/helpers/status";
-import type { EventOverviewRow } from "../../../domain/models/eventOverviewRow.schema";
+import type { EventOverviewRow } from "../../../domain/models/admin/admin.eventsOverview.schema";
 
 type EventTableProps = {
   events: EventOverviewRow[];

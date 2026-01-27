@@ -4,9 +4,9 @@ import { snakeToCamel } from "../../../../domain/helpers/snakeToCamel";
 import {
   publicOrgEventsOverviewSchema,
   type PublicOrgEventsOverview,
-} from "../../../../domain/models/publicOrgEventsOverview.schema";
+} from "../../../../domain/models/public/public.orgEventsOverview.schema";
 
-export function makePublicEventsRepo(supabase: SupabaseClient) {
+export function makePublicEventsOverviewRepo(supabase: SupabaseClient) {
   return {
     async getPublicOrgEventsOverview(
       orgSlug: string

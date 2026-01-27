@@ -6,7 +6,7 @@ import Card, { CardBody, CardHeader } from "../../ui/components/card/Card";
 
 import { AdminStats, EventTable, EventEditor } from "../../features/admin";
 import type { AdminOutletContext } from "./AdminDashboard";
-import type { EventOverviewRow } from "../../domain/models/eventOverviewRow.schema";
+import type { EventOverviewRow } from "../../domain/models/admin/admin.eventsOverview.schema";
 
 export default function AdminEventsPage() {
   const { events } = useOutletContext<AdminOutletContext>();

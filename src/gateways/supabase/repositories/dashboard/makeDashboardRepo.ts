@@ -4,7 +4,7 @@ import { snakeToCamel } from "../../../../domain/helpers/snakeToCamel";
 import {
   dashboardBootstrapSchema,
   type DashboardBootstrap,
-} from "../../../../domain/models/dashboardBootstrap.schema";
+} from "../../../../domain/models/admin/admin.dashboardBootstrap.schema";
 
 export function makeDashboardRepo(supabase: SupabaseClient) {
   return {

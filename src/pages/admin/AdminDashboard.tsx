@@ -5,8 +5,8 @@ import TopNav, { type OrgInfo } from "../../ui/components/navigation/TopNav";
 import { supabase } from "../../gateways/supabase/supabaseClient";
 import { useAdminDashboardData } from "../../features/admin/hooks/useAdminDashboardData";
 
-import type { EventOverviewRow } from "../../domain/models/eventOverviewRow.schema";
-import type { DashboardBootstrap } from "../../domain/models/dashboardBootstrap.schema";
+import type { EventOverviewRow } from "../../domain/models/admin/admin.eventsOverview.schema";
+import type { DashboardBootstrap } from "../../domain/models/admin/admin.dashboardBootstrap.schema";
 
 
 export type AdminOutletContext = {

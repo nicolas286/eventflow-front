@@ -4,7 +4,7 @@ import { snakeToCamel } from "../../../../domain/helpers/snakeToCamel";
 import {
   eventsOverviewSchema,
   type EventsOverview,
-} from "../../../../domain/models/eventsOverview.schema";
+} from "../../../../domain/models/admin/admin.eventsOverview.schema";
 
 export function makeEventsRepo(supabase: SupabaseClient) {
   return {

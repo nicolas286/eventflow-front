@@ -1,15 +1,11 @@
 import { z } from "zod";
+import { eventSchema } from "../db/db.event.schema";
 
-export const eventOverviewEventSchema = z.object({
-  id: z.uuid(),
-  orgId: z.uuid(),
-  title: z.string().min(3).max(200),
-  location: z.string().max(5000, "L'emplacement est trop long").nullable(),
-  startsAt: z.string(),
-  endsAt: z.string(),
-  isPublished: z.boolean(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
+export const eventOverviewEventSchema = eventSchema.omit({
+  slug: true,
+  description: true,
+  bannerUrl: true,
+  depositCents: true,
 });
 
 export const eventOverviewRowSchema = z.object({
@@ -20,6 +16,14 @@ export const eventOverviewRowSchema = z.object({
 
 export const eventOverviewRowsSchema = z.array(eventOverviewRowSchema);
 
+export const eventsOverviewSchema = z.object({
+  orgId: z.uuid(),
+  events: eventOverviewRowsSchema,
+});
+
+
 export type EventOverviewEvent = z.infer<typeof eventOverviewEventSchema>;
 export type EventOverviewRow = z.infer<typeof eventOverviewRowSchema>;
 export type EventOverviewRows = z.infer<typeof eventOverviewRowsSchema>;
+export type EventsOverview = z.infer<typeof eventsOverviewSchema>;
+

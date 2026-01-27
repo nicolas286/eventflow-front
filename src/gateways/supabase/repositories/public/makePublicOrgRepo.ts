@@ -4,7 +4,7 @@ import { snakeToCamel } from "../../../../domain/helpers/snakeToCamel";
 import {
   publicOrgBySlugSchema,
   type PublicOrgBySlug,
-} from "../../../../domain/models/publicOrgBySlug.schema";
+} from "../../../../domain/models/public/public.orgBySlug.schema";
 
 export function makePublicOrgRepo(supabase: SupabaseClient) {
   return {

@@ -1,7 +1,7 @@
 import "../../../styles/auth.css";
 
 import { useState } from "react";
-import { signupSchema, type SignupInput } from "../../../domain/models/auth.schema";
+import { signupSchema, type SignupInput } from "../../../domain/models/admin/admin.auth.schema";
 import { authRepo } from "../../../gateways/supabase/repositories/auth/authRepo";
 import { normalizeError } from "../../../domain/errors/errors";
 import Button from "../button/Button";

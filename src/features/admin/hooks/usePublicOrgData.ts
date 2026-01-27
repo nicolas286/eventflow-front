@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { makePublicOrgRepo } from "../../../gateways/supabase/repositories/public/makePublicOrgRepo";
-import { makePublicEventsRepo } from "../../../gateways/supabase/repositories/public/makePublicEventsRepo";
+import { makePublicEventsOverviewRepo } from "../../../gateways/supabase/repositories/public/makePublicEventsOverviewRepo";
 
-import type { PublicOrgBySlug } from "../../../domain/models/publicOrgBySlug.schema";
-import type { PublicEventOverview } from "../../../domain/models/publicOrgEventsOverview.schema";
+import type { PublicOrgBySlug } from "../../../domain/models/public/public.orgBySlug.schema";
+import type { PublicEventOverview } from "../../../domain/models/public/public.orgEventsOverview.schema";
 
 type State = {
   loading: boolean;
@@ -26,7 +26,7 @@ export function usePublicOrgData(params: {
   const { supabase, orgSlug } = params;
 
   const orgRepo = useMemo(() => makePublicOrgRepo(supabase), [supabase]);
-  const eventsRepo = useMemo(() => makePublicEventsRepo(supabase), [supabase]);
+  const eventsRepo = useMemo(() => makePublicEventsOverviewRepo(supabase), [supabase]);
 
   const [state, setState] = useState<State>({
     loading: true,
