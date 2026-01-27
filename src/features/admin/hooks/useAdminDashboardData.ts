@@ -4,8 +4,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { makeDashboardRepo } from "../../../gateways/supabase/repositories/dashboard/makeDashboardRepo";
 import { makeEventsRepo } from "../../../gateways/supabase/repositories/dashboard/makeEventsRepo";
 import type { DashboardBootstrap } from "../../../domain/models/admin/admin.dashboardBootstrap.schema";
-import type { EventsOverview } from "../../../domain/models/admin/admin.eventsOverview.schema";
-import type { EventOverviewRow } from "../../../domain/models/admin/admin.eventsOverview.schema";
+import type { EventsOverview, EventOverviewRow } from "../../../domain/models/admin/admin.eventsOverview.schema";
+import { normalizeError } from "../../../domain/errors/errors";
 
 type State = {
   loading: boolean;
@@ -42,7 +42,9 @@ export function useAdminDashboardData(params: { supabase: SupabaseClient }) {
 
         // 1) bootstrap (org via membership)
         const bootstrap = await dashboardRepo.getDashboardBootstrap();
-        const orgId = bootstrap.organization?.id ? String(bootstrap.organization.id) : null;
+        const orgId = bootstrap.organization?.id
+          ? String(bootstrap.organization.id)
+          : null;
 
         if (cancelled) return;
 
@@ -69,14 +71,20 @@ export function useAdminDashboardData(params: { supabase: SupabaseClient }) {
           bootstrap,
           orgId,
           eventsOverview,
-          events: eventsOverview.events, // ✅ déjà EventOverviewRow[]
+          events: eventsOverview.events,
         });
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (cancelled) return;
+
+        const ne = normalizeError(
+          e,
+          "Impossible de charger les données du dashboard"
+        );
+
         setState((s) => ({
           ...s,
           loading: false,
-          error: e?.message ?? "Erreur inconnue",
+          error: ne.message,
         }));
       }
     }

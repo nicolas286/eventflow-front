@@ -6,6 +6,7 @@ import { makePublicEventsOverviewRepo } from "../../../gateways/supabase/reposit
 
 import type { PublicOrgBySlug } from "../../../domain/models/public/public.orgBySlug.schema";
 import type { PublicEventOverview } from "../../../domain/models/public/public.orgEventsOverview.schema";
+import { normalizeError } from "../../../domain/errors/errors";
 
 type State = {
   loading: boolean;
@@ -26,7 +27,10 @@ export function usePublicOrgData(params: {
   const { supabase, orgSlug } = params;
 
   const orgRepo = useMemo(() => makePublicOrgRepo(supabase), [supabase]);
-  const eventsRepo = useMemo(() => makePublicEventsOverviewRepo(supabase), [supabase]);
+  const eventsRepo = useMemo(
+    () => makePublicEventsOverviewRepo(supabase),
+    [supabase]
+  );
 
   const [state, setState] = useState<State>({
     loading: true,
@@ -58,15 +62,14 @@ export function usePublicOrgData(params: {
       }
 
       try {
-        setState((s) => ({
-          ...s,
+        setState({
           loading: true,
           error: null,
           orgSlug: slug,
           org: null,
           profile: null,
           events: [],
-        }));
+        });
 
         // 1) org info
         const orgData = await orgRepo.getPublicOrgBySlug(slug);
@@ -84,12 +87,17 @@ export function usePublicOrgData(params: {
           profile: orgData.profile,
           events: overview.events,
         });
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (cancelled) return;
+
+        const ne = normalizeError(
+          e,
+          "Impossible de charger la page de l’organisation"
+        );
 
         setState({
           loading: false,
-          error: e?.message ?? "Erreur inconnue",
+          error: ne.message,
           orgSlug: slug,
           org: null,
           profile: null,

@@ -34,11 +34,22 @@ export const publicEventProductSchema = eventProductSchema.pick({
   sortOrder: true,
 });
 
-export const publicEventDetailSchema = z.object({
+export const publicFormFieldSchema = eventFormFieldSchema.pick({
+  id: true,
+  label: true,
+  fieldKey: true,
+  fieldType: true,
+  isRequired: true,
+  options: true,
+  sortOrder: true,
+});
+
+export const publicEventDetailSchema =
+ z.object({
   org: publicOrgProfileOverviewForEventPageSchema,
   event: publicEventSchema,
   products: z.array(publicEventProductSchema),
-  formFields: z.array(eventFormFieldSchema),
+  formFields: z.array(publicFormFieldSchema),
 });
 
 export type PublicEventDetail = z.infer<typeof publicEventDetailSchema>;
