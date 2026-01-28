@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
+import { ConfirmDeleteModal } from "../../ui/components/modals/ConfirmDeleteModal";
 
 import "../../styles/adminEventsPage.css";
 
@@ -17,11 +18,20 @@ import { Button } from "../../ui/components";
 import { supabase } from "../../gateways/supabase/supabaseClient";
 import { useCreateEvent } from "../../features/admin/hooks/useCreateEvent";
 import { useUpdateEvent } from "../../features/admin/hooks/useUpdateEvent";
+import { useDeleteEvent } from "../../features/admin/hooks/useDeleteEvent";
 import { PlusIcon } from "../../ui/components/icon/Icons";
 
 type EditableEventFields = Partial<
   Pick<EventOverviewRow["event"], "title" | "isPublished" | "startsAt" | "endsAt">
 > & { location?: string | null };
+
+type ConfirmState = {
+  open: boolean;
+  eventId: string | null;
+  title: string | null;
+};
+
+
 
 export default function AdminEventsPage() {
   const { events, orgId, refetch } = useOutletContext<AdminOutletContext>();
@@ -40,8 +50,21 @@ export default function AdminEventsPage() {
     reset: resetSave,
   } = useUpdateEvent({ supabase });
 
+  const {
+    deleteEvent: doDelete,
+    loading: deleting,
+    error: deleteError,
+    reset: resetDelete,
+  } = useDeleteEvent({ supabase });
+
   const { selectedRow, editingId, select, closeIf, onAnimEnd, panelClassName } =
     useEventEditorPanel(events);
+
+  const [confirm, setConfirm] = useState<ConfirmState>({
+    open: false,
+    eventId: null,
+    title: null,
+  });
 
   const stats = useMemo(() => {
     const totalEvents = events.length;
@@ -66,8 +89,37 @@ export default function AdminEventsPage() {
   };
 
   const deleteEvent = (id: string) => {
-    closeIf(id);
-    void id;
+    resetDelete();
+
+    const row = events.find((e) => e.event.id === id);
+
+    setConfirm({
+      open: true,
+      eventId: id,
+      title: row?.event.title ?? "cet événement",
+    });
+  };
+
+  const cancelDelete = () => {
+    resetDelete();
+    setConfirm({ open: false, eventId: null, title: null });
+  };
+
+  const confirmDelete = async () => {
+    if (!confirm.eventId) return;
+
+    // UX: ferme le panel si on supprime l'event affiché
+    closeIf(confirm.eventId);
+
+    const ok = await doDelete({
+      eventId: confirm.eventId,
+      orgId, // optionnel si ton repo le supporte
+    });
+
+    if (!ok) return; // on laisse le modal ouvert + message
+
+    await refetch();
+    cancelDelete();
   };
 
   const addEvent = async () => {
@@ -99,15 +151,20 @@ export default function AdminEventsPage() {
       <AdminStats stats={stats} />
 
       <div className="adminEventsActions">
-        
         <Button
           label={creating ? "Création…" : "Nouvel événement"}
           onClick={addEvent}
-          disabled={creating}><PlusIcon/>Nouvel événement</Button>
+          disabled={creating}
+        >
+          <PlusIcon />
+          Nouvel événement
+        </Button>
       </div>
 
-      {(createError || saveError) && (
-        <div className="adminEventsError">{createError ?? saveError}</div>
+      {(createError || saveError || deleteError) && (
+        <div className="adminEventsError">
+          {createError ?? saveError ?? deleteError}
+        </div>
       )}
 
       <div
@@ -142,6 +199,16 @@ export default function AdminEventsPage() {
           </div>
         )}
       </div>
+
+      <ConfirmDeleteModal
+        open={confirm.open}
+        title="Supprimer l’événement ?"
+        eventName={confirm.title}
+        busy={deleting}
+        error={deleteError}
+        onCancel={cancelDelete}
+        onConfirm={confirmDelete}
+      />
     </>
   );
 }
