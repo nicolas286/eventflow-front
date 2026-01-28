@@ -1,4 +1,5 @@
 /* src/styles/publicPages.css */
+/* LIGHT MODE ONLY */
 
 .publicPage {
   position: relative;
@@ -10,92 +11,20 @@
 .publicSurface {
   border-radius: 18px;
   padding: 18px;
-  background: rgb(255 255 255 / 0.78);
-  border: 1px solid rgb(0 0 0 / 0.06);
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
   box-shadow:
-    0 10px 28px rgb(0 0 0 / 0.06),
-    0 1px 0 rgb(255 255 255 / 0.6) inset;
-  backdrop-filter: blur(10px);
+    0 10px 28px rgba(0, 0, 0, 0.06),
+    0 1px 0 rgba(255, 255, 255, 0.6) inset;
+  color: #0f172a;
 }
 
-@media (prefers-color-scheme: dark) {
-  .publicSurface {
-    background: rgb(20 20 24 / 0.64);
-    border: 1px solid rgb(255 255 255 / 0.08);
-    box-shadow:
-      0 10px 28px rgb(0 0 0 / 0.35),
-      0 1px 0 rgb(255 255 255 / 0.06) inset;
-  }
-}
+/* ---------- Banner ---------- */
 
-/* ---------- Hero ---------- */
-
-.publicHero {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.publicBrand {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-width: 0;
-}
-
-.publicLogo {
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
-  object-fit: cover;
-  flex: 0 0 auto;
-  border: 1px solid rgb(0 0 0 / 0.08);
-}
-
-@media (prefers-color-scheme: dark) {
-  .publicLogo {
-    border-color: rgb(255 255 255 / 0.12);
-  }
-}
-
-.publicTitleBlock {
-  min-width: 0;
-}
-
-.publicTitle {
-  margin: 0;
-  font-size: 24px;
-  line-height: 1.15;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
-.publicSubtitle {
-  margin-top: 6px;
-  font-size: 13px;
-  opacity: 0.72;
-}
-
-.publicActions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 0 0 auto;
-}
-
-.publicDivider {
-  height: 1px;
-  width: 100%;
-  background: rgb(0 0 0 / 0.06);
-  margin: 14px 0;
-}
-
-@media (prefers-color-scheme: dark) {
-  .publicDivider {
-    background: rgb(255 255 255 / 0.08);
-  }
+.publicBannerWrap {
+  position: relative;
+  margin-top: 12px;
+  overflow: visible;
 }
 
 .publicBanner {
@@ -103,186 +32,181 @@
   height: 240px;
   border-radius: 18px;
   object-fit: cover;
-  margin-top: 12px;
-  border: 1px solid rgb(0 0 0 / 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-@media (prefers-color-scheme: dark) {
-  .publicBanner {
-    border-color: rgb(255 255 255 / 0.08);
-  }
+/* Logo overlay */
+.publicBannerLogo {
+  position: absolute;
+  left: 16px;
+  bottom: -55px;
+
+  width: 104px;
+  height: 104px;
+  border-radius: 26px;
+  object-fit: cover;
+
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.22);
 }
 
-@media (max-width: 720px) {
-  .publicHero {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .publicActions {
-    justify-content: flex-start;
-    flex-wrap: wrap;
-  }
-
-  .publicBanner {
-    height: 190px;
-  }
+.publicBannerUnderSpace {
+  height: 64px;
 }
 
-/* ---------- Prose / text ---------- */
+/* ---------- Header row ---------- */
 
-.publicMetaRow {
+.publicHeaderRow {
+  position: relative;
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.publicTitleBlock {
+  min-width: 0;
+}
+
+/* ⬆️ 24px → 29px (+20%) */
+.publicTitle {
+  margin: 0;
+  font-size: 29px;
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+
+/* ⬆️ 13px → 16px */
+.publicSubtitle {
+  margin-top: 6px;
+  font-size: 16px;
+  color: #475569;
+}
+
+/* ---------- Date ---------- */
+
+/* ⬆️ 13px → 16px */
+.publicDateChip {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+/* ---------- Actions ---------- */
+
+.publicActions {
+  display: flex;
+  align-items: center;
   gap: 10px;
-  font-size: 13px;
-  opacity: 0.82;
-  margin-top: 10px;
 }
 
+/* ---------- Divider ---------- */
+
+.publicDivider {
+  height: 1px;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.06);
+  margin: 20px 0;
+}
+
+/* ---------- Content ---------- */
+
+/* ⬆️ 15px → 18px */
 .publicSectionTitle {
-  margin: 22px 0 10px;
-  font-size: 15px;
+  margin: 26px 0 12px;
+  font-size: 18px;
   font-weight: 800;
-  letter-spacing: -0.01em;
+  color: #0f172a;
 }
 
+/* ⬆️ 14px → 17px */
 .publicProse {
-  font-size: 14px;
+  font-size: 17px;
   line-height: 1.65;
-  opacity: 0.92;
+  color: #334155;
 }
 
-.publicProse p {
-  margin: 0;
-}
-
-.publicProse p + p {
-  margin-top: 10px;
-}
-
-.publicProse a {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.publicCardTitle {
-  font-weight: 800;
-  margin: 0;
-  letter-spacing: -0.01em;
-}
-
-.publicCardText {
-  margin-top: 8px;
-  font-size: 13px;
-  opacity: 0.8;
-}
-
+/* ⬆️ 14px → 17px */
 .publicEmpty {
-  opacity: 0.75;
-  padding: 14px 0;
+  color: #64748b;
+  font-size: 17px;
+  padding: 16px 0;
 }
 
-/* ---------- Full width lists + gutter ---------- */
+/* ---------- Lists ---------- */
 
 .publicGutter {
   padding-left: 10px;
   padding-right: 10px;
 }
 
-@media (max-width: 520px) {
-  .publicGutter {
-    padding-left: 8px;
-    padding-right: 8px;
-  }
-}
-
 .publicList {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  width: 100%;
+  gap: 14px;
 }
 
 .publicGrid2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  width: 100%;
+  gap: 14px;
 }
 
 @media (max-width: 860px) {
   .publicGrid2 {
     grid-template-columns: 1fr;
   }
-}
 
-/* ---------- ✅ Admin-like sizing for event list ---------- */
-/* Mirrors the idea in adminEventsPage.css (editor width + gap). :contentReference[oaicite:1]{index=1} */
+  .publicHeaderRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-top: 20px;
+  }
 
-.publicEventsShell {
-  --rail-w: 440px;   /* same as --editor-w */
-  --rail-gap: 24px;  /* same as --editor-gap */
-
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-}
-
-/* Left side takes the "admin left" width: 100% - rail - gap
-   This gives the same perceived size as admin list when the editor exists. */
-.publicEventsLeft {
-  width: calc(100% - (var(--rail-w) + var(--rail-gap)));
-  min-width: 0;
-}
-
-/* On smaller screens, just take full width. */
-@media (max-width: 1050px) {
-  .publicEventsLeft {
-    width: 100%;
+  .publicDateChip {
+    position: static;
+    transform: none;
+    margin: 10px 0;
   }
 }
 
-/* ---------- Fixed bottom-right logo ---------- */
+/* ---------- Fixed logo bottom-right ---------- */
 
 .publicCornerLogoWrap {
   position: fixed;
   right: 18px;
   bottom: 18px;
   z-index: 50;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: auto;
+  text-decoration: none;
 }
 
 .publicCornerLogo {
-  width: 56px;
-  height: 56px;
-  border-radius: 18px;
+  width: 168px;
+  height: 168px;
+  border-radius: 36px;
   object-fit: cover;
-  border: 1px solid rgb(0 0 0 / 0.10);
-  box-shadow: 0 16px 34px rgb(0 0 0 / 0.20);
-  background: rgb(255 255 255 / 0.85);
-  backdrop-filter: blur(10px);
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.22);
+  transition: transform 160ms ease, box-shadow 160ms ease;
 }
 
-@media (prefers-color-scheme: dark) {
-  .publicCornerLogo {
-    border-color: rgb(255 255 255 / 0.14);
-    background: rgb(20 20 24 / 0.65);
-    box-shadow: 0 16px 34px rgb(0 0 0 / 0.45);
-  }
-}
-
-@media (max-width: 520px) {
-  .publicCornerLogoWrap {
-    right: 12px;
-    bottom: 12px;
-  }
-  .publicCornerLogo {
-    width: 48px;
-    height: 48px;
-    border-radius: 16px;
-  }
+.publicCornerLogoWrap:hover .publicCornerLogo {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 34px 78px rgba(0, 0, 0, 0.26);
 }
