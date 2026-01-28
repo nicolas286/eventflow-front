@@ -1,34 +1,31 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { supabaseSafe } from "../../supabaseSafe";
-import { registerPayloadSchema, 
-    registerResponseSchema,
-    type RegisterPayload,
-    type RegisterResponse,
-} from "../../../../domain/models/public/public.registerPayload.schema";
+import type { RegisterResponse, RegisterPayload } from "../../../../domain/models/public/public.registerPayload.schema";
 
-/**
- * Repo: Registration (PUBLIC)
- * - appelle l’edge function `register`
- * - Turnstile token inclus dans payload
- */
 export function createRegisterRepo(supabase: SupabaseClient) {
   return {
     async register(input: RegisterPayload): Promise<RegisterResponse> {
-      // 1) Validate front payload (Zod) BEFORE sending anything
-      const validated = registerPayloadSchema.parse(input);
-
-      // 2) Call edge function
-      const raw = await supabaseSafe(async () => {
-        const { data, error } = await supabase.functions.invoke("register", {
-          body: validated,
-        });
-
-        if (error) throw error;
-        return data;
+      // IMPORTANT: invoke retourne { data, error }
+      const { data, error } = await supabase.functions.invoke("register", {
+        body: input,
       });
 
-      // 3) Parse response (success OR error)
-      return registerResponseSchema.parse(raw);
+      // si l'edge renvoie un status != 2xx, supabase met souvent error ici
+      if (error) {
+        // error.context?.body contient parfois la réponse JSON string
+        const details =
+          (error as any)?.context?.body ??
+          (error as any)?.message ??
+          String(error);
+
+        throw new Error(details);
+      }
+
+      // si data est null => gros signal (pas normal si edge a répondu)
+      if (!data) {
+        throw new Error("REGISTER_EMPTY_RESPONSE");
+      }
+
+      return data as RegisterResponse;
     },
   };
 }

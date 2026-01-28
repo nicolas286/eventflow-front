@@ -1,11 +1,7 @@
 import { useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-
 import { createRegisterRepo } from "../../../gateways/supabase/repositories/public/registerRepo";
-import type {
-  RegisterPayload,
-  RegisterResponse,
-} from "../../../domain/models/public/public.registerPayload.schema";
+import type { RegisterPayload, RegisterResponse } from "../../../domain/models/public/public.registerPayload.schema";
 import { normalizeError } from "../../../domain/errors/errors";
 
 type State = {
@@ -16,7 +12,6 @@ type State = {
 
 export function useRegister(params: { supabase: SupabaseClient }) {
   const { supabase } = params;
-
   const registerRepo = useMemo(() => createRegisterRepo(supabase), [supabase]);
 
   const [state, setState] = useState<State>({
@@ -25,15 +20,19 @@ export function useRegister(params: { supabase: SupabaseClient }) {
     result: null,
   });
 
-  async function register(input: RegisterPayload): Promise<RegisterResponse | null> {
+  async function register(input: RegisterPayload): Promise<RegisterResponse> {
     try {
       setState({ loading: true, error: null, result: null });
 
+      console.log("[register] sending", input);
+
       const result = await registerRepo.register(input);
 
-      // si l’edge renvoie { error: ... }, on le traite comme erreur UI
+      console.log("[register] received", result);
+
+      // si l’edge renvoie { error: ... }
       if (result && typeof result === "object" && "error" in result) {
-        const msg = typeof result.error === "string" ? result.error : "Erreur lors de l’inscription";
+        const msg = typeof (result as any).error === "string" ? (result as any).error : "Erreur register";
         setState({ loading: false, error: msg, result });
         return result;
       }
@@ -41,9 +40,14 @@ export function useRegister(params: { supabase: SupabaseClient }) {
       setState({ loading: false, error: null, result });
       return result;
     } catch (e: unknown) {
+      // IMPORTANT: on LOG le vrai problème, sinon tu vois juste "null"
+      console.error("[register] failed", e);
+
       const ne = normalizeError(e, "Impossible de finaliser la réservation");
       setState({ loading: false, error: ne.message, result: null });
-      return null;
+
+      // au lieu de retourner null (qui casse tes if), on throw :
+      throw e;
     }
   }
 
@@ -51,9 +55,5 @@ export function useRegister(params: { supabase: SupabaseClient }) {
     setState({ loading: false, error: null, result: null });
   }
 
-  return {
-    ...state,
-    register,
-    reset,
-  };
+  return { ...state, register, reset };
 }

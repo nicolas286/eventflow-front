@@ -11,6 +11,7 @@ import Badge from "../../ui/components/badge/Badge";
 import { PublicEventHeader } from "./checkout/PublicEventHeader";
 import { loadDraft, saveDraft } from "./checkout/checkoutStore";
 
+
 import "../../styles/publicPages.css";
 
 type Field = {
@@ -24,6 +25,11 @@ type Field = {
 };
 
 type Draft = ReturnType<typeof loadDraft>;
+
+// ✅ on garde un “slot” participant avec son productId + ses réponses
+type AttendeeSlot = Record<string, unknown> & {
+  eventProductId: string;
+};
 
 export function EventAttendeesPage() {
   const navigate = useNavigate();
@@ -62,48 +68,74 @@ export function EventAttendeesPage() {
     return [...ff].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   }, [data?.formFields]);
 
-  // Compute attendeesCount from DB products + selected quantities
-  const attendeesCount = useMemo(() => {
-    const products = data?.products ?? [];
-    return products.reduce((acc, p) => {
-      const qty = quantities[p.id] ?? 0;
-      if (!p.createsAttendees) return acc;
-      return acc + (Number(qty) || 0) * (p.attendeesPerUnit ?? 0);
-    }, 0);
+  // ✅ Build the attendee "slots" we expect, based on selected products
+  const expectedSlots: AttendeeSlot[] = useMemo(() => {
+    const products = [...(data?.products ?? [])].sort(
+      (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
+    );
+
+    const slots: AttendeeSlot[] = [];
+
+    for (const p of products) {
+      const qty = Number(quantities[p.id] ?? 0) || 0;
+      if (!p.createsAttendees) continue;
+
+      const perUnit = p.attendeesPerUnit ?? 0;
+      const count = qty * perUnit;
+
+      for (let i = 0; i < count; i++) {
+        slots.push({ eventProductId: p.id });
+      }
+    }
+
+    return slots;
   }, [data?.products, quantities]);
 
-  // ✅ Ensure attendees array length matches attendeesCount (effect, not memo)
+  const attendeesCount = expectedSlots.length;
+
+  // ✅ Ensure draft.attendees matches expected slots (length + eventProductId)
   useEffect(() => {
     if (!orgSlug || !eventSlug) return;
     if (!data) return;
     if (!draft) return;
 
-    const current = draft.attendees ?? [];
-    if (current.length === attendeesCount) return;
+    const current = (draft.attendees ?? []) as Array<Record<string, unknown>>;
 
-    const next = [...current];
-    while (next.length < attendeesCount) next.push({});
-    while (next.length > attendeesCount) next.pop();
+    // construit next en conservant les réponses existantes par index
+    const next = expectedSlots.map((slot, idx) => {
+      const prev = current[idx] ?? {};
+      // Force eventProductId du slot, tout en gardant les réponses de l’utilisateur
+      return { ...prev, eventProductId: slot.eventProductId } as AttendeeSlot;
+    });
+
+    // évite de persister si identique (préviens loops)
+    const sameLength = next.length === current.length;
+    const sameIds =
+      sameLength &&
+      next.every((a, i) => a.eventProductId === (current[i] as any)?.eventProductId);
+
+    if (sameIds) return;
 
     persist({
       ...draft,
-      attendees: next,
+      attendees: next as any,
       acceptedTerms: false,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [attendeesCount, data, orgSlug, eventSlug, draft?.attendees?.length]);
+  }, [expectedSlots, data, orgSlug, eventSlug, draft]);
 
-  const attendees = draft?.attendees ?? [];
+  const attendees = (draft?.attendees ?? []) as AttendeeSlot[];
 
   function setAnswer(attendeeIndex: number, fieldKey: string, value: unknown) {
     if (!draft) return;
+
     const nextAttendees = attendees.map((a, idx) =>
       idx === attendeeIndex ? { ...a, [fieldKey]: value } : a
     );
 
     persist({
       ...draft,
-      attendees: nextAttendees,
+      attendees: nextAttendees as any,
       acceptedTerms: false,
     });
   }
