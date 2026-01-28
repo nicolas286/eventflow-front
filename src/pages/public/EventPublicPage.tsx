@@ -41,6 +41,16 @@
    *     sortOrder: number
    *   }>
    * }
+   * // ✅ Comportement :
+   * - Bannière OK mais fond plus clair
+   * - Logo plus grand
+   * - Wizard de réservation en 3 étapes : tickets → infos → récapitulatif + paiement
+   * - utiliser createsAttendees et attendeesPerUnit pour demander X formulaires par billet
+   * - Afficher les champs de formulaire demandés
+   * - Sélection de chaque produit avec +/- (pas quantités négatives)
+   * - Il faut au moins UN produit "gatekeeper" avec createsAttendees=true pour passer à l'étape suivante
+   * - Afficher SOLD OUT sur TOUT l'événement si pas de produit gatekeeper dispo
+   * - Afficher SOLD OUT sur le produit si stockQty === 0
    */
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "../../gateways/supabase/supabaseClient";
