@@ -103,36 +103,58 @@ export function EventPublicPage() {
 
   const { org, event, products, formFields } = data;
 
+  const startText = event.startsAt ? formatDateTimeHuman(event.startsAt) : null;
+  const endText = event.endsAt ? formatDateTimeHuman(event.endsAt) : null;
+
   return (
     <div className="publicPage">
-      {/* Fixed corner logo */}
+      {/* Fixed logo bottom-right */}
       {org?.logoUrl ? (
-        <Link
-          to={`/o/${orgSlug}`}
-          className="publicCornerLogoWrap"
-          aria-label="Retour à l'organisation"
-          title={org.slug}
-        >
+        <Link to={`/o/${orgSlug}`} className="publicCornerLogoWrap">
           <img src={org.logoUrl} alt={org.slug} className="publicCornerLogo" />
         </Link>
       ) : null}
 
       <Container>
-        {/* HERO surface */}
         <div className="publicSurface">
-          <div className="publicHero">
-            <div className="publicBrand">
-              {org?.logoUrl ? (
-                <img src={org.logoUrl} alt={org.slug} className="publicLogo" />
-              ) : null}
+          {/* Banner */}
+          {event.bannerUrl ? (
+            <>
+              <div className="publicBannerWrap">
+                <img
+                  src={event.bannerUrl}
+                  alt={event.title}
+                  className="publicBanner"
+                />
 
-              <div className="publicTitleBlock">
-                <h1 className="publicTitle">{event.title}</h1>
-                <div className="publicSubtitle">
-                  {event.location ?? "Lieu à venir"}
-                </div>
+                {org?.logoUrl ? (
+                  <img
+                    src={org.logoUrl}
+                    alt={org.slug}
+                    className="publicBannerLogo"
+                  />
+                ) : null}
+              </div>
+
+              <div className="publicBannerUnderSpace" />
+            </>
+          ) : null}
+
+          {/* Header row: title + date + back */}
+          <div className="publicHeaderRow">
+            <div className="publicTitleBlock">
+              <h1 className="publicTitle">{event.title}</h1>
+              <div className="publicSubtitle">
+                {event.location ?? "Lieu à venir"}
               </div>
             </div>
+
+            {(startText || endText) ? (
+              <div className="publicDateChip">
+                {startText ? <span>Début : {startText}</span> : null}
+                {endText ? <span>Fin : {endText}</span> : null}
+              </div>
+            ) : null}
 
             <div className="publicActions">
               <Link to={`/o/${orgSlug}`}>
@@ -140,29 +162,6 @@ export function EventPublicPage() {
               </Link>
             </div>
           </div>
-
-          {event.bannerUrl ? (
-            <img
-              src={event.bannerUrl}
-              alt={event.title}
-              className="publicBanner"
-            />
-          ) : null}
-
-          {event.startsAt ? (
-            <div className="publicMetaRow">
-              <Badge
-                tone="info"
-                label={`Début : ${formatDateTimeHuman(event.startsAt)}`}
-              />
-              {event.endsAt ? (
-                <Badge
-                  tone="neutral"
-                  label={`Fin : ${formatDateTimeHuman(event.endsAt)}`}
-                />
-              ) : null}
-            </div>
-          ) : null}
 
           <div className="publicDivider" />
 
@@ -186,14 +185,10 @@ export function EventPublicPage() {
           <div className="publicGutter">
             <div className="publicList">
               {products.map((p) => (
-                <Card key={p.id} style={{ width: "100%" }}>
+                <Card key={p.id}>
                   <CardHeader
-                    title={<div className="publicCardTitle">{p.name}</div>}
-                    subtitle={
-                      <div className="publicSubtitle">
-                        {p.priceCents} {p.currency}
-                      </div>
-                    }
+                    title={p.name}
+                    subtitle={`${p.priceCents} ${p.currency}`}
                     right={
                       <Badge
                         tone={p.stockQty === 0 ? "danger" : "success"}
@@ -202,18 +197,7 @@ export function EventPublicPage() {
                     }
                   />
                   <CardBody>
-                    {p.description ? (
-                      <div className="publicCardText">{p.description}</div>
-                    ) : null}
-
-                    <div className="publicMetaRow">
-                      <span>Stock : {p.stockQty ?? "∞"}</span>
-                      <span>Places/unité : {p.attendeesPerUnit}</span>
-                    </div>
-
-                    <div style={{ marginTop: 12 }}>
-                      <Button label="Choisir" />
-                    </div>
+                    <Button label="Choisir" />
                   </CardBody>
                 </Card>
               ))}
@@ -224,37 +208,27 @@ export function EventPublicPage() {
         {/* FORM FIELDS */}
         <div className="publicSectionTitle">Informations demandées</div>
 
-        {formFields.length === 0 ? (
-          <div className="publicEmpty">Aucun champ requis.</div>
-        ) : (
-          <div className="publicGutter">
-            <div className="publicGrid2">
-              {formFields.map((f) => (
-                <Card key={f.id} style={{ width: "100%" }}>
-                  <CardHeader
-                    title={<div className="publicCardTitle">{f.label}</div>}
-                    subtitle={
-                      <div className="publicSubtitle">
-                        {f.fieldType} · {f.fieldKey}
-                      </div>
-                    }
-                    right={
-                      <Badge
-                        tone={f.isRequired ? "warn" : "neutral"}
-                        label={f.isRequired ? "Requis" : "Optionnel"}
-                      />
-                    }
-                  />
-                  <CardBody>
-                    <div className="publicCardText">
-                      Ce champ sera demandé lors de l’inscription.
-                    </div>
-                  </CardBody>
-                </Card>
-              ))}
-            </div>
+        <div className="publicGutter">
+          <div className="publicGrid2">
+            {formFields.map((f) => (
+              <Card key={f.id}>
+                <CardHeader
+                  title={f.label}
+                  subtitle={`${f.fieldType} · ${f.fieldKey}`}
+                  right={
+                    <Badge
+                      tone={f.isRequired ? "warn" : "neutral"}
+                      label={f.isRequired ? "Requis" : "Optionnel"}
+                    />
+                  }
+                />
+                <CardBody>
+                  Ce champ sera demandé lors de l’inscription.
+                </CardBody>
+              </Card>
+            ))}
           </div>
-        )}
+        </div>
       </Container>
     </div>
   );
