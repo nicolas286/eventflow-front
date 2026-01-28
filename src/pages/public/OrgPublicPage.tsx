@@ -1,15 +1,3 @@
-import { useParams, Link } from "react-router-dom";
-import { supabase } from "../../gateways/supabase/supabaseClient";
-import { usePublicOrgData } from "../../features/admin/hooks/usePublicOrgData";
-
-export function OrgPublicPage() {
-  const { orgSlug } = useParams<{ orgSlug: string }>();
-
-  const { loading, error, org, profile, events } = usePublicOrgData({
-    supabase,
-    orgSlug,
-  });
-
   /**
    * ✅ Structure des données dispo dans la page :
    *
@@ -43,28 +31,47 @@ export function OrgPublicPage() {
    * }>
    */
 
+import { useParams, Link } from "react-router-dom";
+import { supabase } from "../../gateways/supabase/supabaseClient";
+import { usePublicOrgData } from "../../features/admin/hooks/usePublicOrgData";
+
+import Container from "../../ui/components/container/Container";
+import Card, { CardBody, CardHeader } from "../../ui/components/card/Card";
+import Button from "../../ui/components/button/Button";
+import Badge from "../../ui/components/badge/Badge";
+
+import { formatDateTimeHuman } from "../../domain/helpers/dateTime";
+
+import "../../styles/publicPages.css";
+
+export function OrgPublicPage() {
+  const { orgSlug } = useParams<{ orgSlug: string }>();
+
+  const { loading, error, org, profile, events } = usePublicOrgData({
+    supabase,
+    orgSlug,
+  });
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div>Chargement…</div>
+      <div className="publicPage">
+        <Container>Chargement…</Container>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div>Erreur : {error}</div>
+      <div className="publicPage">
+        <Container>Erreur : {error}</Container>
       </div>
     );
   }
 
-  // Si pas d'erreur mais org/profile null (normalement rare),
-  // on évite un crash.
   if (!org || !profile) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div>Organisation introuvable.</div>
+      <div className="publicPage">
+        <Container>Organisation introuvable.</Container>
       </div>
     );
   }
@@ -72,69 +79,109 @@ export function OrgPublicPage() {
   const displayName = profile.displayName ?? org.name;
 
   return (
-    <div className="min-h-screen">
-      {/* Pour l’instant on “hydrate” juste, donc affichage minimal */}
-      <div className="max-w-3xl mx-auto p-6">
-        <div className="flex items-center gap-3">
-          {profile.logoUrl ? (
-            <img
-              src={profile.logoUrl}
-              alt={displayName}
-              className="h-12 w-12 rounded object-cover"
-            />
-          ) : null}
+    <div className="publicPage">
+      {/* Fixed corner logo */}
+      {profile.logoUrl ? (
+        <Link
+          to={`/o/${orgSlug ?? profile.slug}`}
+          className="publicCornerLogoWrap"
+          aria-label="Retour à l'organisation"
+          title={displayName}
+        >
+          <img
+            src={profile.logoUrl}
+            alt={displayName}
+            className="publicCornerLogo"
+          />
+        </Link>
+      ) : null}
 
-          <div>
-            <h1 className="text-2xl font-semibold">{displayName}</h1>
-            <div className="text-sm opacity-70">
-              slug: {profile.slug} · type: {org.type}
+      <Container>
+        {/* HERO as modern surface */}
+        <div className="publicSurface">
+          <div className="publicHero">
+            <div className="publicBrand">
+              {profile.logoUrl ? (
+                <img
+                  src={profile.logoUrl}
+                  alt={displayName}
+                  className="publicLogo"
+                />
+              ) : null}
+
+              <div className="publicTitleBlock">
+                <h1 className="publicTitle">{displayName}</h1>
+                <div className="publicSubtitle">
+                  {profile.slug} · {org.type}
+                </div>
+              </div>
+            </div>
+
+            <div className="publicActions">
+              {profile.website ? (
+                <a href={profile.website} target="_blank" rel="noreferrer">
+                  <Button variant="secondary" label="Site web" />
+                </a>
+              ) : null}
+
+              {profile.publicEmail ? (
+                <a href={`mailto:${profile.publicEmail}`}>
+                  <Button variant="ghost" label="Contact" />
+                </a>
+              ) : null}
             </div>
           </div>
-        </div>
 
-        {profile.description ? (
-          <p className="mt-4 whitespace-pre-wrap">{profile.description}</p>
-        ) : null}
+          <div className="publicDivider" />
 
-        <div className="mt-8">
-          <h2 className="text-lg font-semibold">Événements</h2>
-
-          {events.length === 0 ? (
-            <div className="mt-2 opacity-70">Aucun événement publié.</div>
+          {profile.description ? (
+            <div className="publicProse" style={{ whiteSpace: "pre-wrap" }}>
+              {profile.description}
+            </div>
           ) : (
-            <ul className="mt-3 space-y-3">
-              {events.map((e) => (
-                <li key={e.id} className="border rounded p-3">
-                  <div className="font-medium">{e.title}</div>
-
-                  {e.startsAt ? (
-                    <div className="text-sm opacity-70">
-                      startsAt: {e.startsAt}
-                      {e.endsAt ? ` · endsAt: ${e.endsAt}` : ""}
-                   {e.location ? ` · location: ${e.location}` : ""}
-                    </div>
-                  ) : null}
-
-                  {/* route: /o/:orgSlug/e/:eventSlug */}
-                  <div className="mt-2">
-                    <Link
-                      to={`e/${e.slug}`}
-                      className="underline underline-offset-2"
-                    >
-                      Voir l’événement
-                    </Link>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <div className="publicEmpty">Cette organisation n’a pas encore de description.</div>
           )}
         </div>
 
-        {/* Debug léger optionnel (tu peux enlever) */}
-        {/* <pre className="mt-8 text-xs opacity-70 overflow-auto">
-          {JSON.stringify({ org, profile, events }, null, 2)}
-        </pre> */}
-      </div>
+        {/* EVENTS */}
+        <div className="publicSectionTitle">Événements</div>
+
+        {events.length === 0 ? (
+          <div className="publicEmpty">Aucun événement publié.</div>
+        ) : (
+          <div className="publicList">
+            {events.map((e) => (
+              <Card key={e.id} style={{ width: "100%" }}>
+                <CardHeader
+                  title={<div className="publicCardTitle">{e.title}</div>}
+                  subtitle={
+                    <div className="publicSubtitle">
+                      {e.location ?? "Lieu à venir"}
+                    </div>
+                  }
+                  right={e.startsAt ? <Badge tone="info" label="À venir" /> : null}
+                />
+                <CardBody>
+                  {e.startsAt ? (
+                    <div className="publicMetaRow">
+                      <span>Début : {formatDateTimeHuman(e.startsAt)}</span>
+                      {e.endsAt ? (
+                        <span>Fin : {formatDateTimeHuman(e.endsAt)}</span>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  <div style={{ marginTop: 12, display: "flex", gap: 10 }}>
+                    <Link to={`e/${e.slug}`}>
+                      <Button label="Voir l’événement" />
+                    </Link>
+                  </div>
+                </CardBody>
+              </Card>
+            ))}
+          </div>
+        )}
+      </Container>
     </div>
   );
 }

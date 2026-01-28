@@ -1,16 +1,3 @@
-import { useParams, Link } from "react-router-dom";
-import { supabase } from "../../gateways/supabase/supabaseClient";
-import { usePublicEventDetail } from "../../features/admin/hooks/usePublicEventDetail";
-
-export function EventPublicPage() {
-  const { orgSlug, eventSlug } = useParams<{ orgSlug: string; eventSlug: string }>();
-
-  const { loading, error, data } = usePublicEventDetail({
-    supabase,
-    orgSlug,
-    eventSlug,
-  });
-
   /**
    * ✅ Structure des données dispo dans la page :
    *
@@ -55,27 +42,51 @@ export function EventPublicPage() {
    *   }>
    * }
    */
+import { useParams, Link } from "react-router-dom";
+import { supabase } from "../../gateways/supabase/supabaseClient";
+import { usePublicEventDetail } from "../../features/admin/hooks/usePublicEventDetail";
+
+import Container from "../../ui/components/container/Container";
+import Card, { CardBody, CardHeader } from "../../ui/components/card/Card";
+import Button from "../../ui/components/button/Button";
+import Badge from "../../ui/components/badge/Badge";
+
+import { formatDateTimeHuman } from "../../domain/helpers/dateTime";
+
+import "../../styles/publicPages.css";
+
+export function EventPublicPage() {
+  const { orgSlug, eventSlug } = useParams<{
+    orgSlug: string;
+    eventSlug: string;
+  }>();
+
+  const { loading, error, data } = usePublicEventDetail({
+    supabase,
+    orgSlug,
+    eventSlug,
+  });
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div>Chargement…</div>
+      <div className="publicPage">
+        <Container>Chargement…</Container>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div>Erreur : {error}</div>
+      <div className="publicPage">
+        <Container>Erreur : {error}</Container>
       </div>
     );
   }
 
   if (!data?.event) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div>Événement introuvable.</div>
+      <div className="publicPage">
+        <Container>Événement introuvable.</Container>
       </div>
     );
   }
@@ -83,104 +94,158 @@ export function EventPublicPage() {
   const { org, event, products, formFields } = data;
 
   return (
-    <div className="min-h-screen">
-      <div className="max-w-3xl mx-auto p-6">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            {org?.logoUrl ? (
-              <img
-                src={org.logoUrl}
-                alt={org.slug}
-                className="h-10 w-10 rounded object-cover"
-              />
-            ) : null}
+    <div className="publicPage">
+      {/* Fixed corner logo */}
+      {org?.logoUrl ? (
+        <Link
+          to={`/o/${orgSlug}`}
+          className="publicCornerLogoWrap"
+          aria-label="Retour à l'organisation"
+          title={org.slug}
+        >
+          <img src={org.logoUrl} alt={org.slug} className="publicCornerLogo" />
+        </Link>
+      ) : null}
 
-            <div>
-              <h1 className="text-2xl font-semibold">{event.title}</h1>
-              <div className="text-sm opacity-70">
-                slug: {event.slug}
-                {event.location ? ` · ${event.location}` : ""}
+      <Container>
+        {/* HERO surface */}
+        <div className="publicSurface">
+          <div className="publicHero">
+            <div className="publicBrand">
+              {org?.logoUrl ? (
+                <img src={org.logoUrl} alt={org.slug} className="publicLogo" />
+              ) : null}
+
+              <div className="publicTitleBlock">
+                <h1 className="publicTitle">{event.title}</h1>
+                <div className="publicSubtitle">
+                  {event.location ?? "Lieu à venir"}
+                </div>
               </div>
+            </div>
+
+            <div className="publicActions">
+              <Link to={`/o/${orgSlug}`}>
+                <Button variant="secondary" label="Retour" />
+              </Link>
             </div>
           </div>
 
-          {orgSlug ? (
-            <Link to={`/o/${orgSlug}`} className="underline underline-offset-2">
-              Retour orga
-            </Link>
+          {event.bannerUrl ? (
+            <img
+              src={event.bannerUrl}
+              alt={event.title}
+              className="publicBanner"
+            />
           ) : null}
+
+          {event.startsAt ? (
+            <div className="publicMetaRow">
+              <Badge
+                tone="info"
+                label={`Début : ${formatDateTimeHuman(event.startsAt)}`}
+              />
+              {event.endsAt ? (
+                <Badge
+                  tone="neutral"
+                  label={`Fin : ${formatDateTimeHuman(event.endsAt)}`}
+                />
+              ) : null}
+            </div>
+          ) : null}
+
+          <div className="publicDivider" />
+
+          {event.description ? (
+            <div className="publicProse" style={{ whiteSpace: "pre-wrap" }}>
+              {event.description}
+            </div>
+          ) : (
+            <div className="publicEmpty">
+              Cet événement n’a pas encore de description.
+            </div>
+          )}
         </div>
 
-        {event.bannerUrl ? (
-          <img
-            src={event.bannerUrl}
-            alt={event.title}
-            className="mt-6 w-full rounded-lg object-cover"
-          />
-        ) : null}
+        {/* PRODUCTS */}
+        <div className="publicSectionTitle">Billets</div>
 
-        {event.startsAt ? (
-          <div className="mt-4 text-sm opacity-70">
-            startsAt: {event.startsAt}
-            {event.endsAt ? ` · endsAt: ${event.endsAt}` : ""}
-          </div>
-        ) : null}
-
-        {event.description ? (
-          <p className="mt-4 whitespace-pre-wrap">{event.description}</p>
-        ) : null}
-
-        <div className="mt-10">
-          <h2 className="text-lg font-semibold">Produits</h2>
-
-          {products.length === 0 ? (
-            <div className="mt-2 opacity-70">Aucun produit actif.</div>
-          ) : (
-            <ul className="mt-3 space-y-3">
+        {products.length === 0 ? (
+          <div className="publicEmpty">Aucun produit disponible.</div>
+        ) : (
+          <div className="publicGutter">
+            <div className="publicList">
               {products.map((p) => (
-                <li key={p.id} className="border rounded p-3">
-                  <div className="font-medium">
-                    {p.name} — {p.priceCents} {p.currency}
-                  </div>
-                  {p.description ? (
-                    <div className="text-sm opacity-70 mt-1">{p.description}</div>
-                  ) : null}
-                  <div className="text-sm opacity-70 mt-1">
-                    stockQty: {p.stockQty ?? "∞"} · attendeesPerUnit: {p.attendeesPerUnit}
-                  </div>
-                </li>
+                <Card key={p.id} style={{ width: "100%" }}>
+                  <CardHeader
+                    title={<div className="publicCardTitle">{p.name}</div>}
+                    subtitle={
+                      <div className="publicSubtitle">
+                        {p.priceCents} {p.currency}
+                      </div>
+                    }
+                    right={
+                      <Badge
+                        tone={p.stockQty === 0 ? "danger" : "success"}
+                        label={p.stockQty === 0 ? "Épuisé" : "Disponible"}
+                      />
+                    }
+                  />
+                  <CardBody>
+                    {p.description ? (
+                      <div className="publicCardText">{p.description}</div>
+                    ) : null}
+
+                    <div className="publicMetaRow">
+                      <span>Stock : {p.stockQty ?? "∞"}</span>
+                      <span>Places/unité : {p.attendeesPerUnit}</span>
+                    </div>
+
+                    <div style={{ marginTop: 12 }}>
+                      <Button label="Choisir" />
+                    </div>
+                  </CardBody>
+                </Card>
               ))}
-            </ul>
-          )}
-        </div>
+            </div>
+          </div>
+        )}
 
-        <div className="mt-10">
-          <h2 className="text-lg font-semibold">Champs du formulaire</h2>
+        {/* FORM FIELDS */}
+        <div className="publicSectionTitle">Informations demandées</div>
 
-          {formFields.length === 0 ? (
-            <div className="mt-2 opacity-70">Aucun champ actif.</div>
-          ) : (
-            <ul className="mt-3 space-y-2">
+        {formFields.length === 0 ? (
+          <div className="publicEmpty">Aucun champ requis.</div>
+        ) : (
+          <div className="publicGutter">
+            <div className="publicGrid2">
               {formFields.map((f) => (
-                <li key={f.id} className="border rounded p-3">
-                  <div className="font-medium">
-                    {f.label}{" "}
-                    {f.isRequired ? <span className="opacity-70">(requis)</span> : null}
-                  </div>
-                  <div className="text-sm opacity-70">
-                    key: {f.fieldKey} · type: {f.fieldType}
-                  </div>
-                </li>
+                <Card key={f.id} style={{ width: "100%" }}>
+                  <CardHeader
+                    title={<div className="publicCardTitle">{f.label}</div>}
+                    subtitle={
+                      <div className="publicSubtitle">
+                        {f.fieldType} · {f.fieldKey}
+                      </div>
+                    }
+                    right={
+                      <Badge
+                        tone={f.isRequired ? "warn" : "neutral"}
+                        label={f.isRequired ? "Requis" : "Optionnel"}
+                      />
+                    }
+                  />
+                  <CardBody>
+                    <div className="publicCardText">
+                      Ce champ sera demandé lors de l’inscription.
+                    </div>
+                  </CardBody>
+                </Card>
               ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Debug optionnel */}
-        {/* <pre className="mt-8 text-xs opacity-70 overflow-auto">
-          {JSON.stringify(data, null, 2)}
-        </pre> */}
-      </div>
+            </div>
+          </div>
+        )}
+      </Container>
     </div>
   );
 }
