@@ -1,5 +1,3 @@
-// EventPaymentPage.tsx
-
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
@@ -49,9 +47,8 @@ export function EventPaymentPage() {
     return ensureDraft(orgSlug, eventSlug);
   }, [orgSlug, eventSlug, tick]);
 
-  // ✅ Ces 2 champs en state local (sinon tu te bats avec sessionStorage)
   const [buyerEmail, setBuyerEmail] = useState("");
-  const [turnstileToken, setTurnstileToken] = useState("TEST_BYPASS"); // pratique en dev
+  const [turnstileToken, setTurnstileToken] = useState("TEST_BYPASS"); 
 
   const { register, loading: registering, error: registerError } = useRegister({ supabase });
 
@@ -205,7 +202,6 @@ async function pay() {
 
   console.log("[register] response", r);
 
-  // erreur métier (edge -> { error: ... })
   if (r && typeof r === "object" && "error" in r) {
     console.error("[register] business error", r.error, r.details);
     return;
@@ -236,7 +232,6 @@ async function pay() {
     return;
   }
 
-  // fallback si orderId présent mais shape bizarre
   if (orderId) {
     console.warn("[register] unexpected shape but orderId present", r);
     clearDraft(orgSlug, eventSlug);
@@ -246,10 +241,6 @@ async function pay() {
 
   console.error("[register] unexpected response shape", r);
 }
-
-
-
-
 
   return (
     <div className="publicPage">
@@ -390,4 +381,3 @@ async function pay() {
   );
 }
 
-export default EventPaymentPage;
