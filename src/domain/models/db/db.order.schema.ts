@@ -17,7 +17,7 @@ export const orderSchema = z.object({
   expiresAt: z.string().nullable().optional(),
   confirmedAt: z.string().nullable().optional(),
   detailsCompletedAt: z.string().nullable().optional(),
-  depositDueCentsSnapshopt: z.number().int().min(0, "Le montant de l'acompte doit être positif ou nul").max(1000000000, "Le montant de l'acompte est trop élevé"), 
+  depositDueCentsSnapshot: z.number().int().min(0, "Le montant de l'acompte doit être positif ou nul").max(1000000000, "Le montant de l'acompte est trop élevé"), 
   buyerPhone: z.string().min(6, "Le téléphone de l'acheteur est trop court").max(20, "Le téléphone de l'acheteur est trop long").nullable().optional(),
   buyerIsAttendee: z.boolean(),
 });
