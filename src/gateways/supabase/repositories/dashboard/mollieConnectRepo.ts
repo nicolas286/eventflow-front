@@ -1,5 +1,4 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { supabaseSafe } from "../../supabaseSafe";
 
 import {
   startMollieConnectInputSchema,
@@ -7,16 +6,6 @@ import {
   type StartMollieConnectInput,
   type StartMollieConnectResult,
 } from "../../../../domain/models/admin/admin.mollieConnect.schema";
-
-function extractEdgeErrorMessage(err: unknown): string {
-  // supabase-js renvoie souvent un truc du genre { message, context, ... }
-  if (typeof err === "object" && err && "message" in err) {
-    const m = (err as any).message;
-    if (typeof m === "string" && m.trim()) return m;
-  }
-  if (typeof err === "string" && err.trim()) return err;
-  return "Edge function error";
-}
 
 /**
  * mollieConnectRepo

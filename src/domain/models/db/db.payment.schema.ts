@@ -7,7 +7,7 @@ export const paymentSchema = z.object({
   providerPaymentId: z.string().min(3, "L'id paiement est trop court").max(100, "L'id paiement est trop long"),
   amountCents: z.number().int().min(0, "Le montant doit être positif ou nul").max(10000000, "Le montant est trop élevé"),
   currency: z.string().length(3, "Le code devise doit faire 3 caractères"),
-  status: z.enum(["created", "pending", "failed", "expired"]),
+  status: z.enum(["created", "pending", "failed", "expired", "open", "authorized"]),
   isRefund: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string(),

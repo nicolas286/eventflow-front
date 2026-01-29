@@ -17,6 +17,7 @@ import { EventTicketsPage } from "./pages/public/EventTicketsPage";
 import { EventAttendeesPage } from "./pages/public/EventAttendeesPage";
 import { EventPaymentPage } from "./pages/public/EventPaymentPage";
 import { EventConfirmationPage } from "./pages/public/EventConfirmationPage";
+import { OrderReturnPage } from "./pages/public/OrderReturnPage";
 
 /* Layouts */
 import { AdminLayout } from "./ui/layouts/AdminLayout";
@@ -64,6 +65,9 @@ function App() {
         <Route path="/o/:orgSlug/e/:eventSlug/confirmation" element={<EventConfirmationPage />} />
 
       </Route>
+
+      {/* PUBLIC - return Mollie */}
+      <Route path="/order/:orderId" element={<OrderReturnPage />} />
 
       {/* ROOT / FALLBACK */}
       <Route path="/" element={<Navigate to="/admin/login" replace />} />
