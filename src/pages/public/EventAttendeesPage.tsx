@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../../gateways/supabase/supabaseClient";
 import { usePublicEventDetail } from "../../features/admin/hooks/usePublicEventDetail";
 
@@ -10,7 +10,6 @@ import Badge from "../../ui/components/badge/Badge";
 
 import { PublicEventHeader } from "./checkout/PublicEventHeader";
 import { loadDraft, saveDraft } from "./checkout/checkoutStore";
-
 
 import "../../styles/publicPages.css";
 
@@ -26,7 +25,6 @@ type Field = {
 
 type Draft = ReturnType<typeof loadDraft>;
 
-// ✅ on garde un “slot” participant avec son productId + ses réponses
 type AttendeeSlot = Record<string, unknown> & {
   eventProductId: string;
 };
@@ -41,16 +39,13 @@ export function EventAttendeesPage() {
     eventSlug,
   });
 
-  // ✅ Draft in state (stable hooks)
   const [draft, setDraft] = useState<Draft | null>(null);
 
-  // Load draft when route changes
   useEffect(() => {
     if (!orgSlug || !eventSlug) return;
     setDraft(loadDraft(orgSlug, eventSlug));
   }, [orgSlug, eventSlug]);
 
-  // Helper: persist draft
   function persist(next: Draft) {
     setDraft(next);
     saveDraft(next);
@@ -62,13 +57,11 @@ export function EventAttendeesPage() {
     return Object.values(quantities).reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
   }, [quantities]);
 
-  // Sort fields once data is available
   const fields: Field[] = useMemo(() => {
     const ff = data?.formFields ?? [];
     return [...ff].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   }, [data?.formFields]);
 
-  // ✅ Build the attendee "slots" we expect, based on selected products
   const expectedSlots: AttendeeSlot[] = useMemo(() => {
     const products = [...(data?.products ?? [])].sort(
       (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
@@ -93,7 +86,6 @@ export function EventAttendeesPage() {
 
   const attendeesCount = expectedSlots.length;
 
-  // ✅ Ensure draft.attendees matches expected slots (length + eventProductId)
   useEffect(() => {
     if (!orgSlug || !eventSlug) return;
     if (!data) return;
@@ -101,14 +93,11 @@ export function EventAttendeesPage() {
 
     const current = (draft.attendees ?? []) as Array<Record<string, unknown>>;
 
-    // construit next en conservant les réponses existantes par index
     const next = expectedSlots.map((slot, idx) => {
       const prev = current[idx] ?? {};
-      // Force eventProductId du slot, tout en gardant les réponses de l’utilisateur
       return { ...prev, eventProductId: slot.eventProductId } as AttendeeSlot;
     });
 
-    // évite de persister si identique (préviens loops)
     const sameLength = next.length === current.length;
     const sameIds =
       sameLength &&
@@ -146,7 +135,7 @@ export function EventAttendeesPage() {
     if (field.fieldType === "checkbox") return v === true;
     if (typeof v === "string") return v.trim().length > 0;
     if (typeof v === "number") return Number.isFinite(v);
-    if (typeof v === "boolean") return true; // already handled checkbox above, but safe
+    if (typeof v === "boolean") return true;
     return v != null;
   }
 
@@ -168,8 +157,6 @@ export function EventAttendeesPage() {
     if (!orgSlug || !eventSlug) return;
     navigate(`/o/${orgSlug}/e/${eventSlug}/paiement`);
   }
-
-  // ---------------- RENDER (returns only after hooks) ----------------
 
   if (loading || !orgSlug || !eventSlug) {
     return (
@@ -199,12 +186,6 @@ export function EventAttendeesPage() {
 
   return (
     <div className="publicPage">
-      {org?.logoUrl ? (
-        <Link to={`/o/${orgSlug}`} className="publicCornerLogoWrap">
-          <img src={org.logoUrl} alt={org.slug} className="publicCornerLogo" />
-        </Link>
-      ) : null}
-
       <Container>
         <div className="publicSurface">
           <PublicEventHeader orgSlug={orgSlug} org={org} event={event} />
@@ -214,13 +195,9 @@ export function EventAttendeesPage() {
           <div className="publicSectionTitle">2/3 — Participants</div>
 
           {totalSelected <= 0 ? (
-            <div className="publicEmpty">
-              Aucun billet sélectionné. Reviens à l’étape “Billets”.
-            </div>
+            <div className="publicEmpty">Aucun billet sélectionné. Reviens à l’étape “Billets”.</div>
           ) : attendeesCount === 0 ? (
-            <div className="publicEmpty">
-              Aucun formulaire participant n’est requis pour ces billets.
-            </div>
+            <div className="publicEmpty">Aucun formulaire participant n’est requis pour ces billets.</div>
           ) : fields.length === 0 ? (
             <div className="publicEmpty">Aucun champ configuré pour le formulaire.</div>
           ) : (
@@ -252,8 +229,7 @@ export function EventAttendeesPage() {
 
                           const label = (
                             <div style={{ fontWeight: 800, marginBottom: 6 }}>
-                              {f.label}{" "}
-                              {f.isRequired ? <span style={{ opacity: 0.7 }}>(requis)</span> : null}
+                              {f.label} {f.isRequired ? <span style={{ opacity: 0.7 }}>(requis)</span> : null}
                             </div>
                           );
 
@@ -293,10 +269,7 @@ export function EventAttendeesPage() {
 
                           if (f.fieldType === "checkbox") {
                             return (
-                              <div
-                                key={f.id}
-                                style={{ display: "flex", alignItems: "center", gap: 10 }}
-                              >
+                              <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                                 <input
                                   type="checkbox"
                                   checked={value === true}
@@ -304,8 +277,7 @@ export function EventAttendeesPage() {
                                   style={{ width: 18, height: 18 }}
                                 />
                                 <div style={{ fontWeight: 800 }}>
-                                  {f.label}{" "}
-                                  {f.isRequired ? <span style={{ opacity: 0.7 }}>(requis)</span> : null}
+                                  {f.label} {f.isRequired ? <span style={{ opacity: 0.7 }}>(requis)</span> : null}
                                 </div>
                               </div>
                             );
@@ -360,11 +332,7 @@ export function EventAttendeesPage() {
 
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
             <Button variant="secondary" label="Retour aux billets" onClick={goBack} />
-            <Button
-              label="Continuer"
-              onClick={goNext}
-              disabled={totalSelected <= 0 || !allValid}
-            />
+            <Button label="Continuer" onClick={goNext} disabled={totalSelected <= 0 || !allValid} />
           </div>
         </div>
       </Container>
