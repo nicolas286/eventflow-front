@@ -1,0 +1,138 @@
+.structurePanel{
+  display:grid;
+  gap:16px;
+}
+
+.structurePanel__grid2{
+  display:grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap:14px;
+}
+@media (max-width: 900px){
+  .structurePanel__grid2{ grid-template-columns: 1fr; }
+}
+
+.structurePanel__grid2Inner{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:12px;
+}
+@media (max-width: 700px){
+  .structurePanel__grid2Inner{ grid-template-columns: 1fr; }
+}
+
+.structurePanel__block{
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(255,255,255,0.6);
+}
+
+.structurePanel__labelRow{
+  display:flex;
+  justify-content: space-between;
+  align-items:flex-start;
+  gap:12px;
+  margin-bottom: 10px;
+}
+
+.structurePanel__label{
+  font-size: 12px;
+  font-weight: 800;
+  color:#374151;
+}
+
+.structurePanel__hint{
+  margin-top: 4px;
+  font-size: 12px;
+  color:#6b7280;
+}
+
+.structurePanel__field{
+  display:grid;
+  gap:10px;
+  margin-top: 12px;
+}
+
+.structurePanel__fieldLabel{
+  margin-bottom: -4px;
+  font-size:13px;
+  font-weight:650;
+  color:#374151;
+}
+
+.structurePanel__help{
+  font-size: 12px;
+  color:#6b7280;
+}
+
+.structurePanel__mono{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  color:#111827;
+}
+
+.structurePanel__actionsBar{
+  display:flex;
+  justify-content: space-between;
+  align-items:center;
+  gap:12px;
+  flex-wrap: wrap;
+}
+
+.structurePanel__actions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap: wrap;
+}
+
+.structurePanel__status{
+  min-height: 18px;
+  font-size: 13px;
+}
+
+.structurePanel__error{
+  color:#b91c1c;
+  font-weight:650;
+}
+
+.structurePanel__success{
+  color:#065f46;
+  font-weight:650;
+}
+
+.structurePanel__chip{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: rgba(255,255,255,0.65);
+  font-size: 13px;
+  color: #111827;
+}
+
+.structurePanel__chipLabel{
+  color:#6b7280;
+  font-weight:700;
+}
+
+.structurePanel__chipValue{
+  font-weight:800;
+}
+
+.structurePanel__chipOk{
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #065f46;
+}
+
+.structurePanel__chipWarn{
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #92400e;
+}

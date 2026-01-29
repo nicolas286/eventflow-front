@@ -1,0 +1,57 @@
+.uiSelect{
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.uiSelect--full{
+  width: 100%;
+}
+
+.uiSelect__control{
+  appearance: none;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 36px 8px 12px;
+
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: rgba(255,255,255,0.75);
+
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+
+  cursor: pointer;
+}
+
+.uiSelect__control:focus{
+  outline: none;
+  border-color: rgba(37,99,235,0.9);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+  background: #fff;
+}
+
+.uiSelect__control:disabled{
+  background: rgba(243,244,246,0.8);
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.uiSelect--error .uiSelect__control{
+  border-color: rgba(185,28,28,0.9);
+  box-shadow: 0 0 0 3px rgba(185,28,28,0.15);
+}
+
+.uiSelect__chevron{
+  position: absolute;
+  right: 12px;
+  pointer-events: none;
+
+  width: 0;
+  height: 0;
+
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid #6b7280;
+}
