@@ -7,7 +7,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminEventsPage from "./pages/admin/AdminEventsPage";
 import AdminBrandingPage from "./pages/admin/AdminBrandingPage";
 import AdminStructurePage from "./pages/admin/AdminStructurePage";
-import { AdminProfilPage } from "./pages/admin/AdminProfilPage";
+import AdminProfilPage  from "./pages/admin/AdminProfilPage";
 import { AdminAbonnementPage } from "./pages/admin/AdminAbonnementPage";
 import { AdminSingleEventPage } from "./pages/admin/AdminSingleEventPage";
 

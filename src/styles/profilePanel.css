@@ -1,0 +1,143 @@
+/* styles/profilePanel.css */
+.profilePanel {
+  display: grid;
+  gap: 14px;
+}
+
+.profilePanel__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.profilePanel__titleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profilePanel__title {
+  font-weight: 900;
+  color: #111827;
+}
+
+.profilePanel__subtitle {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.profilePanel__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: #f3f4f6;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.profilePanel__chipDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgb(var(--primary) / 1);
+}
+
+.profilePanel__grid2 {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 820px) {
+  .profilePanel__head {
+    flex-direction: column;
+  }
+
+  .profilePanel__grid2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.profilePanel__section {
+  display: grid;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.profilePanel__sectionTitle {
+  font-weight: 800;
+  color: #111827;
+}
+
+.profilePanel__actionsBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 6px;
+}
+
+.profilePanel__status {
+  display: grid;
+  gap: 6px;
+}
+
+.profilePanel__error {
+  font-size: 13px;
+  color: #b91c1c;
+}
+
+.profilePanel__success {
+  font-size: 13px;
+  color: #047857;
+}
+
+.profilePanel__actions {
+  display: flex;
+  gap: 10px;
+}
+
+.profilePanel__label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+.profilePanel__select {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  font-size: 14px;
+}
+
+.profilePanel__phoneRow {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.profilePanel__phoneInput {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  font-size: 14px;
+}
+
+@media (max-width: 820px) {
+  .profilePanel__phoneRow {
+    grid-template-columns: 1fr;
+  }
+}
