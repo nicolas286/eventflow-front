@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+// AdminBrandingPage.tsx
+import { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
 import { Container } from "../../ui/components";
@@ -11,28 +12,45 @@ type OrgBranding = {
   name: string;
   primaryColor: string;
   logoUrl?: string;
+  defaultEventBannerUrl?: string;
 };
 
 export default function AdminBrandingPage() {
-  const { org } = useOutletContext<AdminOutletContext>();
+  const { bootstrap, orgId, refetch } = useOutletContext<AdminOutletContext>();
+  const orgProfile = bootstrap?.organizationProfile;
 
   const initial = useMemo<OrgBranding>(
     () => ({
-      name: (org?.name as string) ?? "Mon organisation",
-      primaryColor: (org as any)?.primaryColor ?? "#2563eb",
-      logoUrl: (org as any)?.logoUrl ?? "",
+      name: orgProfile?.displayName ?? "Mon organisation",
+      primaryColor: orgProfile?.primaryColor ?? "#2563eb",
+      logoUrl: orgProfile?.logoUrl ?? "",
+      defaultEventBannerUrl: orgProfile?.defaultEventBannerUrl ?? "",
     }),
-    [org]
+    [orgProfile]
   );
 
   const [branding, setBranding] = useState<OrgBranding>(initial);
 
+  // 🔁 resync si le bootstrap arrive après le premier render
+  useEffect(() => {
+    setBranding(initial);
+  }, [initial]);
+
   return (
     <Container>
       <Card>
-        <CardHeader title="Branding" subtitle="Nom, couleur, logo" />
+        <CardHeader
+          title="Branding"
+          subtitle="Nom, couleur principale, logo et bannière par défaut"
+        />
         <CardBody>
-          <BrandingPanel org={branding} setOrg={setBranding} />
+        <BrandingPanel
+        orgId={orgId}
+        org={branding}
+        setOrg={setBranding}
+        onSaved={refetch}
+      />
+
         </CardBody>
       </Card>
     </Container>

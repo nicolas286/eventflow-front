@@ -9,6 +9,8 @@ export const publicOrgProfileOverviewForEventPageSchema = organizationProfileSch
   slug: true,
   defaultEventBannerUrl: true,
   logoUrl: true,
+  displayName: true,
+  primaryColor: true
 });
 
 export const publicEventSchema = eventSchema.pick({

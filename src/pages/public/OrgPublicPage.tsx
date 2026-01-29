@@ -1,36 +1,4 @@
-  /**
-   * ✅ Structure des données dispo dans la page :
-   *
-   * org: {
-   *   id: string (uuid)
-   *   type: "association" | "person"
-   *   name: string
-   * }
-   *
-   * profile: {
-   *   slug: string
-   *   displayName: string | null
-   *   description: string | null
-   *   publicEmail: string | null
-   *   phone: string | null
-   *   website: string | null
-   *   logoUrl: string | null
-   *   primaryColor: string | null
-   *   defaultEventBannerUrl: string | null
-   * }
-   *
-   * events: Array<{
-   *   id: string (uuid)
-   *   slug: string
-   *   title: string
-   *   location?: string | null
-   *   description?: string | null
-   *   bannerUrl?: string | null
-   *   startsAt?: string | null (ISO)
-   *   endsAt?: string | null (ISO)
-   * }>
-   */
-
+// OrgPublicPage.tsx
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "../../gateways/supabase/supabaseClient";
 import { usePublicOrgData } from "../../features/admin/hooks/usePublicOrgData";
@@ -139,7 +107,9 @@ export function OrgPublicPage() {
               {profile.description}
             </div>
           ) : (
-            <div className="publicEmpty">Cette organisation n’a pas encore de description.</div>
+            <div className="publicEmpty">
+              Cette organisation n’a pas encore de description.
+            </div>
           )}
         </div>
 

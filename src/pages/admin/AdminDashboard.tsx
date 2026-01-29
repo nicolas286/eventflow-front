@@ -5,9 +5,10 @@ import TopNav, { type OrgInfo } from "../../ui/components/navigation/TopNav";
 import { supabase } from "../../gateways/supabase/supabaseClient";
 import { useAdminDashboardData } from "../../features/admin/hooks/useAdminDashboardData";
 
+import OrgThemeSync from "../../features/theme/OrgThemeSync";
+
 import type { EventOverviewRow } from "../../domain/models/admin/admin.eventsOverview.schema";
 import type { DashboardBootstrap } from "../../domain/models/admin/admin.dashboardBootstrap.schema";
-
 
 export type AdminOutletContext = {
   org: OrgInfo | null;
@@ -17,29 +18,26 @@ export type AdminOutletContext = {
   refetch: () => Promise<void>;
 };
 
-
-// Structure de données disponible à ce stade (à partir de useAdminDashboardData) : 
-// bootstrap : DashboardBootstrap qui contient profile, membership, organization,
-// organizationProfile, subscription, planLimits
-// orgId : string, juste l'ID de l'organisation
-// events : EventOverviewRow[] avec event + ordersCount + paidCents
-// ATTENTION j'ai ajouté location dans les events !!!
-// Pour détail des types (par ex.organization) voir dans domain/models (ex. organization.schema.ts)
-
 export default function AdminDashboard() {
+  const { loading, error, bootstrap, orgId, events, refetch } =
+    useAdminDashboardData({ supabase });
 
-  const { loading, error, bootstrap, orgId, events, refetch } = useAdminDashboardData({ supabase });
+  const topNavOrg: OrgInfo | null = bootstrap
+    ? {
+        name:
+          bootstrap.organizationProfile?.displayName ??
+          bootstrap.organization?.name,
+        logoUrl: bootstrap.organizationProfile?.logoUrl ?? undefined,
+      }
+    : null;
 
-    const topNavOrg: OrgInfo | null = bootstrap
-  ? {
-      name: bootstrap.organizationProfile?.displayName ?? bootstrap.organization?.name,
-      logoUrl: bootstrap.organizationProfile?.logoUrl ?? undefined,
-    }
-  : null;
+  // ✅ Couleur orga -> thème global (html/body) via composant
+  const primaryHex = bootstrap?.organizationProfile?.primaryColor ?? "#2563eb";
 
   if (loading) {
     return (
       <div className="adminPage">
+        <OrgThemeSync primaryColor={primaryHex} />
         <TopNav mode="admin" org={topNavOrg} />
         <div className="adminPageGrid">
           <div className="adminPageRight">Chargement…</div>
@@ -51,6 +49,7 @@ export default function AdminDashboard() {
   if (error) {
     return (
       <div className="adminPage">
+        <OrgThemeSync primaryColor={primaryHex} />
         <TopNav mode="admin" org={topNavOrg} />
         <div className="adminPageGrid">
           <div className="adminPageRight">Erreur : {String(error)}</div>
@@ -62,6 +61,7 @@ export default function AdminDashboard() {
   if (!orgId) {
     return (
       <div className="adminPage">
+        <OrgThemeSync primaryColor={primaryHex} />
         <TopNav mode="admin" org={topNavOrg} />
         <div className="adminPageGrid">
           <div className="adminPageRight">
@@ -74,10 +74,10 @@ export default function AdminDashboard() {
   }
 
   // Sécurité runtime : si orgId existe, bootstrap devrait exister.
-  // Mais on évite les crashs si hook renvoie temporairement null.
   if (!bootstrap) {
     return (
       <div className="adminPage">
+        <OrgThemeSync primaryColor={primaryHex} />
         <TopNav mode="admin" org={topNavOrg} />
         <div className="adminPageGrid">
           <div className="adminPageRight">Chargement…</div>
@@ -88,11 +88,19 @@ export default function AdminDashboard() {
 
   return (
     <div className="adminPage">
+      <OrgThemeSync primaryColor={primaryHex} />
       <TopNav mode="admin" org={topNavOrg} />
-
       <div className="adminPageGrid">
         <div className="adminPageRight">
-          <Outlet context={{ org: topNavOrg, orgId, bootstrap, events, refetch } satisfies AdminOutletContext} />
+          <Outlet
+            context={{
+              org: topNavOrg,
+              orgId,
+              bootstrap,
+              events,
+              refetch,
+            } satisfies AdminOutletContext}
+          />
         </div>
       </div>
     </div>
