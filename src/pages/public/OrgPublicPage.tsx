@@ -1,4 +1,3 @@
-// OrgPublicPage.tsx
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "../../gateways/supabase/supabaseClient";
 import { usePublicOrgData } from "../../features/admin/hooks/usePublicOrgData";
@@ -22,7 +21,7 @@ export function OrgPublicPage() {
 
   if (loading) {
     return (
-      <div className="publicPage">
+      <div className="publicPage publicOrgPage">
         <Container>Chargement…</Container>
       </div>
     );
@@ -30,7 +29,7 @@ export function OrgPublicPage() {
 
   if (error) {
     return (
-      <div className="publicPage">
+      <div className="publicPage publicOrgPage">
         <Container>Erreur : {error}</Container>
       </div>
     );
@@ -38,7 +37,7 @@ export function OrgPublicPage() {
 
   if (!org || !profile) {
     return (
-      <div className="publicPage">
+      <div className="publicPage publicOrgPage">
         <Container>Organisation introuvable.</Container>
       </div>
     );
@@ -47,34 +46,13 @@ export function OrgPublicPage() {
   const displayName = profile.displayName ?? org.name;
 
   return (
-    <div className="publicPage">
-      {/* Fixed corner logo */}
-      {profile.logoUrl ? (
-        <Link
-          to={`/o/${orgSlug ?? profile.slug}`}
-          className="publicCornerLogoWrap"
-          aria-label="Retour à l'organisation"
-          title={displayName}
-        >
-          <img
-            src={profile.logoUrl}
-            alt={displayName}
-            className="publicCornerLogo"
-          />
-        </Link>
-      ) : null}
-
+    <div className="publicPage publicOrgPage">
       <Container>
-        {/* HERO as modern surface */}
         <div className="publicSurface">
           <div className="publicHero">
             <div className="publicBrand">
               {profile.logoUrl ? (
-                <img
-                  src={profile.logoUrl}
-                  alt={displayName}
-                  className="publicLogo"
-                />
+                <img src={profile.logoUrl} alt={displayName} className="publicLogo" />
               ) : null}
 
               <div className="publicTitleBlock">
@@ -107,13 +85,10 @@ export function OrgPublicPage() {
               {profile.description}
             </div>
           ) : (
-            <div className="publicEmpty">
-              Cette organisation n’a pas encore de description.
-            </div>
+            <div className="publicEmpty">Cette organisation n’a pas encore de description.</div>
           )}
         </div>
 
-        {/* EVENTS */}
         <div className="publicSectionTitle">Événements</div>
 
         {events.length === 0 ? (
@@ -124,20 +99,14 @@ export function OrgPublicPage() {
               <Card key={e.id} style={{ width: "100%" }}>
                 <CardHeader
                   title={<div className="publicCardTitle">{e.title}</div>}
-                  subtitle={
-                    <div className="publicSubtitle">
-                      {e.location ?? "Lieu à venir"}
-                    </div>
-                  }
+                  subtitle={<div className="publicSubtitle">{e.location ?? "Lieu à venir"}</div>}
                   right={e.startsAt ? <Badge tone="info" label="À venir" /> : null}
                 />
                 <CardBody>
                   {e.startsAt ? (
                     <div className="publicMetaRow">
                       <span>Début : {formatDateTimeHuman(e.startsAt)}</span>
-                      {e.endsAt ? (
-                        <span>Fin : {formatDateTimeHuman(e.endsAt)}</span>
-                      ) : null}
+                      {e.endsAt ? <span>Fin : {formatDateTimeHuman(e.endsAt)}</span> : null}
                     </div>
                   ) : null}
 
