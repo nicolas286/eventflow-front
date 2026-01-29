@@ -15,13 +15,12 @@ type ProfilePanelProps = {
 };
 
 type CountryOption = {
-  label: string;     // "Belgique"
-  iso2: string;      // "BE"
-  dial: string;      // "+32"
-  flag: string;      // "🇧🇪"
+  label: string;
+  iso2: string;
+  dial: string;
+  flag: string;
 };
 
-// MVP: liste courte (tu peux en ajouter quand tu veux)
 const COUNTRY_OPTIONS: CountryOption[] = [
   { label: "Belgique", iso2: "BE", dial: "+32", flag: "🇧🇪" },
   { label: "France", iso2: "FR", dial: "+33", flag: "🇫🇷" },
@@ -46,7 +45,6 @@ function parseE164(phoneRaw: string | null | undefined) {
   const p = (phoneRaw ?? "").trim();
   if (!p.startsWith("+")) return { dial: "", national: normalizeDigits(p) };
 
-  // on tente de matcher un dial connu (max dial length 4 ici)
   const match = COUNTRY_OPTIONS
     .map((c) => c.dial)
     .sort((a, b) => b.length - a.length)
@@ -61,9 +59,9 @@ function parseE164(phoneRaw: string | null | undefined) {
 function buildE164(dial: string, national: string) {
   const d = (dial ?? "").trim();
   const n = normalizeDigits(national ?? "");
-  if (!d && !n) return "";        // vide
-  if (!d) return n;               // fallback
-  return `${d}${n}`;              // ex: +32470123456
+  if (!d && !n) return "";
+  if (!d) return n;
+  return `${d}${n}`;
 }
 
 export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePanelProps) {
@@ -85,18 +83,22 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
   const [dial, setDial] = useState<string>(initialPhone.dial || "+32");
   const [national, setNational] = useState<string>(initialPhone.national);
 
-  // quand le profil chargé change (bootstrap/refetch), on resync l’UI phone
+  // "Compte" (Auth) — UI only pour l’instant
+  const [email, setEmail] = useState<string>("");
+  const [newPassword, setNewPassword] = useState<string>("");
+  const [confirmPassword, setConfirmPassword] = useState<string>("");
+
+  // resync soft quand le profil change
   useMemo(() => {
     const p = parseE164(profile.phone);
     if (p.dial) setDial(p.dial);
     setNational(p.national);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile.userId]); // resync “soft” quand on change d’utilisateur / bootstrap
+  }, [profile.userId]);
 
   async function handleSave() {
     reset();
 
-    // pousse le téléphone E.164 dans le form avant save
     const phoneE164 = buildE164(dial, national);
     const next: AdminProfileForm = {
       ...profile,
@@ -161,7 +163,7 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
 
       {/* Contact */}
       <div className="profilePanel__grid2">
-        {/* Téléphone avec indicatif + drapeau */}
+        {/* Téléphone */}
         <div className="profilePanel__phone">
           <div className="profilePanel__label">Téléphone</div>
 
@@ -173,7 +175,6 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
                 const nextDial = e.target.value;
                 setDial(nextDial);
 
-                // met à jour le form en E.164 (sans attendre Save)
                 const phoneE164 = buildE164(nextDial, national);
                 updateField("phone", phoneE164 || null);
               }}
@@ -203,7 +204,7 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
           </div>
         </div>
 
-        {/* Pays en select */}
+        {/* Pays */}
         <div className="profilePanel__country">
           <div className="profilePanel__label">Pays</div>
 
@@ -212,10 +213,9 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
             value={selectedCountry}
             onChange={(e) => {
               const countryLabel = e.target.value;
-
               updateField("country", countryLabel || null);
 
-              // on garde countryCode côté data (non affiché)
+              // conservé côté data (non affiché)
               updateField("countryCode", inferCountryCode(countryLabel));
             }}
             aria-label="Pays"
@@ -261,6 +261,48 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
             onChange={(e) => updateField("city", e.target.value)}
             placeholder="Ville"
           />
+        </div>
+      </div>
+
+      {/* Compte (Auth) — UI only */}
+      <div className="profilePanel__section">
+        <div className="profilePanel__sectionHead">
+          <div className="profilePanel__sectionTitle">Compte</div>
+          <Badge tone="warning" label="Bientôt" />
+        </div>
+
+        <div className="profilePanel__grid2">
+          <Input
+            label="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="email@exemple.com"
+            disabled
+          />
+          <div />
+        </div>
+
+        <div className="profilePanel__grid2">
+          <Input
+            label="Nouveau mot de passe"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="••••••••"
+            type="password"
+            disabled
+          />
+          <Input
+            label="Confirmer le mot de passe"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="••••••••"
+            type="password"
+            disabled
+          />
+        </div>
+
+        <div className="profilePanel__hint">
+          TODO : modifier l’email et le mot de passe via Supabase Auth (avec re-auth si nécessaire).
         </div>
       </div>
 
