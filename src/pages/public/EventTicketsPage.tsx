@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../../gateways/supabase/supabaseClient";
 import { usePublicEventDetail } from "../../features/admin/hooks/usePublicEventDetail";
 
@@ -58,9 +58,7 @@ export function EventTicketsPage() {
   const { org, event, products } = data;
   const quantities = draft?.quantities ?? {};
 
-  const sortedProducts = [...products].sort(
-    (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
-  );
+  const sortedProducts = [...products].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
   const totalTickets = Object.values(quantities).reduce((a, b) => a + b, 0);
 
@@ -71,7 +69,6 @@ export function EventTicketsPage() {
 
   const currency = sortedProducts[0]?.currency ?? "EUR";
 
-  // ✅ total participants that will be asked on step 2
   const attendeesToCreate = sortedProducts.reduce((acc, p) => {
     const qty = quantities[p.id] ?? 0;
     if (!p.createsAttendees) return acc;
@@ -94,7 +91,6 @@ export function EventTicketsPage() {
     const next = {
       ...draft,
       quantities: { ...draft.quantities, [productId]: q },
-      // reset attendees when quantities change (regenerated in step 2)
       attendees: [],
       acceptedTerms: false,
     };
@@ -109,13 +105,6 @@ export function EventTicketsPage() {
 
   return (
     <div className="publicPage">
-      {/* logo fixed */}
-      {org?.logoUrl ? (
-        <Link to={`/o/${orgSlug}`} className="publicCornerLogoWrap">
-          <img src={org.logoUrl} alt={org.slug} className="publicCornerLogo" />
-        </Link>
-      ) : null}
-
       <Container>
         <div className="publicSurface">
           <PublicEventHeader orgSlug={orgSlug} org={org} event={event} />
@@ -132,8 +121,7 @@ export function EventTicketsPage() {
                 {sortedProducts.map((p) => {
                   const qty = quantities[p.id] ?? 0;
                   const soldOut = p.stockQty === 0;
-                  const stockLabel =
-                    p.stockQty == null ? "Illimité" : `Stock : ${p.stockQty}`;
+                  const stockLabel = p.stockQty == null ? "Illimité" : `Stock : ${p.stockQty}`;
 
                   const badgeTone = soldOut ? "danger" : "success";
                   const badgeLabel = soldOut ? "Épuisé" : "Disponible";
@@ -244,11 +232,7 @@ export function EventTicketsPage() {
               </div>
             </div>
 
-            <Button
-              label="Continuer (Participants)"
-              onClick={goNext}
-              disabled={totalTickets <= 0}
-            />
+            <Button label="Continuer (Participants)" onClick={goNext} disabled={totalTickets <= 0} />
           </div>
         </div>
       </Container>
