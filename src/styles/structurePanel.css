@@ -37,14 +37,14 @@
 }
 
 .structurePanel__label{
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 800;
   color:#374151;
 }
 
 .structurePanel__hint{
   margin-top: 4px;
-  font-size: 12px;
+  font-size: 14px;
   color:#6b7280;
 }
 
@@ -56,19 +56,19 @@
 
 .structurePanel__fieldLabel{
   margin-bottom: -4px;
-  font-size:13px;
+  font-size:16px;
   font-weight:650;
   color:#374151;
 }
 
 .structurePanel__help{
-  font-size: 12px;
+  font-size: 14px;
   color:#6b7280;
 }
 
 .structurePanel__mono{
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 12px;
+  font-size: 14px;
   color:#111827;
 }
 
@@ -89,7 +89,7 @@
 
 .structurePanel__status{
   min-height: 18px;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .structurePanel__error{
@@ -110,7 +110,7 @@
   border-radius: 12px;
   border: 1px solid rgba(0,0,0,0.08);
   background: rgba(255,255,255,0.65);
-  font-size: 13px;
+  font-size: 14px;
   color: #111827;
 }
 
@@ -125,14 +125,14 @@
 
 .structurePanel__chipOk{
   margin-left: 6px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 800;
   color: #065f46;
 }
 
 .structurePanel__chipWarn{
   margin-left: 6px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 800;
   color: #92400e;
 }

@@ -23,7 +23,7 @@
 
 .eventEditor__label{
   margin-bottom:6px;
-  font-size:13px;
+  font-size:14px;
   font-weight:650;
   color:#374151;
 }
@@ -76,7 +76,7 @@
 }
 
 .eventEditor__error{
-  font-size:13px;
+  font-size:14px;
   color:#dc2626;
   font-weight:600;
 }

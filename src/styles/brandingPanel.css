@@ -5,7 +5,7 @@
 
 .brandingPanel__label{
   margin-bottom:6px;
-  font-size:13px;
+  font-size:16px;
   font-weight:650;
   color:#374151;
 }
@@ -27,7 +27,7 @@
 
 .brandingPanel__help{
   margin-top:8px;
-  font-size:12px;
+  font-size:14px;
   color:#6b7280;
 }
 
@@ -60,7 +60,7 @@
 }
 
 .brandingPanel__previewTitle{
-  font-size:12px;
+  font-size:14px;
   font-weight:800;
   color:#374151;
   margin-bottom:10px;
@@ -125,7 +125,7 @@
   border-radius: 12px;
   border: 1px solid rgba(0,0,0,0.08);
   background: rgba(255,255,255,0.65);
-  font-size: 13px;
+  font-size: 14px;
   color: #111827;
 }
 
@@ -159,7 +159,7 @@
 }
 
 .brandingPanel__hint{
-  font-size: 12px;
+  font-size: 14px;
   color: #6b7280;
   margin-top: 4px;
 }
@@ -203,7 +203,7 @@
 }
 
 .brandingPanel__thumbEmpty{
-  font-size: 12px;
+  font-size: 14px;
   color: #6b7280;
 }
 
@@ -214,11 +214,11 @@
 .brandingPanel__metaTitle{
   font-weight: 700;
   color: #111827;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .brandingPanel__metaSub{
-  font-size: 12px;
+  font-size: 14px;
   color: #6b7280;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -242,7 +242,7 @@
 
 .brandingPanel__status{
   min-height: 18px;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .brandingPanel__error{

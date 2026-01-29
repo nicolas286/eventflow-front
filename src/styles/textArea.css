@@ -4,7 +4,7 @@
 
 .ui-field__label {
   margin-bottom: 6px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 650;
   color: #374151;
 }
@@ -16,7 +16,7 @@
   border: 1px solid #e5e7eb;
   background: #fff;
   padding: 10px 12px;
-  font-size: 14px;
+  font-size: 16px;
   outline: none;
   resize: vertical;
 

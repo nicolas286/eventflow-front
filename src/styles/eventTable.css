@@ -17,12 +17,12 @@
 .eventTable__table{
   width:100%;
   border-collapse:collapse;
-  font-size:14px;
+  font-size:16px;
 }
 
 .eventTable__table thead th{
   text-align:left;
-  font-size:12px;
+  font-size:14px;
   color:#6b7280;
   padding:10px 10px;
   border-bottom:1px solid #f3f4f6;
@@ -71,14 +71,14 @@
 
 .eventTable__hint{
   margin-top:10px;
-  font-size:12px;
+  font-size:14px;
   color:#6b7280;
 }
 
 /* --- Mobile cards (hidden by default) --- */
 .eventTable__mobileList {
   display: none;
-  gap: 12px;
+  gap: 14px;
 }
 
 /* Card style */
@@ -126,12 +126,12 @@
 }
 
 .eventCard__label {
-  font-size: 12px;
+  font-size: 14px;
   color: #6b7280;
 }
 
 .eventCard__value {
-  font-size: 13px;
+  font-size: 14px;
   color: #111827;
   overflow: hidden;
   text-overflow: ellipsis;
