@@ -40,8 +40,8 @@ export default function AdminBrandingPage() {
     <Container>
       <Card>
         <CardHeader
-          title="Branding"
-          subtitle="Nom, couleur principale, logo et bannière par défaut"
+          title="Apparence"
+          subtitle="Contrôlez l'apparence de votre organisation. Les modifications apparaîtront dans vos pages publiques et privées."
         />
         <CardBody>
         <BrandingPanel

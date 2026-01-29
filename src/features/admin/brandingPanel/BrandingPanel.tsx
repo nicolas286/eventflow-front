@@ -94,7 +94,7 @@ export default function BrandingPanel({ orgId, org, setOrg, onSaved }: BrandingP
       {/* Ligne 1 : nom + preview */}
       <div className="brandingPanel__grid2">
         <Input
-          label="Nom (ASBL / organisateur)"
+          label="Nom affiché"
           value={org.name}
           onChange={(e) => setOrg((o) => ({ ...o, name: e.target.value }))}
         />
@@ -188,7 +188,7 @@ export default function BrandingPanel({ orgId, org, setOrg, onSaved }: BrandingP
       <div className="brandingPanel__actionsBar">
         <div className="brandingPanel__status">
           {error ? <div className="brandingPanel__error">{error}</div> : null}
-          {updated ? <div className="brandingPanel__success">Branding sauvegardé ✅</div> : null}
+          {updated ? <div className="brandingPanel__success">Branding sauvegardé</div> : null}
         </div>
 
         <div className="brandingPanel__actions">
@@ -287,9 +287,6 @@ function AssetUploader({
 
         <div className="brandingPanel__thumbMeta">
           <div className="brandingPanel__metaTitle">{valueUrl ? "Actuel" : "Aucun"}</div>
-          <div className="brandingPanel__metaSub">
-            {fileName ? fileName : valueUrl ? "Déjà configuré" : "—"}
-          </div>
         </div>
       </div>
     </div>
