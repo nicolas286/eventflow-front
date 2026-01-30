@@ -15,9 +15,15 @@ function safeExt(file: File) {
   return ext === "jpeg" ? "jpg" : ext;
 }
 
-function withBust(url: string) {
+function withBust(url: string, seed?: string | number) {
   const sep = url.includes("?") ? "&" : "?";
-  return `${url}${sep}v=${Date.now()}`;
+  const v =
+    typeof seed === "number"
+      ? seed
+      : typeof seed === "string"
+      ? Date.parse(seed) || Date.now()
+      : Date.now();
+  return `${url}${sep}v=${v}`;
 }
 
 export function uploadOrgAssetsRepo(supabase: SupabaseClient) {
@@ -34,7 +40,10 @@ export function uploadOrgAssetsRepo(supabase: SupabaseClient) {
       supabase.storage.from(bucket).upload(path, file, {
         upsert,
         contentType: file.type || undefined,
-        cacheControl: "3600",
+
+        // ✅ CRUCIAL: sinon tu gardes des vieilles versions 1h
+        // (et “remplacer” paraît ne pas marcher)
+        cacheControl: "0",
       })
     );
 
@@ -44,14 +53,13 @@ export function uploadOrgAssetsRepo(supabase: SupabaseClient) {
 
     return {
       path,
-      publicUrl,
-      publicUrlWithBust: withBust(publicUrl),
+      publicUrl, // raw DB value
+      publicUrlWithBust: withBust(publicUrl), // UI immediate refresh
     };
   }
 
   return {
     /**
-     * ✅ Upsert stable:
      * orgs/<orgId>/logo/logo.<ext>
      */
     async uploadOrgLogo(params: { orgId: string; file: File }) {
@@ -61,7 +69,6 @@ export function uploadOrgAssetsRepo(supabase: SupabaseClient) {
     },
 
     /**
-     * ✅ Upsert stable:
      * orgs/<orgId>/default_banner/default_banner.<ext>
      */
     async uploadOrgDefaultBanner(params: { orgId: string; file: File }) {
@@ -71,7 +78,6 @@ export function uploadOrgAssetsRepo(supabase: SupabaseClient) {
     },
 
     /**
-     * ✅ Upsert stable (pour plus tard)
      * orgs/<orgId>/events/<eventId>/banner/banner.<ext>
      */
     async uploadEventBanner(params: { orgId: string; eventId: string; file: File }) {

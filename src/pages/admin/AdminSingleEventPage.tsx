@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
 
 import type { AdminOutletContext } from "./AdminDashboard";
@@ -12,17 +12,28 @@ import { EventDetailsForm } from "../../features/admin/events/singleEvent/EventD
 import { EventTicketsPanel } from "../../features/admin/events/singleEvent/EventTicketsPanel";
 import { EventRegistrationFormPanel } from "../../features/admin/events/singleEvent/EventRegistrationFormPanel";
 
+import { uploadOrgAssetsRepo } from "../../gateways/supabase/repositories/dashboard/uploadOrgAssets.repo";
+
 import "../../styles/adminEventsPage.css";
 
 type TabKey = "details" | "tickets" | "form" | "participants";
 
 export function AdminSingleEventPage() {
   const { eventSlug } = useParams<{ eventSlug: string }>();
-  const { orgId } = useOutletContext<AdminOutletContext>();
+  const { orgId, refetch: refetchDashboard } =
+    useOutletContext<AdminOutletContext>();
+
+  const storageRepo = useMemo(() => uploadOrgAssetsRepo(supabase), []);
 
   const [tab, setTab] = useState<TabKey>("details");
 
-  const { loading, error, data, eventId, refetch } = useAdminSingleEventData({
+  const {
+    loading,
+    error,
+    data,
+    eventId,
+    refetch: refetchSingle,
+  } = useAdminSingleEventData({
     supabase,
     orgId,
     eventSlug,
@@ -32,10 +43,8 @@ export function AdminSingleEventPage() {
     attendeesOffset: 0,
   });
 
-  // ✅ hook unique (supabase reste au niveau page)
   const update = useUpdateEvent({ supabase });
 
-  // ✅ override local après update pour UX instant
   const [eventOverride, setEventOverride] = useState<any | null>(null);
 
   if (!eventSlug) {
@@ -47,28 +56,38 @@ export function AdminSingleEventPage() {
     );
   }
 
-  // ⚠️ si override existe mais qu’on navigue vers un autre event, on veut pas le garder
-  // => la manière la plus simple : override seulement si même id
   const baseEvent = data?.event ?? null;
   const event =
     eventOverride && baseEvent && eventOverride.id === baseEvent.id
       ? eventOverride
       : baseEvent;
 
-  async function handleConfirmFullPatch(patch: UpdateEventFullPatch) {
+  async function handleConfirmFullPatch(
+    patch: UpdateEventFullPatch
+  ): Promise<void> {
     if (!event?.id) return;
 
-        const next = await update.updateEvent({
+    const next = await update.updateEvent({ eventId: event.id, patch });
+    if (!next) return;
+
+    setEventOverride(next);
+
+    // ✅ refresh panels de la page single (si nécessaire)
+    if (typeof refetchSingle === "function") await refetchSingle();
+
+    // ✅ refresh liste events (écran global)
+    if (typeof refetchDashboard === "function") await refetchDashboard();
+  }
+
+  async function uploadEventBanner(file: File) {
+    if (!orgId) throw new Error("ORG_ID_MISSING");
+    if (!event?.id) throw new Error("EVENT_ID_MISSING");
+
+    return storageRepo.uploadEventBanner({
+      orgId,
       eventId: event.id,
-      patch,
+      file,
     });
-
-
-    if (next) {
-      setEventOverride(next);
-      // optionnel : si tu veux resynchroniser les panels
-      if (typeof refetch === "function") await refetch();
-    }
   }
 
   return (
@@ -94,7 +113,10 @@ export function AdminSingleEventPage() {
         <TabButton active={tab === "form"} onClick={() => setTab("form")}>
           Formulaire d&apos;inscription
         </TabButton>
-        <TabButton active={tab === "participants"} onClick={() => setTab("participants")}>
+        <TabButton
+          active={tab === "participants"}
+          onClick={() => setTab("participants")}
+        >
           Participants
         </TabButton>
       </div>
@@ -107,17 +129,18 @@ export function AdminSingleEventPage() {
           <>
             {tab === "details" && (
               <div className="adminEventSection">
-                {/* ✅ key => remount => reset draft sans useEffect */}
-               <EventDetailsForm
-                key={event.updatedAt}
+                
+                <EventDetailsForm
+                key={event.updatedAt ?? event.id}  
                 event={event}
                 onConfirm={handleConfirmFullPatch}
-                onSaved={(next) => setEventOverride(next)}
+                onUploadBanner={uploadEventBanner}
               />
 
 
-                {/* Optionnel : feedback global depuis le hook */}
-                {update.error && <p style={{ color: "crimson" }}>{update.error}</p>}
+                {update.error && (
+                  <p style={{ color: "crimson" }}>{update.error}</p>
+                )}
               </div>
             )}
 
@@ -132,7 +155,8 @@ export function AdminSingleEventPage() {
                   orderItems={data.orderItems ?? []}
                   payments={data.payments ?? []}
                   onChanged={async () => {
-                    if (typeof refetch === "function") await refetch();
+                    if (typeof refetchSingle === "function") await refetchSingle();
+                    if (typeof refetchDashboard === "function") await refetchDashboard();
                   }}
                 />
               </div>
@@ -145,7 +169,8 @@ export function AdminSingleEventPage() {
                   event={event}
                   fields={data.formFields ?? []}
                   onChanged={async () => {
-                    if (typeof refetch === "function") await refetch();
+                    if (typeof refetchSingle === "function") await refetchSingle();
+                    if (typeof refetchDashboard === "function") await refetchDashboard();
                   }}
                 />
               </div>
@@ -164,7 +189,11 @@ export function AdminSingleEventPage() {
   );
 }
 
-function TabButton(props: { active?: boolean; onClick: () => void; children: React.ReactNode }) {
+function TabButton(props: {
+  active?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
   const { active, onClick, children } = props;
   return (
     <button
