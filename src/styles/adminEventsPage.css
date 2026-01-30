@@ -16,7 +16,7 @@
 }
 
 .adminEventsLeft * {
-    min-width: 0;
+  min-width: 0;
 }
 
 .adminEventsRight{
@@ -93,5 +93,525 @@
 
   .adminEventsEditorPanel{
     transform-origin: top center;
+  }
+}
+
+/* ---------- Admin Single Event (Détails) ---------- */
+
+.adminEventTabs{
+  display:flex;
+  gap:8px;
+  margin-top:12px;
+  flex-wrap:wrap;
+}
+
+.adminEventTab{
+  padding:8px 10px;
+  border-radius:10px;
+  border:1px solid #e5e7eb;
+  background:#fff;
+  color:#111827;
+  font-size:13px;
+  cursor:pointer;
+}
+
+.adminEventTab.isActive{
+  background:#111827;
+  color:#fff;
+  border-color:#111827;
+}
+
+.adminEventSection{
+  margin-top: 8px;
+}
+
+.adminEventDetails{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.adminEventHeaderRow{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.adminEventHeaderActions{
+  display:flex;
+  gap:10px;
+}
+
+.adminEventBtn{
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(0,0,0,0.10);
+  background:#111827;
+  color:#fff;
+  font-weight:800;
+  font-size:13px;
+  cursor:pointer;
+}
+
+.adminEventBtn:disabled{
+  opacity:0.55;
+  cursor:not-allowed;
+}
+
+.adminEventHint{
+  margin-top:6px;
+  font-size:12px;
+  color:#6b7280;
+  line-height:1.35;
+}
+
+.adminEventAlert{
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(0,0,0,0.10);
+  background:#fff;
+  font-size:13px;
+}
+
+.adminEventAlert.isError{
+  border-color: rgba(220, 38, 38, 0.35);
+  background: rgba(220, 38, 38, 0.06);
+  color:#7f1d1d;
+}
+
+.adminEventAlert.isWarn{
+  border-color: rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.08);
+  color:#7c2d12;
+}
+
+.adminEventAlert.isOk{
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.08);
+  color:#064e3b;
+}
+
+/* 🔧 ALIGNEMENT FIX ICI */
+.adminEventFormGrid{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap:12px;
+  align-items:start;
+}
+
+.adminEventField{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+}
+
+.adminEventFieldSpan2{
+  grid-column: span 2;
+}
+
+.adminEventLabel{
+  font-size:12px;
+  font-weight:800;
+  color:#111827;
+  margin-bottom:6px;
+  line-height:1.2;
+}
+
+.adminEventLabelRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:6px;
+}
+
+.adminEventLink{
+  border:none;
+  background:transparent;
+  color:#111827;
+  font-size:12px;
+  font-weight:800;
+  cursor:pointer;
+  opacity:0.85;
+  padding:0;
+}
+
+.adminEventLink:disabled{
+  opacity:0.45;
+  cursor:not-allowed;
+}
+
+.adminEventInput{
+  width:100%;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(0,0,0,0.10);
+  outline:none;
+  font-size:13px;
+  background:#fff;
+  box-sizing:border-box;
+}
+
+.adminEventTextarea{
+  width:100%;
+  min-height: 110px;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(0,0,0,0.10);
+  outline:none;
+  font-size:13px;
+  background:#fff;
+  box-sizing:border-box;
+  resize: vertical;
+}
+
+.adminEventToggle{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(0,0,0,0.10);
+  background:#fff;
+  font-size:13px;
+}
+
+.adminEventBannerPreview{
+  width:100%;
+  height: clamp(160px, 24vw, 260px);
+  object-fit: cover;
+  border-radius: 14px;
+  border:1px solid rgba(0,0,0,0.10);
+  background:#fff;
+}
+
+.adminEventEmpty{
+  padding:12px;
+  border-radius:12px;
+  border:1px dashed rgba(0,0,0,0.18);
+  color:#6b7280;
+  font-size:13px;
+}
+
+.adminEventInlineBtn{
+  margin-top:6px;
+  align-self:flex-start;
+  border:none;
+  background:transparent;
+  color:#111827;
+  font-size:12px;
+  font-weight:800;
+  cursor:pointer;
+  padding:0;
+  opacity:0.85;
+}
+
+.adminEventInlineBtn:disabled{
+  opacity:0.45;
+  cursor:not-allowed;
+}
+
+@media (max-width: 860px){
+  .adminEventFormGrid{
+    grid-template-columns: 1fr;
+  }
+  .adminEventFieldSpan2{
+    grid-column: auto;
+  }
+}
+
+/* ---------- Tickets ---------- */
+
+.adminTickets{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.adminTicketsGrid{
+  display:grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap:14px;
+  align-items:start;
+}
+
+.adminTicketsList{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.adminTicketCard{
+  background:#fff;
+  border:1px solid rgba(0,0,0,0.08);
+  border-radius:16px;
+  padding:12px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.05);
+}
+
+.adminTicketCard.isInactive{
+  opacity:0.65;
+}
+
+.adminTicketTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.adminTicketTitle{
+  font-weight:900;
+  font-size:15px;
+  color:#111827;
+}
+
+.adminTicketPill{
+  font-size:12px;
+  font-weight:900;
+  padding:6px 10px;
+  border-radius:999px;
+  background: rgba(16, 185, 129, 0.10);
+  border:1px solid rgba(16, 185, 129, 0.25);
+  color:#065f46;
+  white-space:nowrap;
+}
+
+.adminTicketPill.isOff{
+  background: rgba(239, 68, 68, 0.08);
+  border:1px solid rgba(239, 68, 68, 0.22);
+  color:#7f1d1d;
+}
+
+.adminTicketMeta{
+  margin-top:8px;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  color:#374151;
+  font-size:12px;
+}
+
+.adminTicketStrong{
+  font-weight:900;
+  color:#111827;
+}
+
+.adminTicketStats{
+  margin-top:10px;
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap:10px;
+}
+
+.adminTicketStat{
+  background: rgba(17,24,39,0.04);
+  border:1px solid rgba(17,24,39,0.08);
+  border-radius:14px;
+  padding:10px 12px;
+}
+
+.adminTicketStatLabel{
+  font-size:11px;
+  color:#6b7280;
+  font-weight:800;
+}
+
+.adminTicketStatValue{
+  margin-top:4px;
+  font-size:14px;
+  font-weight:900;
+  color:#111827;
+}
+
+.adminTicketDesc{
+  margin-top:10px;
+  font-size:12px;
+  color:#4b5563;
+  white-space:pre-wrap;
+}
+
+.adminTicketActions{
+  margin-top:12px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.adminTicketBtn{
+  padding:9px 12px;
+  border-radius:12px;
+  border:1px solid rgba(0,0,0,0.10);
+  background:#fff;
+  font-weight:900;
+  font-size:12px;
+  cursor:pointer;
+}
+
+.adminTicketBtn.danger{
+  border-color: rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.08);
+  color:#7f1d1d;
+}
+
+.adminTicketsEditor{
+  position:sticky;
+  top:12px;
+  align-self:start;
+}
+
+.adminTicketsEditorCard{
+  background:#fff;
+  border:1px solid rgba(0,0,0,0.08);
+  border-radius:16px;
+  padding:12px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.05);
+}
+
+.adminTicketsEditorHeader{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.adminTicketsEditorTitle{
+  font-weight:900;
+  font-size:14px;
+  color:#111827;
+}
+
+.adminTicketsEditorFooter{
+  margin-top:12px;
+  display:flex;
+  justify-content:flex-end;
+}
+
+@media (max-width: 1050px){
+  .adminTicketsGrid{
+    grid-template-columns: 1fr;
+  }
+  .adminTicketsEditor{
+    position:static;
+  }
+}
+
+/* ---------- Registration Form Builder ---------- */
+
+.adminRegForm{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.adminRegGrid{
+  display:grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap:14px;
+  align-items:start;
+}
+
+.adminRegList{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.adminRegCard{
+  background:#fff;
+  border:1px solid rgba(0,0,0,0.08);
+  border-radius:16px;
+  padding:12px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.05);
+}
+
+.adminRegCard.isInactive{
+  opacity:0.65;
+}
+
+.adminRegTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.adminRegTitle{
+  font-weight:900;
+  font-size:15px;
+  color:#111827;
+}
+
+.adminRegPills{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+.adminRegPill{
+  font-size:12px;
+  font-weight:900;
+  padding:6px 10px;
+  border-radius:999px;
+  background: rgba(16, 185, 129, 0.10);
+  border:1px solid rgba(16, 185, 129, 0.25);
+  color:#065f46;
+  white-space:nowrap;
+}
+
+.adminRegPill.isOff{
+  background: rgba(239, 68, 68, 0.08);
+  border:1px solid rgba(239, 68, 68, 0.22);
+  color:#7f1d1d;
+}
+
+.adminRegPill.isReq{
+  background: rgba(245, 158, 11, 0.10);
+  border:1px solid rgba(245, 158, 11, 0.25);
+  color:#7c2d12;
+}
+
+.adminRegPill.isOpt{
+  background: rgba(17,24,39,0.04);
+  border:1px solid rgba(17,24,39,0.10);
+  color:#111827;
+}
+
+.adminRegMeta{
+  margin-top:8px;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  color:#374151;
+  font-size:12px;
+}
+
+.adminRegKey code{
+  font-weight:900;
+}
+
+.adminRegActions{
+  margin-top:12px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.adminRegEditor{
+  position:sticky;
+  top:12px;
+  align-self:start;
+}
+
+@media (max-width: 1050px){
+  .adminRegGrid{
+    grid-template-columns: 1fr;
+  }
+  .adminRegEditor{
+    position:static;
   }
 }
