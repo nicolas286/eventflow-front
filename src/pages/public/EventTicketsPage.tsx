@@ -11,7 +11,9 @@ import Badge from "../../ui/components/badge/Badge";
 import { PublicEventHeader } from "./checkout/PublicEventHeader";
 import { loadDraft, saveDraft, formatMoney } from "./checkout/checkoutStore";
 
-import "../../styles/publicPages.css";
+/* ✅ CSS (remplace publicPages.css) */
+import "../../styles/publicCheckoutBase.css";
+import "../../styles/eventTicketsPage.css";
 
 export function EventTicketsPage() {
   const navigate = useNavigate();
@@ -133,7 +135,7 @@ export function EventTicketsPage() {
                   const createdCount = createsAtt ? qty * perUnit : 0;
 
                   return (
-                    <Card key={p.id}>
+                    <Card key={p.id} className={soldOut ? "publicTicketCard isSoldOut" : "publicTicketCard"}>
                       <CardHeader
                         title={<div className="publicCardTitle">{p.name}</div>}
                         subtitle={
@@ -144,65 +146,59 @@ export function EventTicketsPage() {
                         right={<Badge tone={badgeTone} label={badgeLabel} />}
                       />
 
-                      <CardBody>
-                        {p.description ? (
-                          <div className="publicProse" style={{ marginBottom: 10, whiteSpace: "pre-wrap" }}>
-                            {p.description}
+                      <CardBody className="publicTicketBody">
+                        <div className="publicTicketLayout">
+                          <div className="publicTicketLeft">
+                            {p.description ? (
+                              <div className="publicProse publicTicketDesc" style={{ whiteSpace: "pre-wrap" }}>
+                                {p.description}
+                              </div>
+                            ) : null}
+
+                            <div className="publicMetaRow">
+                              {createsAtt ? (
+                                <span>
+                                  Participants : {perUnit} / billet
+                                  {qty > 0 ? ` · ${createdCount} participant(s) à renseigner` : ""}
+                                </span>
+                              ) : (
+                                <span>Ce billet ne demande pas de formulaire participant</span>
+                              )}
+                            </div>
                           </div>
-                        ) : null}
 
-                        <div className="publicMetaRow">
-                          {createsAtt ? (
-                            <span>
-                              Participants : {perUnit} / billet
-                              {qty > 0 ? ` · ${createdCount} participant(s) à renseigner` : ""}
-                            </span>
-                          ) : (
-                            <span>Ce billet ne demande pas de formulaire participant</span>
-                          )}
-                        </div>
+                          <div className="publicTicketRight">
+                            <div className="publicQtyBlock">
+                              <Button
+                                variant="secondary"
+                                label="−"
+                                onClick={() => updateQty(p.id, qty - 1)}
+                                disabled={qty <= 0}
+                                className="publicQtyBtn"
+                              />
 
-                        <div
-                          style={{
-                            marginTop: 12,
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 10,
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          <Button
-                            variant="secondary"
-                            label="−"
-                            onClick={() => updateQty(p.id, qty - 1)}
-                            disabled={qty <= 0}
-                          />
+                              <input
+                                type="number"
+                                min={0}
+                                max={maxQty}
+                                value={qty}
+                                onChange={(e) => updateQty(p.id, Number(e.target.value))}
+                                className="publicQtyInput"
+                                disabled={soldOut}
+                              />
 
-                          <input
-                            type="number"
-                            min={0}
-                            max={maxQty}
-                            value={qty}
-                            onChange={(e) => updateQty(p.id, Number(e.target.value))}
-                            style={{
-                              width: 110,
-                              padding: "10px 12px",
-                              borderRadius: 12,
-                              border: "1px solid rgba(0,0,0,0.10)",
-                              outline: "none",
-                            }}
-                            disabled={soldOut}
-                          />
+                              <Button
+                                variant="secondary"
+                                label="+"
+                                onClick={() => updateQty(p.id, qty + 1)}
+                                disabled={soldOut || qty >= maxQty}
+                                className="publicQtyBtn"
+                              />
+                            </div>
 
-                          <Button
-                            variant="secondary"
-                            label="+"
-                            onClick={() => updateQty(p.id, qty + 1)}
-                            disabled={soldOut || qty >= maxQty}
-                          />
-
-                          <div style={{ marginLeft: "auto", fontWeight: 800 }}>
-                            {formatMoney(qty * p.priceCents, p.currency)}
+                            <div className="publicTicketTotal">
+                              {formatMoney(qty * p.priceCents, p.currency)}
+                            </div>
                           </div>
                         </div>
                       </CardBody>
@@ -215,24 +211,20 @@ export function EventTicketsPage() {
 
           <div className="publicDivider" />
 
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 12,
-              flexWrap: "wrap",
-            }}
-          >
+          <div className="publicRecapRow">
             <div>
-              <div style={{ fontWeight: 800 }}>Récap</div>
-              <div className="publicSubtitle" style={{ marginTop: 4 }}>
+              <div className="publicRecapTitle">Récap</div>
+              <div className="publicSubtitle publicRecapSubtitle">
                 {totalTickets} billet(s) · {attendeesToCreate} participant(s) à renseigner ·{" "}
                 {formatMoney(totalCents, currency)}
               </div>
             </div>
 
-            <Button label="Continuer (Participants)" onClick={goNext} disabled={totalTickets <= 0} />
+            <Button
+              label="Continuer (Participants)"
+              onClick={goNext}
+              disabled={totalTickets <= 0}
+            />
           </div>
         </div>
       </Container>

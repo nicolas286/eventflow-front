@@ -17,7 +17,9 @@ import {
   type CheckoutDraft,
 } from "./checkout/checkoutStore";
 
-import "../../styles/publicPages.css";
+/* ✅ CSS (remplace publicPages.css) */
+import "../../styles/publicCheckoutBase.css";
+import "../../styles/eventPaymentPage.css";
 
 import { useRegister } from "../../features/public/register/useRegister";
 
