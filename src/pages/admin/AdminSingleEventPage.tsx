@@ -15,6 +15,7 @@ import { EventTicketsPanel } from "../../features/admin/events/singleEvent/Event
 import { EventRegistrationFormPanel } from "../../features/admin/events/singleEvent/EventRegistrationFormPanel";
 
 import { uploadOrgAssetsRepo } from "../../gateways/supabase/repositories/dashboard/uploadOrgAssets.repo";
+import { useDeleteEventProduct } from "../../features/admin/hooks/useDeleteEventProduct";
 
 import "../../styles/adminEventsPage.css";
 
@@ -39,6 +40,7 @@ export function AdminSingleEventPage() {
 
   const update = useUpdateEvent({ supabase });
   const createProduct = useCreateEventProduct({ supabase });
+  const removeProduct = useDeleteEventProduct({ supabase }); 
 
   const [eventOverride, setEventOverride] = useState<any | null>(null);
 
@@ -137,13 +139,22 @@ export function AdminSingleEventPage() {
                   orders={data.orders ?? []}
                   orderItems={data.orderItems ?? []}
                   payments={data.payments ?? []}
+
                   createLoading={createProduct.loading}
                   createError={createProduct.error}
                   onCreate={async (input) => {
                     await createProduct.createEventProduct(input);
                     await refreshAll();
                   }}
-                  // ✅ pas d'update/delete pour l’instant
+                  deleteLoading={removeProduct.loading}
+                  deleteError={removeProduct.error}
+                  onRemove={async (productId) => {
+                    const ok = await removeProduct.deleteEventProduct({ id: productId });
+                    if (!ok) return;
+                    await refreshAll();
+                  }}
+
+                  onChanged={refreshAll}
                 />
               </div>
             )}

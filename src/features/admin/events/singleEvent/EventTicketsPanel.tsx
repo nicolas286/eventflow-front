@@ -20,12 +20,14 @@ type Props = {
   orderItems: OrderItemLike[];
   payments: unknown[];
 
-  // ✅ create only
   onCreate: (input: CreateEventProductInput) => Promise<void>;
 
-  // ✅ UX state
   createLoading?: boolean;
   createError?: string | null;
+
+  onRemove?: (productId: string) => Promise<void>;
+  deleteLoading?: boolean;
+  deleteError?: string | null;
 
   onChanged?: () => void;
 };
@@ -64,6 +66,8 @@ type TicketDraft = {
   closeEventWhenSoldOut: boolean;
 };
 
+
+
 export function EventTicketsPanel(props: Props) {
   const {
     event,
@@ -72,6 +76,9 @@ export function EventTicketsPanel(props: Props) {
     onCreate,
     createLoading = false,
     createError = null,
+    onRemove,
+    deleteLoading = false,
+    deleteError = null,
     onChanged,
   } = props;
 
@@ -82,6 +89,16 @@ export function EventTicketsPanel(props: Props) {
     arr.sort((a, b) => (a?.sortOrder ?? 0) - (b?.sortOrder ?? 0));
     return arr;
   }, [products]);
+
+  async function handleRemove(productId: string) {
+  if (!onRemove) return;
+
+  const ok = window.confirm("Supprimer ce ticket ? (les commandes passées restent intactes)");
+  if (!ok) return;
+
+  await onRemove(productId);
+  onChanged?.();
+  }
 
   const statsByProductId = useMemo(() => {
     const map = new Map<string, { soldQty: number; grossCents: number; currency: string }>();
@@ -151,6 +168,9 @@ export function EventTicketsPanel(props: Props) {
       isGatekeeper: Boolean(editing.isGatekeeper),
       closeEventWhenSoldOut: Boolean(editing.closeEventWhenSoldOut),
     };
+
+    
+
 
     await onCreate(input);
     closeEditor();
@@ -224,9 +244,16 @@ export function EventTicketsPanel(props: Props) {
                     <button type="button" className="adminTicketBtn" disabled title="Pas encore dispo">
                       Éditer
                     </button>
-                    <button type="button" className="adminTicketBtn danger" disabled title="Pas encore dispo">
-                      Supprimer
+                    <button
+                      type="button"
+                      className="adminTicketBtn danger"
+                      onClick={() => void handleRemove(String(p.id))}
+                      disabled={!onRemove || deleteLoading}
+                      title={!onRemove ? "Suppression non dispo" : undefined}
+                    >
+                      {deleteLoading ? "Suppression..." : "Supprimer"}
                     </button>
+
                   </div>
                 </div>
               );
@@ -253,6 +280,13 @@ export function EventTicketsPanel(props: Props) {
                   {createError}
                 </div>
               ) : null}
+
+              {deleteError ? (
+              <div className="adminEventHint" style={{ marginTop: 10, color: "#b91c1c" }}>
+                {deleteError}
+              </div>
+            ) : null}
+
 
               <div className="adminEventFormGrid" style={{ marginTop: 12 }}>
                 <div className="adminEventField">
