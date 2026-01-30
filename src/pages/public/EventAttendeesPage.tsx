@@ -11,7 +11,13 @@ import Badge from "../../ui/components/badge/Badge";
 import { PublicEventHeader } from "./checkout/PublicEventHeader";
 import { loadDraft, saveDraft } from "./checkout/checkoutStore";
 
-import "../../styles/publicPages.css";
+/* ✅ CSS */
+import "../../styles/publicCheckoutBase.css";
+import "../../styles/eventAttendeesPage.css";
+
+/* ✅ factorisé */
+import CountrySelect from "../../ui/components/forms/CountrySelect";
+import PhoneInput from "../../ui/components/forms/PhoneInput";
 
 type Field = {
   id: string;
@@ -28,6 +34,39 @@ type Draft = ReturnType<typeof loadDraft>;
 type AttendeeSlot = Record<string, unknown> & {
   eventProductId: string;
 };
+
+function norm(s: unknown) {
+  return String(s ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function isBirthDateField(f: Field) {
+  const k = norm(f.fieldKey);
+  const l = norm(f.label);
+  return (
+    k === "birthdate" ||
+    k === "date_naissance" ||
+    k === "date-de-naissance" ||
+    k === "datenaissance" ||
+    k === "dob" ||
+    l.includes("date de naissance")
+  );
+}
+
+function isCountryField(f: Field) {
+  const k = norm(f.fieldKey);
+  const l = norm(f.label);
+  return k === "country" || k === "pays" || l === "pays";
+}
+
+function isPhoneField(f: Field) {
+  const k = norm(f.fieldKey);
+  const l = norm(f.label);
+  return k === "phone" || k === "telephone" || k === "tel" || l.includes("telephone");
+}
 
 export function EventAttendeesPage() {
   const navigate = useNavigate();
@@ -229,10 +268,59 @@ export function EventAttendeesPage() {
 
                           const label = (
                             <div style={{ fontWeight: 800, marginBottom: 6 }}>
-                              {f.label} {f.isRequired ? <span style={{ opacity: 0.7 }}>(requis)</span> : null}
+                              {f.label}{" "}
+                              {f.isRequired ? <span style={{ opacity: 0.7 }}>(requis)</span> : null}
                             </div>
                           );
 
+                          // ✅ Date de naissance -> type date
+                          if (isBirthDateField(f)) {
+                            return (
+                              <div key={f.id}>
+                                {label}
+                                <input
+                                  type="date"
+                                  value={typeof value === "string" ? value : ""}
+                                  onChange={(e) => setAnswer(idx, f.fieldKey, e.target.value)}
+                                  style={commonStyle}
+                                />
+                              </div>
+                            );
+                          }
+
+                          // ✅ Pays -> factorisé (valeur = label)
+                          if (isCountryField(f)) {
+                            return (
+                              <div key={f.id}>
+                                {label}
+                                <CountrySelect
+                                  value={typeof value === "string" ? value : ""}
+                                  onChange={(v) => setAnswer(idx, f.fieldKey, v)}
+                                  style={commonStyle}
+                                  placeholder="Sélectionner un pays"
+                                />
+                              </div>
+                            );
+                          }
+
+                          // ✅ Téléphone -> factorisé (valeur e164)
+                          if (isPhoneField(f)) {
+                            return (
+                              <div key={f.id}>
+                                {label}
+                                <PhoneInput
+                                  value={typeof value === "string" ? value : ""}
+                                  onChange={(v) => setAnswer(idx, f.fieldKey, v)}
+                                  groupClassName="publicPhoneGroup"
+                                  selectStyle={commonStyle}
+                                  inputStyle={commonStyle}
+                                  defaultDial="+33"
+                                />
+                              </div>
+                            );
+                          }
+
+                          // --- reste inchangé ---
                           if (f.fieldType === "textarea") {
                             return (
                               <div key={f.id}>
@@ -277,7 +365,8 @@ export function EventAttendeesPage() {
                                   style={{ width: 18, height: 18 }}
                                 />
                                 <div style={{ fontWeight: 800 }}>
-                                  {f.label} {f.isRequired ? <span style={{ opacity: 0.7 }}>(requis)</span> : null}
+                                  {f.label}{" "}
+                                  {f.isRequired ? <span style={{ opacity: 0.7 }}>(requis)</span> : null}
                                 </div>
                               </div>
                             );
@@ -301,8 +390,8 @@ export function EventAttendeesPage() {
                                       ? value
                                       : ""
                                     : typeof value === "string"
-                                    ? value
-                                    : ""
+                                      ? value
+                                      : ""
                                 }
                                 onChange={(e) =>
                                   setAnswer(

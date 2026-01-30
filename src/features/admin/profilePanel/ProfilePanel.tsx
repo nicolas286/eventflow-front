@@ -8,61 +8,16 @@ import { useSaveAdminProfile } from "../hooks/useUpdateAdminProfile";
 import type { AdminProfileForm } from "../../../domain/models/admin/admin.updateAdminProfile.schema";
 import { inferCountryCode } from "../../../domain/helpers/countries";
 
+/* ✅ factorisé */
+import CountrySelect from "../../../ui/components/forms/CountrySelect";
+import PhoneInput from "../../../ui/components/forms/PhoneInput";
+import { parseE164, buildE164 } from "../../../ui/components/forms/countryPhoneData";
+
 type ProfilePanelProps = {
   profile: AdminProfileForm;
   setProfile: React.Dispatch<React.SetStateAction<AdminProfileForm>>;
   onSaved: () => Promise<void>;
 };
-
-type CountryOption = {
-  label: string;
-  iso2: string;
-  dial: string;
-  flag: string;
-};
-
-const COUNTRY_OPTIONS: CountryOption[] = [
-  { label: "Belgique", iso2: "BE", dial: "+32", flag: "🇧🇪" },
-  { label: "France", iso2: "FR", dial: "+33", flag: "🇫🇷" },
-  { label: "Luxembourg", iso2: "LU", dial: "+352", flag: "🇱🇺" },
-  { label: "Pays-Bas", iso2: "NL", dial: "+31", flag: "🇳🇱" },
-  { label: "Allemagne", iso2: "DE", dial: "+49", flag: "🇩🇪" },
-  { label: "Suisse", iso2: "CH", dial: "+41", flag: "🇨🇭" },
-  { label: "Royaume-Uni", iso2: "GB", dial: "+44", flag: "🇬🇧" },
-  { label: "Espagne", iso2: "ES", dial: "+34", flag: "🇪🇸" },
-  { label: "Italie", iso2: "IT", dial: "+39", flag: "🇮🇹" },
-  { label: "Portugal", iso2: "PT", dial: "+351", flag: "🇵🇹" },
-  { label: "Irlande", iso2: "IE", dial: "+353", flag: "🇮🇪" },
-  { label: "États-Unis", iso2: "US", dial: "+1", flag: "🇺🇸" },
-  { label: "Canada", iso2: "CA", dial: "+1", flag: "🇨🇦" },
-];
-
-function normalizeDigits(s: string) {
-  return s.replace(/[^\d]/g, "");
-}
-
-function parseE164(phoneRaw: string | null | undefined) {
-  const p = (phoneRaw ?? "").trim();
-  if (!p.startsWith("+")) return { dial: "", national: normalizeDigits(p) };
-
-  const match = COUNTRY_OPTIONS
-    .map((c) => c.dial)
-    .sort((a, b) => b.length - a.length)
-    .find((dial) => p.startsWith(dial));
-
-  if (!match) return { dial: "", national: normalizeDigits(p) };
-
-  const rest = p.slice(match.length);
-  return { dial: match, national: normalizeDigits(rest) };
-}
-
-function buildE164(dial: string, national: string) {
-  const d = (dial ?? "").trim();
-  const n = normalizeDigits(national ?? "");
-  if (!d && !n) return "";
-  if (!d) return n;
-  return `${d}${n}`;
-}
 
 export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePanelProps) {
   const { loading, error, updated, saveAdminProfile, reset } = useSaveAdminProfile({ supabase });
@@ -78,28 +33,18 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
     return name || "Compte admin";
   }, [profile.firstName, profile.lastName]);
 
-  // Téléphone UI: split indicatif / numéro local
-  const initialPhone = useMemo(() => parseE164(profile.phone), [profile.phone]);
-  const [dial, setDial] = useState<string>(initialPhone.dial || "+32");
-  const [national, setNational] = useState<string>(initialPhone.national);
-
   // "Compte" (Auth) — UI only pour l’instant
   const [email, setEmail] = useState<string>("");
   const [newPassword, setNewPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
 
-  // resync soft quand le profil change
-  useMemo(() => {
-    const p = parseE164(profile.phone);
-    if (p.dial) setDial(p.dial);
-    setNational(p.national);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile.userId]);
-
   async function handleSave() {
     reset();
 
-    const phoneE164 = buildE164(dial, national);
+    // ⚠️ inchangé : on construit bien une valeur e164 sans espaces
+    const p = parseE164(profile.phone);
+    const phoneE164 = buildE164(p.dial || "+32", p.national);
+
     const next: AdminProfileForm = {
       ...profile,
       phone: phoneE164 || null,
@@ -119,8 +64,7 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
   const selectedCountry = useMemo(() => {
     const c = (profile.country ?? "").trim().toLowerCase();
     if (!c) return "";
-    const found = COUNTRY_OPTIONS.find((o) => o.label.toLowerCase() === c);
-    return found?.label ?? profile.country ?? "";
+    return profile.country ?? "";
   }, [profile.country]);
 
   return (
@@ -167,66 +111,32 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
         <div className="profilePanel__phone">
           <div className="profilePanel__label">Téléphone</div>
 
-          <div className="profilePanel__phoneRow">
-            <select
-              className="profilePanel__select"
-              value={dial}
-              onChange={(e) => {
-                const nextDial = e.target.value;
-                setDial(nextDial);
-
-                const phoneE164 = buildE164(nextDial, national);
-                updateField("phone", phoneE164 || null);
-              }}
-              aria-label="Indicatif"
-            >
-              {COUNTRY_OPTIONS.map((c) => (
-                <option key={`${c.iso2}-${c.dial}`} value={c.dial}>
-                  {c.flag} {c.dial}
-                </option>
-              ))}
-            </select>
-
-            <input
-              className="profilePanel__phoneInput"
-              value={national}
-              onChange={(e) => {
-                const nextNational = e.target.value;
-                setNational(nextNational);
-
-                const phoneE164 = buildE164(dial, nextNational);
-                updateField("phone", phoneE164 || null);
-              }}
-              inputMode="tel"
-              placeholder="Numéro"
-              aria-label="Numéro de téléphone"
-            />
-          </div>
+          {/* ✅ même structure visuelle, mais logique factorisée */}
+          <PhoneInput
+            value={profile.phone}
+            onChange={(next) => {
+              updateField("phone", next ? next : null);
+            }}
+            groupClassName="profilePanel__phoneRow"
+            selectClassName="profilePanel__select"
+            inputClassName="profilePanel__phoneInput"
+            defaultDial="+32"
+          />
         </div>
 
         {/* Pays */}
         <div className="profilePanel__country">
           <div className="profilePanel__label">Pays</div>
 
-          <select
+          <CountrySelect
             className="profilePanel__select"
             value={selectedCountry}
-            onChange={(e) => {
-              const countryLabel = e.target.value;
+            onChange={(countryLabel) => {
               updateField("country", countryLabel || null);
-
-              // conservé côté data (non affiché)
               updateField("countryCode", inferCountryCode(countryLabel));
             }}
-            aria-label="Pays"
-          >
-            <option value="">Sélectionner un pays</option>
-            {COUNTRY_OPTIONS.map((c) => (
-              <option key={c.iso2} value={c.label}>
-                {c.flag} {c.label}
-              </option>
-            ))}
-          </select>
+            placeholder="Sélectionner un pays"
+          />
         </div>
       </div>
 

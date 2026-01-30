@@ -1,0 +1,12 @@
+.publicPhoneGroup {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+@media (max-width: 520px) {
+  .publicPhoneGroup {
+    grid-template-columns: 1fr;
+  }
+}
