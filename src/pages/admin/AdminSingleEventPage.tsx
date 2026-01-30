@@ -1,9 +1,15 @@
-import { useState } from "react";
-import { useParams, useOutletContext } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useOutletContext, useParams } from "react-router-dom";
 
 import type { AdminOutletContext } from "./AdminDashboard";
 import { supabase } from "../../gateways/supabase/supabaseClient";
 import { useAdminSingleEventData } from "../../features/admin/hooks/useAdminSingleEventData";
+
+import { EventDetailsForm } from "../../features/admin/events/singleEvent/EventDetailsForm";
+import { EventTicketsPanel } from "../../features/admin/events/singleEvent/EventTicketsPanel";
+import { EventRegistrationFormPanel } from "../../features/admin/events/singleEvent/EventRegistrationFormPanel";
+
+import "../../styles/adminEventsPage.css";
 
 type TabKey = "details" | "tickets" | "form" | "participants";
 
@@ -13,28 +19,38 @@ export function AdminSingleEventPage() {
 
   const [tab, setTab] = useState<TabKey>("details");
 
-  const { loading, error, data, eventId } = useAdminSingleEventData({
+  const { loading, error, data, eventId, refetch } = useAdminSingleEventData({
     supabase,
     orgId,
     eventSlug,
-    ordersLimit: 50,
+    ordersLimit: 200,
     ordersOffset: 0,
-    attendeesLimit: 50,
+    attendeesLimit: 200,
     attendeesOffset: 0,
   });
+
+  const [eventOverride, setEventOverride] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (!data?.event) return;
+    setEventOverride(null);
+  }, [data?.event?.id]);
 
   if (!eventSlug) {
     return (
       <div className="adminCard">
-        <h2>Evénement</h2>
+        <h2>Événement</h2>
         <p>Slug manquant.</p>
       </div>
     );
   }
 
+  const event = eventOverride ?? data?.event ?? null;
+
   return (
     <div className="adminCard">
-      <h2>Evénement</h2>
+      <h2>Événement</h2>
+
       <div style={{ fontSize: 12, opacity: 0.8 }}>
         slug: <code>{eventSlug}</code>{" "}
         {eventId ? (
@@ -44,8 +60,7 @@ export function AdminSingleEventPage() {
         ) : null}
       </div>
 
-      {/* Onglets */}
-      <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+      <div className="adminEventTabs">
         <TabButton active={tab === "details"} onClick={() => setTab("details")}>
           Détails
         </TabButton>
@@ -64,49 +79,54 @@ export function AdminSingleEventPage() {
         {loading && <p>Chargement…</p>}
         {error && <p style={{ color: "crimson" }}>{error}</p>}
 
-        {!loading && !error && data && (
+        {!loading && !error && data && event && (
           <>
             {tab === "details" && (
-              <>
-                <h3>Détails</h3>
-                <pre style={preStyle}>{JSON.stringify(data.event, null, 2)}</pre>
-                <h4>Branding</h4>
-                <pre style={preStyle}>{JSON.stringify(data.orgBranding, null, 2)}</pre>
-              </>
+              <div className="adminEventSection">
+                <EventDetailsForm
+                  supabase={supabase as any}
+                  orgId={orgId}
+                  event={event}
+                  orgBranding={data.orgBranding}
+                  onSaved={(next) => setEventOverride(next)}
+                />
+              </div>
             )}
 
             {tab === "tickets" && (
-              <>
-                <h3>Tickets</h3>
-                <pre style={preStyle}>{JSON.stringify(data.products, null, 2)}</pre>
-              </>
+              <div className="adminEventSection">
+                <EventTicketsPanel
+                  supabase={supabase as any}
+                  orgId={orgId}
+                  event={event}
+                  products={data.products ?? []}
+                  orders={data.orders ?? []}
+                  orderItems={data.orderItems ?? []}
+                  payments={data.payments ?? []}
+                  onChanged={async () => {
+                    if (typeof refetch === "function") await refetch();
+                  }}
+                />
+              </div>
             )}
 
             {tab === "form" && (
-              <>
-                <h3>Formulaire d&apos;inscription</h3>
-                <pre style={preStyle}>{JSON.stringify(data.formFields, null, 2)}</pre>
-              </>
+              <div className="adminEventSection">
+                <EventRegistrationFormPanel
+                  supabase={supabase as any}
+                  event={event}
+                  fields={data.formFields ?? []}
+                  onChanged={async () => {
+                    if (typeof refetch === "function") await refetch();
+                  }}
+                />
+              </div>
             )}
 
             {tab === "participants" && (
               <>
                 <h3>Participants</h3>
-
-                <h4>Attendees</h4>
                 <pre style={preStyle}>{JSON.stringify(data.attendees, null, 2)}</pre>
-
-                <h4>Réponses</h4>
-                <pre style={preStyle}>{JSON.stringify(data.attendeeAnswers, null, 2)}</pre>
-
-                <h4>Commandes</h4>
-                <pre style={preStyle}>{JSON.stringify(data.orders, null, 2)}</pre>
-
-                <h4>Order items</h4>
-                <pre style={preStyle}>{JSON.stringify(data.orderItems, null, 2)}</pre>
-
-                <h4>Paiements</h4>
-                <pre style={preStyle}>{JSON.stringify(data.payments, null, 2)}</pre>
               </>
             )}
           </>
@@ -121,15 +141,8 @@ function TabButton(props: { active?: boolean; onClick: () => void; children: Rea
   return (
     <button
       onClick={onClick}
-      style={{
-        padding: "8px 10px",
-        borderRadius: 10,
-        border: "1px solid #e5e7eb",
-        background: active ? "#111827" : "white",
-        color: active ? "white" : "#111827",
-        fontSize: 13,
-        cursor: "pointer",
-      }}
+      className={active ? "adminEventTab isActive" : "adminEventTab"}
+      type="button"
     >
       {children}
     </button>
