@@ -3,9 +3,11 @@ import { useOutletContext, useParams } from "react-router-dom";
 
 import type { AdminOutletContext } from "./AdminDashboard";
 import { supabase } from "../../gateways/supabase/supabaseClient";
-import { useAdminSingleEventData } from "../../features/admin/hooks/useAdminSingleEventData";
 
+import { useAdminSingleEventData } from "../../features/admin/hooks/useAdminSingleEventData";
 import { useUpdateEvent } from "../../features/admin/hooks/useUpdateEvent";
+import { useCreateEventProduct } from "../../features/admin/hooks/useCreateEventProduct";
+
 import type { UpdateEventFullPatch } from "../../domain/models/admin/admin.updateEventFullPatch.schema";
 
 import { EventDetailsForm } from "../../features/admin/events/singleEvent/EventDetailsForm";
@@ -20,20 +22,12 @@ type TabKey = "details" | "tickets" | "form" | "participants";
 
 export function AdminSingleEventPage() {
   const { eventSlug } = useParams<{ eventSlug: string }>();
-  const { orgId, refetch: refetchDashboard } =
-    useOutletContext<AdminOutletContext>();
+  const { orgId, refetch: refetchDashboard } = useOutletContext<AdminOutletContext>();
 
   const storageRepo = useMemo(() => uploadOrgAssetsRepo(supabase), []);
-
   const [tab, setTab] = useState<TabKey>("details");
 
-  const {
-    loading,
-    error,
-    data,
-    eventId,
-    refetch: refetchSingle,
-  } = useAdminSingleEventData({
+  const { loading, error, data, eventId, refetch: refetchSingle } = useAdminSingleEventData({
     supabase,
     orgId,
     eventSlug,
@@ -44,6 +38,7 @@ export function AdminSingleEventPage() {
   });
 
   const update = useUpdateEvent({ supabase });
+  const createProduct = useCreateEventProduct({ supabase });
 
   const [eventOverride, setEventOverride] = useState<any | null>(null);
 
@@ -58,25 +53,21 @@ export function AdminSingleEventPage() {
 
   const baseEvent = data?.event ?? null;
   const event =
-    eventOverride && baseEvent && eventOverride.id === baseEvent.id
-      ? eventOverride
-      : baseEvent;
+    eventOverride && baseEvent && eventOverride.id === baseEvent.id ? eventOverride : baseEvent;
 
-  async function handleConfirmFullPatch(
-    patch: UpdateEventFullPatch
-  ): Promise<void> {
+  async function refreshAll() {
+    if (typeof refetchSingle === "function") await refetchSingle();
+    if (typeof refetchDashboard === "function") await refetchDashboard();
+  }
+
+  async function handleConfirmFullPatch(patch: UpdateEventFullPatch): Promise<void> {
     if (!event?.id) return;
 
     const next = await update.updateEvent({ eventId: event.id, patch });
     if (!next) return;
 
     setEventOverride(next);
-
-    // ✅ refresh panels de la page single (si nécessaire)
-    if (typeof refetchSingle === "function") await refetchSingle();
-
-    // ✅ refresh liste events (écran global)
-    if (typeof refetchDashboard === "function") await refetchDashboard();
+    await refreshAll();
   }
 
   async function uploadEventBanner(file: File) {
@@ -113,10 +104,7 @@ export function AdminSingleEventPage() {
         <TabButton active={tab === "form"} onClick={() => setTab("form")}>
           Formulaire d&apos;inscription
         </TabButton>
-        <TabButton
-          active={tab === "participants"}
-          onClick={() => setTab("participants")}
-        >
+        <TabButton active={tab === "participants"} onClick={() => setTab("participants")}>
           Participants
         </TabButton>
       </div>
@@ -129,35 +117,33 @@ export function AdminSingleEventPage() {
           <>
             {tab === "details" && (
               <div className="adminEventSection">
-                
                 <EventDetailsForm
-                key={event.updatedAt ?? event.id}  
-                event={event}
-                onConfirm={handleConfirmFullPatch}
-                onUploadBanner={uploadEventBanner}
-              />
+                  key={event.updatedAt ?? event.id}
+                  event={event}
+                  onConfirm={handleConfirmFullPatch}
+                  onUploadBanner={uploadEventBanner}
+                />
 
-
-                {update.error && (
-                  <p style={{ color: "crimson" }}>{update.error}</p>
-                )}
+                {update.error && <p style={{ color: "crimson" }}>{update.error}</p>}
               </div>
             )}
 
             {tab === "tickets" && (
               <div className="adminEventSection">
                 <EventTicketsPanel
-                  supabase={supabase as any}
                   orgId={orgId}
                   event={event}
                   products={data.products ?? []}
                   orders={data.orders ?? []}
                   orderItems={data.orderItems ?? []}
                   payments={data.payments ?? []}
-                  onChanged={async () => {
-                    if (typeof refetchSingle === "function") await refetchSingle();
-                    if (typeof refetchDashboard === "function") await refetchDashboard();
+                  createLoading={createProduct.loading}
+                  createError={createProduct.error}
+                  onCreate={async (input) => {
+                    await createProduct.createEventProduct(input);
+                    await refreshAll();
                   }}
+                  // ✅ pas d'update/delete pour l’instant
                 />
               </div>
             )}
@@ -168,10 +154,7 @@ export function AdminSingleEventPage() {
                   supabase={supabase as any}
                   event={event}
                   fields={data.formFields ?? []}
-                  onChanged={async () => {
-                    if (typeof refetchSingle === "function") await refetchSingle();
-                    if (typeof refetchDashboard === "function") await refetchDashboard();
-                  }}
+                  onChanged={refreshAll}
                 />
               </div>
             )}
@@ -189,11 +172,7 @@ export function AdminSingleEventPage() {
   );
 }
 
-function TabButton(props: {
-  active?: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
+function TabButton(props: { active?: boolean; onClick: () => void; children: React.ReactNode }) {
   const { active, onClick, children } = props;
   return (
     <button

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { ConfirmDeleteModal } from "../../ui/components/modals/ConfirmDeleteModal";
+import { useNavigate } from "react-router-dom";
 
 import "../../styles/adminEventsPage.css";
 
@@ -122,27 +123,32 @@ export default function AdminEventsPage() {
     cancelDelete();
   };
 
+  const navigate = useNavigate();
+
+
   const addEvent = async () => {
-    if (creating) return;
+  if (creating) return;
 
-    resetCreate();
+  resetCreate();
 
-    const created = await createEvent({
-      orgId,
-      title: "Nouvel événement",
-      description: null,
-      location: null,
-      bannerUrl: null,
-      depositCents: null,
-      startsAt: null,
-      endsAt: null,
-    });
+  const created = await createEvent({
+    orgId,
+    title: "Nouvel événement",
+    description: null,
+    location: null,
+    bannerUrl: null,
+    depositCents: null,
+    startsAt: null,
+    endsAt: null,
+  });
 
-    if (!created) return;
+  if (!created) return;
 
-    await refetch(); // récupère la liste à jour
-    select(created.id); // ouvre l’éditeur sur le nouvel event
-  };
+  await refetch();
+
+  navigate(`/admin/events/${created.slug}`);
+};
+
 
   const isEditorVisible = !!selectedRow;
 
