@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { makeAdminEventsLookupRepo } from "../../../gateways/supabase/repositories/dashboard/makeAdminEventsLookupRepo";
 import { makeEventDetailAdminRepo } from "../../../gateways/supabase/repositories/dashboard/makeEventDetailRepo";
 import type { EventDetailAdmin } from "../../../domain/models/admin/admin.eventDetail.schema";
 import { normalizeError } from "../../../domain/errors/errors";
@@ -83,7 +82,7 @@ export function useAdminSingleEventData(params: {
     attendeesOffset = 0,
   } = params;
 
-  const lookupRepo = useMemo(() => makeAdminEventsLookupRepo(supabase), [supabase]);
+  // ✅ plus de lookup repo (plus de PostgREST /events)
   const detailRepo = useMemo(() => makeEventDetailAdminRepo(supabase), [supabase]);
 
   const loadFn = useCallback(async () => {
@@ -91,23 +90,21 @@ export function useAdminSingleEventData(params: {
       return { eventId: null, data: null };
     }
 
-    // 1) slug -> id
-    const eventId = await lookupRepo.getEventIdBySlug({ orgId, eventSlug });
-
-    // 2) id -> detail rpc
     const data = await detailRepo.getEventDetailAdmin({
-      eventId,
+      orgId,
+      eventSlug,
       ordersLimit,
       ordersOffset,
       attendeesLimit,
       attendeesOffset,
     });
 
+    const eventId = (data as any)?.event?.id ?? null;
+
     return { eventId, data };
   }, [
     orgId,
     eventSlug,
-    lookupRepo,
     detailRepo,
     ordersLimit,
     ordersOffset,

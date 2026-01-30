@@ -8,4 +8,6 @@ export const updateEventPatchSchema = z
     isPublished: z.boolean().optional(),
   });
 
+  
+
 export type UpdateEventPatch = z.infer<typeof updateEventPatchSchema>;

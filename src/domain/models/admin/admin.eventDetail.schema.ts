@@ -28,7 +28,6 @@ import { attendeesAnswersSchema } from "../db/db.attendeeAnswers.schema";
 export const adminEventDetailEventSchema = eventSchema
   .omit({
     bannerUrl: true, 
-    depositCents: true, 
     createdAt: true,
     updatedAt: true,
     orgId: true, 

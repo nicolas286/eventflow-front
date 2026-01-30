@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
 
 import type { AdminOutletContext } from "./AdminDashboard";
 import { supabase } from "../../gateways/supabase/supabaseClient";
 import { useAdminSingleEventData } from "../../features/admin/hooks/useAdminSingleEventData";
+
+import { useUpdateEvent } from "../../features/admin/hooks/useUpdateEvent";
+import type { UpdateEventFullPatch } from "../../domain/models/admin/admin.updateEventFullPatch.schema";
 
 import { EventDetailsForm } from "../../features/admin/events/singleEvent/EventDetailsForm";
 import { EventTicketsPanel } from "../../features/admin/events/singleEvent/EventTicketsPanel";
@@ -29,12 +32,11 @@ export function AdminSingleEventPage() {
     attendeesOffset: 0,
   });
 
-  const [eventOverride, setEventOverride] = useState<any | null>(null);
+  // ✅ hook unique (supabase reste au niveau page)
+  const update = useUpdateEvent({ supabase });
 
-  useEffect(() => {
-    if (!data?.event) return;
-    setEventOverride(null);
-  }, [data?.event?.id]);
+  // ✅ override local après update pour UX instant
+  const [eventOverride, setEventOverride] = useState<any | null>(null);
 
   if (!eventSlug) {
     return (
@@ -45,7 +47,29 @@ export function AdminSingleEventPage() {
     );
   }
 
-  const event = eventOverride ?? data?.event ?? null;
+  // ⚠️ si override existe mais qu’on navigue vers un autre event, on veut pas le garder
+  // => la manière la plus simple : override seulement si même id
+  const baseEvent = data?.event ?? null;
+  const event =
+    eventOverride && baseEvent && eventOverride.id === baseEvent.id
+      ? eventOverride
+      : baseEvent;
+
+  async function handleConfirmFullPatch(patch: UpdateEventFullPatch) {
+    if (!event?.id) return;
+
+        const next = await update.updateEvent({
+      eventId: event.id,
+      patch,
+    });
+
+
+    if (next) {
+      setEventOverride(next);
+      // optionnel : si tu veux resynchroniser les panels
+      if (typeof refetch === "function") await refetch();
+    }
+  }
 
   return (
     <div className="adminCard">
@@ -83,13 +107,17 @@ export function AdminSingleEventPage() {
           <>
             {tab === "details" && (
               <div className="adminEventSection">
-                <EventDetailsForm
-                  supabase={supabase as any}
-                  orgId={orgId}
-                  event={event}
-                  orgBranding={data.orgBranding}
-                  onSaved={(next) => setEventOverride(next)}
-                />
+                {/* ✅ key => remount => reset draft sans useEffect */}
+               <EventDetailsForm
+                key={event.updatedAt}
+                event={event}
+                onConfirm={handleConfirmFullPatch}
+                onSaved={(next) => setEventOverride(next)}
+              />
+
+
+                {/* Optionnel : feedback global depuis le hook */}
+                {update.error && <p style={{ color: "crimson" }}>{update.error}</p>}
               </div>
             )}
 

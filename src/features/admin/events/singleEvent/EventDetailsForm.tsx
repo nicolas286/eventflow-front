@@ -1,32 +1,59 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { z } from "zod";
 
-type SupabaseLike = {
-  from: (table: string) => {
-    update: (values: any) => any;
-    eq: (col: string, val: any) => any;
-    select: (cols?: string) => any;
-    single: () => any;
-  };
-};
+import {
+  updateEventFullPatchSchema,
+  type UpdateEventFullPatch,
+} from "../../../../domain/models/admin/admin.updateEventFullPatch.schema";
+import type { Event } from "../../../../domain/models/db/db.event.schema";
+
+/* ------------------------------------------------------------------ */
+/* Types                                                              */
+/* ------------------------------------------------------------------ */
 
 type Props = {
-  supabase: SupabaseLike;
-  orgId: string;
-  event: any;
-  orgBranding?: any;
-  onSaved?: (nextEvent: any) => void;
+  event: Event;
+  onConfirm: (patch: UpdateEventFullPatch) => void;
+  onSaved?: (nextEvent: Event) => void;
 };
 
+type FieldErrors = Partial<Record<keyof UpdateEventFullPatch, string>>;
+
+type Draft = {
+  title: string;
+  location: string;
+  description: string;
+  startsAtLocal: string;
+  endsAtLocal: string;
+  bannerUrl: string;
+  depositCentsRaw: string;
+};
+
+/* ------------------------------------------------------------------ */
+/* Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+function zodErrorsToFieldErrors(err: z.ZodError): FieldErrors {
+  const out: FieldErrors = {};
+  for (const issue of err.issues) {
+    const key = issue.path[0] as keyof UpdateEventFullPatch | undefined;
+    if (key && !out[key]) out[key] = issue.message;
+  }
+  return out;
+}
+
+// ISO -> "YYYY-MM-DDTHH:mm" (local)
 function isoToLocalInput(iso: string | null | undefined) {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours()
-  )}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+    d.getDate()
+  )}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// "YYYY-MM-DDTHH:mm" (local) -> ISO
 function localInputToIso(local: string) {
   if (!local) return null;
   const d = new Date(local);
@@ -34,109 +61,155 @@ function localInputToIso(local: string) {
   return d.toISOString();
 }
 
-function slugify(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .replace(/--+/g, "-");
+function eventToDraft(event: Event): Draft {
+  return {
+    title: event.title ?? "",
+    location: event.location ?? "",
+    description: event.description ?? "",
+    startsAtLocal: isoToLocalInput(event.startsAt ?? null),
+    endsAtLocal: isoToLocalInput(event.endsAt ?? null),
+    bannerUrl: event.bannerUrl ?? "",
+    depositCentsRaw: String((event as any).depositCents ?? 0),
+  };
 }
 
-export function EventDetailsForm(props: Props) {
-  const { supabase, event, onSaved } = props;
+/* ------------------------------------------------------------------ */
+/* Component                                                          */
+/* ------------------------------------------------------------------ */
 
-  const [title, setTitle] = useState("");
-  const [slug, setSlug] = useState("");
-  const [location, setLocation] = useState("");
-  const [description, setDescription] = useState("");
-  const [startsAtLocal, setStartsAtLocal] = useState("");
-  const [endsAtLocal, setEndsAtLocal] = useState("");
-  const [isPublished, setIsPublished] = useState(false);
-  const [bannerUrlRaw, setBannerUrlRaw] = useState("");
+export function EventDetailsForm({ event, onConfirm }: Props) {
+  // ⚠️ reset via <EventDetailsForm key={event.id} />
+  const [draft, setDraft] = useState<Draft>(() => eventToDraft(event));
 
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
   const [saveOk, setSaveOk] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
-  useEffect(() => {
-    if (!event) return;
+  const startsIso = useMemo(
+    () => localInputToIso(draft.startsAtLocal),
+    [draft.startsAtLocal]
+  );
+  const endsIso = useMemo(
+    () => localInputToIso(draft.endsAtLocal),
+    [draft.endsAtLocal]
+  );
 
-    setTitle(event.title ?? "");
-    setSlug(event.slug ?? "");
-    setLocation(event.location ?? "");
-    setDescription(event.description ?? "");
-    setStartsAtLocal(isoToLocalInput(event.startsAt));
-    setEndsAtLocal(isoToLocalInput(event.endsAt));
-    setIsPublished(Boolean(event.isPublished));
-    setBannerUrlRaw(event.bannerUrlRaw ?? "");
+  const canSave = Boolean(event.id && draft.title.trim());
 
-    setSaveError(null);
-    setSaveOk(false);
-  }, [event?.id]);
+  const bannerEffective = useMemo(() => {
+    const trimmed = draft.bannerUrl.trim();
+    return trimmed ? trimmed : null;
+  }, [draft.bannerUrl]);
 
-  const startsIso = useMemo(() => localInputToIso(startsAtLocal), [startsAtLocal]);
-  const endsIso = useMemo(() => localInputToIso(endsAtLocal), [endsAtLocal]);
+  /* ------------------------------------------------------------------ */
+  /* Patch builder                                                      */
+  /* ------------------------------------------------------------------ */
 
-  const dateError = useMemo(() => {
-    if (!startsIso || !endsIso) return null;
-    if (new Date(startsIso).getTime() > new Date(endsIso).getTime()) {
-      return "La date de début ne peut pas être après la date de fin.";
+  function buildPatch(nextIsPublished: boolean): UpdateEventFullPatch {
+    const patch: UpdateEventFullPatch = {};
+
+    const nextTitle = draft.title.trim();
+    if (nextTitle && nextTitle !== (event.title ?? "")) {
+      patch.title = nextTitle;
     }
-    return null;
-  }, [startsIso, endsIso]);
 
-  const canSave = Boolean(event?.id && title.trim() && slug.trim() && !dateError);
+    const nextLoc = draft.location.trim() || null;
+    if ((nextLoc ?? null) !== (event.location ?? null)) {
+      patch.location = nextLoc;
+    }
 
-  async function save() {
+    const nextDesc = draft.description.trim() || null;
+    if ((nextDesc ?? null) !== (event.description ?? null)) {
+      patch.description = nextDesc;
+    }
+
+    const nextBanner = draft.bannerUrl.trim() || null;
+    if ((nextBanner ?? null) !== (event.bannerUrl ?? null)) {
+      patch.bannerUrl = nextBanner;
+    }
+
+    if ((startsIso ?? null) !== (event.startsAt ?? null)) {
+      patch.startsAt = startsIso ?? null;
+    }
+
+    if ((endsIso ?? null) !== (event.endsAt ?? null)) {
+      patch.endsAt = endsIso ?? null;
+    }
+
+    if (nextIsPublished !== Boolean(event.isPublished)) {
+      patch.isPublished = nextIsPublished;
+    }
+
+    const raw = draft.depositCentsRaw.trim();
+    const parsed = raw === "" ? 0 : Number(raw);
+    if (!Number.isNaN(parsed)) {
+      const nextDeposit = Math.max(0, Math.trunc(parsed));
+      const curDeposit = Number((event as any).depositCents ?? 0);
+      if (nextDeposit !== curDeposit) {
+        patch.depositCents = nextDeposit;
+      }
+    }
+
+    return patch;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Save                                                              */
+  /* ------------------------------------------------------------------ */
+
+  async function save(nextIsPublished: boolean) {
     if (!canSave) return;
 
     setSaving(true);
     setSaveError(null);
+    setSaveOk(false);
+    setFieldErrors({});
 
-    const payload = {
-      title: title.trim(),
-      slug: slug.trim(),
-      description: description.trim() || null,
-      location: location.trim() || null,
-      starts_at: startsIso,
-      ends_at: endsIso,
-      is_published: isPublished,
-      banner_url_raw: bannerUrlRaw.trim() || null,
-    };
+    try {
+      const patch = buildPatch(nextIsPublished);
 
-    const { data, error } = await supabase
-      .from("events")
-      .update(payload)
-      .eq("id", event.id)
-      .select("*")
-      .single();
+      if (Object.keys(patch).length === 0) {
+        setSaving(false);
+        return;
+      }
 
-    if (error) {
-      setSaveError(error.message);
+      const parsed = updateEventFullPatchSchema.safeParse(patch);
+      if (!parsed.success) {
+        setFieldErrors(zodErrorsToFieldErrors(parsed.error));
+        setSaving(false);
+        return;
+      }
+
+      onConfirm(parsed.data);
+
       setSaving(false);
-      return;
+      setSaveOk(true);
+      setTimeout(() => setSaveOk(false), 1200);
+    } catch (e) {
+      setSaving(false);
+      setSaveError(
+        e instanceof Error ? e.message : "Impossible d’enregistrer l’événement"
+      );
     }
-
-    setSaving(false);
-    setSaveOk(true);
-    onSaved?.(data);
-    setTimeout(() => setSaveOk(false), 1200);
   }
 
-  function onBlurSlug() {
-    setSlug(slugify(slug));
-  }
+  /* ------------------------------------------------------------------ */
+  /* UI labels                                                          */
+  /* ------------------------------------------------------------------ */
 
-  function generateSlugFromTitle() {
-    const next = slugify(title);
-    if (next) setSlug(next);
-  }
+  const primaryLabel = event.isPublished ? "Enregistrer" : "Publier";
+  const secondaryLabel = event.isPublished
+    ? "Remettre en brouillon"
+    : "Enregistrer le brouillon";
 
-  const bannerEffective =
-    event?.bannerUrlEffective || (bannerUrlRaw ? bannerUrlRaw : null);
+  const canPublish = Boolean(startsIso);
+  const isPrimaryDisabled =
+    !canSave || saving || (!event.isPublished && !canPublish);
+
+  /* ------------------------------------------------------------------ */
+  /* Render                                                             */
+  /* ------------------------------------------------------------------ */
 
   return (
     <div className="adminEventDetails">
@@ -147,19 +220,9 @@ export function EventDetailsForm(props: Props) {
             Modifie les informations principales de l’événement.
           </div>
         </div>
-
-        <button
-          type="button"
-          className="adminEventBtn"
-          onClick={save}
-          disabled={!canSave || saving}
-        >
-          {saving ? "Enregistrement…" : "Enregistrer"}
-        </button>
       </div>
 
       {saveError && <div className="adminEventAlert isError">{saveError}</div>}
-      {dateError && <div className="adminEventAlert isWarn">{dateError}</div>}
       {saveOk && <div className="adminEventAlert isOk">Enregistré</div>}
 
       <div className="adminEventFormGrid">
@@ -167,47 +230,42 @@ export function EventDetailsForm(props: Props) {
           <div className="adminEventLabel">Titre</div>
           <input
             className="adminEventInput"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            value={draft.title}
+            onChange={(e) =>
+              setDraft((d) => ({ ...d, title: e.target.value }))
+            }
           />
-        </div>
-
-        <div className="adminEventField">
-          <div className="adminEventLabel">Slug</div>
-          <input
-            className="adminEventInput"
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            onBlur={onBlurSlug}
-            spellCheck={false}
-          />
-          <button
-            type="button"
-            className="adminEventInlineBtn"
-            onClick={generateSlugFromTitle}
-            disabled={!title.trim()}
-          >
-            Générer depuis le titre
-          </button>
-          <div className="adminEventHint">URL publique : /o/…/e/{slug || "…"}</div>
+          {fieldErrors.title && (
+            <div className="formError">{fieldErrors.title}</div>
+          )}
         </div>
 
         <div className="adminEventField">
           <div className="adminEventLabel">Lieu</div>
           <input
             className="adminEventInput"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
+            value={draft.location}
+            onChange={(e) =>
+              setDraft((d) => ({ ...d, location: e.target.value }))
+            }
           />
+          {fieldErrors.location && (
+            <div className="formError">{fieldErrors.location}</div>
+          )}
         </div>
 
         <div className="adminEventField adminEventFieldSpan2">
           <div className="adminEventLabel">Description</div>
           <textarea
             className="adminEventTextarea"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            value={draft.description}
+            onChange={(e) =>
+              setDraft((d) => ({ ...d, description: e.target.value }))
+            }
           />
+          {fieldErrors.description && (
+            <div className="formError">{fieldErrors.description}</div>
+          )}
         </div>
 
         <div className="adminEventField">
@@ -215,40 +273,61 @@ export function EventDetailsForm(props: Props) {
           <input
             type="datetime-local"
             className="adminEventInput"
-            value={startsAtLocal}
-            onChange={(e) => setStartsAtLocal(e.target.value)}
+            value={draft.startsAtLocal}
+            onChange={(e) =>
+              setDraft((d) => ({ ...d, startsAtLocal: e.target.value }))
+            }
           />
+          {fieldErrors.startsAt && (
+            <div className="formError">{fieldErrors.startsAt}</div>
+          )}
         </div>
 
         <div className="adminEventField">
-          <div className="adminEventLabel">Fin</div>
+          <div className="adminEventLabel">Fin (optionnel)</div>
           <input
             type="datetime-local"
             className="adminEventInput"
-            value={endsAtLocal}
-            onChange={(e) => setEndsAtLocal(e.target.value)}
+            value={draft.endsAtLocal}
+            onChange={(e) =>
+              setDraft((d) => ({ ...d, endsAtLocal: e.target.value }))
+            }
           />
+          {fieldErrors.endsAt && (
+            <div className="formError">{fieldErrors.endsAt}</div>
+          )}
         </div>
 
         <div className="adminEventField">
-          <div className="adminEventLabel">Statut</div>
-          <label className="adminEventToggle">
-            <input
-              type="checkbox"
-              checked={isPublished}
-              onChange={(e) => setIsPublished(e.target.checked)}
-            />
-            <span>{isPublished ? "Publié" : "Brouillon"}</span>
-          </label>
+          <div className="adminEventLabel">Acompte (centimes)</div>
+          <input
+            type="number"
+            min={0}
+            step={1}
+            className="adminEventInput"
+            value={draft.depositCentsRaw}
+            onChange={(e) =>
+              setDraft((d) => ({ ...d, depositCentsRaw: e.target.value }))
+            }
+          />
+          {fieldErrors.depositCents && (
+            <div className="formError">{fieldErrors.depositCents}</div>
+          )}
+          <div className="adminEventHint">0 = pas d’acompte.</div>
         </div>
 
-        <div className="adminEventField">
+        <div className="adminEventField adminEventFieldSpan2">
           <div className="adminEventLabel">Bannière (URL)</div>
           <input
             className="adminEventInput"
-            value={bannerUrlRaw}
-            onChange={(e) => setBannerUrlRaw(e.target.value)}
+            value={draft.bannerUrl}
+            onChange={(e) =>
+              setDraft((d) => ({ ...d, bannerUrl: e.target.value }))
+            }
           />
+          {fieldErrors.bannerUrl && (
+            <div className="formError">{fieldErrors.bannerUrl}</div>
+          )}
         </div>
 
         <div className="adminEventField adminEventFieldSpan2">
@@ -262,6 +341,29 @@ export function EventDetailsForm(props: Props) {
           ) : (
             <div className="adminEventEmpty">Aucune bannière</div>
           )}
+        </div>
+
+        <div
+          className="adminEventField adminEventFieldSpan2"
+          style={{ marginTop: 12, display: "flex", gap: 8 }}
+        >
+          <button
+            type="button"
+            className="adminEventBtn isSecondary"
+            disabled={!canSave || saving}
+            onClick={() => save(false)}
+          >
+            {secondaryLabel}
+          </button>
+
+          <button
+            type="button"
+            className="adminEventBtn"
+            disabled={isPrimaryDisabled}
+            onClick={() => save(true)}
+          >
+            {saving ? "Enregistrement…" : primaryLabel}
+          </button>
         </div>
       </div>
     </div>

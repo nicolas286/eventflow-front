@@ -2,13 +2,12 @@ import { useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { makeUpdateEventRepo } from "../../../gateways/supabase/repositories/dashboard/updateEventRepo";
-import type { UpdateEventPatch } from "../../../domain/models/admin/admin.updateEventPatch.schema";
 import type { Event } from "../../../domain/models/db/db.event.schema";
 import { normalizeError } from "../../../domain/errors/errors";
 
-export type UpdateEventInput = {
+export type UpdateEventInput<Patch extends Record<string, unknown>> = {
   eventId: string;
-  patch: UpdateEventPatch;
+  patch: Patch;
 };
 
 type State = {
@@ -28,7 +27,9 @@ export function useUpdateEvent(params: { supabase: SupabaseClient }) {
     updated: null,
   });
 
-  async function updateEvent(input: UpdateEventInput): Promise<Event | null> {
+  async function updateEvent<Patch extends Record<string, unknown>>(
+    input: UpdateEventInput<Patch>
+  ): Promise<Event | null> {
     try {
       setState({ loading: true, error: null, updated: null });
 

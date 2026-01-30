@@ -12,7 +12,6 @@ type Props = {
     title: string;
     location?: string | null;
     startsAt?: string | null; // ISO
-    endsAt?: string | null;   // ISO
     isPublished: boolean;
   };
   onConfirm: (patch: UpdateEventPatch) => void;
@@ -54,7 +53,6 @@ export default function EventEditorForm({ event, onConfirm }: Props) {
     title: event.title,
     location: event.location ?? null,
     startsAt: event.startsAt ?? null,
-    endsAt: event.endsAt ?? null,
     isPublished: event.isPublished,
   }));
 
@@ -62,6 +60,7 @@ export default function EventEditorForm({ event, onConfirm }: Props) {
     () => updateEventPatchSchema.safeParse(draft),
     [draft]
   );
+
   const fieldErrors: FieldErrors = validation.success
     ? {}
     : zodErrorsToFieldErrors(validation.error);
@@ -69,40 +68,44 @@ export default function EventEditorForm({ event, onConfirm }: Props) {
   const isValid = validation.success;
 
   function submit(nextIsPublished?: boolean) {
-  const parsed = updateEventPatchSchema.parse({
-    ...draft,
-    ...(typeof nextIsPublished === "boolean"
-      ? { isPublished: nextIsPublished }
-      : {}),
-  });
+    const parsed = updateEventPatchSchema.parse({
+      ...draft,
+      ...(typeof nextIsPublished === "boolean"
+        ? { isPublished: nextIsPublished }
+        : {}),
+    });
 
-  const patch: UpdateEventPatch = {};
+    const patch: UpdateEventPatch = {};
 
-  if (parsed.title !== event.title) patch.title = parsed.title;
-  if ((parsed.location ?? null) !== (event.location ?? null))
-    patch.location = parsed.location ?? null;
-  if ((parsed.startsAt ?? null) !== (event.startsAt ?? null))
-    patch.startsAt = parsed.startsAt ?? null;
-  if (parsed.isPublished !== event.isPublished)
-    patch.isPublished = parsed.isPublished;
+    if (parsed.title !== event.title) patch.title = parsed.title;
 
-  if (Object.keys(patch).length === 0) return;
-  onConfirm(patch);
-}
+    if ((parsed.location ?? null) !== (event.location ?? null)) {
+      patch.location = parsed.location ?? null;
+    }
 
-    const primaryLabel = event.isPublished ? "Enregistrer" : "Publier";
-    const primaryNextIsPublished = true;
+    if ((parsed.startsAt ?? null) !== (event.startsAt ?? null)) {
+      patch.startsAt = parsed.startsAt ?? null;
+    }
 
-    const secondaryLabel = event.isPublished
-      ? "Remettre en brouillon"
-      : "Enregistrer le brouillon";
-    const secondaryNextIsPublished = false;
+    if (parsed.isPublished !== event.isPublished) {
+      patch.isPublished = parsed.isPublished;
+    }
 
-    const canPublish = Boolean(draft.startsAt); // startsAt obligatoire pour publier
-    const isPrimaryDisabled =
-      !isValid || (!event.isPublished && !canPublish); // désactive seulement quand c'est "Publier"
+    if (Object.keys(patch).length === 0) return;
+    onConfirm(patch);
+  }
 
+  const primaryLabel = event.isPublished ? "Enregistrer" : "Publier";
+  const primaryNextIsPublished = true;
 
+  const secondaryLabel = event.isPublished
+    ? "Remettre en brouillon"
+    : "Enregistrer le brouillon";
+  const secondaryNextIsPublished = false;
+
+  const canPublish = Boolean(draft.startsAt); // startsAt obligatoire pour publier
+  const isPrimaryDisabled =
+    !isValid || (!event.isPublished && !canPublish);
 
   return (
     <div>
@@ -137,7 +140,6 @@ export default function EventEditorForm({ event, onConfirm }: Props) {
       />
       {fieldErrors.startsAt && <div className="formError">{fieldErrors.startsAt}</div>}
 
-     
       <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
         <Button
           label={secondaryLabel}
@@ -153,7 +155,6 @@ export default function EventEditorForm({ event, onConfirm }: Props) {
           onClick={() => submit(primaryNextIsPublished)}
         />
       </div>
-
     </div>
   );
 }
