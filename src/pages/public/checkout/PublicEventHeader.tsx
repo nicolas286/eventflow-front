@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import Button from "../../../ui/components/button/Button";
 import { formatDateTimeHuman } from "../../../domain/helpers/dateTime";
+import { getPublicEventBanner } from "../../../domain/helpers/getPublicEventBanner";
 
 import "../../../styles/publicPages.css";
 
@@ -20,7 +21,8 @@ export function PublicEventHeader({ orgSlug, org, event }: Props) {
   const startText = event.startsAt ? formatDateTimeHuman(event.startsAt) : null;
   const endText = event.endsAt ? formatDateTimeHuman(event.endsAt) : null;
 
-  const banner = event.bannerUrl || org?.defaultEventBannerUrl;
+  // ✅ Bannière STRICTEMENT event (via helper)
+  const banner = getPublicEventBanner(event);
 
   return (
     <>

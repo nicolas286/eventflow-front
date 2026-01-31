@@ -3,11 +3,12 @@ import { supabase } from "../../gateways/supabase/supabaseClient";
 import { usePublicOrgData } from "../../features/admin/hooks/usePublicOrgData";
 
 import Container from "../../ui/components/container/Container";
-import Card, { CardBody, CardHeader } from "../../ui/components/card/Card";
+import Card, { CardBody } from "../../ui/components/card/Card";
 import Button from "../../ui/components/button/Button";
 import Badge from "../../ui/components/badge/Badge";
 
 import { formatDateTimeHuman } from "../../domain/helpers/dateTime";
+import { getPublicEventBanner } from "../../domain/helpers/getPublicEventBanner";
 
 import "../../styles/publicPages.css";
 
@@ -49,32 +50,35 @@ export function OrgPublicPage() {
     <div className="publicPage publicOrgPage">
       <Container>
         <div className="publicSurface">
+          {/* HERO */}
           <div className="publicHero">
             <div className="publicBrand">
               {profile.logoUrl ? (
                 <img src={profile.logoUrl} alt={displayName} className="publicLogo" />
               ) : null}
 
-              <div className="publicTitleBlock">
-                <h1 className="publicTitle">{displayName}</h1>
-                <div className="publicSubtitle">
-                  {profile.slug} · {org.type}
+              <div className="publicOrgHeroRight">
+                <div className="publicTitleBlock">
+                  <h1 className="publicTitle">{displayName}</h1>
+                  <div className="publicSubtitle">
+                    {profile.slug} · {org.type}
+                  </div>
+                </div>
+
+                <div className="publicActions">
+                  {profile.website ? (
+                    <a href={profile.website} target="_blank" rel="noreferrer">
+                      <Button variant="secondary" label="Site web" />
+                    </a>
+                  ) : null}
+
+                  {profile.publicEmail ? (
+                    <a href={`mailto:${profile.publicEmail}`}>
+                      <Button variant="ghost" label="Contact" />
+                    </a>
+                  ) : null}
                 </div>
               </div>
-            </div>
-
-            <div className="publicActions">
-              {profile.website ? (
-                <a href={profile.website} target="_blank" rel="noreferrer">
-                  <Button variant="secondary" label="Site web" />
-                </a>
-              ) : null}
-
-              {profile.publicEmail ? (
-                <a href={`mailto:${profile.publicEmail}`}>
-                  <Button variant="ghost" label="Contact" />
-                </a>
-              ) : null}
             </div>
           </div>
 
@@ -94,30 +98,50 @@ export function OrgPublicPage() {
         {events.length === 0 ? (
           <div className="publicEmpty">Aucun événement publié.</div>
         ) : (
-          <div className="publicList">
-            {events.map((e) => (
-              <Card key={e.id} style={{ width: "100%" }}>
-                <CardHeader
-                  title={<div className="publicCardTitle">{e.title}</div>}
-                  subtitle={<div className="publicSubtitle">{e.location ?? "Lieu à venir"}</div>}
-                  right={e.startsAt ? <Badge tone="info" label="À venir" /> : null}
-                />
-                <CardBody>
-                  {e.startsAt ? (
-                    <div className="publicMetaRow">
-                      <span>Début : {formatDateTimeHuman(e.startsAt)}</span>
-                      {e.endsAt ? <span>Fin : {formatDateTimeHuman(e.endsAt)}</span> : null}
-                    </div>
+          <div className="publicOrgEventsGrid">
+            {events.map((e: any) => {
+              // ✅ Bannière STRICTEMENT event (via helper)
+              const banner = getPublicEventBanner(e);
+
+              const startText = e.startsAt ? formatDateTimeHuman(e.startsAt) : null;
+              const endText = e.endsAt ? formatDateTimeHuman(e.endsAt) : null;
+
+              return (
+                <Card key={e.id} className="publicOrgEventCard">
+                  {banner ? (
+                    <div
+                      className="publicOrgEventBanner"
+                      style={{ backgroundImage: `url(${banner})` }}
+                      aria-label={e.title}
+                    />
                   ) : null}
 
-                  <div style={{ marginTop: 12, display: "flex", gap: 10 }}>
-                    <Link to={`e/${e.slug}`}>
-                      <Button label="Voir l’événement" />
-                    </Link>
-                  </div>
-                </CardBody>
-              </Card>
-            ))}
+                  <CardBody className="publicOrgEventBody">
+                    <div className="publicOrgEventHeaderRow">
+                      <div className="publicOrgEventTitle">{e.title}</div>
+                      {e.startsAt ? <Badge tone="info" label="À venir" /> : null}
+                    </div>
+
+                    <div className="publicOrgEventLocation">
+                      {e.location ?? "Lieu à venir"}
+                    </div>
+
+                    {(startText || endText) ? (
+                      <div className="publicOrgEventDates">
+                        {startText ? <span>Début : {startText}</span> : null}
+                        {endText ? <span>Fin : {endText}</span> : null}
+                      </div>
+                    ) : null}
+
+                    <div className="publicOrgEventFooter">
+                      <Link to={`e/${e.slug}`}>
+                        <Button label="Voir l’événement" />
+                      </Link>
+                    </div>
+                  </CardBody>
+                </Card>
+              );
+            })}
           </div>
         )}
       </Container>

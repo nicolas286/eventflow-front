@@ -1,0 +1,100 @@
+/* src/styles/public/partials/public.org.events.css */
+
+/* =========================================================
+   OrgPublicPage – Events grid + cards with banner
+   - Desktop: 2 colonnes
+   - Mobile: 1 colonne
+   ========================================================= */
+
+.publicOrgEventsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 10px;
+}
+
+/* Card container */
+.publicOrgEventCard {
+  overflow: hidden;
+}
+
+/* Banner (image en background) */
+.publicOrgEventBanner {
+  width: 100%;
+  height: 160px;
+  background-size: cover;
+  background-position: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Body */
+.publicOrgEventBody {
+  padding: 16px;
+}
+
+/* Header row: title + badge */
+.publicOrgEventHeaderRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.publicOrgEventTitle {
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.publicOrgEventLocation {
+  margin-top: 8px;
+  font-size: 15px;
+  color: #475569;
+}
+
+.publicOrgEventDates {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: #334155;
+}
+
+.publicOrgEventFooter {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Petit hover premium (sans casser le branding) */
+@media (hover: hover) {
+  .publicOrgEventCard {
+    transition: transform 140ms ease, box-shadow 140ms ease;
+  }
+  .publicOrgEventCard:hover {
+    transform: translateY(-2px);
+  }
+  .publicOrgEventBanner {
+    transition: transform 220ms ease;
+  }
+  .publicOrgEventCard:hover .publicOrgEventBanner {
+    transform: scale(1.02);
+  }
+}
+
+/* ✅ Mobile */
+@media (max-width: 860px) {
+  .publicOrgEventsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .publicOrgEventBanner {
+    height: 180px;
+  }
+
+  .publicOrgEventFooter {
+    justify-content: center;
+  }
+}
