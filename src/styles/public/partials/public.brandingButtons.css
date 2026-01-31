@@ -1,0 +1,27 @@
+/* src/styles/public/partials/public.brandingButtons.css */
+
+/* =========================================================
+   ✅ BRANDING (public) : buttons
+   Utilise --primary (format "r g b")
+   ========================================================= */
+
+.publicPage .ui-button--secondary {
+  background: rgba(var(--primary), 0.10);
+  border-color: rgba(var(--primary), 0.22);
+  color: rgb(var(--primary));
+}
+
+.publicPage .ui-button--secondary:hover {
+  background: rgba(var(--primary), 0.16);
+}
+
+.publicPage .ui-button--ghost {
+  background: transparent;
+  color: rgb(var(--primary));
+  border-color: rgba(var(--primary), 0.00);
+}
+
+.publicPage .ui-button--ghost:hover {
+  background: rgba(var(--primary), 0.10);
+  border-color: rgba(var(--primary), 0.10);
+}
