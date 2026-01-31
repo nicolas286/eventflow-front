@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 
 import type { EventProducts } from "../../../../domain/models/db/db.eventProducts.schema";
 import type { CreateEventProductInput } from "../../../../domain/models/admin/admin.createEventProduct.schema";
+import type { UpdateEventProductPatch } from "../../../../gateways/supabase/repositories/dashboard/updateEventProductRepo";
 
 type OrderItemLike = {
   eventProductId?: string | null;
@@ -21,7 +22,8 @@ type Props = {
   payments: unknown[];
 
   onCreate: (input: CreateEventProductInput) => Promise<void>;
-
+  onUpdate: (input: { productId: string; patch: UpdateEventProductPatch }) => Promise<void>;
+  updateLoading?: boolean;
   createLoading?: boolean;
   createError?: string | null;
 
@@ -80,9 +82,34 @@ export function EventTicketsPanel(props: Props) {
     deleteLoading = false,
     deleteError = null,
     onChanged,
+    onUpdate,
+    updateLoading,
   } = props;
 
   const [editing, setEditing] = useState<TicketDraft | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  function productToDraft(p: any): TicketDraft {
+    return {
+      name: String(p?.name ?? ""),
+      description: String(p?.description ?? ""),
+      priceCents: clampInt(p?.priceCents ?? 0, 0),
+      currency: "EUR",
+      stockQty: p?.stockQty == null ? null : clampInt(p.stockQty, 0),
+      sortOrder: clampInt(p?.sortOrder ?? 0, 0),
+      createsAttendees: Boolean(p?.createsAttendees ?? true),
+      attendeesPerUnit: clampInt(p?.attendeesPerUnit ?? 1, 1) || 1,
+      isActive: Boolean(p?.isActive ?? true),
+      isGatekeeper: Boolean(p?.isGatekeeper ?? false),
+      closeEventWhenSoldOut: Boolean(p?.closeEventWhenSoldOut ?? false),
+    };
+  }
+
+  function openEdit(p: any) {
+    setEditing(productToDraft(p));
+    setEditingId(String(p.id));
+  }
+
 
   const sorted = useMemo(() => {
     const arr = Array.isArray(products) ? [...products] : [];
@@ -128,54 +155,77 @@ export function EventTicketsPanel(props: Props) {
   }, [sorted, orderItems]);
 
   function openCreate() {
-    setEditing({
-      name: "",
-      description: "",
-      priceCents: 0,
-      currency: "EUR",
-      stockQty: null,
-      sortOrder: (sorted.at(-1)?.sortOrder ?? 0) + 10,
-      createsAttendees: true,
-      attendeesPerUnit: 1,
-      isActive: true,
-      isGatekeeper: false,
-      closeEventWhenSoldOut: false,
-    });
-  }
+  setEditingId(null);
+  setEditing({
+    name: "",
+    description: "",
+    priceCents: 0,
+    currency: "EUR",
+    stockQty: null,
+    sortOrder: (sorted.at(-1)?.sortOrder ?? 0) + 10,
+    createsAttendees: true,
+    attendeesPerUnit: 1,
+    isActive: true,
+    isGatekeeper: false,
+    closeEventWhenSoldOut: false,
+  });
+}
 
-  function closeEditor() {
-    setEditing(null);
-  }
+    function closeEditor() {
+      setEditing(null);
+      setEditingId(null);
+    }
+
 
   async function save() {
-    if (!editing) return;
-    if (!event?.id) return;
+  if (!editing) return;
+  if (!event?.id) return;
 
-    const name = String(editing.name ?? "").trim();
-    if (!name) return;
+  const name = String(editing.name ?? "").trim();
+  if (!name) return;
 
-    const input: CreateEventProductInput = {
-      eventId: event.id,
-      name,
-      description: toNullIfEmpty(editing.description),
-      priceCents: clampInt(editing.priceCents, 0),
-      currency: "EUR",
-      stockQty: editing.stockQty == null ? null : clampInt(editing.stockQty, 0),
-      sortOrder: clampInt(editing.sortOrder, 0),
-      createsAttendees: Boolean(editing.createsAttendees),
-      attendeesPerUnit: clampInt(editing.attendeesPerUnit, 1) || 1,
-      isActive: Boolean(editing.isActive),
-      isGatekeeper: Boolean(editing.isGatekeeper),
-      closeEventWhenSoldOut: Boolean(editing.closeEventWhenSoldOut),
+  // payload commun (draft -> input)
+  const base: CreateEventProductInput = {
+    eventId: event.id,
+    name,
+    description: toNullIfEmpty(editing.description),
+    priceCents: clampInt(editing.priceCents, 0),
+    currency: "EUR",
+    stockQty: editing.stockQty == null ? null : clampInt(editing.stockQty, 0),
+    sortOrder: clampInt(editing.sortOrder, 0),
+    createsAttendees: Boolean(editing.createsAttendees),
+    attendeesPerUnit: clampInt(editing.attendeesPerUnit, 1) || 1,
+    isActive: Boolean(editing.isActive),
+    isGatekeeper: Boolean(editing.isGatekeeper),
+    closeEventWhenSoldOut: Boolean(editing.closeEventWhenSoldOut),
+  };
+
+  if (!editingId) {
+    // ✅ create
+    await onCreate(base);
+  } else {
+    // ✅ update (patch)
+    const patch: UpdateEventProductPatch = {
+      name: base.name,
+      description: base.description,
+      priceCents: base.priceCents,
+      currency: base.currency,
+      stockQty: base.stockQty,
+      sortOrder: base.sortOrder,
+      createsAttendees: base.createsAttendees,
+      attendeesPerUnit: base.attendeesPerUnit,
+      isActive: base.isActive,
+      isGatekeeper: base.isGatekeeper,
+      closeEventWhenSoldOut: base.closeEventWhenSoldOut,
     };
 
-    
-
-
-    await onCreate(input);
-    closeEditor();
-    onChanged?.();
+    await onUpdate({ productId: editingId, patch });
   }
+
+  closeEditor();
+  onChanged?.();
+}
+
 
   return (
     <div className="adminTickets">
@@ -241,9 +291,17 @@ export function EventTicketsPanel(props: Props) {
                   {p.description ? <div className="adminTicketDesc">{p.description}</div> : null}
 
                   <div className="adminTicketActions">
-                    <button type="button" className="adminTicketBtn" disabled title="Pas encore dispo">
-                      Éditer
-                    </button>
+                    <button
+                    type="button"
+                    className="adminTicketBtn"
+                    onClick={() => openEdit(p)}
+                    disabled={Boolean(updateLoading)}
+                    title={updateLoading ? "Enregistrement en cours" : undefined}
+                  >
+                    Modifier
+                  </button>
+
+
                     <button
                       type="button"
                       className="adminTicketBtn danger"
@@ -266,7 +324,10 @@ export function EventTicketsPanel(props: Props) {
             <div className="adminTicketsEditorCard">
               <div className="adminTicketsEditorHeader">
                 <div>
-                  <div className="adminTicketsEditorTitle">Nouveau ticket</div>
+                  <div className="adminTicketsEditorTitle">
+                  {editingId ? "Modifier ticket" : "Nouveau ticket"}
+                </div>
+
                   <div className="adminEventHint">Les prix sont en centimes.</div>
                 </div>
 
@@ -393,10 +454,20 @@ export function EventTicketsPanel(props: Props) {
                   type="button"
                   className="adminEventBtn"
                   onClick={() => void save()}
-                  disabled={!String(editing.name ?? "").trim() || createLoading}
+                  disabled={
+                    !String(editing.name ?? "").trim() ||
+                    (editingId ? Boolean(updateLoading) : createLoading)
+                  }
                 >
-                  {createLoading ? "Enregistrement..." : "Enregistrer"}
+                  {editingId
+                    ? updateLoading
+                      ? "Enregistrement..."
+                      : "Mettre à jour"
+                    : createLoading
+                      ? "Enregistrement..."
+                      : "Enregistrer"}
                 </button>
+
               </div>
             </div>
           ) : (

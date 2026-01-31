@@ -7,6 +7,7 @@ import { supabase } from "../../gateways/supabase/supabaseClient";
 import { useAdminSingleEventData } from "../../features/admin/hooks/useAdminSingleEventData";
 import { useUpdateEvent } from "../../features/admin/hooks/useUpdateEvent";
 import { useCreateEventProduct } from "../../features/admin/hooks/useCreateEventProduct";
+import { useUpdateEventProduct } from "../../features/admin/hooks/useUpdateEventProduct";
 
 import type { UpdateEventFullPatch } from "../../domain/models/admin/admin.updateEventFullPatch.schema";
 
@@ -41,6 +42,8 @@ export function AdminSingleEventPage() {
   const update = useUpdateEvent({ supabase });
   const createProduct = useCreateEventProduct({ supabase });
   const removeProduct = useDeleteEventProduct({ supabase }); 
+  const updateProduct = useUpdateEventProduct({ supabase });
+
 
   const [eventOverride, setEventOverride] = useState<any | null>(null);
 
@@ -146,6 +149,15 @@ export function AdminSingleEventPage() {
                     await createProduct.createEventProduct(input);
                     await refreshAll();
                   }}
+
+                  updateLoading={updateProduct.loading}
+                  updateError={updateProduct.error}
+                  onUpdate={async (input) => {
+                    // input: { productId: string; patch: UpdateEventProductPatch }
+                    await updateProduct.updateEventProduct(input);
+                    await refreshAll();
+                  }}
+
                   deleteLoading={removeProduct.loading}
                   deleteError={removeProduct.error}
                   onRemove={async (productId) => {
@@ -156,6 +168,7 @@ export function AdminSingleEventPage() {
 
                   onChanged={refreshAll}
                 />
+
               </div>
             )}
 
