@@ -35,6 +35,35 @@ type AttendeeSlot = Record<string, unknown> & {
   eventProductId: string;
 };
 
+function hexToRgbTriplet(hex: string | null | undefined): string | null {
+  if (!hex) return null;
+  const h = hex.trim().replace("#", "");
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  if (full.length !== 6) return null;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  if ([r, g, b].some((n) => Number.isNaN(n))) return null;
+  return `${r} ${g} ${b}`;
+}
+
+function getBrandStyle(org: any): Record<string, string> | undefined {
+  const hex =
+    org?.primaryColor ??
+    org?.primary_color ??
+    org?.brandingPrimaryColor ??
+    org?.organizationProfile?.primaryColor ??
+    null;
+
+  const rgb = hexToRgbTriplet(typeof hex === "string" ? hex : null);
+  if (!rgb) return undefined;
+
+  return {
+    ["--primary" as any]: rgb,
+    ["--primary-bg" as any]: rgb,
+  } as Record<string, string>;
+}
+
 function norm(s: unknown) {
   return String(s ?? "")
     .trim()
@@ -77,6 +106,8 @@ export function EventAttendeesPage() {
     orgSlug,
     eventSlug,
   });
+
+  const brandStyle = getBrandStyle((data as any)?.org ?? (data as any)?.organizationProfile);
 
   const [draft, setDraft] = useState<Draft | null>(null);
 
@@ -199,7 +230,7 @@ export function EventAttendeesPage() {
 
   if (loading || !orgSlug || !eventSlug) {
     return (
-      <div className="publicPage">
+      <div className="publicPage" style={brandStyle}>
         <Container>Chargement…</Container>
       </div>
     );
@@ -207,7 +238,7 @@ export function EventAttendeesPage() {
 
   if (error) {
     return (
-      <div className="publicPage">
+      <div className="publicPage" style={brandStyle}>
         <Container>Erreur : {error}</Container>
       </div>
     );
@@ -215,7 +246,7 @@ export function EventAttendeesPage() {
 
   if (!data?.event) {
     return (
-      <div className="publicPage">
+      <div className="publicPage" style={brandStyle}>
         <Container>Événement introuvable.</Container>
       </div>
     );
@@ -224,7 +255,7 @@ export function EventAttendeesPage() {
   const { org, event } = data;
 
   return (
-    <div className="publicPage">
+    <div className="publicPage" style={brandStyle}>
       <Container>
         <div className="publicSurface">
           <PublicEventHeader orgSlug={orgSlug} org={org} event={event} />
@@ -249,7 +280,7 @@ export function EventAttendeesPage() {
                       right={
                         <Badge
                           tone="neutral"
-                          label={fields.some((f) => f.isRequired) ? "Champs requis" : "Optionnel"}
+                          label={fields.some((f) => f.isRequired ? true : false) ? "Champs requis" : "Optionnel"}
                         />
                       }
                     />
@@ -273,7 +304,6 @@ export function EventAttendeesPage() {
                             </div>
                           );
 
-                          // ✅ Date de naissance -> type date
                           if (isBirthDateField(f)) {
                             return (
                               <div key={f.id}>
@@ -288,7 +318,6 @@ export function EventAttendeesPage() {
                             );
                           }
 
-                          // ✅ Pays -> factorisé (valeur = label)
                           if (isCountryField(f)) {
                             return (
                               <div key={f.id}>
@@ -303,7 +332,6 @@ export function EventAttendeesPage() {
                             );
                           }
 
-                          // ✅ Téléphone -> factorisé (valeur e164)
                           if (isPhoneField(f)) {
                             return (
                               <div key={f.id}>
@@ -320,7 +348,6 @@ export function EventAttendeesPage() {
                             );
                           }
 
-                          // --- reste inchangé ---
                           if (f.fieldType === "textarea") {
                             return (
                               <div key={f.id}>

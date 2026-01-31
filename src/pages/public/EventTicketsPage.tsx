@@ -11,9 +11,38 @@ import Badge from "../../ui/components/badge/Badge";
 import { PublicEventHeader } from "./checkout/PublicEventHeader";
 import { loadDraft, saveDraft, formatMoney } from "./checkout/checkoutStore";
 
-/* ✅ CSS (remplace publicPages.css) */
+/* ✅ CSS */
 import "../../styles/publicCheckoutBase.css";
 import "../../styles/eventTicketsPage.css";
+
+function hexToRgbTriplet(hex: string | null | undefined): string | null {
+  if (!hex) return null;
+  const h = hex.trim().replace("#", "");
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  if (full.length !== 6) return null;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  if ([r, g, b].some((n) => Number.isNaN(n))) return null;
+  return `${r} ${g} ${b}`;
+}
+
+function getBrandStyle(org: any): Record<string, string> | undefined {
+  const hex =
+    org?.primaryColor ??
+    org?.primary_color ??
+    org?.brandingPrimaryColor ??
+    org?.organizationProfile?.primaryColor ??
+    null;
+
+  const rgb = hexToRgbTriplet(typeof hex === "string" ? hex : null);
+  if (!rgb) return undefined;
+
+  return {
+    ["--primary" as any]: rgb,
+    ["--primary-bg" as any]: rgb,
+  } as Record<string, string>;
+}
 
 export function EventTicketsPage() {
   const navigate = useNavigate();
@@ -25,6 +54,8 @@ export function EventTicketsPage() {
     eventSlug,
   });
 
+  const brandStyle = getBrandStyle((data as any)?.org ?? (data as any)?.organizationProfile);
+
   const [tick, setTick] = useState(0);
 
   const draft = useMemo(() => {
@@ -35,7 +66,7 @@ export function EventTicketsPage() {
 
   if (loading || !orgSlug || !eventSlug) {
     return (
-      <div className="publicPage">
+      <div className="publicPage" style={brandStyle}>
         <Container>Chargement…</Container>
       </div>
     );
@@ -43,7 +74,7 @@ export function EventTicketsPage() {
 
   if (error) {
     return (
-      <div className="publicPage">
+      <div className="publicPage" style={brandStyle}>
         <Container>Erreur : {error}</Container>
       </div>
     );
@@ -51,7 +82,7 @@ export function EventTicketsPage() {
 
   if (!data?.event) {
     return (
-      <div className="publicPage">
+      <div className="publicPage" style={brandStyle}>
         <Container>Événement introuvable.</Container>
       </div>
     );
@@ -106,7 +137,7 @@ export function EventTicketsPage() {
   }
 
   return (
-    <div className="publicPage">
+    <div className="publicPage" style={brandStyle}>
       <Container>
         <div className="publicSurface">
           <PublicEventHeader orgSlug={orgSlug} org={org} event={event} />
@@ -220,11 +251,7 @@ export function EventTicketsPage() {
               </div>
             </div>
 
-            <Button
-              label="Continuer (Participants)"
-              onClick={goNext}
-              disabled={totalTickets <= 0}
-            />
+            <Button label="Continuer (Participants)" onClick={goNext} disabled={totalTickets <= 0} />
           </div>
         </div>
       </Container>

@@ -17,11 +17,40 @@ import {
   type CheckoutDraft,
 } from "./checkout/checkoutStore";
 
-/* ✅ CSS (remplace publicPages.css) */
+/* ✅ CSS */
 import "../../styles/publicCheckoutBase.css";
 import "../../styles/eventPaymentPage.css";
 
 import { useRegister } from "../../features/public/register/useRegister";
+
+function hexToRgbTriplet(hex: string | null | undefined): string | null {
+  if (!hex) return null;
+  const h = hex.trim().replace("#", "");
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  if (full.length !== 6) return null;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  if ([r, g, b].some((n) => Number.isNaN(n))) return null;
+  return `${r} ${g} ${b}`;
+}
+
+function getBrandStyle(org: any): Record<string, string> | undefined {
+  const hex =
+    org?.primaryColor ??
+    org?.primary_color ??
+    org?.brandingPrimaryColor ??
+    org?.organizationProfile?.primaryColor ??
+    null;
+
+  const rgb = hexToRgbTriplet(typeof hex === "string" ? hex : null);
+  if (!rgb) return undefined;
+
+  return {
+    ["--primary" as any]: rgb,
+    ["--primary-bg" as any]: rgb,
+  } as Record<string, string>;
+}
 
 function ensureDraft(orgSlug: string, eventSlug: string): CheckoutDraft {
   const d = loadDraft(orgSlug, eventSlug) as CheckoutDraft;
@@ -50,6 +79,8 @@ export function EventPaymentPage() {
     eventSlug,
   });
 
+  const brandStyle = getBrandStyle((data as any)?.org ?? (data as any)?.organizationProfile);
+
   const [tick, setTick] = useState(0);
 
   const draft = useMemo(() => {
@@ -70,7 +101,7 @@ export function EventPaymentPage() {
 
   if (loading || !orgSlug || !eventSlug) {
     return (
-      <div className="publicPage">
+      <div className="publicPage" style={brandStyle}>
         <Container>Chargement…</Container>
       </div>
     );
@@ -78,7 +109,7 @@ export function EventPaymentPage() {
 
   if (error) {
     return (
-      <div className="publicPage">
+      <div className="publicPage" style={brandStyle}>
         <Container>Erreur : {error}</Container>
       </div>
     );
@@ -86,7 +117,7 @@ export function EventPaymentPage() {
 
   if (!data?.event) {
     return (
-      <div className="publicPage">
+      <div className="publicPage" style={brandStyle}>
         <Container>Événement introuvable.</Container>
       </div>
     );
@@ -94,7 +125,7 @@ export function EventPaymentPage() {
 
   if (!draft) {
     return (
-      <div className="publicPage">
+      <div className="publicPage" style={brandStyle}>
         <Container>Draft introuvable.</Container>
       </div>
     );
@@ -202,9 +233,7 @@ export function EventPaymentPage() {
     }
 
     const orderId: string | null = typeof r?.orderId === "string" ? r.orderId : null;
-    const confirmUrl = `/o/${orgSlug}/e/${eventSlug}/confirmation${
-      orderId ? `?order=${orderId}` : ""
-    }`;
+    const confirmUrl = `/o/${orgSlug}/e/${eventSlug}/confirmation${orderId ? `?order=${orderId}` : ""}`;
 
     if (r?.ok === true && r?.status === "paid") {
       clearDraft(orgSlug, eventSlug);
@@ -233,7 +262,7 @@ export function EventPaymentPage() {
   }
 
   return (
-    <div className="publicPage">
+    <div className="publicPage" style={brandStyle}>
       <Container>
         <div className="publicSurface">
           <PublicEventHeader orgSlug={orgSlug} org={org} event={event} />
@@ -252,23 +281,16 @@ export function EventPaymentPage() {
                   <CardBody>
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                       {picked.map(({ p, qty }) => (
-                        <div
-                          key={p.id}
-                          style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
-                        >
+                        <div key={p.id} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                           <div>
                             <div style={{ fontWeight: 800 }}>
                               {p.name} × {qty}
                             </div>
                             <div className="publicSubtitle">
-                              {p.createsAttendees
-                                ? `${p.attendeesPerUnit} participant(s) / billet`
-                                : "Pas de participant créé"}
+                              {p.createsAttendees ? `${p.attendeesPerUnit} participant(s) / billet` : "Pas de participant créé"}
                             </div>
                           </div>
-                          <div style={{ fontWeight: 800 }}>
-                            {formatMoney(qty * p.priceCents, p.currency)}
-                          </div>
+                          <div style={{ fontWeight: 800 }}>{formatMoney(qty * p.priceCents, p.currency)}</div>
                         </div>
                       ))}
                     </div>
@@ -286,8 +308,7 @@ export function EventPaymentPage() {
 
                     {attendeesMismatch ? (
                       <div className="publicEmpty" style={{ marginTop: 12 }}>
-                        Oups : le nombre de participants ne correspond pas aux billets sélectionnés.
-                        Reviens à l’étape “Participants”.
+                        Oups : le nombre de participants ne correspond pas aux billets sélectionnés. Reviens à l’étape “Participants”.
                       </div>
                     ) : null}
                   </CardBody>
@@ -339,9 +360,7 @@ export function EventPaymentPage() {
                           style={{ width: 18, height: 18 }}
                           disabled={registering}
                         />
-                        <span style={{ fontWeight: 700 }}>
-                          J’accepte les conditions et je confirme l’achat.
-                        </span>
+                        <span style={{ fontWeight: 700 }}>J’accepte les conditions et je confirme l’achat.</span>
                       </label>
 
                       {registerError ? <div className="publicEmpty">Erreur : {registerError}</div> : null}
@@ -363,8 +382,8 @@ export function EventPaymentPage() {
                     ? "Validation…"
                     : "Confirmer"
                   : registering
-                  ? "Paiement…"
-                  : "Payer"
+                    ? "Paiement…"
+                    : "Payer"
               }
               onClick={pay}
               disabled={
