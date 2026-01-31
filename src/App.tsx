@@ -63,6 +63,7 @@ function App() {
         <Route path="e/:eventSlug/paiement" element={<EventPaymentPage />} />
 
 
+
       </Route>
 
       {/* PUBLIC - return Mollie */}
