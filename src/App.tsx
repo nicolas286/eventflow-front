@@ -16,7 +16,6 @@ import { OrgPublicPage } from "./pages/public/OrgPublicPage";
 import { EventTicketsPage } from "./pages/public/EventTicketsPage";
 import { EventAttendeesPage } from "./pages/public/EventAttendeesPage";
 import { EventPaymentPage } from "./pages/public/EventPaymentPage";
-import { EventConfirmationPage } from "./pages/public/EventConfirmationPage";
 import { OrderReturnPage } from "./pages/public/OrderReturnPage";
 
 /* Layouts */
@@ -62,7 +61,6 @@ function App() {
         <Route path="e/:eventSlug/billets" element={<EventTicketsPage />} />
         <Route path="e/:eventSlug/participants" element={<EventAttendeesPage />} />
         <Route path="e/:eventSlug/paiement" element={<EventPaymentPage />} />
-        <Route path="/o/:orgSlug/e/:eventSlug/confirmation" element={<EventConfirmationPage />} />
 
       </Route>
 
