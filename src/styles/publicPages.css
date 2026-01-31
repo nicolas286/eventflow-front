@@ -98,16 +98,15 @@
   height: clamp(44px, 10vw, 64px);
 }
 
-/* ---------- Header row ---------- */
+/* ---------- Header row (FIX : date au niveau du lieu) ---------- */
 
 .publicHeaderRow {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px 16px;
+  align-items: start;
   margin-top: 10px;
-  gap: 12px;
-  flex-wrap: wrap;
 }
 
 .publicTitleBlock {
@@ -123,21 +122,23 @@
   color: #0f172a;
 }
 
+/* subtitle = lieu / infos */
 .publicSubtitle {
   margin-top: 6px;
   font-size: 16px;
   color: #475569;
 }
 
-/* ---------- Date ---------- */
-
+/* date : plus d'absolute */
 .publicDateChip {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  position: static;
+  transform: none;
+  justify-self: end;
 
+  margin-top: 6px; /* alignée avec subtitle */
   padding: 10px 18px;
   border-radius: 999px;
+
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
@@ -148,12 +149,13 @@
   white-space: nowrap;
 }
 
-/* ---------- Actions ---------- */
-
+/* Actions (boutons) */
 .publicActions {
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-top: 6px;
 }
 
 /* ---------- Divider ---------- */
@@ -205,22 +207,21 @@
   gap: 14px;
 }
 
+/* ✅ MOBILE */
 @media (max-width: 860px) {
   .publicGrid2 {
     grid-template-columns: 1fr;
   }
 
   .publicHeaderRow {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
+    grid-template-columns: 1fr;
+    gap: 10px;
     margin-top: 20px;
   }
 
   .publicDateChip {
-    position: static;
-    transform: none;
-    margin: 10px 0;
+    justify-self: start;
+    margin-top: 0;
   }
 
   .publicActions {
@@ -233,111 +234,29 @@
   }
 }
 
-.publicTicketCard {
-  background:
-    radial-gradient(1200px 360px at 0% 0%, rgba(99, 102, 241, 0.10), transparent 55%),
-    radial-gradient(900px 320px at 100% 0%, rgba(16, 185, 129, 0.08), transparent 55%),
-    #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.07);
-  box-shadow:
-    0 12px 30px rgba(0, 0, 0, 0.08),
-    0 1px 0 rgba(255, 255, 255, 0.7) inset;
-  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+/* =========================================================
+   ✅ BRANDING (public) : buttons
+   Utilise --primary (format "r g b")
+   ========================================================= */
+
+/* 🎯 Boutons publics au branding (secondary / ghost) */
+.publicPage .ui-button--secondary {
+  background: rgba(var(--primary), 0.10);
+  border-color: rgba(var(--primary), 0.22);
+  color: rgb(var(--primary));
 }
 
-.publicTicketCard:hover {
-  transform: translateY(-2px);
-  border-color: rgba(0, 0, 0, 0.10);
-  box-shadow:
-    0 18px 44px rgba(0, 0, 0, 0.10),
-    0 1px 0 rgba(255, 255, 255, 0.7) inset;
+.publicPage .ui-button--secondary:hover {
+  background: rgba(var(--primary), 0.16);
 }
 
-.publicTicketCard.isSoldOut {
-  opacity: 0.78;
+.publicPage .ui-button--ghost {
+  background: transparent;
+  color: rgb(var(--primary));
+  border-color: rgba(var(--primary), 0.00);
 }
 
-.publicTicketBody {
-  padding-top: 2px;
-}
-
-.publicTicketLayout {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
-.publicTicketLeft {
-  flex: 1;
-  min-width: 0;
-}
-
-.publicTicketDesc {
-  margin-bottom: 10px;
-}
-
-.publicTicketRight {
-  width: 260px;
-  flex: 0 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  align-items: flex-end;
-}
-
-.publicQtyBlock {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  justify-content: flex-end;
-
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.75);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.06);
-}
-
-.publicQtyInput {
-  width: 110px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.10);
-  outline: none;
-  background: #fff;
-  box-sizing: border-box;
-}
-
-.publicQtyBtn {
-  min-width: 44px;
-  padding-left: 12px;
-  padding-right: 12px;
-}
-
-.publicTicketTotal {
-  font-weight: 900;
-  font-size: 14px;
-  color: #0f172a;
-  padding: 10px 12px;
-  border-radius: 999px;
-  background: rgba(17, 24, 39, 0.04);
-  border: 1px solid rgba(17, 24, 39, 0.10);
-  white-space: nowrap;
-}
-
-@media (max-width: 900px) {
-  .publicTicketRight {
-    width: 100%;
-    align-items: flex-start;
-  }
-
-  .publicTicketLayout {
-    flex-direction: column;
-  }
-
-  .publicQtyBlock {
-    justify-content: flex-start;
-  }
+.publicPage .ui-button--ghost:hover {
+  background: rgba(var(--primary), 0.10);
+  border-color: rgba(var(--primary), 0.10);
 }

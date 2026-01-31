@@ -1,15 +1,38 @@
 /* src/styles/eventTicketsPage.css */
 
+/* =========================================================
+   🎟️ Ticket card – Gradient linéaire branding
+   ========================================================= */
+
 .publicTicketCard {
-  background:
-    radial-gradient(1200px 360px at 0% 0%, rgba(99, 102, 241, 0.10), transparent 55%),
-    radial-gradient(900px 320px at 100% 0%, rgba(16, 185, 129, 0.08), transparent 55%),
-    #ffffff;
+  /* fallback au cas où */
+  background-color: #ffffff;
+
+  /* ✅ gradient branding (bas -> haut) */
+  background-image: linear-gradient(
+    to top,
+    rgb(var(--primary-bg) / 0.10) 0%,
+    rgb(var(--primary-bg) / 0.04) 55%,
+    #ffffff 100%
+  );
+
+  /* ⚠️ important: certains composants Card imposent un background */
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-clip: padding-box;
+
   border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 18px;
+
   box-shadow:
     0 12px 30px rgba(0, 0, 0, 0.08),
     0 1px 0 rgba(255, 255, 255, 0.7) inset;
-  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease,
+    background-image 160ms ease;
 }
 
 .publicTicketCard:hover {
@@ -21,8 +44,10 @@
 }
 
 .publicTicketCard.isSoldOut {
-  opacity: 0.78;
+  opacity: 0.75;
 }
+
+/* ---------- Ticket layout ---------- */
 
 .publicTicketBody {
   padding-top: 2px;
@@ -47,14 +72,18 @@
 .publicTicketRight {
   width: 260px;
   flex: 0 0 auto;
+
   display: flex;
   flex-direction: column;
   gap: 10px;
   align-items: flex-end;
 }
 
+/* ---------- Quantity block ---------- */
+
 .publicQtyBlock {
   width: 100%;
+
   display: flex;
   align-items: center;
   gap: 10px;
@@ -62,17 +91,21 @@
 
   padding: 10px 12px;
   border-radius: 14px;
+
   background: rgba(255, 255, 255, 0.75);
   border: 1px solid rgba(0, 0, 0, 0.08);
+
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.06);
 }
 
 .publicQtyInput {
   width: 110px;
   padding: 10px 12px;
+
   border-radius: 12px;
   border: 1px solid rgba(0, 0, 0, 0.10);
   outline: none;
+
   background: #fff;
   box-sizing: border-box;
 }
@@ -83,33 +116,23 @@
   padding-right: 12px;
 }
 
+/* ---------- Total ---------- */
+
 .publicTicketTotal {
   font-weight: 900;
   font-size: 14px;
   color: #0f172a;
+
   padding: 10px 12px;
   border-radius: 999px;
+
   background: rgba(17, 24, 39, 0.04);
   border: 1px solid rgba(17, 24, 39, 0.10);
   white-space: nowrap;
 }
 
-@media (max-width: 900px) {
-  .publicTicketRight {
-    width: 100%;
-    align-items: flex-start;
-  }
+/* ---------- Recap ---------- */
 
-  .publicTicketLayout {
-    flex-direction: column;
-  }
-
-  .publicQtyBlock {
-    justify-content: flex-start;
-  }
-}
-
-/* Recap (utilisé dans ta page billets) */
 .publicRecapRow {
   display: flex;
   align-items: center;
@@ -125,4 +148,21 @@
 
 .publicRecapSubtitle {
   margin-top: 4px;
+}
+
+/* ---------- Mobile ---------- */
+
+@media (max-width: 900px) {
+  .publicTicketRight {
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .publicTicketLayout {
+    flex-direction: column;
+  }
+
+  .publicQtyBlock {
+    justify-content: flex-start;
+  }
 }
