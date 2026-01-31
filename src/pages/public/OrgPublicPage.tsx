@@ -8,9 +8,9 @@ import Button from "../../ui/components/button/Button";
 import Badge from "../../ui/components/badge/Badge";
 
 import { formatDateTimeHuman } from "../../domain/helpers/dateTime";
-import { getPublicEventBanner } from "../../domain/helpers/getPublicEventBanner";
 
 import "../../styles/publicPages.css";
+import type { PublicEventOverview } from "../../domain/models/public/public.orgEventsOverview.schema";
 
 export function OrgPublicPage() {
   const { orgSlug } = useParams<{ orgSlug: string }>();
@@ -99,9 +99,8 @@ export function OrgPublicPage() {
           <div className="publicEmpty">Aucun événement publié.</div>
         ) : (
           <div className="publicOrgEventsGrid">
-            {events.map((e: any) => {
-              // ✅ Bannière STRICTEMENT event (via helper)
-              const banner = getPublicEventBanner(e);
+            {events.map((e: PublicEventOverview) => {
+              const banner = e.bannerUrl;
 
               const startText = e.startsAt ? formatDateTimeHuman(e.startsAt) : null;
               const endText = e.endsAt ? formatDateTimeHuman(e.endsAt) : null;
@@ -111,7 +110,7 @@ export function OrgPublicPage() {
                   {banner ? (
                     <div
                       className="publicOrgEventBanner"
-                      style={{ backgroundImage: `url(${banner})` }}
+                      style={{ backgroundImage: `url("${banner}")` }}
                       aria-label={e.title}
                     />
                   ) : null}

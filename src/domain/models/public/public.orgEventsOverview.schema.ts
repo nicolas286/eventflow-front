@@ -4,7 +4,6 @@ import { eventSchema } from "../db/db.event.schema";
 export const publicEventOverviewSchema = eventSchema.omit({
   orgId: true,
   description: true,
-  bannerUrl: true, 
   isPublished: true,
   createdAt: true,
   updatedAt: true,
