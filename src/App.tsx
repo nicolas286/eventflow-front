@@ -10,6 +10,7 @@ import AdminStructurePage from "./pages/admin/AdminStructurePage";
 import AdminProfilPage  from "./pages/admin/AdminProfilPage";
 import { AdminAbonnementPage } from "./pages/admin/AdminAbonnementPage";
 import { AdminSingleEventPage } from "./pages/admin/singleEvent/AdminSingleEventPage";
+import OnboardingWizard from "./pages/admin/OnboardingWizard";
 
 /* Public pages */
 import { OrgPublicPage } from "./pages/public/OrgPublicPage";
@@ -45,6 +46,7 @@ function App() {
           <Route path="structure" element={<AdminStructurePage />} />
           <Route path="profil" element={<AdminProfilPage />} />
           <Route path="abonnement" element={<AdminAbonnementPage />} />
+          <Route path="onboarding" element={<OnboardingWizard />} />
         </Route>
       </Route>
 
@@ -61,8 +63,6 @@ function App() {
         <Route path="e/:eventSlug/billets" element={<EventTicketsPage />} />
         <Route path="e/:eventSlug/participants" element={<EventAttendeesPage />} />
         <Route path="e/:eventSlug/paiement" element={<EventPaymentPage />} />
-
-
 
       </Route>
 

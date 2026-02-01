@@ -1,4 +1,5 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import "../../styles/adminDashBoard.css";
 
 import TopNav, { type OrgInfo } from "../../ui/components/navigation/TopNav";
@@ -19,6 +20,8 @@ export type AdminOutletContext = {
 };
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
+
   const { loading, error, bootstrap, orgId, events, refetch } =
     useAdminDashboardData({ supabase });
 
@@ -31,8 +34,18 @@ export default function AdminDashboard() {
       }
     : null;
 
-  // ✅ Couleur orga -> thème global (html/body) via composant
   const primaryHex = bootstrap?.organizationProfile?.primaryColor ?? "#2563eb";
+
+  useEffect(() => {
+    if (loading || error) return;
+    if (!bootstrap) return;
+
+    const hasOrg = Boolean(bootstrap.organization);
+    if (!hasOrg) {
+      // ⚠️ évite boucle si on est déjà sur le wizard
+      navigate("/admin/onboarding", { replace: true });
+    }
+  }, [loading, error, bootstrap, navigate]);
 
   if (loading) {
     return (
@@ -58,16 +71,18 @@ export default function AdminDashboard() {
     );
   }
 
+  /**
+   * ✅ Ici, orgId peut être vide si pas d'orga.
+   * Avec le redirect au-dessus, on ne devrait plus rester sur cet écran,
+   * mais on garde un fallback safe (évite flash / cas edge).
+   */
   if (!orgId) {
     return (
       <div className="adminPage">
         <OrgThemeSync primaryColor={primaryHex} />
         <TopNav mode="admin" org={topNavOrg} />
         <div className="adminPageGrid">
-          <div className="adminPageRight">
-            <h2>Bienvenue 👋</h2>
-            <p>Vous n’avez pas encore d’organisation. Créez-en une pour commencer.</p>
-          </div>
+          <div className="adminPageRight">Redirection…</div>
         </div>
       </div>
     );
