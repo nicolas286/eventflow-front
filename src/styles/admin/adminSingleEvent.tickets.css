@@ -1,0 +1,108 @@
+/* ---------- Ticket editor animation (same as AdminEventsPage) ---------- */
+
+/*
+  ✅ New layout goal:
+  - Tickets take 100% width when the editor is closed
+  - When the editor opens, the list "slides" / shrinks to the left to make room
+    (same interaction as AdminEventsPage)
+*/
+
+.adminTicketsShell{
+  --editor-w: 420px;
+  --editor-gap: 14px;
+
+  width:100%;
+  position:relative;
+  min-width:0;
+}
+
+.adminTicketsLeft{
+  width:100%;
+  min-width:0;
+  transition: width 180ms ease, transform 180ms ease;
+}
+
+.adminTicketsLeft *{
+  min-width:0;
+}
+
+.adminTicketsRight{
+  position:absolute;
+  right:0;
+  top:0;
+  width:var(--editor-w);
+  box-sizing:border-box;
+}
+
+.adminTicketsShell.isEditorOpen .adminTicketsLeft{
+  width: calc(100% - (var(--editor-w) + var(--editor-gap)));
+  transform: translateX(0);
+}
+
+.adminTicketsEditorCard {
+  transform-origin: top right;
+}
+
+/* Le panneau animé (même pattern que .adminEventsEditorPanel) */
+.ticketEditorPanel {
+  transform-origin: top right;
+  animation-duration: 180ms;
+  animation-fill-mode: both;
+}
+
+.ticketEditorPanel.isOpen {
+  animation-name: ticketEditorIn;
+  animation-timing-function: ease-out;
+}
+
+.ticketEditorPanel.isClosing {
+  animation-name: ticketEditorOut;
+  animation-timing-function: ease-in;
+}
+
+@keyframes ticketEditorIn {
+  from {
+    opacity: 0;
+    transform: translateX(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes ticketEditorOut {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(8px) scale(0.98);
+  }
+}
+
+@media (max-width: 1050px) {
+  .adminTicketsLeft{
+    width:100%;
+    transform:none;
+  }
+
+  .adminTicketsShell.isEditorOpen .adminTicketsLeft{
+    width:100%;
+    transform:none;
+  }
+
+  .adminTicketsRight{
+    position:static;
+    width:100%;
+    margin-top:14px;
+  }
+
+  .adminTicketsEditorCard {
+    transform-origin: top center;
+  }
+  .ticketEditorPanel {
+    transform-origin: top center;
+  }
+}

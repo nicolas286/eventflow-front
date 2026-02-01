@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { supabase } from "../../../../gateways/supabase/supabaseClient";
 
+import "../../../../styles/admin/adminSingleEvent.tickets.css";
+
 import { EventTicketsPanel } from "../../../../features/admin/events/singleEvent/EventTicketsPanel";
 import { useCreateEventProduct } from "../../../../features/admin/hooks/useCreateEventProduct";
 import { useDeleteEventProduct } from "../../../../features/admin/hooks/useDeleteEventProduct";
@@ -26,7 +28,10 @@ export function SingleEventTicketsSection(props: {
 
   const products = useMemo(() => toRows(data.products), [data.products]);
   const orders = useMemo(() => toRows(data.orders), [data.orders]);
-  const orderItems = useMemo(() => toRows(data.orderItems ?? data.order_items), [data.orderItems, data.order_items]);
+  const orderItems = useMemo(
+    () => toRows(data.orderItems ?? data.order_items),
+    [data.orderItems, data.order_items]
+  );
   const payments = useMemo(() => toRows(data.payments), [data.payments]);
 
   return (

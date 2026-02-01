@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { EventProducts } from "../../../../domain/models/db/db.eventProducts.schema";
 import type { CreateEventProductInput } from "../../../../domain/models/admin/admin.createEventProduct.schema";
@@ -68,13 +68,37 @@ type TicketDraft = {
   closeEventWhenSoldOut: boolean;
 };
 
+/* ------------------------------------------------------------------ */
+/* 🔥 Animation helper (même logique que AdminEventsPage)               */
+/* ------------------------------------------------------------------ */
+function useAnimatedPanel(isOpen: boolean) {
+  const [mounted, setMounted] = useState(isOpen);
+  const [closing, setClosing] = useState(false);
 
+  useEffect(() => {
+    if (isOpen) {
+      setMounted(true);
+      setClosing(false);
+      return;
+    }
+    if (mounted) setClosing(true);
+  }, [isOpen, mounted]);
+
+  function onAnimationEnd() {
+    if (!isOpen) {
+      setMounted(false);
+      setClosing(false);
+    }
+  }
+
+  const className = isOpen ? "isOpen" : closing ? "isClosing" : "";
+  return { mounted, className, onAnimationEnd };
+}
 
 export function EventTicketsPanel(props: Props) {
   const {
     event,
     products,
-    orderItems,
     onCreate,
     createLoading = false,
     createError = null,
@@ -88,6 +112,10 @@ export function EventTicketsPanel(props: Props) {
 
   const [editing, setEditing] = useState<TicketDraft | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // ✅ on sépare l'ouverture/fermeture (anim) du contenu (editing)
+  const [editorOpen, setEditorOpen] = useState(false);
+  const editorAnim = useAnimatedPanel(editorOpen);
 
   function productToDraft(p: any): TicketDraft {
     return {
@@ -105,109 +133,119 @@ export function EventTicketsPanel(props: Props) {
     };
   }
 
-  function openEdit(p: any) {
-    setEditing(productToDraft(p));
-    setEditingId(String(p.id));
-  }
   const sorted = useMemo(() => {
     const arr = Array.isArray(products) ? [...products] : [];
     arr.sort((a, b) => (a?.sortOrder ?? 0) - (b?.sortOrder ?? 0));
     return arr;
   }, [products]);
 
-  async function handleRemove(productId: string) {
-  if (!onRemove) return;
-
-  const ok = window.confirm("Supprimer ce ticket ? (les commandes passées restent intactes)");
-  if (!ok) return;
-
-  await onRemove(productId);
-  onChanged?.();
+  function openEdit(p: any) {
+    setEditing(productToDraft(p));
+    setEditingId(String(p.id));
+    setEditorOpen(true);
   }
 
   function openCreate() {
-  setEditingId(null);
-  setEditing({
-    name: "",
-    description: "",
-    priceCents: 0,
-    currency: "EUR",
-    stockQty: null,
-    sortOrder: (sorted.at(-1)?.sortOrder ?? 0) + 10,
-    createsAttendees: true,
-    attendeesPerUnit: 1,
-    isActive: true,
-    isGatekeeper: false,
-    closeEventWhenSoldOut: false,
-  });
-}
+    setEditingId(null);
+    setEditing({
+      name: "",
+      description: "",
+      priceCents: 0,
+      currency: "EUR",
+      stockQty: null,
+      sortOrder: (sorted.at(-1)?.sortOrder ?? 0) + 10,
+      createsAttendees: true,
+      attendeesPerUnit: 1,
+      isActive: true,
+      isGatekeeper: false,
+      closeEventWhenSoldOut: false,
+    });
+    setEditorOpen(true);
+  }
 
-    function closeEditor() {
+  // 🔥 fermeture animée (ne vide pas editing tout de suite)
+  function closeEditor() {
+    setEditorOpen(false);
+  }
+
+  // ✅ Le shell doit rester "ouvert" pendant l'animation de fermeture
+  const shellOpen = editorOpen || editorAnim.mounted;
+
+  // ✅ quand l’anim de fermeture finit, on “démonte” proprement
+  function handleEditorAnimationEnd() {
+    editorAnim.onAnimationEnd();
+    if (!editorOpen) {
       setEditing(null);
       setEditingId(null);
     }
-
-
-  async function save() {
-  if (!editing) return;
-  if (!event?.id) return;
-
-  const name = String(editing.name ?? "").trim();
-  if (!name) return;
-
-  // payload commun (draft -> input)
-  const base: CreateEventProductInput = {
-    eventId: event.id,
-    name,
-    description: toNullIfEmpty(editing.description),
-    priceCents: clampInt(editing.priceCents, 0),
-    currency: "EUR",
-    stockQty: editing.stockQty == null ? null : clampInt(editing.stockQty, 0),
-    sortOrder: clampInt(editing.sortOrder, 0),
-    createsAttendees: Boolean(editing.createsAttendees),
-    attendeesPerUnit: clampInt(editing.attendeesPerUnit, 1) || 1,
-    isActive: Boolean(editing.isActive),
-    isGatekeeper: Boolean(editing.isGatekeeper),
-    closeEventWhenSoldOut: Boolean(editing.closeEventWhenSoldOut),
-  };
-
-  if (!editingId) {
-    // ✅ create
-    await onCreate(base);
-  } else {
-    // ✅ update (patch)
-    const patch: UpdateEventProductPatch = {
-      name: base.name,
-      description: base.description,
-      priceCents: base.priceCents,
-      currency: base.currency,
-      stockQty: base.stockQty,
-      sortOrder: base.sortOrder,
-      createsAttendees: base.createsAttendees,
-      attendeesPerUnit: base.attendeesPerUnit,
-      isActive: base.isActive,
-      isGatekeeper: base.isGatekeeper,
-      closeEventWhenSoldOut: base.closeEventWhenSoldOut,
-    };
-
-    await onUpdate({ productId: editingId, patch });
   }
 
-  closeEditor();
-  onChanged?.();
-}
+  async function handleRemove(productId: string) {
+    if (!onRemove) return;
 
-    function getSoldQty(p: any) {
-      return clampInt(p?.soldQty ?? p?.sold_qty ?? 0, 0);
+    const ok = window.confirm("Supprimer ce ticket ? (les commandes passées restent intactes)");
+    if (!ok) return;
+
+    await onRemove(productId);
+    onChanged?.();
+  }
+
+  async function save() {
+    if (!editing) return;
+    if (!event?.id) return;
+
+    const name = String(editing.name ?? "").trim();
+    if (!name) return;
+
+    const base: CreateEventProductInput = {
+      eventId: event.id,
+      name,
+      description: toNullIfEmpty(editing.description),
+      priceCents: clampInt(editing.priceCents, 0),
+      currency: "EUR",
+      stockQty: editing.stockQty == null ? null : clampInt(editing.stockQty, 0),
+      sortOrder: clampInt(editing.sortOrder, 0),
+      createsAttendees: Boolean(editing.createsAttendees),
+      attendeesPerUnit: clampInt(editing.attendeesPerUnit, 1) || 1,
+      isActive: Boolean(editing.isActive),
+      isGatekeeper: Boolean(editing.isGatekeeper),
+      closeEventWhenSoldOut: Boolean(editing.closeEventWhenSoldOut),
+    };
+
+    if (!editingId) {
+      await onCreate(base);
+    } else {
+      const patch: UpdateEventProductPatch = {
+        name: base.name,
+        description: base.description,
+        priceCents: base.priceCents,
+        currency: base.currency,
+        stockQty: base.stockQty,
+        sortOrder: base.sortOrder,
+        createsAttendees: base.createsAttendees,
+        attendeesPerUnit: base.attendeesPerUnit,
+        isActive: base.isActive,
+        isGatekeeper: base.isGatekeeper,
+        closeEventWhenSoldOut: base.closeEventWhenSoldOut,
+      };
+
+      await onUpdate({ productId: editingId, patch });
     }
 
-    function formatStockLine(sold: number, stockQty: number | null | undefined) {
-      if (stockQty == null) return `${sold} / illimité`;
-      const stock = clampInt(stockQty, 0);
-      return `${sold} / ${stock}`;
-    }
+    // ✅ fermeture animée
+    closeEditor();
+    onChanged?.();
+  }
 
+  function getSoldQty(p: any) {
+    return clampInt(p?.soldQty ?? p?.sold_qty ?? 0, 0);
+  }
 
+  function formatStockLine(sold: number, stockQty: number | null | undefined) {
+    if (stockQty == null) return `${sold} / illimité`;
+    const stock = clampInt(stockQty, 0);
+    return `${sold} / ${stock}`;
+  }
 
   return (
     <div className="adminTickets">
@@ -224,241 +262,252 @@ export function EventTicketsPanel(props: Props) {
         </div>
       </div>
 
-      <div className="adminTicketsGrid">
-        <div className="adminTicketsList">
-          {sorted.length === 0 ? (
-            <div className="adminEventEmpty">Aucun ticket. Clique sur “Nouveau ticket”.</div>
-          ) : (
-            sorted.map((p) => {
-              const currency = String(p.currency ?? "EUR");
-              const active = Boolean(p.isActive ?? true);
-              const sold = getSoldQty(p);
-              const stockLine = formatStockLine(sold, p.stockQty);
+      <div className={shellOpen ? "adminTicketsShell isEditorOpen" : "adminTicketsShell"}>
+        <div className="adminTicketsLeft">
+          <div className="adminTicketsList">
+            {sorted.length === 0 ? (
+              <div className="adminEventEmpty">Aucun ticket. Clique sur “Nouveau ticket”.</div>
+            ) : (
+              sorted.map((p) => {
+                const currency = String(p.currency ?? "EUR");
+                const active = Boolean(p.isActive ?? true);
+                const sold = getSoldQty(p);
+                const stockLine = formatStockLine(sold, p.stockQty);
 
-
-              return (
-                <div key={p.id} className={active ? "adminTicketCard" : "adminTicketCard isInactive"}>
-                  <div className="adminTicketTop">
-                    <div className="adminTicketTitle">{p.name}</div>
-                    <div className={active ? "adminTicketPill" : "adminTicketPill isOff"}>
-                      {active ? "Actif" : "Inactif"}
-                    </div>
-                  </div>
-
-                  <div className="adminTicketMeta">
-                    <span className="adminTicketStrong">{formatMoney(p.priceCents ?? 0, currency)}</span>
-                    <span>•</span>
-                    <span>Stock : {stockLine}</span>
-                  </div>
-
-                  <div className="adminTicketMeta">
-                    {p.createsAttendees ? (
-                      <span>
-                        Ce billet crée{" "}
-                        <strong>{p.attendeesPerUnit ?? 1}</strong>{" "}
-                        participant{(p.attendeesPerUnit ?? 1) > 1 ? "s" : ""}{" "}
-                        qui devra{(p.attendeesPerUnit ?? 1) > 1 ? "ont" : ""} remplir le formulaire
-                      </span>
-                    ) : (
-                      <span>
-                        Ce billet ne crée <strong>aucun participant</strong>
-                      </span>
-                    )}
-                  </div>
-
-
-                  <div className="adminTicketStats">
-                    <div className="adminTicketStat">
-                      <div className="adminTicketStatLabel">Vendus</div>
-                      <div className="adminTicketStatValue">{sold}</div>
-                    </div>
-                  </div>
-
-                  {p.description ? <div className="adminTicketDesc">{p.description}</div> : null}
-
-                  <div className="adminTicketActions">
-                    <button
-                    type="button"
-                    className="adminTicketBtn"
-                    onClick={() => openEdit(p)}
-                    disabled={Boolean(updateLoading)}
-                    title={updateLoading ? "Enregistrement en cours" : undefined}
+                return (
+                  <div
+                    key={p.id}
+                    className={active ? "adminTicketCard" : "adminTicketCard isInactive"}
                   >
-                    Modifier
-                  </button>
+                    <div className="adminTicketTop">
+                      <div className="adminTicketTitle">{p.name}</div>
+                      <div className={active ? "adminTicketPill" : "adminTicketPill isOff"}>
+                        {active ? "Actif" : "Inactif"}
+                      </div>
+                    </div>
 
+                    <div className="adminTicketMeta">
+                      <span className="adminTicketStrong">
+                        {formatMoney(p.priceCents ?? 0, currency)}
+                      </span>
+                      <span>•</span>
+                      <span>Stock : {stockLine}</span>
+                    </div>
 
-                    <button
-                      type="button"
-                      className="adminTicketBtn danger"
-                      onClick={() => void handleRemove(String(p.id))}
-                      disabled={!onRemove || deleteLoading}
-                      title={!onRemove ? "Suppression non dispo" : undefined}
-                    >
-                      {deleteLoading ? "Suppression..." : "Supprimer"}
-                    </button>
+                    <div className="adminTicketMeta">
+                      {p.createsAttendees ? (
+                        <span>
+                          Ce billet crée <strong>{p.attendeesPerUnit ?? 1}</strong> participant
+                          {(p.attendeesPerUnit ?? 1) > 1 ? "s" : ""} qui devra
+                          {(p.attendeesPerUnit ?? 1) > 1 ? "ont" : ""} remplir le formulaire
+                        </span>
+                      ) : (
+                        <span>
+                          Ce billet ne crée <strong>aucun participant</strong>
+                        </span>
+                      )}
+                    </div>
 
+                    <div className="adminTicketStats">
+                      <div className="adminTicketStat">
+                        <div className="adminTicketStatLabel">Vendus</div>
+                        <div className="adminTicketStatValue">{sold}</div>
+                      </div>
+                    </div>
+
+                    {p.description ? <div className="adminTicketDesc">{p.description}</div> : null}
+
+                    <div className="adminTicketActions">
+                      <button
+                        type="button"
+                        className="adminTicketBtn"
+                        onClick={() => openEdit(p)}
+                        disabled={Boolean(updateLoading)}
+                        title={updateLoading ? "Enregistrement en cours" : undefined}
+                      >
+                        Modifier
+                      </button>
+
+                      <button
+                        type="button"
+                        className="adminTicketBtn danger"
+                        onClick={() => void handleRemove(String(p.id))}
+                        disabled={!onRemove || deleteLoading}
+                        title={!onRemove ? "Suppression non dispo" : undefined}
+                      >
+                        {deleteLoading ? "Suppression..." : "Supprimer"}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              );
-            })
-          )}
+                );
+              })
+            )}
+          </div>
         </div>
 
-        <div className="adminTicketsEditor">
-          {editing ? (
-            <div className="adminTicketsEditorCard">
-              <div className="adminTicketsEditorHeader">
-                <div>
-                  <div className="adminTicketsEditorTitle">
-                  {editingId ? "Modifier ticket" : "Nouveau ticket"}
+        <div className="adminTicketsRight">
+          <div className="adminTicketsEditor">
+            {editorAnim.mounted && editing ? (
+              <div
+                className={`adminTicketsEditorCard ticketEditorPanel ${editorAnim.className}`}
+                key={editingId ?? "create"}
+                onAnimationEnd={handleEditorAnimationEnd}
+              >
+                <div className="adminTicketsEditorHeader">
+                  <div>
+                    <div className="adminTicketsEditorTitle">
+                      {editingId ? "Modifier ticket" : "Nouveau ticket"}
+                    </div>
+                    <div className="adminEventHint">Les prix sont en centimes.</div>
+                  </div>
+
+                  <button type="button" className="adminTicketBtn" onClick={closeEditor}>
+                    Fermer
+                  </button>
                 </div>
 
-                  <div className="adminEventHint">Les prix sont en centimes.</div>
+                {createError ? (
+                  <div className="adminEventHint" style={{ marginTop: 10, color: "#b91c1c" }}>
+                    {createError}
+                  </div>
+                ) : null}
+
+                {deleteError ? (
+                  <div className="adminEventHint" style={{ marginTop: 10, color: "#b91c1c" }}>
+                    {deleteError}
+                  </div>
+                ) : null}
+
+                <div className="adminEventFormGrid" style={{ marginTop: 12 }}>
+                  <div className="adminEventField">
+                    <div className="adminEventLabel">Nom</div>
+                    <input
+                      className="adminEventInput"
+                      value={editing.name}
+                      onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="adminEventField">
+                    <div className="adminEventLabel">Ordre</div>
+                    <input
+                      className="adminEventInput"
+                      type="number"
+                      value={editing.sortOrder}
+                      onChange={(e) =>
+                        setEditing({ ...editing, sortOrder: clampInt(e.target.value, 0) })
+                      }
+                    />
+                  </div>
+
+                  <div className="adminEventField">
+                    <div className="adminEventLabel">Prix (centimes)</div>
+                    <input
+                      className="adminEventInput"
+                      type="number"
+                      value={editing.priceCents}
+                      onChange={(e) =>
+                        setEditing({ ...editing, priceCents: clampInt(e.target.value, 0) })
+                      }
+                    />
+                  </div>
+
+                  <div className="adminEventField">
+                    <div className="adminEventLabel">Devise</div>
+                    <select className="adminEventInput" value={editing.currency} disabled>
+                      <option value="EUR">EUR</option>
+                      <option value="USD">USD</option>
+                      <option value="GBP">GBP</option>
+                      <option value="CHF">CHF</option>
+                    </select>
+                  </div>
+
+                  <div className="adminEventField">
+                    <div className="adminEventLabel">Stock (vide = illimité)</div>
+                    <input
+                      className="adminEventInput"
+                      type="number"
+                      value={editing.stockQty ?? ""}
+                      onChange={(e) =>
+                        setEditing({
+                          ...editing,
+                          stockQty: e.target.value === "" ? null : clampInt(e.target.value, 0),
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="adminEventField">
+                    <div className="adminEventLabel">Actif</div>
+                    <label className="adminEventToggle">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(editing.isActive)}
+                        onChange={(e) => setEditing({ ...editing, isActive: e.target.checked })}
+                      />
+                      <span>{editing.isActive ? "Actif" : "Inactif"}</span>
+                    </label>
+                  </div>
+
+                  <div className="adminEventField">
+                    <div className="adminEventLabel">Crée des participants</div>
+                    <label className="adminEventToggle">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(editing.createsAttendees)}
+                        onChange={(e) =>
+                          setEditing({ ...editing, createsAttendees: e.target.checked })
+                        }
+                      />
+                      <span>{editing.createsAttendees ? "Oui" : "Non"}</span>
+                    </label>
+                  </div>
+
+                  <div className="adminEventField">
+                    <div className="adminEventLabel">Participants / billet</div>
+                    <input
+                      className="adminEventInput"
+                      type="number"
+                      value={editing.attendeesPerUnit}
+                      onChange={(e) =>
+                        setEditing({ ...editing, attendeesPerUnit: clampInt(e.target.value, 0) })
+                      }
+                      disabled={!editing.createsAttendees}
+                    />
+                  </div>
+
+                  <div className="adminEventField adminEventFieldSpan2">
+                    <div className="adminEventLabel">Description</div>
+                    <textarea
+                      className="adminEventTextarea"
+                      value={editing.description}
+                      onChange={(e) => setEditing({ ...editing, description: e.target.value })}
+                    />
+                  </div>
                 </div>
 
-                <button type="button" className="adminTicketBtn" onClick={closeEditor}>
-                  Fermer
-                </button>
-              </div>
-
-              {createError ? (
-                <div className="adminEventHint" style={{ marginTop: 10, color: "#b91c1c" }}>
-                  {createError}
+                <div className="adminTicketsEditorFooter">
+                  <button
+                    type="button"
+                    className="adminEventBtn"
+                    onClick={() => void save()}
+                    disabled={
+                      !String(editing.name ?? "").trim() ||
+                      (editingId ? Boolean(updateLoading) : createLoading)
+                    }
+                  >
+                    {editingId
+                      ? updateLoading
+                        ? "Enregistrement..."
+                        : "Mettre à jour"
+                      : createLoading
+                        ? "Enregistrement..."
+                        : "Enregistrer"}
+                  </button>
                 </div>
-              ) : null}
-
-              {deleteError ? (
-              <div className="adminEventHint" style={{ marginTop: 10, color: "#b91c1c" }}>
-                {deleteError}
               </div>
             ) : null}
-
-
-              <div className="adminEventFormGrid" style={{ marginTop: 12 }}>
-                <div className="adminEventField">
-                  <div className="adminEventLabel">Nom</div>
-                  <input
-                    className="adminEventInput"
-                    value={editing.name}
-                    onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-                  />
-                </div>
-
-                <div className="adminEventField">
-                  <div className="adminEventLabel">Ordre</div>
-                  <input
-                    className="adminEventInput"
-                    type="number"
-                    value={editing.sortOrder}
-                    onChange={(e) => setEditing({ ...editing, sortOrder: clampInt(e.target.value, 0) })}
-                  />
-                </div>
-
-                <div className="adminEventField">
-                  <div className="adminEventLabel">Prix (centimes)</div>
-                  <input
-                    className="adminEventInput"
-                    type="number"
-                    value={editing.priceCents}
-                    onChange={(e) => setEditing({ ...editing, priceCents: clampInt(e.target.value, 0) })}
-                  />
-                </div>
-
-                <div className="adminEventField">
-                  <div className="adminEventLabel">Devise</div>
-                  <select className="adminEventInput" value={editing.currency} disabled>
-                    <option value="EUR">EUR</option>
-                    <option value="USD">USD</option>
-                    <option value="GBP">GBP</option>
-                    <option value="CHF">CHF</option>
-                  </select>
-                </div>
-
-                <div className="adminEventField">
-                  <div className="adminEventLabel">Stock (vide = illimité)</div>
-                  <input
-                    className="adminEventInput"
-                    type="number"
-                    value={editing.stockQty ?? ""}
-                    onChange={(e) =>
-                      setEditing({
-                        ...editing,
-                        stockQty: e.target.value === "" ? null : clampInt(e.target.value, 0),
-                      })
-                    }
-                  />
-                </div>
-
-                <div className="adminEventField">
-                  <div className="adminEventLabel">Actif</div>
-                  <label className="adminEventToggle">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(editing.isActive)}
-                      onChange={(e) => setEditing({ ...editing, isActive: e.target.checked })}
-                    />
-                    <span>{editing.isActive ? "Actif" : "Inactif"}</span>
-                  </label>
-                </div>
-
-                <div className="adminEventField">
-                  <div className="adminEventLabel">Crée des participants</div>
-                  <label className="adminEventToggle">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(editing.createsAttendees)}
-                      onChange={(e) => setEditing({ ...editing, createsAttendees: e.target.checked })}
-                    />
-                    <span>{editing.createsAttendees ? "Oui" : "Non"}</span>
-                  </label>
-                </div>
-
-                <div className="adminEventField">
-                  <div className="adminEventLabel">Participants / billet</div>
-                  <input
-                    className="adminEventInput"
-                    type="number"
-                    value={editing.attendeesPerUnit}
-                    onChange={(e) => setEditing({ ...editing, attendeesPerUnit: clampInt(e.target.value, 0) })}
-                    disabled={!editing.createsAttendees}
-                  />
-                </div>
-
-                <div className="adminEventField adminEventFieldSpan2">
-                  <div className="adminEventLabel">Description</div>
-                  <textarea
-                    className="adminEventTextarea"
-                    value={editing.description}
-                    onChange={(e) => setEditing({ ...editing, description: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="adminTicketsEditorFooter">
-                <button
-                  type="button"
-                  className="adminEventBtn"
-                  onClick={() => void save()}
-                  disabled={
-                    !String(editing.name ?? "").trim() ||
-                    (editingId ? Boolean(updateLoading) : createLoading)
-                  }
-                >
-                  {editingId
-                    ? updateLoading
-                      ? "Enregistrement..."
-                      : "Mettre à jour"
-                    : createLoading
-                      ? "Enregistrement..."
-                      : "Enregistrer"}
-                </button>
-
-              </div>
-            </div>
-          ) : (
-            <div className="adminEventEmpty">Sélectionne un ticket (ou “Nouveau ticket”).</div>
-          )}
+          </div>
         </div>
       </div>
     </div>
