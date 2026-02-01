@@ -13,7 +13,7 @@ import { uploadOrgAssetsRepo } from "../../../gateways/supabase/repositories/das
 
 import { SingleEventDetailsSection } from "../../../pages/admin/singleEvent/sections/SingleEventDetailsSection";
 import { SingleEventTicketsSection } from "../../../pages/admin/singleEvent/sections/SingleEventTicketsSection";
-import { SingleEventFormSection } from "../../../pages/admin/singleEvent/sections/SingleEventFormSection";
+import { SingleEventFormSection }    from "../../../pages/admin/singleEvent/sections/SingleEventFormSection";
 import { SingleEventParticipantsSection } from "../../../pages/admin/singleEvent/sections/SingleEventParticipantsSection";
 
 // ✅ Garde ton CSS global existant (tu peux le déplacer ensuite dans /styles/admin/)
