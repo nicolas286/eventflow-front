@@ -57,27 +57,6 @@ export const createEventProductSchema = z
 
     isGatekeeper: z.boolean().optional(),
     closeEventWhenSoldOut: z.boolean().optional(),
-  })
-  .superRefine((val, ctx) => {
-    const creates = val.createsAttendees ?? true;
-    if (creates) {
-      const apu = val.attendeesPerUnit ?? 1;
-      if (apu < 1) {
-        ctx.addIssue({
-          path: ["attendeesPerUnit"],
-          message: "attendeesPerUnit doit être ≥ 1 si createsAttendees = true",
-          code: z.ZodIssueCode.custom,
-        });
-      }
-    }
-
-    if (val.closeEventWhenSoldOut && !val.isGatekeeper) {
-      ctx.addIssue({
-        path: ["closeEventWhenSoldOut"],
-        message: "closeEventWhenSoldOut nécessite isGatekeeper = true",
-        code: z.ZodIssueCode.custom,
-      });
-    }
   });
 
 export type CreateEventProductInput = z.infer<
