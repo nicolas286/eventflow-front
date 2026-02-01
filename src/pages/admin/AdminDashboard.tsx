@@ -1,5 +1,4 @@
-import { Outlet, useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { Outlet, useLocation } from "react-router-dom";
 import "../../styles/adminDashBoard.css";
 
 import TopNav, { type OrgInfo } from "../../ui/components/navigation/TopNav";
@@ -13,14 +12,15 @@ import type { DashboardBootstrap } from "../../domain/models/admin/admin.dashboa
 
 export type AdminOutletContext = {
   org: OrgInfo | null;
-  orgId: string;
+  orgId: string; // on garde string, mais on passera "" pour onboarding
   bootstrap: DashboardBootstrap;
   events: EventOverviewRow[];
   refetch: () => Promise<void>;
 };
 
 export default function AdminDashboard() {
-  const navigate = useNavigate();
+  const location = useLocation();
+  const isOnboarding = location.pathname.startsWith("/admin/onboarding");
 
   const { loading, error, bootstrap, orgId, events, refetch } =
     useAdminDashboardData({ supabase });
@@ -35,17 +35,6 @@ export default function AdminDashboard() {
     : null;
 
   const primaryHex = bootstrap?.organizationProfile?.primaryColor ?? "#2563eb";
-
-  useEffect(() => {
-    if (loading || error) return;
-    if (!bootstrap) return;
-
-    const hasOrg = Boolean(bootstrap.organization);
-    if (!hasOrg) {
-      // ⚠️ évite boucle si on est déjà sur le wizard
-      navigate("/admin/onboarding", { replace: true });
-    }
-  }, [loading, error, bootstrap, navigate]);
 
   if (loading) {
     return (
@@ -71,24 +60,7 @@ export default function AdminDashboard() {
     );
   }
 
-  /**
-   * ✅ Ici, orgId peut être vide si pas d'orga.
-   * Avec le redirect au-dessus, on ne devrait plus rester sur cet écran,
-   * mais on garde un fallback safe (évite flash / cas edge).
-   */
-  if (!orgId) {
-    return (
-      <div className="adminPage">
-        <OrgThemeSync primaryColor={primaryHex} />
-        <TopNav mode="admin" org={topNavOrg} />
-        <div className="adminPageGrid">
-          <div className="adminPageRight">Redirection…</div>
-        </div>
-      </div>
-    );
-  }
-
-  // Sécurité runtime : si orgId existe, bootstrap devrait exister.
+  // ✅ bootstrap devrait exister ici (sinon on garde un fallback safe)
   if (!bootstrap) {
     return (
       <div className="adminPage">
@@ -96,6 +68,19 @@ export default function AdminDashboard() {
         <TopNav mode="admin" org={topNavOrg} />
         <div className="adminPageGrid">
           <div className="adminPageRight">Chargement…</div>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ Pas d'orga => on autorise uniquement /admin/onboarding à s'afficher
+  if (!orgId && !isOnboarding) {
+    return (
+      <div className="adminPage">
+        <OrgThemeSync primaryColor={primaryHex} />
+        <TopNav mode="admin" org={topNavOrg} />
+        <div className="adminPageGrid">
+          <div className="adminPageRight">Redirection…</div>
         </div>
       </div>
     );
@@ -110,7 +95,7 @@ export default function AdminDashboard() {
           <Outlet
             context={{
               org: topNavOrg,
-              orgId,
+              orgId: orgId ?? "", // ✅ onboarding: "" (pas utilisé)
               bootstrap,
               events,
               refetch,
