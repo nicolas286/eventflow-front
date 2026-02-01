@@ -1,6 +1,48 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import Button from "../../../../ui/components/button/Button";
 
 type AnyRecord = Record<string, any>;
+
+type Attendee = {
+  id: string;
+  orderId: string;
+  productId?: string | null;
+  productNameSnapshot: string;
+  attendeeIndex: number;
+  createdAt: string;
+  status: "reserved" | "confirmed" | "cancelled" | "expired";
+  confirmedAt?: string | null;
+  expiresAt?: string | null;
+  detailsCompletedAt?: string | null;
+  canceledAt?: string | null;
+};
+
+type AttendeeAnswer = {
+  id: string;
+  attendeeId: string;
+  fieldKeySnapshot: string;
+  fieldTypeSnapshot:
+    | "text"
+    | "textarea"
+    | "email"
+    | "number"
+    | "select"
+    | "checkbox"
+    | "radio"
+    | "date"
+    | "country"
+    | "phone";
+  fieldLabelSnapshot: string;
+  value?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+function toRows<T = AnyRecord>(value: any): T[] {
+  if (Array.isArray(value)) return value as T[];
+  if (value && Array.isArray(value.rows)) return value.rows as T[];
+  return [];
+}
 
 function getFirst<T = any>(obj: AnyRecord | null | undefined, keys: string[]): T | undefined {
   if (!obj) return undefined;
@@ -11,299 +53,358 @@ function getFirst<T = any>(obj: AnyRecord | null | undefined, keys: string[]): T
   return undefined;
 }
 
-function toRows(value: any): AnyRecord[] {
-  if (Array.isArray(value)) return value as AnyRecord[];
-  if (value && Array.isArray(value.rows)) return value.rows as AnyRecord[];
-  return [];
+function normalizeStr(v: any): string {
+  if (v === null || v === undefined) return "—";
+  const s = String(v).trim();
+  return s.length ? s : "—";
 }
 
-function formatMoneyEUR(cents: number | null | undefined): string {
-  const n = typeof cents === "number" ? cents : 0;
-  return new Intl.NumberFormat("fr-BE", { style: "currency", currency: "EUR" }).format(n / 100);
+function isFilled(value: any): boolean {
+  if (value === null || value === undefined) return false;
+  return String(value).trim().length > 0;
+}
+
+function normalizeSearch(v: any): string {
+  return String(v ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .trim();
 }
 
 function formatDateTime(value: any): string {
-  if (!value) return "";
+  if (!value) return "—";
   const d = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(d.getTime())) return String(value);
-  return new Intl.DateTimeFormat("fr-BE", { dateStyle: "medium", timeStyle: "short" }).format(d);
+  try {
+    return new Intl.DateTimeFormat("fr-BE", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(d);
+  } catch {
+    return d.toISOString();
+  }
 }
+
+type FilterMode = "all" | "order" | `field:${string}`;
 
 export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
   const data = props.data;
 
-  const attendeeContainer =
-    data?.attendees ??
-    data?.participants ??
-    data?.people ??
-    data?.registrations ??
-    data?.eventAttendees ??
-    data?.event_attendees ??
-    data?.attendeeRows ??
-    data?.attendee_rows ??
-    null;
+  /* -------------------- FILTER UI STATE -------------------- */
+  const [filterMode, setFilterMode] = useState<FilterMode>("all");
+  const [query, setQuery] = useState("");
 
-  const attendeeRows = useMemo(() => toRows(attendeeContainer), [attendeeContainer]);
-  const ordersArr = useMemo(() => toRows(data.orders), [data.orders]);
-  const orderItemsArr = useMemo(() => toRows(data.orderItems ?? data.order_items), [data.orderItems, data.order_items]);
-  const productsArr = useMemo(() => toRows(data.products), [data.products]);
-  const paymentsArr = useMemo(() => toRows(data.payments), [data.payments]);
+  /* -------------------- DATA -------------------- */
+
+  const attendees = useMemo(
+    () =>
+      toRows<Attendee>(
+        data?.attendees ??
+          data?.eventAttendees ??
+          data?.event_attendees ??
+          data?.attendeeRows ??
+          data?.attendee_rows ??
+          data?.participants
+      ),
+    [data]
+  );
+
+  const answers = useMemo(
+    () =>
+      toRows<AttendeeAnswer>(
+        data?.attendeeAnswers ??
+          data?.attendee_answers ??
+          data?.attendeesAnswers ??
+          data?.attendees_answers ??
+          data?.answers
+      ),
+    [data]
+  );
+
+  const orders = useMemo(
+    () => toRows<AnyRecord>(data?.orders ?? data?.orderRows ?? data?.order_rows),
+    [data]
+  );
+
+  /* -------------------- ORDER META -------------------- */
+
+  const orderMetaById = useMemo(() => {
+    const m = new Map<string, { orderNumber: string; createdAt?: string }>();
+    for (const o of orders) {
+      const id = getFirst<string>(o, ["id", "orderId", "order_id"]);
+      if (!id) continue;
+      m.set(id, {
+        orderNumber:
+          getFirst<string>(o, ["publicId", "public_id", "number", "ref", "reference"]) ??
+          id.slice(0, 8),
+        createdAt: getFirst<string>(o, ["createdAt", "created_at"]),
+      });
+    }
+    return m;
+  }, [orders]);
+
+  /* -------------------- ANSWERS BY ATTENDEE -------------------- */
+
+  const filledFieldsByAttendeeId = useMemo(() => {
+    const map = new Map<string, { key: string; label: string; value: string }[]>();
+
+    for (const a of answers) {
+      if (!isFilled(a.value)) continue;
+      const arr = map.get(a.attendeeId) ?? [];
+      arr.push({
+        key: a.fieldKeySnapshot,
+        label: a.fieldLabelSnapshot,
+        value: String(a.value),
+      });
+      map.set(a.attendeeId, arr);
+    }
+
+    for (const [id, arr] of map.entries()) {
+      const uniq = new Map<string, { key: string; label: string; value: string }>();
+      for (const f of arr) uniq.set(f.key, f); // garde la dernière valeur par key
+      const list = Array.from(uniq.values());
+      list.sort((a, b) => a.label.localeCompare(b.label));
+      map.set(id, list);
+    }
+
+    return map;
+  }, [answers]);
+
+  /* -------------------- FIELDS OPTIONS (dropdown) -------------------- */
+
+  const fieldOptions = useMemo(() => {
+    const m = new Map<string, string>(); // key -> label
+    for (const a of answers) {
+      // on liste les champs existants (remplis ou non) : à toi de choisir
+      // ici je garde ceux qui existent au moins une fois
+      const key = a.fieldKeySnapshot;
+      const label = a.fieldLabelSnapshot || key;
+      if (!key) continue;
+      if (!m.has(key)) m.set(key, label);
+    }
+    const arr = Array.from(m.entries()).map(([key, label]) => ({ key, label }));
+    arr.sort((a, b) => a.label.localeCompare(b.label));
+    return arr;
+  }, [answers]);
+
+  /* -------------------- IDENTITY -------------------- */
+
+  function computeIdentity(attendeeId: string) {
+    const fields = filledFieldsByAttendeeId.get(attendeeId) ?? [];
+    const getVal = (...keys: string[]) => fields.find((f) => keys.includes(f.key))?.value ?? "";
+
+    const full = `${getVal("firstName", "prenom")} ${getVal("lastName", "nom")}`.trim();
+    const email = getVal("email");
+
+    return {
+      title: full || email || "Participant",
+      subtitle: full && email ? email : "",
+    };
+  }
+
+  /* -------------------- FILTERED ATTENDEES -------------------- */
+
+  const filteredAttendees = useMemo(() => {
+    const q = normalizeSearch(query);
+    if (!q) return attendees;
+
+    const mode = filterMode;
+
+    // helper: match order number
+    const matchOrder = (orderId: string) => {
+      const orderNum = orderMetaById.get(orderId)?.orderNumber ?? "";
+      return normalizeSearch(orderNum).includes(q);
+    };
+
+    // helper: match any field value
+    const matchAnyField = (attendeeId: string) => {
+      const fields = filledFieldsByAttendeeId.get(attendeeId) ?? [];
+      return fields.some((f) => normalizeSearch(f.value).includes(q));
+    };
+
+    // helper: match specific field key
+    const matchFieldKey = (attendeeId: string, key: string) => {
+      const fields = filledFieldsByAttendeeId.get(attendeeId) ?? [];
+      const found = fields.find((f) => f.key === key);
+      return found ? normalizeSearch(found.value).includes(q) : false;
+    };
+
+    return attendees.filter((att) => {
+      if (mode === "order") return matchOrder(att.orderId);
+
+      if (mode.startsWith("field:")) {
+        const key = mode.slice("field:".length);
+        if (!key) return false;
+        return matchFieldKey(att.id, key);
+      }
+
+      // all (global): order OR any field
+      return matchOrder(att.orderId) || matchAnyField(att.id);
+    });
+  }, [attendees, query, filterMode, orderMetaById, filledFieldsByAttendeeId]);
+
+  /* -------------------- GROUP BY ORDER (on filtered) -------------------- */
+
+  const groups = useMemo(() => {
+    const m = new Map<string, Attendee[]>();
+    for (const a of filteredAttendees) {
+      const arr = m.get(a.orderId) ?? [];
+      arr.push(a);
+      m.set(a.orderId, arr);
+    }
+
+    const entries = Array.from(m.entries());
+
+    entries.sort((a, b) => {
+      const ad = orderMetaById.get(a[0])?.createdAt ?? "";
+      const bd = orderMetaById.get(b[0])?.createdAt ?? "";
+      return bd.localeCompare(ad);
+    });
+
+    // tri participants dans la commande
+    for (const [, arr] of entries) {
+      arr.sort((x, y) => (x.attendeeIndex ?? 0) - (y.attendeeIndex ?? 0));
+    }
+
+    return entries;
+  }, [filteredAttendees, orderMetaById]);
+
+  /* -------------------- RENDER -------------------- */
 
   return (
     <div className="adminParticipants adminSingleEventParticipants">
       <div className="adminParticipantsHeader">
         <h3 className="adminParticipantsTitle">Commandes</h3>
         <div className="adminParticipantsHint">
-          {ordersArr.length} commande(s) • {attendeeRows.length} ticket(s)
+          {groups.length} commande(s) • {filteredAttendees.length} participant(s)
         </div>
       </div>
 
-      {ordersArr.length > 0 ? (
-        <OrderCards
-          attendeeRows={attendeeRows}
-          orders={ordersArr}
-          orderItems={orderItemsArr}
-          products={productsArr}
-          payments={paymentsArr}
-        />
-      ) : (
-        <div className="adminEventEmpty">Aucune commande pour le moment.</div>
-      )}
-    </div>
-  );
-}
+      {/* --- SEARCH BAR --- */}
+      <div className="adminParticipantsSearch">
+        <select
+          className="adminSearchSelect"
+          value={filterMode}
+          onChange={(e) => setFilterMode(e.target.value as FilterMode)}
+        >
+          <option value="all">Tous</option>
+          <option value="order">Commande</option>
 
-function OrderCards(props: {
-  attendeeRows: AnyRecord[];
-  orders: AnyRecord[];
-  orderItems: AnyRecord[];
-  products: AnyRecord[];
-  payments: AnyRecord[];
-}) {
-  const { attendeeRows, orders, orderItems, products, payments } = props;
+          {/* champs dynamiques */}
+          {fieldOptions.length > 0 ? (
+            <optgroup label="Champs participant">
+              {fieldOptions.map((f) => (
+                <option key={f.key} value={`field:${f.key}`}>{f.label}</option>
+              ))}
+            </optgroup>
+          ) : null}
+        </select>
 
-  const productById = useMemo(() => {
-    const m = new Map<string, AnyRecord>();
-    for (const p of products) {
-      const id = getFirst<string>(p, ["id", "productId"]);
-      if (id) m.set(id, p);
-    }
-    return m;
-  }, [products]);
-
-  const paymentsByOrderId = useMemo(() => {
-    const m = new Map<string, AnyRecord[]>();
-    for (const pay of payments) {
-      const oid = getFirst<string>(pay, ["orderId", "order_id"]);
-      if (!oid) continue;
-      const arr = m.get(oid) ?? [];
-      arr.push(pay);
-      m.set(oid, arr);
-    }
-    return m;
-  }, [payments]);
-
-  const orderItemsByOrderId = useMemo(() => {
-    const m = new Map<string, AnyRecord[]>();
-    for (const it of orderItems) {
-      const oid = getFirst<string>(it, ["orderId", "order_id"]);
-      if (!oid) continue;
-      const arr = m.get(oid) ?? [];
-      arr.push(it);
-      m.set(oid, arr);
-    }
-    return m;
-  }, [orderItems]);
-
-  const ticketsCountByOrderId = useMemo(() => {
-    const m = new Map<string, Set<string>>();
-    for (const r of attendeeRows) {
-      const oid = getFirst<string>(r, ["orderId", "order_id"]);
-      if (!oid) continue;
-
-      const rid = getFirst<string>(r, ["id"]) ?? "";
-      const idx = getFirst<number>(r, ["attendeeIndex", "attendee_index", "index"]);
-      const fallback = idx === undefined || idx === null ? "" : `${oid}::${idx}`;
-      const key = rid || fallback;
-      if (!key) continue;
-
-      const set = m.get(oid) ?? new Set<string>();
-      set.add(key);
-      m.set(oid, set);
-    }
-
-    const counts = new Map<string, number>();
-    for (const [oid, set] of m.entries()) counts.set(oid, set.size);
-    return counts;
-  }, [attendeeRows]);
-
-  const uniqueOrders = useMemo(() => {
-    const map = new Map<string, AnyRecord>();
-
-    for (const o of orders) {
-      const oid = getFirst<string>(o, ["id", "orderId", "order_id"]);
-      if (!oid) continue;
-
-      const prev = map.get(oid);
-      if (!prev) {
-        map.set(oid, o);
-        continue;
-      }
-
-      const a = getFirst<string>(prev, ["updatedAt", "updated_at", "createdAt", "created_at"]) ?? "";
-      const b = getFirst<string>(o, ["updatedAt", "updated_at", "createdAt", "created_at"]) ?? "";
-      if (b && a && b.localeCompare(a) > 0) map.set(oid, o);
-    }
-
-    return Array.from(map.values());
-  }, [orders]);
-
-  const sortedOrders = useMemo(() => {
-    const arr = [...uniqueOrders];
-    arr.sort((a, b) => {
-      const ad = getFirst<string>(a, ["createdAt", "created_at"]) ?? "";
-      const bd = getFirst<string>(b, ["createdAt", "created_at"]) ?? "";
-      if (ad && bd) return bd.localeCompare(ad);
-
-      const aid = getFirst<string>(a, ["id", "orderId", "order_id"]) ?? "";
-      const bid = getFirst<string>(b, ["id", "orderId", "order_id"]) ?? "";
-      return bid.localeCompare(aid);
-    });
-    return arr;
-  }, [uniqueOrders]);
-
-  function itemLabel(it: AnyRecord): string {
-    const pid = getFirst<string>(it, ["productId", "product_id"]);
-    const product = pid ? productById.get(pid) : undefined;
-    return (
-      getFirst<string>(product, ["title", "name", "label"]) ??
-      getFirst<string>(it, ["productNameSnapshot", "product_name_snapshot", "productTitle", "product_title"]) ??
-      "Article"
-    );
-  }
-
-  function itemQty(it: AnyRecord): number {
-    return Number(getFirst(it, ["quantity", "qty"])) || 0;
-  }
-
-  return (
-    <div className="adminParticipantsGrid">
-      {sortedOrders.map((order) => {
-        const orderId = getFirst<string>(order, ["id", "orderId", "order_id"]) ?? "";
-        if (!orderId) return null;
-
-        const orderNumber =
-          getFirst<string>(order, ["publicId", "public_id", "number", "ref", "reference"]) ??
-          orderId.slice(0, 8);
-
-        const status = getFirst<string>(order, ["status", "state"]) ?? "—";
-        const created = formatDateTime(getFirst(order, ["createdAt", "created_at"])) || "";
-
-        const totalCents =
-          Number(getFirst(order, ["totalCents", "total_cents", "amountCents", "amount_cents"])) || 0;
-        const paidCents =
-          Number(getFirst(order, ["paidCents", "paid_cents", "amountPaidCents", "amount_paid_cents"])) || 0;
-
-        const pays = paymentsByOrderId.get(orderId) ?? [];
-        const paymentState =
-          getFirst<string>(pays[0], ["status", "state"]) ??
-          (paidCents >= totalCents && totalCents > 0 ? "paid" : paidCents > 0 ? "partial" : "unpaid");
-
-        const ticketsCount = ticketsCountByOrderId.get(orderId) ?? 0;
-
-        const items = orderItemsByOrderId.get(orderId) ?? [];
-        const aggregated = (() => {
-          const agg = new Map<string, { label: string; qty: number }>();
-          for (const it of items) {
-            const pid = getFirst<string>(it, ["productId", "product_id"]) ?? `__noid_${itemLabel(it)}`;
-            const current = agg.get(pid);
-            const qty = itemQty(it);
-            if (!current) agg.set(pid, { label: itemLabel(it), qty });
-            else current.qty += qty;
+        <input
+          className="adminSearchInput"
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={
+            filterMode === "order"
+              ? "Rechercher par numéro de commande…"
+              : filterMode.startsWith("field:")
+              ? "Rechercher dans le champ sélectionné…"
+              : "Recherche globale…"
           }
-          return Array.from(agg.values());
-        })();
+        />
 
-        return (
-          <div key={orderId} className="adminParticipantCard">
-            <div className="adminParticipantTop">
-              <div className="adminParticipantIdentity">
-                <div className="adminParticipantName">Commande {orderNumber}</div>
-                <div className="adminParticipantSub">{created ? created : null}</div>
-              </div>
+        {query.trim() ? (
+          <Button variant="ghost" onClick={() => setQuery("")}>
+            Réinitialiser
+          </Button>
+        ) : null}
+      </div>
 
-              <div className="adminParticipantPills">
-                <span className="adminParticipantPill isStrong">
-                  {ticketsCount} ticket{ticketsCount > 1 ? "s" : ""}
-                </span>
-                <span className="adminParticipantPill">{formatMoneyEUR(paidCents)}</span>
-              </div>
-            </div>
+      {groups.length === 0 ? (
+        <div className="adminEventEmpty">
+          {query.trim()
+            ? "Aucun résultat avec ces filtres."
+            : "Aucune inscription pour le moment."}
+        </div>
+      ) : (
+        <div className="adminOrdersGrid">
+          {groups.map(([orderId, people]) => {
+            const meta = orderMetaById.get(orderId);
+            const orderNumber = meta?.orderNumber ?? orderId.slice(0, 8);
 
-            <div className="adminParticipantStats">
-              <div className="adminParticipantStat">
-                <div className="adminParticipantStatLabel">Statut</div>
-                <div className="adminParticipantStatValue">{status}</div>
-              </div>
-              <div className="adminParticipantStat">
-                <div className="adminParticipantStatLabel">Paiement</div>
-                <div className="adminParticipantStatValue">
-                  {paymentState === "paid" ? "Payée" : paymentState === "partial" ? "Partielle" : "Non payée"}
-                </div>
-              </div>
-            </div>
+            return (
+              <div key={orderId} className="adminOrderCard">
+                {/* ---------- ORDER HEADER ---------- */}
+                <div className="adminOrderHeader">
+                  <div>
+                    <div className="adminOrderTitle">Commande {orderNumber}</div>
+                    <div className="adminOrderSub">Créée le {formatDateTime(meta?.createdAt)}</div>
+                  </div>
 
-            <div className="adminParticipantOrders">
-              <div className="adminParticipantOrder">
-                <div className="adminParticipantOrderTop">
-                  <div className="adminParticipantOrderTitle">Articles achetés</div>
-                  <div className="adminParticipantOrderMeta">
-                    <span className="adminParticipantBadge">{status}</span>
-                    <span
-                      className={
-                        paymentState === "paid"
-                          ? "adminParticipantBadge isPaid"
-                          : paymentState === "partial"
-                          ? "adminParticipantBadge isPartial"
-                          : "adminParticipantBadge isUnpaid"
-                      }
-                    >
-                      {paymentState === "paid"
-                        ? "Payée"
-                        : paymentState === "partial"
-                        ? "Partielle"
-                        : "Non payée"}
+                  <div className="adminOrderHeaderRight">
+                    <span className="adminOrderPill">
+                      {people.length} inscrit{people.length > 1 ? "s" : ""}
                     </span>
+
+                    <Button variant="primary">+ Ajouter un participant</Button>
                   </div>
                 </div>
 
-                <div className="adminParticipantOrderSub">
-                  <span>
-                    {paidCents > 0
-                      ? `${formatMoneyEUR(paidCents)} / ${formatMoneyEUR(totalCents)}`
-                      : formatMoneyEUR(totalCents)}
-                  </span>
-                </div>
+                {/* ---------- PARTICIPANTS ---------- */}
+                <div className="adminOrderPeople">
+                  {people.map((att) => {
+                    const identity = computeIdentity(att.id);
+                    const filled = filledFieldsByAttendeeId.get(att.id) ?? [];
 
-                <div className="adminParticipantOrderItems">
-                  {aggregated.length > 0 ? (
-                    aggregated.map((it, idx) => (
-                      <div key={`${it.label}-${idx}`} className="adminParticipantOrderItem">
-                        <div className="adminParticipantOrderItemTitle">{it.label}</div>
-                        <div className="adminParticipantOrderItemRight">
-                          <span className="adminParticipantOrderQty">x{it.qty}</span>
+                    return (
+                      <div key={att.id} className="adminPersonCard">
+                        <div className="adminPersonTop">
+                          <div>
+                            <div className="adminPersonName">
+                              {identity.title}{" "}
+                              <span className="adminPersonIndex">#{att.attendeeIndex}</span>
+                            </div>
+                            {identity.subtitle ? (
+                              <div className="adminPersonSub">{identity.subtitle}</div>
+                            ) : null}
+                          </div>
+
+                          <div className="adminPersonBadges">
+                            <span className={`adminStatusBadge is-${att.status}`}>{att.status}</span>
+                            <span className="adminProductBadge">{att.productNameSnapshot}</span>
+                          </div>
+                        </div>
+
+                        {/* Champs remplis */}
+                        <div className="adminFilledGrid">
+                          {filled.length > 0 ? (
+                            filled.map((f) => (
+                              <div key={f.key} className="adminFieldLine">
+                                <span className="adminFieldLabel">{f.label}</span>
+                                <span className="adminFieldValue">{normalizeStr(f.value)}</span>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="adminFilledEmpty">Aucun champ rempli.</div>
+                          )}
+                        </div>
+
+                        {/* ---------- ACTIONS (BAS DE CARD) ---------- */}
+                        <div className="adminPersonActionsBottom">
+                          <Button variant="primary">Modifier</Button>
+                          <Button variant="danger">Supprimer</Button>
                         </div>
                       </div>
-                    ))
-                  ) : (
-                    <div className="adminParticipantOrderEmpty">Aucun article trouvé.</div>
-                  )}
+                    );
+                  })}
                 </div>
               </div>
-            </div>
-          </div>
-        );
-      })}
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

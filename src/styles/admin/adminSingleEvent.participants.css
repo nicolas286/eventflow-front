@@ -1,0 +1,265 @@
+/* --- Orders grid --- */
+.adminOrdersGrid {
+  display: grid;
+  gap: 14px;
+}
+
+/* --- Search bar --- */
+.adminParticipantsSearch {
+  margin: 12px 0 18px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.adminSearchSelect {
+  padding: 9px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.15);
+  background: #fff;
+  font-weight: 900;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.adminSearchInput {
+  flex: 1;
+  min-width: 220px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.15);
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.adminSearchInput::placeholder {
+  opacity: 0.6;
+}
+
+/* --- Order card --- */
+.adminOrderCard {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 18px;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.05);
+  overflow: hidden;
+}
+
+.adminOrderHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 14px 12px;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.03), transparent);
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+.adminOrderTitle {
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.adminOrderSub {
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.8;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.adminOrderSubLabel {
+  font-weight: 800;
+  opacity: 0.75;
+}
+
+.adminOrderSubDot {
+  opacity: 0.5;
+}
+
+.adminOrderPill {
+  font-size: 12px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.06);
+  border: 1px solid rgba(0,0,0,0.08);
+  white-space: nowrap;
+  font-weight: 800;
+}
+
+/* --- Right side header actions (pill + button) --- */
+.adminOrderHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* --- People list inside order --- */
+.adminOrderPeople {
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+/* --- Person card --- */
+.adminPersonCard {
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(0,0,0,0.02);
+}
+
+.adminPersonTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.adminPersonName {
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.adminPersonIndex {
+  font-weight: 900;
+  opacity: 0.55;
+  margin-left: 6px;
+}
+
+.adminPersonSub {
+  margin-top: 2px;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.adminPersonBadges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.adminStatusBadge,
+.adminProductBadge {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.06);
+  border: 1px solid rgba(0,0,0,0.08);
+  white-space: nowrap;
+  font-weight: 800;
+}
+
+/* Status nuances */
+.adminStatusBadge.is-confirmed { background: rgba(16,185,129,0.14); border-color: rgba(16,185,129,0.25); }
+.adminStatusBadge.is-reserved  { background: rgba(59,130,246,0.14); border-color: rgba(59,130,246,0.25); }
+.adminStatusBadge.is-cancelled { background: rgba(239,68,68,0.14);  border-color: rgba(239,68,68,0.25); }
+.adminStatusBadge.is-expired   { background: rgba(234,179,8,0.14);   border-color: rgba(234,179,8,0.25); }
+
+.adminPersonMeta {
+  margin-top: 10px;
+  display: grid;
+  gap: 6px 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.adminMetaLabel {
+  font-weight: 900;
+  opacity: 0.75;
+}
+
+.adminRequiredGrid {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+  border-top: 1px dashed rgba(0,0,0,0.12);
+  padding-top: 10px;
+}
+
+.adminFieldLine {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.adminFieldLabel {
+  font-size: 12px;
+  font-weight: 900;
+  opacity: 0.75;
+}
+
+.adminFieldValue {
+  font-size: 12px;
+  font-weight: 800;
+  text-align: right;
+}
+
+/* Champs remplis */
+.adminFilledGrid {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+  border-top: 1px dashed rgba(0,0,0,0.12);
+  padding-top: 10px;
+}
+
+.adminFilledEmpty {
+  font-size: 12px;
+  opacity: 0.7;
+  font-weight: 700;
+}
+
+/* Actions en bas de la card participant (plus bas) */
+.adminPersonActionsBottom {
+  margin-top: 22px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px dashed rgba(0,0,0,0.12);
+  padding-top: 16px;
+}
+
+
+/* ============================= */
+/* Responsive                    */
+/* ============================= */
+
+@media (max-width: 720px) {
+  .adminOrderHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .adminOrderHeaderRight {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .adminPersonTop {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .adminPersonBadges {
+    justify-content: flex-start;
+  }
+
+  .adminPersonMeta {
+    grid-template-columns: 1fr;
+  }
+
+  .adminSearchInput {
+    min-width: 100%;
+  }
+}
