@@ -1,6 +1,6 @@
 // pages/admin/AdminAbonnementPage.tsx
-import { useMemo } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useEffect, useMemo } from "react";
+import { useLocation, useOutletContext } from "react-router-dom";
 
 import { Container } from "../../ui/components";
 import Card, { CardBody, CardHeader } from "../../ui/components/card/Card";
@@ -8,6 +8,12 @@ import Badge from "../../ui/components/badge/Badge";
 import Button from "../../ui/components/button/Button";
 
 import type { AdminOutletContext } from "./AdminDashboard";
+import { supabase } from "../../gateways/supabase/supabaseClient";
+import { useStartSubscription } from "../../features/admin/hooks/useStartSubscription";
+
+/* ------------------------------------------------------------------ */
+/* Helpers                                                            */
+/* ------------------------------------------------------------------ */
 
 function fmtDate(d: string | null | undefined) {
   if (!d) return null;
@@ -18,7 +24,7 @@ function fmtDate(d: string | null | undefined) {
       year: "numeric",
     });
   } catch {
-    return d;
+    return d as any;
   }
 }
 
@@ -101,12 +107,20 @@ function neighbors(plan: PlanKey): { down?: PlanKey; up?: PlanKey } {
   return { down: "starter" }; // pro
 }
 
+function canStartSubscription(target: PlanKey): target is "starter" | "pro" {
+  return target === "starter" || target === "pro";
+}
+
 /* ------------------------------------------------------------------ */
 /* Page                                                               */
 /* ------------------------------------------------------------------ */
 
 export default function AdminAbonnementPage() {
-  const { bootstrap } = useOutletContext<AdminOutletContext>();
+  const { bootstrap, refetch, orgId } = useOutletContext<AdminOutletContext>();
+  const location = useLocation();
+
+  const { loading: startLoading, error: startError, result, startSubscription, reset } =
+    useStartSubscription({ supabase });
 
   const org = bootstrap.organization;
   const sub = bootstrap.subscription;
@@ -116,13 +130,40 @@ export default function AdminAbonnementPage() {
   const planLabel =
     plan === "free" ? "Free" : plan === "starter" ? "Starter" : "Pro";
 
+  const qs = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const isReturn = qs.get("return") === "1";
+
   const periodEndLabel = useMemo(() => {
-    // priorité à currentPeriodEnd si présent, sinon planExpiresAt
     const d = sub?.currentPeriodEnd ?? org?.planExpiresAt ?? null;
     return fmtDate(d);
   }, [sub?.currentPeriodEnd, org?.planExpiresAt]);
 
   const startedAtLabel = fmtDate(org?.planStartedAt ?? null);
+
+  // ✅ UX: après retour Mollie, on refetch pour synchroniser plan / subscription
+  useEffect(() => {
+    if (!isReturn) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        // petit refetch immédiat
+        await refetch();
+
+        // souvent le webhook arrive avec un léger délai => second refetch "best effort"
+        // (pas de setTimeout: tu peux le faire plus tard si tu veux)
+      } finally {
+        if (!cancelled) {
+          // on laisse les éventuels messages du hook
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isReturn, refetch]);
 
   if (!bootstrap || !org) {
     return (
@@ -146,8 +187,47 @@ export default function AdminAbonnementPage() {
 
   const cols = tiles.length === 2 ? "1fr 1fr" : "1fr";
 
+  async function onChoosePlan(target: PlanKey) {
+    reset();
+
+    if (!canStartSubscription(target)) return;
+
+    const res = await startSubscription({ orgId, plan: target });
+    if (!res) return;
+
+    if (res.ok && "action" in res && res.action === "checkout") {
+      // redirection Mollie checkout (first payment)
+      window.location.href = res.checkoutUrl;
+      return;
+    }
+
+    if (res.ok && "action" in res && res.action === "sub_created") {
+      await refetch();
+      return;
+    }
+  }
+
   return (
     <Container>
+      {/* ---------------------- Card 0: Retour Mollie ---------------------- */}
+      {isReturn && (
+        <>
+          <Card>
+            <CardHeader
+              title="Retour paiement"
+              subtitle="On vérifie votre paiement et on met à jour votre plan."
+            />
+            <CardBody>
+              <div style={{ fontSize: 14, color: "#374151" }}>
+                Si votre plan ne change pas tout de suite, rafraîchis la page dans quelques secondes
+                (le temps que Mollie appelle le webhook).
+              </div>
+            </CardBody>
+          </Card>
+          <div style={{ height: 16 }} />
+        </>
+      )}
+
       {/* ---------------------- Card 1: Résumé ---------------------- */}
       <Card>
         <CardHeader
@@ -219,10 +299,47 @@ export default function AdminAbonnementPage() {
                 </Button>
               </div>
               <div style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>
-                Changement de plan bientôt dispo (intégration Mollie en cours).
+                {startLoading ? "Ouverture de Mollie…" : "Changement de plan via Mollie."}
               </div>
             </div>
           </div>
+
+          {/* ✅ feedback hook */}
+          {(startError || result) && (
+            <div style={{ marginTop: 14 }}>
+              {startError && (
+                <div
+                  style={{
+                    padding: "10px 12px",
+                    border: "1px solid #fecaca",
+                    background: "#fef2f2",
+                    borderRadius: 10,
+                    color: "#991b1b",
+                    fontSize: 14,
+                  }}
+                >
+                  {startError}
+                </div>
+              )}
+
+              {!startError && result && (
+                <div
+                  style={{
+                    padding: "10px 12px",
+                    border: "1px solid #d1fae5",
+                    background: "#ecfdf5",
+                    borderRadius: 10,
+                    color: "#065f46",
+                    fontSize: 14,
+                  }}
+                >
+                  {result.ok
+                    ? "OK. Si Mollie s’ouvre, finalise le paiement. Sinon, ton plan est déjà à jour."
+                    : "Subscription créée côté Mollie mais pas encore synchronisée côté DB."}
+                </div>
+              )}
+            </div>
+          )}
         </CardBody>
       </Card>
 
@@ -243,27 +360,12 @@ export default function AdminAbonnementPage() {
               maxWidth: 760,
             }}
           >
-            <Row
-              label="Événements / an"
-              value={fmtLimit(limits.maxEventsPerYear)}
-            />
-            <Row
-              label="Inscriptions / événement"
-              value={fmtLimit(limits.maxRegistrationsPerEvent)}
-            />
-            <Row
-              label="Produits / événement"
-              value={fmtLimit(limits.maxProductsPerEvent)}
-            />
-            <Row
-              label="Champs formulaire"
-              value={fmtLimit(limits.maxFormFields)}
-            />
+            <Row label="Événements / an" value={fmtLimit(limits.maxEventsPerYear)} />
+            <Row label="Inscriptions / événement" value={fmtLimit(limits.maxRegistrationsPerEvent)} />
+            <Row label="Produits / événement" value={fmtLimit(limits.maxProductsPerEvent)} />
+            <Row label="Champs formulaire" value={fmtLimit(limits.maxFormFields)} />
             <Row label="Admins" value={fmtLimit(limits.maxAdmins)} />
-            <Row
-              label="Branding Eventflow"
-              value={boolLabel(limits.brandingRequired)}
-            />
+            <Row label="Branding Eventflow" value={boolLabel(limits.brandingRequired)} />
           </div>
         </CardBody>
       </Card>
@@ -278,8 +380,8 @@ export default function AdminAbonnementPage() {
             plan === "free"
               ? "Passez au plan Starter pour débloquer plus de capacité."
               : plan === "starter"
-              ? "Vous pouvez upgrader vers Pro ou redescendre en Free."
-              : "Vous pouvez redescendre en Starter si besoin."
+              ? "Vous pouvez upgrader vers Pro (downgrade viendra après)."
+              : "Vous pourrez redescendre en Starter plus tard."
           }
         />
         <CardBody>
@@ -301,25 +403,24 @@ export default function AdminAbonnementPage() {
                 kind={kind}
                 currentPlan={plan}
                 targetPlan={def.key}
+                loading={startLoading}
+                // ✅ on active uniquement l'upgrade (starter/pro) puisque start-subscription ne gère pas downgrade
+                onAction={
+                  kind === "up" && canStartSubscription(def.key)
+                    ? () => onChoosePlan(def.key)
+                    : undefined
+                }
               />
             ))}
           </div>
 
           <div style={{ marginTop: 12, fontSize: 13, color: "#6b7280" }}>
-            {plan === "free" && (
-              <>Upgrade bientôt dispo (paiement Mollie en cours d’intégration).</>
-            )}
+            {plan === "free" && <>Upgrade via Mollie (test ok si tu as la clé test).</>}
             {plan === "starter" && (
-              <>
-                Upgrade/downgrade bientôt dispo. Le downgrade peut réduire vos
-                limites immédiatement.
-              </>
+              <>Upgrade vers Pro via Mollie. Le downgrade sera ajouté ensuite (annulation + prorata).</>
             )}
             {plan === "pro" && (
-              <>
-                Downgrade bientôt dispo. Le downgrade peut réduire vos limites
-                immédiatement.
-              </>
+              <>Downgrade bientôt (annulation / changement de souscription).</>
             )}
           </div>
         </CardBody>
@@ -360,6 +461,8 @@ function PlanTile({
   kind,
   currentPlan,
   targetPlan,
+  onAction,
+  loading,
 }: {
   title: string;
   price: string;
@@ -368,6 +471,8 @@ function PlanTile({
   kind: "up" | "down";
   currentPlan: PlanKey;
   targetPlan: PlanKey;
+  onAction?: () => void;
+  loading?: boolean;
 }) {
   const actionLabel =
     kind === "up" ? `Passer à ${title}` : `Redescendre à ${title}`;
@@ -377,12 +482,15 @@ function PlanTile({
       ? "Vous garderez l’accès immédiatement après confirmation."
       : "Attention : baisse des limites et fonctionnalités.";
 
+  const isEnabled = Boolean(onAction) && !loading;
+
   return (
     <div
       style={{
         border: highlight ? "2px solid var(--primary)" : "1px solid #e5e7eb",
         borderRadius: 12,
         padding: 14,
+        opacity: kind === "down" ? 0.7 : 1,
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
@@ -419,12 +527,15 @@ function PlanTile({
       </div>
 
       <div style={{ marginTop: 12 }}>
-        <Button disabled style={{ width: "100%" }}>
-          {actionLabel}
+        <Button
+          disabled={!isEnabled}
+          style={{ width: "100%" }}
+          onClick={onAction}
+        >
+          {loading && isEnabled ? "Ouverture Mollie…" : actionLabel}
         </Button>
       </div>
 
-      {/* petit détail optionnel : rappeler où on est */}
       <div style={{ marginTop: 10, fontSize: 12, color: "#9ca3af" }}>
         Plan actuel : {PLAN_DEFS[currentPlan].title}
       </div>
