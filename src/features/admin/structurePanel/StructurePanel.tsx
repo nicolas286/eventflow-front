@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import "../../../styles/structurePanel.css";
+import "../../../styles/desktop/structurePanel.desktop.css";
+import "../../../styles/mobile/structurePanel.mobile.css";
 
 import { Button, Input, TextArea, Select, Badge } from "../../../ui/components";
 

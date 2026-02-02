@@ -1,0 +1,18 @@
+/* ============================= */
+/* Mobile (extrait)              */
+/* Source: profilePanel.css      */
+/* ============================= */
+
+@media (max-width: 820px) {
+  .profilePanel__head {
+    flex-direction: column;
+  }
+
+  .profilePanel__grid2 {
+    grid-template-columns: 1fr;
+  }
+
+  .profilePanel__phoneRow {
+    grid-template-columns: 1fr;
+  }
+}

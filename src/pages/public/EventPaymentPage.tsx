@@ -18,8 +18,10 @@ import {
 } from "./checkout/checkoutStore";
 
 /* ✅ CSS */
-import "../../styles/publicCheckoutBase.css";
-import "../../styles/eventPaymentPage.css";
+import "../../styles/desktop/publicCheckoutBase.desktop.css";
+
+import "../../styles/desktop/eventPaymentPage.desktop.css";
+
 
 import { useRegister } from "../../features/public/register/useRegister";
 

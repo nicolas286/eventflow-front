@@ -1,0 +1,10 @@
+/* ============================= */
+/* Mobile (extrait)              */
+/* Source: adminDashBoard.css    */
+/* ============================= */
+
+@media (max-width: 1000px) {
+  .adminPageRight {
+    padding: 16px;
+  }
+}

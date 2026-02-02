@@ -1,0 +1,19 @@
+/* ============================= */
+/* Mobile (extrait)              */
+/* Source: orderReturnPage.css   */
+/* ============================= */
+
+@media (max-width: 560px) {
+  .orderReturnTitle {
+    font-size: 26px;
+  }
+
+  .orderReturnCard {
+    padding: 16px;
+  }
+
+  .orderReturnFooter {
+    justify-content: center;
+    text-align: center;
+  }
+}

@@ -1,0 +1,14 @@
+/* ============================= */
+/* Mobile (extrait)              */
+/* Source: auth.css              */
+/* ============================= */
+
+@media (max-width: 360px) {
+  .auth-page {
+    padding: 12px;
+  }
+
+  .auth-card {
+    padding: 16px;
+  }
+}

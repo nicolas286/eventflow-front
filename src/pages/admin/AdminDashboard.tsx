@@ -1,5 +1,6 @@
 import { Outlet, useLocation } from "react-router-dom";
-import "../../styles/adminDashBoard.css";
+import "../../styles/desktop/adminDashBoard.desktop.css";
+import "../../styles/mobile/adminDashBoard.mobile.css";
 
 import TopNav, { type OrgInfo } from "../../ui/components/navigation/TopNav";
 import { supabase } from "../../gateways/supabase/supabaseClient";

@@ -1,4 +1,5 @@
-import "../../../styles/adminStats.css"
+import "../../../styles/desktop/adminStats.desktop.css";
+import "../../../styles/mobile/adminStats.mobile.css";
 import { Card, CardBody } from "../../../ui/components";
 
 type Stats = {

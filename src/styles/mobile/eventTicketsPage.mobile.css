@@ -1,0 +1,19 @@
+/* ============================= */
+/* Mobile (extrait)              */
+/* Source: eventTicketsPage.css  */
+/* ============================= */
+
+@media (max-width: 900px) {
+  .publicTicketLayout {
+    flex-direction: column;
+  }
+
+  .publicTicketRight {
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .publicQtyBlock {
+    justify-content: flex-start;
+  }
+}

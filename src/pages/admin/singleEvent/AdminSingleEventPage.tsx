@@ -17,13 +17,19 @@ import { SingleEventFormSection }    from "../../../pages/admin/singleEvent/sect
 import { SingleEventParticipantsSection } from "../../../pages/admin/singleEvent/sections/SingleEventParticipantsSection";
 
 // ✅ Garde ton CSS global existant (tu peux le déplacer ensuite dans /styles/admin/)
-import "../../../styles/admin/adminEventsPage.css";
+import "../../../styles/desktop/admin/adminEventsPage.desktop.css";
+import "../../../styles/mobile/admin/adminEventsPage.mobile.css";
+
 
 // ✅ Imports CSS par section (tout dans /styles/admin/)
-import "../../../styles/admin/adminSingleEvent.details.css";
-import "../../../styles/admin/adminSingleEvent.tickets.css";
-import "../../../styles/admin/adminSingleEvent.form.css";
-import "../../../styles/admin/adminSingleEvent.participants.css";
+import "../../../styles/desktop/admin/adminSingleEvent.details.desktop.css";
+import "../../../styles/desktop/admin/adminSingleEvent.tickets.desktop.css";
+import "../../../styles/desktop/admin/adminSingleEvent.form.desktop.css";
+import "../../../styles/desktop/admin/adminSingleEvent.participants.desktop.css";
+
+import "../../../styles/mobile/admin/adminSingleEvent.tickets.mobile.css";
+import "../../../styles/mobile/admin/adminSingleEvent.participants.mobile.css";
+
 
 type TabKey = "details" | "tickets" | "form" | "participants";
 

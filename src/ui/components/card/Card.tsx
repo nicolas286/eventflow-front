@@ -1,5 +1,5 @@
 import type { ReactNode, HTMLAttributes } from "react";
-import "../../../styles/card.css"
+import "../../../styles/desktop/card.desktop.css"
 
 export type CardProps = HTMLAttributes<HTMLDivElement> & {
   children?: ReactNode;

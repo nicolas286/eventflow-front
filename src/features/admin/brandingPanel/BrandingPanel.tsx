@@ -1,6 +1,7 @@
 // features/admin/brandingPanel/BrandingPanel.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
-import "../../../styles/brandingPanel.css";
+import "../../../styles/desktop/brandingPanel.desktop.css";
+import "../../../styles/mobile/brandingPanel.mobile.css";
 import { Button, Input, Badge } from "../../../ui/components";
 
 import { applyOrgTheme } from "../../theme/applyOrgTheme";

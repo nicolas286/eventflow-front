@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import "../../../styles/badge.css"
+import "../../../styles/desktop/badge.desktop.css"
 
 export type BadgeTone = "neutral" | "success" | "warn" | "danger" | "info";
 
