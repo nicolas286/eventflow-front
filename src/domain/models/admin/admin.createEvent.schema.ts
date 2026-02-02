@@ -1,43 +1,13 @@
 import { z } from "zod";
 import { eventSchema } from "../db/db.event.schema";
 
-export const createEventInputSchema = z
-  .object({
-    orgId: eventSchema.shape.orgId,
-
-    title: z
-      .string()
-      .min(3, "Le titre est trop court")
-      .max(120, "Le titre est trop long"),
-
-    description: z
-      .string()
-      .max(5000, "La description est trop longue")
-      .nullable()
-      .optional(),
-
-    location: z
-      .string()
-      .max(180, "L'emplacement est trop long")
-      .nullable()
-      .optional(),
-
-    bannerUrl: z
-      .string()
-      .max(500, "L'URL de la bannière est trop longue")
-      .nullable()
-      .optional(),
-
-    depositCents: z
-      .number()
-      .int("L'acompte doit être un entier")
-      .min(0, "L'acompte doit être positif ou nul")
-      .nullable()
-      .optional(),
-
-    startsAt: z.string().nullable().optional(),
-    endsAt: z.string().nullable().optional(),
-  })
+export const createEventInputSchema = eventSchema.omit({
+  id: true,
+  slug: true,
+  isPublished: true,
+  createdAt: true,
+  updatedAt: true
+})
   .superRefine((data, ctx) => {
   if (data.startsAt && data.endsAt) {
     const start = Date.parse(data.startsAt);
@@ -52,6 +22,5 @@ export const createEventInputSchema = z
     }
   }
 });
-
 
 export type CreateEventInput = z.infer<typeof createEventInputSchema>;
