@@ -9,7 +9,8 @@ import Badge from "../../ui/components/badge/Badge";
 
 import { formatDateTimeHuman } from "../../domain/helpers/dateTime";
 
-import "../../styles/publicPages.css";
+import "../../styles/desktop/publicPages.desktop.css";
+
 import type { PublicEventOverview } from "../../domain/models/public/public.orgEventsOverview.schema";
 
 export function OrgPublicPage() {

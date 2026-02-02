@@ -9,8 +9,11 @@ import Card, { CardBody } from "../../ui/components/card/Card";
 
 import { PublicEventHeader } from "./checkout/PublicEventHeader";
 
-import "../../styles/publicCheckoutBase.css";
-import "../../styles/public/orderReturnPage.css";
+import "../../styles/desktop/publicCheckoutBase.desktop.css";
+
+import "../../styles/desktop/public/orderReturnPage.desktop.css";
+import "../../styles/mobile/public/orderReturnPage.mobile.css";
+
 
 type OrderStatus = "open" | "pending" | "paid" | "failed" | "canceled" | "expired" | "awaiting_payment";
 

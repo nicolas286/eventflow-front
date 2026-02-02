@@ -1,0 +1,25 @@
+
+
+/* src/styles/desktop/publicPages.desktop.css */
+/* LIGHT MODE ONLY */
+
+/* shared */
+@import "../desktop/public/partials/public.base.desktop.css";
+@import "../desktop/public/partials/public.hero.desktop.css";
+@import "../desktop/public/partials/public.banner.desktop.css";
+
+/* page header (grid) */
+@import "../desktop/public/partials/public.header.pages.desktop.css";
+
+/* org page - events grid/cards */
+@import "../desktop/public/partials/public.org.events.desktop.css";
+
+/* branding overrides */
+@import "../desktop/public/partials/public.brandingButtons.desktop.css";
+
+/* shared */
+@import "../mobile/public/partials/public.hero.mobile.css";
+
+/* page header */
+@import "../mobile/public/partials/public.header.pages.mobile.css";
+

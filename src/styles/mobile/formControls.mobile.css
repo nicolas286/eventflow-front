@@ -1,0 +1,10 @@
+/* ============================= */
+/* Mobile (extrait)              */
+/* Source: formControls.css      */
+/* ============================= */
+
+@media (max-width: 520px) {
+  .publicPhoneGroup {
+    grid-template-columns: 1fr;
+  }
+}

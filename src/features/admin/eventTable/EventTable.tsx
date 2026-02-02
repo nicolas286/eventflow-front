@@ -1,5 +1,5 @@
-import "../../../styles/eventTable.css";
-
+import "../../../styles/desktop/eventTable.desktop.css";
+import "../../../styles/mobile/eventTable.mobile.css";
 import { Link } from "react-router-dom";
 
 import { Badge, Button, Card, CardBody, CardHeader } from "../../../ui/components";

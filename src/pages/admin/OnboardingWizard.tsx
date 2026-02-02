@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "../../styles/onboardingWizard.css";
+import "../../styles/desktop/onboardingWizard.desktop.css";
 
 export default function OnboardingWizard() {
   const [step, setStep] = useState(1);

@@ -1,4 +1,6 @@
-import "../../styles/auth.css";
+import "../../styles/desktop/auth.desktop.css";
+import "../../styles/mobile/auth.mobile.css";
+
 import { Link } from "react-router-dom";
 import { SignInForm } from "../../ui/components/forms/SignInForm";
 

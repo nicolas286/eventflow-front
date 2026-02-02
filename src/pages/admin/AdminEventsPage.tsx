@@ -3,7 +3,8 @@ import { useOutletContext } from "react-router-dom";
 import { ConfirmDeleteModal } from "../../ui/components/modals/ConfirmDeleteModal";
 import { useNavigate } from "react-router-dom";
 
-import "../../styles/admin/adminEventsPage.css";
+import "../../styles/desktop/admin/adminEventsPage.desktop.css";
+import "../../styles/mobile/admin/adminEventsPage.mobile.css";
 
 import {
   AdminStats,

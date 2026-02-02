@@ -1,0 +1,14 @@
+/* ============================= */
+/* Mobile (extrait)              */
+/* Source: adminStats.css        */
+/* ============================= */
+
+@media (max-width: 700px) {
+  .adminStatsDesktop {
+    display: none;
+  }
+
+  .adminStatsMobile {
+    display: block;
+  }
+}

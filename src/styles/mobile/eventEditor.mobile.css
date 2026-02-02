@@ -1,0 +1,10 @@
+/* ============================= */
+/* Mobile (extrait)              */
+/* Source: eventEditor.css       */
+/* ============================= */
+
+@media (max-width: 700px) {
+  .eventEditor__row2 {
+    grid-template-columns: 1fr;
+  }
+}
