@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createEventFormFieldRepo } from "../../../gateways/supabase/repositories/dashboard/createEventFormFieldRepo";
@@ -9,10 +9,10 @@ import { normalizeError } from "../../../domain/errors/errors";
 type State = {
   loading: boolean;
   error: string | null;
-  data: EventFormField | null;
+  created: EventFormField | null;
 };
 
-export function useCreateEventProduct(params: { supabase: SupabaseClient }) {
+export function useCreateEventFormField(params: { supabase: SupabaseClient }) {
   const { supabase } = params;
 
   const repo = useMemo(() => createEventFormFieldRepo(supabase), [supabase]);
@@ -20,33 +20,33 @@ export function useCreateEventProduct(params: { supabase: SupabaseClient }) {
   const [state, setState] = useState<State>({
     loading: false,
     error: null,
-    data: null,
+    created: null,
   });
 
-  const reset = useCallback(() => {
-    setState({ loading: false, error: null, data: null });
-  }, []);
+  async function createEventFormField(
+    input: CreateEventFormFieldInput
+  ): Promise<EventFormField | null> {
+    try {
+      setState({ loading: true, error: null, created: null });
 
-  const createEventProduct = useCallback(
-    async (input: CreateEventFormFieldInput): Promise<EventFormField> => {
-      setState((s) => ({ ...s, loading: true, error: null }));
+      const created = await repo.createEventFormField(input);
 
-      try {
-        const data = await repo.createEventFormField(input);
-        setState({ loading: false, error: null, data });
-        return data;
-      } catch (e: unknown) {
-        const ne = normalizeError(e, "Impossible de créer le champ de formulaire.");
-        setState((s) => ({ ...s, loading: false, error: ne.message }));
-        throw e;
-      }
-    },
-    [repo]
-  );
+      setState({ loading: false, error: null, created });
+      return created;
+    } catch (e: unknown) {
+      const ne = normalizeError(e, "Impossible de créer le champ de formulaire.");
+      setState({ loading: false, error: ne.message, created: null });
+      return null;
+    }
+  }
+
+  function reset() {
+    setState({ loading: false, error: null, created: null });
+  }
 
   return {
     ...state,
-    createEventProduct,
+    createEventFormField,
     reset,
   };
 }

@@ -1,20 +1,18 @@
 import { useMemo, useState } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-type SupabaseLike = {
-  from: (table: string) => {
-    insert: (values: any) => any;
-    update: (values: any) => any;
-    delete: () => any;
-    eq: (col: string, val: any) => any;
-    select: (cols?: string) => any;
-    single: () => any;
-  };
-};
+import type { EventFormField } from "../../../../domain/models/db/db.eventFormFields.schema";
+import type { CreateEventFormFieldInput } from "../../../../domain/models/admin/admin.createFormField.schema";
+import type { UpdateEventFormFieldPatch } from "../../../../domain/models/admin/admin.updateEventFormFieldPatch.schema";
+
+import { useCreateEventFormField } from "../../hooks/useCreateEventFormField";
+import { useUpdateEventFormField } from "../../hooks/useUpdateEventFormField";
+import { useDeleteEventFormField } from "../../hooks/useDeleteEventFormField"; // ✅ NEW
 
 type Props = {
-  supabase: SupabaseLike;
-  event: any;
-  fields: any[];
+  supabase: SupabaseClient;
+  event: { id: string } | null;
+  fields: EventFormField[];
   onChanged?: () => void;
 };
 
@@ -30,18 +28,25 @@ const FIELD_TYPES = [
   { value: "number", label: "Nombre" },
   { value: "checkbox", label: "Case à cocher" },
   { value: "select", label: "Liste (select)" },
+  { value: "radio", label: "Radio" },
 ] as const;
+
+type FieldType = (typeof FIELD_TYPES)[number]["value"];
 
 type EditState = {
   id: string | null;
   label: string;
   fieldKey: string;
-  fieldType: string;
+  fieldType: FieldType;
   isRequired: boolean;
   isActive: boolean;
   sortOrder: number;
   optionsText: string;
 };
+
+/* ------------------------------------------------------------------ */
+/* Utils                                                               */
+/* ------------------------------------------------------------------ */
 
 function slugKey(value: string) {
   return value
@@ -60,27 +65,22 @@ function clampInt(v: unknown, fallback = 0) {
   return Math.trunc(n);
 }
 
-function normalizeOptionsToText(options: any): string {
+function normalizeOptionsToText(options: EventFormField["options"]): string {
   if (!options) return "";
   if (typeof options === "string") return options;
-
   try {
-    if (Array.isArray(options)) return JSON.stringify(options, null, 2);
-    if (typeof options === "object") return JSON.stringify(options, null, 2);
+    return JSON.stringify(options, null, 2);
   } catch {
     return "";
   }
-
-  return "";
 }
 
-function parseOptions(text: string): any {
+function parseOptions(text: string): EventFormField["options"] {
   const t = (text ?? "").trim();
   if (!t) return null;
 
   try {
-    const json = JSON.parse(t);
-    return json;
+    return JSON.parse(t);
   } catch {
     const lines = t
       .split("\n")
@@ -108,19 +108,27 @@ function uniqueKey(base: string, existing: Set<string>) {
   return k;
 }
 
+/* ------------------------------------------------------------------ */
+/* Component                                                           */
+/* ------------------------------------------------------------------ */
+
 export function EventRegistrationFormPanel(props: Props) {
   const { supabase, event, fields, onChanged } = props;
 
+  const create = useCreateEventFormField({ supabase });
+  const update = useUpdateEventFormField({ supabase });
+  const del = useDeleteEventFormField({ supabase }); // ✅ NEW
+
   const sorted = useMemo(() => {
     const arr = Array.isArray(fields) ? [...fields] : [];
-    arr.sort((a, b) => (a?.sortOrder ?? a?.sort_order ?? 0) - (b?.sortOrder ?? b?.sort_order ?? 0));
+    arr.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
     return arr;
   }, [fields]);
 
   const existingKeys = useMemo(() => {
     const s = new Set<string>();
     for (const f of sorted) {
-      const k = String(f?.fieldKey ?? f?.field_key ?? "").trim();
+      const k = String(f.fieldKey ?? "").trim();
       if (k) s.add(k);
     }
     return s;
@@ -129,8 +137,18 @@ export function EventRegistrationFormPanel(props: Props) {
   const [editing, setEditing] = useState<EditState | null>(null);
   const [creating, setCreating] = useState(false);
 
+  const isSaving = create.loading || update.loading;
+  const saveError = create.error || update.error;
+
+  const isDeleting = del.loading;
+  const deleteError = del.error;
+
   function openCreate() {
-    const nextSort = (sorted.at(-1)?.sortOrder ?? sorted.at(-1)?.sort_order ?? 0) + 1;
+    create.reset();
+    update.reset();
+    del.reset(); // ✅ clear delete errors
+
+    const nextSort = (sorted.at(-1)?.sortOrder ?? 0) + 1;
 
     setCreating(true);
     setEditing({
@@ -145,16 +163,20 @@ export function EventRegistrationFormPanel(props: Props) {
     });
   }
 
-  function openEdit(f: any) {
+  function openEdit(f: EventFormField) {
+    create.reset();
+    update.reset();
+    del.reset(); // ✅ clear delete errors
+
     setCreating(false);
     setEditing({
-      id: String(f.id),
+      id: f.id,
       label: f.label ?? "",
-      fieldKey: f.fieldKey ?? f.field_key ?? "",
-      fieldType: f.fieldType ?? f.field_type ?? "text",
-      isRequired: Boolean(f.isRequired ?? f.is_required),
-      isActive: Boolean(f.isActive ?? f.is_active ?? true),
-      sortOrder: clampInt(f.sortOrder ?? f.sort_order ?? 0, 0),
+      fieldKey: f.fieldKey ?? "",
+      fieldType: (f.fieldType ?? "text") as FieldType,
+      isRequired: Boolean(f.isRequired),
+      isActive: Boolean(f.isActive ?? true),
+      sortOrder: clampInt(f.sortOrder ?? 0, 0),
       optionsText: normalizeOptionsToText(f.options ?? null),
     });
   }
@@ -162,9 +184,13 @@ export function EventRegistrationFormPanel(props: Props) {
   function closeEditor() {
     setEditing(null);
     setCreating(false);
+    // pas obligatoire, mais ça évite de garder un vieux message rouge
+    create.reset();
+    update.reset();
+    del.reset();
   }
 
-  async function quickToggle(id: string, patch: any) {
+  async function quickToggle(id: string, patch: Record<string, any>) {
     const { error } = await supabase.from(FIELDS_TABLE).update(patch).eq("id", id);
     if (error) return;
     onChanged?.();
@@ -178,8 +204,8 @@ export function EventRegistrationFormPanel(props: Props) {
     const b = sorted[idx + dir];
     if (!b) return;
 
-    const aOrder = clampInt(a.sortOrder ?? a.sort_order ?? 0, 0);
-    const bOrder = clampInt(b.sortOrder ?? b.sort_order ?? 0, 0);
+    const aOrder = clampInt(a.sortOrder ?? 0, 0);
+    const bOrder = clampInt(b.sortOrder ?? 0, 0);
 
     const { error: e1 } = await supabase.from(FIELDS_TABLE).update({ sort_order: bOrder }).eq("id", a.id);
     if (e1) return;
@@ -190,55 +216,78 @@ export function EventRegistrationFormPanel(props: Props) {
     onChanged?.();
   }
 
+  function buildKey(edit: EditState) {
+    const baseKey = slugKey(edit.fieldKey || edit.label);
+    return edit.id ? baseKey : uniqueKey(baseKey, existingKeys);
+  }
+
+  function buildOptions(edit: EditState) {
+    if (edit.fieldType === "select" || edit.fieldType === "radio") {
+      return parseOptions(edit.optionsText);
+    }
+    return null;
+  }
+
   async function save() {
-    if (!editing) return;
+    if (!editing || isSaving) return;
     if (!event?.id) return;
 
-    const label = (editing.label ?? "").trim();
+    const label = editing.label.trim();
     if (!label) return;
 
-    const baseKey = slugKey(editing.fieldKey || editing.label);
-    const key = editing.id
-      ? baseKey
-      : uniqueKey(baseKey, existingKeys);
-
-    const payload = {
-      event_id: event.id,
-      label,
-      field_key: key,
-      field_type: String(editing.fieldType ?? "text"),
-      is_required: Boolean(editing.isRequired),
-      is_active: Boolean(editing.isActive),
-      sort_order: clampInt(editing.sortOrder ?? 0, 0),
-      options: editing.fieldType === "select" ? parseOptions(editing.optionsText) : null,
-    };
+    const key = buildKey(editing);
+    const options = buildOptions(editing);
 
     if (creating) {
-      const { error } = await supabase.from(FIELDS_TABLE).insert(payload);
-      if (error) return;
+      const input: CreateEventFormFieldInput = {
+        eventId: event.id,
+        label,
+        fieldKey: key,
+        fieldType: editing.fieldType as any,
+        isRequired: editing.isRequired,
+        isActive: editing.isActive,
+        sortOrder: clampInt(editing.sortOrder, 0),
+        options,
+      } as CreateEventFormFieldInput;
+
+      const created = await create.createEventFormField(input);
+      if (!created) return;
+
       closeEditor();
       onChanged?.();
       return;
     }
 
-    const { error } = await supabase.from(FIELDS_TABLE).update(payload).eq("id", editing.id);
-    if (error) return;
+    if (!editing.id) return;
+
+    const patch: Omit<UpdateEventFormFieldPatch, "id"> = {
+      label,
+      fieldKey: key,
+      fieldType: editing.fieldType as any,
+      isRequired: editing.isRequired,
+      isActive: editing.isActive,
+      sortOrder: clampInt(editing.sortOrder, 0),
+      options,
+    };
+
+    const updated = await update.updateEventFormField({
+      fieldId: editing.id,
+      patch,
+    });
+
+    if (!updated) return;
 
     closeEditor();
     onChanged?.();
   }
 
-  async function remove(f: any) {
-    const id = String(f?.id ?? "");
-    if (!id) return;
+  async function remove(fieldId: string) {
+    if (!fieldId || isDeleting) return;
 
-    const soft = await supabase.from(FIELDS_TABLE).update({ is_active: false }).eq("id", id);
-    if (soft?.error) {
-      const hard = await supabase.from(FIELDS_TABLE).delete().eq("id", id);
-      if (hard?.error) return;
-    }
+    const ok = await del.deleteEventFormField({ id: fieldId });
+    if (!ok) return;
 
-    if (editing?.id === id) closeEditor();
+    if (editing?.id === fieldId) closeEditor();
     onChanged?.();
   }
 
@@ -253,7 +302,7 @@ export function EventRegistrationFormPanel(props: Props) {
         </div>
 
         <div className="adminEventHeaderActions">
-          <button type="button" className="adminEventBtn" onClick={openCreate}>
+          <button type="button" className="adminEventBtn" onClick={openCreate} disabled={!event?.id}>
             Ajouter un champ
           </button>
         </div>
@@ -266,10 +315,10 @@ export function EventRegistrationFormPanel(props: Props) {
           ) : (
             sorted.map((f, idx) => {
               const id = String(f.id);
-              const active = Boolean(f.isActive ?? f.is_active ?? true);
-              const required = Boolean(f.isRequired ?? f.is_required ?? false);
-              const type = String(f.fieldType ?? f.field_type ?? "text");
-              const key = String(f.fieldKey ?? f.field_key ?? "");
+              const active = Boolean(f.isActive ?? true);
+              const required = Boolean(f.isRequired ?? false);
+              const type = String(f.fieldType ?? "text");
+              const key = String(f.fieldKey ?? "");
 
               return (
                 <div key={id} className={active ? "adminRegCard" : "adminRegCard isInactive"}>
@@ -293,7 +342,7 @@ export function EventRegistrationFormPanel(props: Props) {
                     <span>•</span>
                     <span>Type : {type}</span>
                     <span>•</span>
-                    <span>Ordre : {f.sortOrder ?? f.sort_order ?? idx + 1}</span>
+                    <span>Ordre : {f.sortOrder ?? idx + 1}</span>
                   </div>
 
                   <div className="adminRegActions">
@@ -317,12 +366,7 @@ export function EventRegistrationFormPanel(props: Props) {
                       {active ? "Désactiver" : "Activer"}
                     </button>
 
-                    <button
-                      type="button"
-                      className="adminTicketBtn"
-                      onClick={() => move(id, -1)}
-                      disabled={idx === 0}
-                    >
+                    <button type="button" className="adminTicketBtn" onClick={() => move(id, -1)} disabled={idx === 0}>
                       ↑
                     </button>
 
@@ -335,14 +379,25 @@ export function EventRegistrationFormPanel(props: Props) {
                       ↓
                     </button>
 
-                    <button type="button" className="adminTicketBtn danger" onClick={() => remove(f)}>
-                      Supprimer
+                    <button
+                      type="button"
+                      className="adminTicketBtn danger"
+                      onClick={() => remove(id)}
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? "Suppression…" : "Supprimer"}
                     </button>
                   </div>
                 </div>
               );
             })
           )}
+
+          {deleteError ? (
+            <div className="adminEventHint" style={{ color: "crimson", marginTop: 10 }}>
+              {deleteError}
+            </div>
+          ) : null}
         </div>
 
         <div className="adminRegEditor">
@@ -350,11 +405,9 @@ export function EventRegistrationFormPanel(props: Props) {
             <div className="adminTicketsEditorCard">
               <div className="adminTicketsEditorHeader">
                 <div>
-                  <div className="adminTicketsEditorTitle">
-                    {creating ? "Nouveau champ" : "Éditer champ"}
-                  </div>
+                  <div className="adminTicketsEditorTitle">{creating ? "Nouveau champ" : "Éditer champ"}</div>
                   <div className="adminEventHint">
-                    Pour <code>select</code> : options en JSON ou une ligne par option.
+                    Pour <code>select</code>/<code>radio</code> : options en JSON ou une ligne par option.
                   </div>
                 </div>
 
@@ -399,7 +452,7 @@ export function EventRegistrationFormPanel(props: Props) {
                   <select
                     className="adminEventInput"
                     value={editing.fieldType}
-                    onChange={(e) => setEditing({ ...editing, fieldType: e.target.value })}
+                    onChange={(e) => setEditing({ ...editing, fieldType: e.target.value as FieldType })}
                   >
                     {FIELD_TYPES.map((t) => (
                       <option key={t.value} value={t.value}>
@@ -443,7 +496,7 @@ export function EventRegistrationFormPanel(props: Props) {
                   </label>
                 </div>
 
-                {editing.fieldType === "select" ? (
+                {editing.fieldType === "select" || editing.fieldType === "radio" ? (
                   <div className="adminEventField adminEventFieldSpan2">
                     <div className="adminEventLabel">Options</div>
                     <textarea
@@ -456,14 +509,15 @@ export function EventRegistrationFormPanel(props: Props) {
                 ) : null}
               </div>
 
+              {saveError ? (
+                <div className="adminEventHint" style={{ color: "crimson", marginTop: 10 }}>
+                  {saveError}
+                </div>
+              ) : null}
+
               <div className="adminTicketsEditorFooter">
-                <button
-                  type="button"
-                  className="adminEventBtn"
-                  onClick={save}
-                  disabled={!editing.label.trim()}
-                >
-                  Enregistrer
+                <button type="button" className="adminEventBtn" onClick={save} disabled={!editing.label.trim() || isSaving}>
+                  {isSaving ? "Enregistrement…" : "Enregistrer"}
                 </button>
               </div>
             </div>
