@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useOutletContext, useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useOutletContext, useParams, useSearchParams } from "react-router-dom";
 
 import type { AdminOutletContext } from "./../AdminDashboard";
 import { supabase } from "../../../gateways/supabase/supabaseClient";
@@ -13,7 +13,7 @@ import { uploadOrgAssetsRepo } from "../../../gateways/supabase/repositories/das
 
 import { SingleEventDetailsSection } from "../../../pages/admin/singleEvent/sections/SingleEventDetailsSection";
 import { SingleEventTicketsSection } from "../../../pages/admin/singleEvent/sections/SingleEventTicketsSection";
-import { SingleEventFormSection }    from "../../../pages/admin/singleEvent/sections/SingleEventFormSection";
+import { SingleEventFormSection } from "../../../pages/admin/singleEvent/sections/SingleEventFormSection";
 import { SingleEventParticipantsSection } from "../../../pages/admin/singleEvent/sections/SingleEventParticipantsSection";
 
 // ✅ Garde ton CSS global existant (tu peux le déplacer ensuite dans /styles/admin/)
@@ -33,12 +33,37 @@ import "../../../styles/mobile/admin/adminSingleEvent.participants.mobile.css";
 
 type TabKey = "details" | "tickets" | "form" | "participants";
 
+const TAB_KEYS: TabKey[] = ["details", "tickets", "form", "participants"];
+function isTabKey(v: string | null): v is TabKey {
+  return !!v && (TAB_KEYS as string[]).includes(v);
+}
+
 export function AdminSingleEventPage() {
   const { eventSlug } = useParams<{ eventSlug: string }>();
   const { orgId, refetch: refetchDashboard } = useOutletContext<AdminOutletContext>();
 
   const storageRepo = useMemo(() => uploadOrgAssetsRepo(supabase), []);
-  const [tab, setTab] = useState<TabKey>("details");
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl: TabKey = isTabKey(searchParams.get("tab")) ? (searchParams.get("tab") as TabKey) : "details";
+  const [tab, setTab] = useState<TabKey>(tabFromUrl);
+
+  useEffect(() => {
+    if (tab !== tabFromUrl) setTab(tabFromUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabFromUrl]);
+
+  function setTabAndUrl(next: TabKey) {
+    setTab(next);
+    setSearchParams(
+      (prev) => {
+        const sp = new URLSearchParams(prev);
+        sp.set("tab", next);
+        return sp;
+      },
+      { replace: true }
+    );
+  }
 
   const { loading, error, data, eventId, refetch: refetchSingle } = useAdminSingleEventData({
     supabase,
@@ -100,16 +125,16 @@ export function AdminSingleEventPage() {
       </div>
 
       <div className="adminEventTabs">
-        <TabButton active={tab === "details"} onClick={() => setTab("details")}>
+        <TabButton active={tab === "details"} onClick={() => setTabAndUrl("details")}>
           Détails
         </TabButton>
-        <TabButton active={tab === "tickets"} onClick={() => setTab("tickets")}>
+        <TabButton active={tab === "tickets"} onClick={() => setTabAndUrl("tickets")}>
           Tickets
         </TabButton>
-        <TabButton active={tab === "form"} onClick={() => setTab("form")}>
+        <TabButton active={tab === "form"} onClick={() => setTabAndUrl("form")}>
           Formulaire d&apos;inscription
         </TabButton>
-        <TabButton active={tab === "participants"} onClick={() => setTab("participants")}>
+        <TabButton active={tab === "participants"} onClick={() => setTabAndUrl("participants")}>
           Participants
         </TabButton>
       </div>
@@ -130,25 +155,12 @@ export function AdminSingleEventPage() {
             )}
 
             {tab === "tickets" && (
-              <SingleEventTicketsSection
-                orgId={orgId}
-                event={event}
-                data={data as any}
-                onChanged={refreshAll}
-              />
+              <SingleEventTicketsSection orgId={orgId} event={event} data={data as any} onChanged={refreshAll} />
             )}
 
-            {tab === "form" && (
-              <SingleEventFormSection
-                event={event}
-                data={data as any}
-                onChanged={refreshAll}
-              />
-            )}
+            {tab === "form" && <SingleEventFormSection event={event} data={data as any} onChanged={refreshAll} />}
 
-            {tab === "participants" && (
-              <SingleEventParticipantsSection data={data as any} />
-            )}
+            {tab === "participants" && <SingleEventParticipantsSection data={data as any} />}
           </>
         )}
       </div>

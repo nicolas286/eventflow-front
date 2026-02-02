@@ -7,7 +7,7 @@ import type { UpdateEventFormFieldPatch } from "../../../../domain/models/admin/
 
 import { useCreateEventFormField } from "../../hooks/useCreateEventFormField";
 import { useUpdateEventFormField } from "../../hooks/useUpdateEventFormField";
-import { useDeleteEventFormField } from "../../hooks/useDeleteEventFormField"; // ✅ NEW
+import { useDeleteEventFormField } from "../../hooks/useDeleteEventFormField";
 
 type Props = {
   supabase: SupabaseClient;
@@ -36,10 +36,10 @@ type FieldType = (typeof FIELD_TYPES)[number]["value"];
 type EditState = {
   id: string | null;
   label: string;
-  fieldKey: string;
   fieldType: FieldType;
   isRequired: boolean;
   isActive: boolean;
+  // ✅ plus affiché / éditable par l’utilisateur, mais on le calcule pour l’insert
   sortOrder: number;
   optionsText: string;
 };
@@ -68,34 +68,38 @@ function clampInt(v: unknown, fallback = 0) {
 function normalizeOptionsToText(options: EventFormField["options"]): string {
   if (!options) return "";
   if (typeof options === "string") return options;
-  try {
-    return JSON.stringify(options, null, 2);
-  } catch {
-    return "";
+
+  // ✅ on accepte encore l’ancien stockage json côté DB,
+  // mais côté UI on veut "une option par ligne"
+  if (Array.isArray(options)) {
+    return options
+      .map((o: any) => String(o?.label ?? o?.value ?? "").trim())
+      .filter(Boolean)
+      .join("\n");
   }
+
+  return "";
 }
 
-function parseOptions(text: string): EventFormField["options"] {
+/**
+ * UI: une option par ligne
+ * - "Oui"
+ * - "Non"
+ *
+ * DB: [{label, value}]
+ */
+function parseOptionsLines(text: string): EventFormField["options"] {
   const t = (text ?? "").trim();
   if (!t) return null;
 
-  try {
-    return JSON.parse(t);
-  } catch {
-    const lines = t
-      .split("\n")
-      .map((x) => x.trim())
-      .filter(Boolean);
+  const lines = t
+    .split("\n")
+    .map((x) => x.trim())
+    .filter(Boolean);
 
-    if (!lines.length) return null;
+  if (!lines.length) return null;
 
-    return lines.map((line) => {
-      const [a, ...rest] = line.split("|");
-      const label = (a ?? "").trim();
-      const value = (rest.join("|") ?? "").trim() || slugKey(label);
-      return { label, value };
-    });
-  }
+  return lines.map((label) => ({ label, value: slugKey(label) }));
 }
 
 function uniqueKey(base: string, existing: Set<string>) {
@@ -117,7 +121,7 @@ export function EventRegistrationFormPanel(props: Props) {
 
   const create = useCreateEventFormField({ supabase });
   const update = useUpdateEventFormField({ supabase });
-  const del = useDeleteEventFormField({ supabase }); // ✅ NEW
+  const del = useDeleteEventFormField({ supabase });
 
   const sorted = useMemo(() => {
     const arr = Array.isArray(fields) ? [...fields] : [];
@@ -143,22 +147,24 @@ export function EventRegistrationFormPanel(props: Props) {
   const isDeleting = del.loading;
   const deleteError = del.error;
 
+  function nextSortOrder() {
+    const last = sorted.at(-1)?.sortOrder ?? 0;
+    return clampInt(last, 0) + 1;
+  }
+
   function openCreate() {
     create.reset();
     update.reset();
-    del.reset(); // ✅ clear delete errors
-
-    const nextSort = (sorted.at(-1)?.sortOrder ?? 0) + 1;
+    del.reset();
 
     setCreating(true);
     setEditing({
       id: null,
       label: "",
-      fieldKey: "",
       fieldType: "text",
       isRequired: false,
       isActive: true,
-      sortOrder: nextSort,
+      sortOrder: nextSortOrder(), // ✅ auto last+1
       optionsText: "",
     });
   }
@@ -166,16 +172,16 @@ export function EventRegistrationFormPanel(props: Props) {
   function openEdit(f: EventFormField) {
     create.reset();
     update.reset();
-    del.reset(); // ✅ clear delete errors
+    del.reset();
 
     setCreating(false);
     setEditing({
       id: f.id,
       label: f.label ?? "",
-      fieldKey: f.fieldKey ?? "",
       fieldType: (f.fieldType ?? "text") as FieldType,
       isRequired: Boolean(f.isRequired),
       isActive: Boolean(f.isActive ?? true),
+      // ✅ on garde en state pour patch (mais plus de champ UI)
       sortOrder: clampInt(f.sortOrder ?? 0, 0),
       optionsText: normalizeOptionsToText(f.options ?? null),
     });
@@ -184,7 +190,6 @@ export function EventRegistrationFormPanel(props: Props) {
   function closeEditor() {
     setEditing(null);
     setCreating(false);
-    // pas obligatoire, mais ça évite de garder un vieux message rouge
     create.reset();
     update.reset();
     del.reset();
@@ -216,14 +221,14 @@ export function EventRegistrationFormPanel(props: Props) {
     onChanged?.();
   }
 
-  function buildKey(edit: EditState) {
-    const baseKey = slugKey(edit.fieldKey || edit.label);
-    return edit.id ? baseKey : uniqueKey(baseKey, existingKeys);
+  function buildKeyFromLabel(label: string, forCreate: boolean) {
+    const base = slugKey(label);
+    return forCreate ? uniqueKey(base, existingKeys) : base;
   }
 
   function buildOptions(edit: EditState) {
     if (edit.fieldType === "select" || edit.fieldType === "radio") {
-      return parseOptions(edit.optionsText);
+      return parseOptionsLines(edit.optionsText);
     }
     return null;
   }
@@ -235,18 +240,18 @@ export function EventRegistrationFormPanel(props: Props) {
     const label = editing.label.trim();
     if (!label) return;
 
-    const key = buildKey(editing);
+    const key = buildKeyFromLabel(label, creating);
     const options = buildOptions(editing);
 
     if (creating) {
       const input: CreateEventFormFieldInput = {
         eventId: event.id,
         label,
-        fieldKey: key,
+        fieldKey: key, // ✅ toujours généré
         fieldType: editing.fieldType as any,
         isRequired: editing.isRequired,
         isActive: editing.isActive,
-        sortOrder: clampInt(editing.sortOrder, 0),
+        sortOrder: nextSortOrder(), // ✅ toujours last+1 (pas editable)
         options,
       } as CreateEventFormFieldInput;
 
@@ -262,10 +267,11 @@ export function EventRegistrationFormPanel(props: Props) {
 
     const patch: Omit<UpdateEventFormFieldPatch, "id"> = {
       label,
-      fieldKey: key,
+      fieldKey: key, // ✅ régénéré depuis label à chaque save (comme demandé)
       fieldType: editing.fieldType as any,
       isRequired: editing.isRequired,
       isActive: editing.isActive,
+      // ✅ on conserve l’ordre actuel (pas de champ UI)
       sortOrder: clampInt(editing.sortOrder, 0),
       options,
     };
@@ -318,7 +324,6 @@ export function EventRegistrationFormPanel(props: Props) {
               const active = Boolean(f.isActive ?? true);
               const required = Boolean(f.isRequired ?? false);
               const type = String(f.fieldType ?? "text");
-              const key = String(f.fieldKey ?? "");
 
               return (
                 <div key={id} className={active ? "adminRegCard" : "adminRegCard isInactive"}>
@@ -336,18 +341,13 @@ export function EventRegistrationFormPanel(props: Props) {
                   </div>
 
                   <div className="adminRegMeta">
-                    <span className="adminRegKey">
-                      <code>{key}</code>
-                    </span>
-                    <span>•</span>
                     <span>Type : {type}</span>
-                    <span>•</span>
-                    <span>Ordre : {f.sortOrder ?? idx + 1}</span>
+                    {/* ✅ ordre + fieldKey virés de la visualisation */}
                   </div>
 
                   <div className="adminRegActions">
                     <button type="button" className="adminTicketBtn" onClick={() => openEdit(f)}>
-                      Éditer
+                      Modifier
                     </button>
 
                     <button
@@ -405,9 +405,9 @@ export function EventRegistrationFormPanel(props: Props) {
             <div className="adminTicketsEditorCard">
               <div className="adminTicketsEditorHeader">
                 <div>
-                  <div className="adminTicketsEditorTitle">{creating ? "Nouveau champ" : "Éditer champ"}</div>
+                  <div className="adminTicketsEditorTitle">{creating ? "Nouveau champ" : "Modifier champ"}</div>
                   <div className="adminEventHint">
-                    Pour <code>select</code>/<code>radio</code> : options en JSON ou une ligne par option.
+                    Pour <code>select</code>/<code>radio</code> : une option par ligne (ex: Oui, Non).
                   </div>
                 </div>
 
@@ -428,26 +428,6 @@ export function EventRegistrationFormPanel(props: Props) {
                 </div>
 
                 <div className="adminEventField">
-                  <div className="adminEventLabel">fieldKey</div>
-                  <input
-                    className="adminEventInput"
-                    value={editing.fieldKey}
-                    onChange={(e) => setEditing({ ...editing, fieldKey: e.target.value })}
-                    onBlur={() => setEditing((s) => (s ? { ...s, fieldKey: slugKey(s.fieldKey) } : s))}
-                    placeholder="ex: allergies"
-                    spellCheck={false}
-                  />
-                  <button
-                    type="button"
-                    className="adminEventInlineBtn"
-                    onClick={() => setEditing((s) => (s ? { ...s, fieldKey: slugKey(s.label) } : s))}
-                    disabled={!editing.label.trim()}
-                  >
-                    Générer depuis le label
-                  </button>
-                </div>
-
-                <div className="adminEventField">
                   <div className="adminEventLabel">Type</div>
                   <select
                     className="adminEventInput"
@@ -462,51 +442,38 @@ export function EventRegistrationFormPanel(props: Props) {
                   </select>
                 </div>
 
+                {/* ✅ Actif / Requis simplifiés : juste les cases (pas de cadre/titre) */}
                 <div className="adminEventField">
-                  <div className="adminEventLabel">Ordre</div>
-                  <input
-                    className="adminEventInput"
-                    type="number"
-                    value={editing.sortOrder}
-                    onChange={(e) => setEditing({ ...editing, sortOrder: clampInt(e.target.value, 0) })}
-                  />
-                </div>
-
-                <div className="adminEventField">
-                  <div className="adminEventLabel">Requis</div>
-                  <label className="adminEventToggle">
+                  <label style={{ display: "flex", gap: 10, alignItems: "center", paddingTop: 6 }}>
                     <input
                       type="checkbox"
                       checked={editing.isRequired}
                       onChange={(e) => setEditing({ ...editing, isRequired: e.target.checked })}
                     />
-                    <span>{editing.isRequired ? "Requis" : "Optionnel"}</span>
+                    <span>Requis</span>
                   </label>
-                </div>
 
-                <div className="adminEventField">
-                  <div className="adminEventLabel">Actif</div>
-                  <label className="adminEventToggle">
+                  <label style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 10 }}>
                     <input
                       type="checkbox"
                       checked={editing.isActive}
                       onChange={(e) => setEditing({ ...editing, isActive: e.target.checked })}
                     />
-                    <span>{editing.isActive ? "Actif" : "Inactif"}</span>
+                    <span>Actif</span>
                   </label>
                 </div>
 
-                {editing.fieldType === "select" || editing.fieldType === "radio" ? (
+                {(editing.fieldType === "select" || editing.fieldType === "radio") && (
                   <div className="adminEventField adminEventFieldSpan2">
                     <div className="adminEventLabel">Options</div>
                     <textarea
                       className="adminEventTextarea"
                       value={editing.optionsText}
                       onChange={(e) => setEditing({ ...editing, optionsText: e.target.value })}
-                      placeholder={`JSON: [{"label":"Oui","value":"yes"}]\nOU\nUne option par ligne:\nOui|yes\nNon|no`}
+                      placeholder={`Une option par ligne :\nOui\nNon\nPeut-être`}
                     />
                   </div>
-                ) : null}
+                )}
               </div>
 
               {saveError ? (
