@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { supabase } from "../../../../gateways/supabase/supabaseClient";
 
-import "../../../../styles/admin/adminSingleEvent.tickets.css";
+import "../../../../styles/desktop/admin/adminSingleEvent.tickets.desktop.css";
+import "../../../../styles/mobile/admin/adminSingleEvent.tickets.mobile.css";
 
 import { EventTicketsPanel } from "../../../../features/admin/events/singleEvent/EventTicketsPanel";
 import { useCreateEventProduct } from "../../../../features/admin/hooks/useCreateEventProduct";

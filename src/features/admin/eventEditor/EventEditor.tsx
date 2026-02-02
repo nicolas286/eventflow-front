@@ -1,5 +1,5 @@
-import "../../../styles/eventEditor.css";
-
+import "../../../styles/desktop/eventEditor.desktop.css";
+import "../../../styles/mobile/eventEditor.mobile.css";
 import { Badge, Card, CardBody, CardHeader } from "../../../ui/components";
 import { getStatusInfo } from "../../../domain/helpers/status";
 import type { EventOverviewRow } from "../../../domain/models/admin/admin.eventsOverview.schema";

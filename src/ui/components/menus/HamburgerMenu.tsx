@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import "../../../styles/hamburgerMenu.css";
+import "../../../styles/desktop/hamburgerMenu.desktop.css";
 
 export type HamburgerMenuChildren =
   | ReactNode

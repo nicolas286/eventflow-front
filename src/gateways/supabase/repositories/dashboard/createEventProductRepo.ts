@@ -18,7 +18,6 @@ export function createEventProductRepo(supabase: SupabaseClient) {
     async createEventProduct(input: CreateEventProductInput): Promise<EventProduct> {
       const validated = createEventProductSchema.parse(input);
 
-
       const normalized: CreateEventProductInput = {
         ...validated,
         currency: validated.currency ?? "EUR",

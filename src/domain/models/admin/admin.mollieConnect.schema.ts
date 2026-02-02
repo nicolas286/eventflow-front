@@ -11,7 +11,7 @@ export type StartMollieConnectInput = z.infer<typeof startMollieConnectInputSche
 
 export const startMollieConnectResultSchema = z.object({
   ok: z.literal(true),
-  url: z.string().url(),
+  url: z.url(),
 });
 
 export type StartMollieConnectResult = z.infer<typeof startMollieConnectResultSchema>;

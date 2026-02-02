@@ -1,5 +1,5 @@
 import type { ChangeEventHandler, ReactNode, TextareaHTMLAttributes } from "react";
-import "../../../styles/textArea.css";
+import "../../../styles/desktop/textArea.desktop.css";
 
 
 export type TextAreaProps = Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "onChange"> & {

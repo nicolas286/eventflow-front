@@ -1,0 +1,41 @@
+/* ============================= */
+/* Mobile (extrait)              */
+/* Source: public.hero.css       */
+/* ============================= */
+
+@media (max-width: 860px) {
+  /* Hero repasse en colonne */
+  .publicOrgPage .publicBrand {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Logo centré */
+  .publicOrgPage .publicLogo {
+    width: clamp(180px, 50vw, 240px);
+    height: clamp(180px, 50vw, 240px);
+    margin-left: 0;
+  }
+
+  /* ✅ ANNULATION TOTALE des décalages desktop */
+  .publicOrgPage .publicOrgHeroRight {
+    padding-left: 0;
+    width: 100%;
+
+    /* on enlève le centrage vertical desktop */
+    justify-content: flex-start;
+
+    /* centrage propre en mobile */
+    align-items: center;
+    text-align: center;
+
+    margin-top: 16px;
+  }
+
+  /* Boutons bien centrés sous le texte */
+  .publicOrgPage .publicOrgHeroRight .publicActions {
+    justify-content: center;
+    width: 100%;
+    margin-top: 12px;
+  }
+}

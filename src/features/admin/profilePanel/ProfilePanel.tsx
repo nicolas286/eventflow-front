@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import "../../../styles/profilePanel.css";
-
+import "../../../styles/desktop/profilePanel.desktop.css";
+import "../../../styles/mobile/profilePanel.mobile.css";
 import { Button, Input, Badge } from "../../../ui/components";
 import { supabase } from "../../../gateways/supabase/supabaseClient";
 

@@ -1,5 +1,5 @@
 import type { SelectHTMLAttributes } from "react";
-import "../../../styles/select.css";
+import "../../../styles/desktop/select.desktop.css";
 
 type SelectProps = SelectHTMLAttributes<HTMLSelectElement> & {
   error?: boolean;

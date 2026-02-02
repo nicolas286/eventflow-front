@@ -1,4 +1,4 @@
-import "../../../styles/button.css"
+import "../../../styles/desktop/button.desktop.css"
 
 type Props = {
     label?: string;

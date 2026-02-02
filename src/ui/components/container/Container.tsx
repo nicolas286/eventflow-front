@@ -1,5 +1,5 @@
 import type { ReactNode, HTMLAttributes } from "react";
-import "../../../styles/container.css"
+import "../../../styles/desktop/container.desktop.css"
 
 export type ContainerProps = HTMLAttributes<HTMLDivElement> & {
   children?: ReactNode;

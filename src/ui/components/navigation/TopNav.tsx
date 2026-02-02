@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "../../../styles/topNav.css";
+import "../../../styles/desktop/topNav.desktop.css";
+import "../../../styles/mobile/topNav.mobile.css";
+
+
 
 import HamburgerMenu, {
   MenuDivider,

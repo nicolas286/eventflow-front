@@ -3,7 +3,8 @@ import Button from "../../../ui/components/button/Button";
 import { formatDateTimeHuman } from "../../../domain/helpers/dateTime";
 import { getPublicEventBanner } from "../../../domain/helpers/getPublicEventBanner";
 
-import "../../../styles/publicPages.css";
+import "../../../styles/desktop/publicPages.desktop.css";
+
 
 type Props = {
   orgSlug: string;

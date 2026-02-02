@@ -12,8 +12,11 @@ import { PublicEventHeader } from "./checkout/PublicEventHeader";
 import { loadDraft, saveDraft } from "./checkout/checkoutStore";
 
 /* ✅ CSS */
-import "../../styles/publicCheckoutBase.css";
-import "../../styles/eventAttendeesPage.css";
+import "../../styles/desktop/publicCheckoutBase.desktop.css";
+
+import "../../styles/desktop/eventAttendeesPage.desktop.css";
+import "../../styles/mobile/eventAttendeesPage.mobile.css";
+
 
 /* ✅ factorisé */
 import CountrySelect from "../../ui/components/forms/CountrySelect";

@@ -12,8 +12,11 @@ import { PublicEventHeader } from "./checkout/PublicEventHeader";
 import { loadDraft, saveDraft, formatMoney } from "./checkout/checkoutStore";
 
 /* ✅ CSS */
-import "../../styles/publicCheckoutBase.css";
-import "../../styles/eventTicketsPage.css";
+import "../../styles/desktop/publicCheckoutBase.desktop.css";
+
+import "../../styles/desktop/eventTicketsPage.desktop.css";
+import "../../styles/mobile/eventTicketsPage.mobile.css";
+
 
 function hexToRgbTriplet(hex: string | null | undefined): string | null {
   if (!hex) return null;

@@ -1,0 +1,10 @@
+@import "../desktop/public/partials/public.base.desktop.css";
+@import "../desktop/public/partials/public.hero.desktop.css";
+@import "../desktop/public/partials/public.banner.desktop.css";
+@import "../desktop/public/partials/public.header.checkout.desktop.css";
+
+/* src/styles/mobile/publicCheckoutBase.mobile.css */
+/* LIGHT MODE ONLY */
+
+@import "../mobile/public/partials/public.hero.mobile.css";
+@import "../mobile/public/partials/public.header.checkout.mobile.css";
