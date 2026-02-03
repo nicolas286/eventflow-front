@@ -1,6 +1,5 @@
-// pages/admin/AdminAbonnementPage.tsx
-import { useEffect, useMemo } from "react";
-import { useLocation, useOutletContext } from "react-router-dom";
+import { useEffect, useMemo, useRef } from "react";
+import { useLocation, useOutletContext, useNavigate } from "react-router-dom";
 
 import { Container } from "../../ui/components";
 import Card, { CardBody, CardHeader } from "../../ui/components/card/Card";
@@ -10,6 +9,7 @@ import Button from "../../ui/components/button/Button";
 import type { AdminOutletContext } from "./AdminDashboard";
 import { supabase } from "../../gateways/supabase/supabaseClient";
 import { useStartSubscription } from "../../features/admin/hooks/useStartSubscription";
+import { useCancelSubscription } from "../../features/admin/hooks/useCancelSubscription";
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                            */
@@ -122,11 +122,22 @@ export default function AdminAbonnementPage() {
   const { loading: startLoading, error: startError, result, startSubscription, reset } =
     useStartSubscription({ supabase });
 
+      const {
+    loading: cancelLoading,
+    error: cancelError,
+    result: cancelResult,
+    cancelSubscription,
+    reset: resetCancel,
+  } = useCancelSubscription({ supabase });
+
+
+
   const org = bootstrap.organization;
   const sub = bootstrap.subscription;
   const limits = bootstrap.planLimits;
 
   const plan = (org?.plan ?? "free") as PlanKey;
+  const isPaidPlan = plan === "starter" || plan === "pro";
   const planLabel =
     plan === "free" ? "Free" : plan === "starter" ? "Starter" : "Pro";
 
@@ -140,30 +151,34 @@ export default function AdminAbonnementPage() {
 
   const startedAtLabel = fmtDate(org?.planStartedAt ?? null);
 
-  // ✅ UX: après retour Mollie, on refetch pour synchroniser plan / subscription
+      const navigate = useNavigate();
+  const didHandleReturn = useRef(false);
+
   useEffect(() => {
     if (!isReturn) return;
+    if (didHandleReturn.current) return;
+    didHandleReturn.current = true;
 
-    let cancelled = false;
+    const nextQs = new URLSearchParams(location.search);
+    nextQs.delete("return");
 
     (async () => {
       try {
-        // petit refetch immédiat
         await refetch();
-
-        // souvent le webhook arrive avec un léger délai => second refetch "best effort"
-        // (pas de setTimeout: tu peux le faire plus tard si tu veux)
       } finally {
-        if (!cancelled) {
-          // on laisse les éventuels messages du hook
-        }
+        const search = nextQs.toString();
+        navigate(
+          {
+            pathname: location.pathname,
+            search: search ? `?${search}` : "",
+          },
+          { replace: true }
+        );
       }
     })();
+  }, [isReturn, refetch, navigate, location.pathname, location.search]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [isReturn, refetch]);
+
 
   if (!bootstrap || !org) {
     return (
@@ -172,7 +187,7 @@ export default function AdminAbonnementPage() {
           <CardHeader title="Abonnement" subtitle="Chargement…" />
           <CardBody>
             <div style={{ padding: 8, color: "#6b7280", fontSize: 14 }}>
-              Patiente une seconde.
+              Veuillez patienter.
             </div>
           </CardBody>
         </Card>
@@ -207,26 +222,25 @@ export default function AdminAbonnementPage() {
     }
   }
 
+    async function onCancelPlan() {
+    resetCancel();
+
+    if (!isPaidPlan) return;
+
+    const ok = window.confirm(
+      "Confirmer la résiliation ?\n\nVotre organisation repassera en Free et les limites seront réduites."
+    );
+    if (!ok) return;
+
+    const res = await cancelSubscription({ orgId });
+    if (!res?.ok) return;
+
+    await refetch();
+  }
+
+
   return (
     <Container>
-      {/* ---------------------- Card 0: Retour Mollie ---------------------- */}
-      {isReturn && (
-        <>
-          <Card>
-            <CardHeader
-              title="Retour paiement"
-              subtitle="On vérifie votre paiement et on met à jour votre plan."
-            />
-            <CardBody>
-              <div style={{ fontSize: 14, color: "#374151" }}>
-                Si votre plan ne change pas tout de suite, rafraîchis la page dans quelques secondes
-                (le temps que Mollie appelle le webhook).
-              </div>
-            </CardBody>
-          </Card>
-          <div style={{ height: 16 }} />
-        </>
-      )}
 
       {/* ---------------------- Card 1: Résumé ---------------------- */}
       <Card>
@@ -284,24 +298,6 @@ export default function AdminAbonnementPage() {
                 </div>
               )}
             </div>
-
-            {/* C - CTA */}
-            <div>
-              <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 6 }}>
-                Actions
-              </div>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <Button disabled>
-                  {plan === "pro" ? "Gérer le plan Pro" : "Changer de plan"}
-                </Button>
-                <Button disabled variant="secondary">
-                  Historique
-                </Button>
-              </div>
-              <div style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>
-                {startLoading ? "Ouverture de Mollie…" : "Changement de plan via Mollie."}
-              </div>
-            </div>
           </div>
 
           {/* ✅ feedback hook */}
@@ -334,7 +330,7 @@ export default function AdminAbonnementPage() {
                   }}
                 >
                   {result.ok
-                    ? "OK. Si Mollie s’ouvre, finalise le paiement. Sinon, ton plan est déjà à jour."
+                    ? "Demande bien enregistrée. Si Mollie s’ouvre, finalisez le paiement. Sinon, le plan est déjà à jour."
                     : "Subscription créée côté Mollie mais pas encore synchronisée côté DB."}
                 </div>
               )}
@@ -370,7 +366,7 @@ export default function AdminAbonnementPage() {
         </CardBody>
       </Card>
 
-      {/* ---------------------- Card 3: Upgrade / Downgrade ---------------------- */}
+            {/* ---------------------- Card 3: Changer de plan ---------------------- */}
       <div style={{ height: 16 }} />
 
       <Card>
@@ -380,51 +376,124 @@ export default function AdminAbonnementPage() {
             plan === "free"
               ? "Passez au plan Starter pour débloquer plus de capacité."
               : plan === "starter"
-              ? "Vous pouvez upgrader vers Pro (downgrade viendra après)."
-              : "Vous pourrez redescendre en Starter plus tard."
+              ? "Vous pouvez upgrader vers Pro."
+              : "Vous êtes sur le plan Pro."
           }
         />
         <CardBody>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: cols,
-              gap: 14,
-              maxWidth: tiles.length === 1 ? 520 : undefined,
-            }}
-          >
-            {tiles.map(({ def, kind }) => (
+          {/* -------- Upgrade tiles (uniquement vers le haut) -------- */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14, maxWidth: 520 }}>
+            {plan === "free" && (
               <PlanTile
-                key={def.key}
-                title={def.title}
-                price={def.price}
-                points={def.points}
-                highlight={def.highlight}
-                kind={kind}
+                title={PLAN_DEFS.starter.title}
+                price={PLAN_DEFS.starter.price}
+                points={PLAN_DEFS.starter.points}
+                highlight={PLAN_DEFS.starter.highlight}
+                kind="up"
                 currentPlan={plan}
-                targetPlan={def.key}
-                loading={startLoading}
-                // ✅ on active uniquement l'upgrade (starter/pro) puisque start-subscription ne gère pas downgrade
-                onAction={
-                  kind === "up" && canStartSubscription(def.key)
-                    ? () => onChoosePlan(def.key)
-                    : undefined
-                }
+                targetPlan="starter"
+                loading={startLoading || cancelLoading}
+                onAction={() => onChoosePlan("starter")}
               />
-            ))}
+            )}
+
+            {plan === "starter" && (
+              <PlanTile
+                title={PLAN_DEFS.pro.title}
+                price={PLAN_DEFS.pro.price}
+                points={PLAN_DEFS.pro.points}
+                highlight={PLAN_DEFS.pro.highlight}
+                kind="up"
+                currentPlan={plan}
+                targetPlan="pro"
+                loading={startLoading || cancelLoading}
+                onAction={() => onChoosePlan("pro")}
+              />
+            )}
           </div>
 
+          {/* -------- Résiliation (starter/pro -> free) -------- */}
+          {isPaidPlan && (
+            <>
+              <div style={{ height: 16 }} />
+
+              <div
+                style={{
+                  border: "1px solid #fee2e2",
+                  background: "#fff1f2",
+                  borderRadius: 12,
+                  padding: 14,
+                  maxWidth: 520,
+                }}
+              >
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#991b1b" }}>
+                  Résilier l’abonnement
+                </div>
+
+                <div style={{ marginTop: 6, fontSize: 13, color: "#7f1d1d" }}>
+                  Vous repasserez sur le plan <b>Free</b>. Les limites (admins, produits, champs, etc.)
+                  seront réduites immédiatement après confirmation.
+                </div>
+
+                <div style={{ marginTop: 12 }}>
+                  <Button
+                    variant="secondary"
+                    style={{ width: "100%" }}
+                    disabled={startLoading || cancelLoading}
+                    onClick={onCancelPlan}
+                  >
+                    {cancelLoading ? "Résiliation…" : "Annuler l’abonnement et repasser en Free"}
+                  </Button>
+                </div>
+
+                {/* feedback cancel */}
+                {(cancelError || cancelResult) && (
+                  <div style={{ marginTop: 12 }}>
+                    {cancelError && (
+                      <div
+                        style={{
+                          padding: "10px 12px",
+                          border: "1px solid #fecaca",
+                          background: "#fef2f2",
+                          borderRadius: 10,
+                          color: "#991b1b",
+                          fontSize: 14,
+                        }}
+                      >
+                        {cancelError}
+                      </div>
+                    )}
+
+                    {!cancelError && cancelResult && (
+                      <div
+                        style={{
+                          padding: "10px 12px",
+                          border: "1px solid #d1fae5",
+                          background: "#ecfdf5",
+                          borderRadius: 10,
+                          color: "#065f46",
+                          fontSize: 14,
+                        }}
+                      >
+                        {cancelResult.ok
+                          ? "Abonnement résilié. Votre organisation est repassée en Free."
+                          : "Résiliation lancée mais pas encore synchronisée côté DB."}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
           <div style={{ marginTop: 12, fontSize: 13, color: "#6b7280" }}>
-            {plan === "free" && <>Upgrade via Mollie (test ok si tu as la clé test).</>}
-            {plan === "starter" && (
-              <>Upgrade vers Pro via Mollie. Le downgrade sera ajouté ensuite (annulation + prorata).</>
-            )}
-            {plan === "pro" && (
-              <>Downgrade bientôt (annulation / changement de souscription).</>
-            )}
+            {plan === "free" && <>Upgrade vers Starter via Mollie.</>}
+            {plan === "starter" && <>Upgrade vers Pro via Mollie.</>}
+            {plan === "pro" && <>Vous pouvez résilier à tout moment.</>}
           </div>
         </CardBody>
       </Card>
+
     </Container>
   );
 }
