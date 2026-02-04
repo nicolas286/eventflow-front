@@ -3,7 +3,7 @@ import { profileSchema } from "../db/db.profile.schema";
 import { membershipSchema } from "../db/db.membership.schema";
 import { organizationSchema } from "../db/db.organization.schema";
 import { organizationProfileSchema } from "../db/db.organizationProfile.schema";
-import { subscriptionSchema } from "../db/db.subscription.schema";
+import { subscriptionUISchema } from "../db/db.subscription.schema";
 import { planLimitsSchema } from "../db/db.planLimits.schema";
 
 export const dashboardBootstrapSchema = z.object({
@@ -11,7 +11,7 @@ export const dashboardBootstrapSchema = z.object({
   membership: membershipSchema.nullable(),
   organization: organizationSchema.nullable(),
   organizationProfile: organizationProfileSchema.nullable(),
-  subscription: subscriptionSchema.nullable(),
+  subscription: subscriptionUISchema.nullable(),
   planLimits: planLimitsSchema,
 });
 

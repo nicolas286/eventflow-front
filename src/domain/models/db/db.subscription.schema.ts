@@ -12,4 +12,13 @@ export const subscriptionSchema = z.object({
   
 });
 
+
+export const subscriptionUISchema = subscriptionSchema.omit({
+  mollieCustomerId: true,
+  mollieSubscriptionId: true,
+  createdAt: true,
+  updatedAt: true,
+})
+
 export type Subscription = z.infer<typeof subscriptionSchema>;
+export type SubscriptionUI = z.infer<typeof subscriptionUISchema>;
