@@ -37,7 +37,7 @@ export default function AdminDashboard() {
 
   const primaryHex = bootstrap?.organizationProfile?.primaryColor ?? "#2563eb";
 
-  if (loading) {
+  if (loading && !bootstrap) {
     return (
       <div className="adminPage">
         <OrgThemeSync primaryColor={primaryHex} />
