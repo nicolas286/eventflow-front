@@ -10,10 +10,8 @@ import Card, { CardBody } from "../../ui/components/card/Card";
 import { PublicEventHeader } from "./checkout/PublicEventHeader";
 
 import "../../styles/desktop/publicCheckoutBase.desktop.css";
-
 import "../../styles/desktop/public/orderReturnPage.desktop.css";
 import "../../styles/mobile/public/orderReturnPage.mobile.css";
-
 
 type OrderStatus = "open" | "pending" | "paid" | "failed" | "canceled" | "expired" | "awaiting_payment";
 
@@ -82,15 +80,17 @@ function getBrandStyle(org: any): Record<string, string> | undefined {
   } as Record<string, string>;
 }
 
-async function fetchOrder(orderId: string): Promise<OrderPublic> {
+async function fetchOrder(orderId: string, token: string): Promise<OrderPublic> {
   const res = await fetch(
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/order-public?orderId=${encodeURIComponent(orderId)}`,
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/order-public?orderId=${encodeURIComponent(
+      orderId,
+    )}&token=${encodeURIComponent(token)}`,
     {
       headers: {
         apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
       },
-    }
+    },
   );
 
   if (!res.ok) throw new Error("order_fetch_failed");
@@ -128,6 +128,10 @@ export function OrderReturnPage() {
 
   const isReturn = useMemo(() => search.get("return") === "1", [search]);
 
+  const bookingToken = useMemo(() => {
+    return search.get("token") ?? search.get("bookingToken") ?? null;
+  }, [search]);
+
   // ✅ on permet aussi de passer org/event dans l’URL si besoin
   const orgSlugFromQuery = search.get("org") ?? search.get("orgSlug") ?? null;
   const eventSlugFromQuery = search.get("event") ?? search.get("eventSlug") ?? null;
@@ -150,7 +154,10 @@ export function OrderReturnPage() {
   }, [isReturn, order]);
 
   const orgSlug = useMemo(() => order?.orgSlug ?? orgSlugFromQuery ?? null, [order?.orgSlug, orgSlugFromQuery]);
-  const eventSlug = useMemo(() => order?.eventSlug ?? eventSlugFromQuery ?? null, [order?.eventSlug, eventSlugFromQuery]);
+  const eventSlug = useMemo(() => order?.eventSlug ?? eventSlugFromQuery ?? null, [
+    order?.eventSlug,
+    eventSlugFromQuery,
+  ]);
 
   // ✅ on va chercher les infos event comme dans EventPaymentPage
   const { loading: eventLoading, data: eventData } = usePublicEventDetail({
@@ -168,6 +175,7 @@ export function OrderReturnPage() {
 
   useEffect(() => {
     if (!orderId) return;
+    if (!bookingToken) return;
 
     let cancelled = false;
 
@@ -180,7 +188,7 @@ export function OrderReturnPage() {
 
     async function loadOnce() {
       try {
-        const o = await fetchOrder(orderId);
+        const o = await fetchOrder(orderId, bookingToken);
         if (cancelled) return;
         setOrder(o);
         setLoading(false);
@@ -193,7 +201,7 @@ export function OrderReturnPage() {
 
     async function poll() {
       try {
-        const o = await fetchOrder(orderId);
+        const o = await fetchOrder(orderId, bookingToken);
         if (cancelled) return;
         setOrder(o);
         if (isFinal(o.status)) stopPolling();
@@ -215,7 +223,7 @@ export function OrderReturnPage() {
       cancelled = true;
       stopPolling();
     };
-  }, [orderId, isReturn]);
+  }, [orderId, isReturn, bookingToken]);
 
   // ✅ démarrer countdown à paid
   useEffect(() => {
@@ -250,6 +258,25 @@ export function OrderReturnPage() {
   }, [order?.status, navigate, backUrl]);
 
   if (!orderId) return <Navigate to="/" replace />;
+
+  if (!bookingToken) {
+    return (
+      <div className="publicPage" style={brandStyle}>
+        <Container>
+          <div className="orderReturnCenter">
+            <Card className="orderReturnCard">
+              <CardBody>
+                <h2 className="orderReturnTitle">Lien invalide</h2>
+                <p className="orderReturnSubtitle">
+                  Il manque le jeton de sécurité pour retrouver la commande.
+                </p>
+              </CardBody>
+            </Card>
+          </div>
+        </Container>
+      </div>
+    );
+  }
 
   // 🌀 Loading : spinner flèche
   if (loading) {
@@ -311,9 +338,7 @@ export function OrderReturnPage() {
     <div className="publicPage" style={brandStyle}>
       <Container>
         {/* Header event : on l’affiche quand on a les infos */}
-        {orgSlug && eventForHeader ? (
-          <PublicEventHeader orgSlug={orgSlug} org={orgForHeader} event={eventForHeader} />
-        ) : null}
+        {orgSlug && eventForHeader ? <PublicEventHeader orgSlug={orgSlug} org={orgForHeader} event={eventForHeader} /> : null}
 
         <div className="orderReturnCenter">
           {/* verifying : spinner */}
@@ -364,9 +389,7 @@ export function OrderReturnPage() {
 
                     <div>
                       <span className="orderReturnLabel">Total :</span>
-                      <span className="orderReturnStrong">
-                        {formatMoney(order.totalCents, order.currency)}
-                      </span>
+                      <span className="orderReturnStrong">{formatMoney(order.totalCents, order.currency)}</span>
                     </div>
                   </div>
                 </div>
@@ -384,7 +407,7 @@ export function OrderReturnPage() {
                           <div className="orderReturnItemPrice">
                             {formatMoney(
                               it.totalCents ?? (it.unitPriceCents ?? 0) * (it.quantity ?? 1),
-                              it.currency ?? order.currency
+                              it.currency ?? order.currency,
                             )}
                           </div>
                         </div>
