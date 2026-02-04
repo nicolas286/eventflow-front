@@ -1,57 +1,42 @@
-.uiSelect{
+/* wrapper interne (pour chevron) */
+.uiSelect {
   position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-
-.uiSelect--full{
   width: 100%;
 }
 
-.uiSelect__control{
+/* on n'ajoute PAS de border ici */
+.uiSelect__control {
   appearance: none;
-  width: 100%;
-  min-height: 40px;
-  padding: 8px 36px 8px 12px;
-
-  border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.12);
-  background: rgba(255,255,255,0.75);
-
-  font-size: 14px;
-  font-weight: 500;
-  color: #111827;
-
-  cursor: pointer;
+  background: transparent;
+  padding-right: 36px; /* place pour le chevron */
 }
 
-.uiSelect__control:focus{
-  outline: none;
-  border-color: rgba(37,99,235,0.9);
-  box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
-  background: #fff;
-}
-
-.uiSelect__control:disabled{
-  background: rgba(243,244,246,0.8);
-  color: #9ca3af;
-  cursor: not-allowed;
-}
-
-.uiSelect--error .uiSelect__control{
-  border-color: rgba(185,28,28,0.9);
-  box-shadow: 0 0 0 3px rgba(185,28,28,0.15);
-}
-
-.uiSelect__chevron{
+/* chevron custom */
+.uiSelect__chevron {
   position: absolute;
+  top: 50%;
   right: 12px;
+  width: 10px;
+  height: 10px;
   pointer-events: none;
+  transform: translateY(-50%);
+}
 
-  width: 0;
-  height: 0;
+.uiSelect__chevron::before {
+  content: "";
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid #6b7280;
+  border-bottom: 2px solid #6b7280;
+  transform: rotate(45deg);
+}
 
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-top: 6px solid #6b7280;
+/* état erreur */
+.uiSelect--error .ui-input {
+  border-color: #dc2626;
+}
+
+.uiSelect--error .ui-input:focus {
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.15);
 }

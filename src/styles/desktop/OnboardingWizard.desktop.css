@@ -32,3 +32,182 @@
 .onboardingActions button {
   padding: 8px 16px;
 }
+
+/* --- Add-ons pour version avec composants UI --- */
+
+.onboardingHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.onboardingHeader h1 {
+  margin: 0;
+}
+
+.onboardingHeader p {
+  margin: 6px 0 0;
+  opacity: 0.85;
+}
+
+.onboardingHeader__right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-top: 2px;
+}
+
+/* titres de section */
+.onboardingStep__titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.onboardingStep__titleRow h2 {
+  margin: 0;
+}
+
+/* grille 2 colonnes (Inputs) */
+.onboardingGrid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 520px) {
+  .onboardingCard {
+    max-width: 92vw;
+  }
+
+  .onboardingGrid2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* row label + pills */
+.onboardingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.onboardingLabel {
+  font-size: 14px;
+  opacity: 0.85;
+  min-width: 48px;
+}
+
+/* boutons type “tabs” */
+.onboardingPills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* hint country code */
+.onboardingHintRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.onboardingHintLabel {
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+/* barre d’actions */
+.onboardingActionsBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.onboardingStatus {
+  min-height: 20px; /* évite les sauts */
+  display: flex;
+  align-items: center;
+}
+
+.onboardingActions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* messages */
+.onboardingError {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.10);
+  color: #b91c1c;
+  font-size: 14px;
+}
+
+.onboardingMuted {
+  opacity: 0.8;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+/* --- PhoneInput inline layout (onboarding) --- */
+
+.onboardingPage .profilePanel__phoneRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.onboardingPage .profilePanel__select {
+  flex: 0 0 auto;
+  min-width: 96px;
+}
+
+.onboardingPage .profilePanel__phoneInput {
+  flex: 1;
+}
+
+@media (max-width: 420px) {
+  .onboardingPage .profilePanel__select {
+    min-width: 84px;
+  }
+}
+
+/* --- PhoneInput inline layout (onboarding) --- */
+.onboardingPage .profilePanel__phoneRow {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+}
+
+/* le select ne doit PAS prendre 100% */
+.onboardingPage .profilePanel__phoneRow select.profilePanel__select,
+.onboardingPage .profilePanel__phoneRow .profilePanel__select {
+  width: 110px !important;
+  min-width: 110px !important;
+  max-width: 110px !important;
+  flex: 0 0 110px !important;
+}
+
+/* l'input prend le reste */
+.onboardingPage .profilePanel__phoneRow input.profilePanel__phoneInput,
+.onboardingPage .profilePanel__phoneRow .profilePanel__phoneInput {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  min-width: 0; /* important pour que flex fonctionne */
+}
+
+/* sécurité : si un wrapper interne force du 100% */
+.onboardingPage .profilePanel__phoneRow > * {
+  min-width: 0;
+}

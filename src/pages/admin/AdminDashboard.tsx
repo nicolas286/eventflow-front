@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, Navigate } from "react-router-dom";
 import "../../styles/desktop/adminDashBoard.desktop.css";
 import "../../styles/mobile/adminDashBoard.mobile.css";
 
@@ -53,7 +53,8 @@ export default function AdminDashboard() {
     return (
       <div className="adminPage">
         <OrgThemeSync primaryColor={primaryHex} />
-        <TopNav mode="admin" org={topNavOrg} />
+        {!isOnboarding && <TopNav mode="admin" org={topNavOrg} />}
+
         <div className="adminPageGrid">
           <div className="adminPageRight">Erreur : {String(error)}</div>
         </div>
@@ -66,7 +67,8 @@ export default function AdminDashboard() {
     return (
       <div className="adminPage">
         <OrgThemeSync primaryColor={primaryHex} />
-        <TopNav mode="admin" org={topNavOrg} />
+        {!isOnboarding && <TopNav mode="admin" org={topNavOrg} />}
+
         <div className="adminPageGrid">
           <div className="adminPageRight">Chargement…</div>
         </div>
@@ -76,21 +78,13 @@ export default function AdminDashboard() {
 
   // ✅ Pas d'orga => on autorise uniquement /admin/onboarding à s'afficher
   if (!orgId && !isOnboarding) {
-    return (
-      <div className="adminPage">
-        <OrgThemeSync primaryColor={primaryHex} />
-        <TopNav mode="admin" org={topNavOrg} />
-        <div className="adminPageGrid">
-          <div className="adminPageRight">Redirection…</div>
-        </div>
-      </div>
-    );
+      return <Navigate to="/admin/onboarding" replace />;
   }
 
   return (
     <div className="adminPage">
       <OrgThemeSync primaryColor={primaryHex} />
-      <TopNav mode="admin" org={topNavOrg} />
+      {!isOnboarding && <TopNav mode="admin" org={topNavOrg} />}
       <div className="adminPageGrid">
         <div className="adminPageRight">
           <Outlet

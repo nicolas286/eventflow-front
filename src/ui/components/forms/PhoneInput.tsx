@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { COUNTRY_OPTIONS, parseE164, buildE164 } from "./countryPhoneData";
+import "../../../styles/desktop/input.desktop.css";
 
 type Props = {
   /** valeur e164 actuelle (ex: "+33612345678") ou autre texte ; null/"" autorisé */
@@ -8,29 +9,44 @@ type Props = {
   /** on renvoie une valeur e164 (ex "+33612345678") ou "" si vide */
   onChange: (next: string) => void;
 
-  /** permet de garder tes classes existantes */
-  groupClassName?: string;
-  selectClassName?: string;
-  inputClassName?: string;
+  /** label comme Input */
+  label?: React.ReactNode;
 
-  /** permet de garder tes styles inline existants */
+  /** required comme Input */
+  required?: boolean;
+
+  /** wrapper + classes optionnelles */
+  className?: string;        // wrapper ui-field
+  groupClassName?: string;   // row container (inline)
+  selectClassName?: string;  // extra classes sur select
+  inputClassName?: string;   // extra classes sur input
+
+  /** styles inline optionnels */
   selectStyle?: React.CSSProperties;
   inputStyle?: React.CSSProperties;
 
   defaultDial?: string;
   placeholder?: string;
+
+  disabled?: boolean;
+  name?: string; // (optionnel) utile si tu veux un name sur l'input national
 };
 
 export default function PhoneInput({
   value,
   onChange,
-  groupClassName,
-  selectClassName,
-  inputClassName,
+  label,
+  required = false,
+  className = "",
+  groupClassName = "",
+  selectClassName = "",
+  inputClassName = "",
   selectStyle,
   inputStyle,
   defaultDial = "+32",
   placeholder = "Numéro",
+  disabled = false,
+  name,
 }: Props) {
   const initial = useMemo(() => parseE164(value ?? ""), [value]);
   const [dial, setDial] = useState<string>(initial.dial || defaultDial);
@@ -39,44 +55,65 @@ export default function PhoneInput({
   // resync doux quand la valeur externe change
   useEffect(() => {
     const p = parseE164(value ?? "");
-    if (p.dial) setDial(p.dial);
-    else setDial(defaultDial);
+    setDial(p.dial || defaultDial);
     setNational(p.national);
   }, [value, defaultDial]);
 
-  return (
-    <div className={groupClassName}>
-      <select
-        className={selectClassName}
-        value={dial}
-        onChange={(e) => {
-          const nextDial = e.target.value;
-          setDial(nextDial);
-          onChange(buildE164(nextDial, national));
-        }}
-        style={selectStyle}
-        aria-label="Indicatif"
-      >
-        {COUNTRY_OPTIONS.map((c) => (
-          <option key={`${c.iso2}-${c.dial}`} value={c.dial}>
-            {c.flag} {c.dial}
-          </option>
-        ))}
-      </select>
+  const isEmpty = national.trim() === "";
+  const isInvalidRequired = required && isEmpty;
 
-      <input
-        className={inputClassName}
-        value={national}
-        onChange={(e) => {
-          const nextNational = e.target.value;
-          setNational(nextNational);
-          onChange(buildE164(dial, nextNational));
-        }}
-        inputMode="tel"
-        placeholder={placeholder}
-        aria-label="Numéro de téléphone"
-        style={inputStyle}
-      />
-    </div>
+  return (
+    <label className={["ui-field", className].filter(Boolean).join(" ")}>
+      {label ? (
+        <div className="ui-field__label">
+          <span className="ui-field__labelText">{label}</span>
+          {required ? (
+            <span className="ui-field__required" aria-hidden>
+              *
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className={["ui-phoneRow", groupClassName].filter(Boolean).join(" ")}>
+        <select
+          className={["ui-input", "ui-phoneRow__dial", selectClassName].filter(Boolean).join(" ")}
+          value={dial}
+          onChange={(e) => {
+            const nextDial = e.target.value;
+            setDial(nextDial);
+            onChange(buildE164(nextDial, national));
+          }}
+          style={selectStyle}
+          aria-label="Indicatif"
+          disabled={disabled}
+        >
+          {COUNTRY_OPTIONS.map((c) => (
+            <option key={`${c.iso2}-${c.dial}`} value={c.dial}>
+              {c.flag} {c.dial}
+            </option>
+          ))}
+        </select>
+
+        <input
+          name={name}
+          className={["ui-input", "ui-phoneRow__number", inputClassName].filter(Boolean).join(" ")}
+          value={national}
+          onChange={(e) => {
+            const nextNational = e.target.value;
+            setNational(nextNational);
+            onChange(buildE164(dial, nextNational));
+          }}
+          inputMode="tel"
+          placeholder={placeholder}
+          aria-label="Numéro de téléphone"
+          style={inputStyle}
+          disabled={disabled}
+          required={required}
+          aria-required={required}
+          aria-invalid={isInvalidRequired}
+        />
+      </div>
+    </label>
   );
 }

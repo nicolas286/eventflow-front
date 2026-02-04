@@ -3,9 +3,9 @@ import { z } from "zod";
 import { eventSchema } from "../db/db.event.schema";
 import { eventProductsSchema } from "../db/db.eventProducts.schema";
 import { eventFormFieldSchema } from "../db/db.eventFormFields.schema";
-import { orderSchema } from "../db/db.order.schema";
+import { orderUISchema } from "../db/db.order.schema";
 import { orderItemsSchema } from "../db/db.orderItems.schema";
-import { paymentsSchema } from "../db/db.payment.schema";
+import { paymentsUISchema } from "../db/db.payment.schema";
 import { attendeesSchema } from "../db/db.attendee.schema";
 import { attendeesAnswersSchema } from "../db/db.attendeeAnswers.schema";
 
@@ -47,7 +47,7 @@ export const eventFormFieldsSchema = z.array(eventFormFieldSchema);
 export const ordersPageSchema = z.object({
   limit: z.number().int().min(1).max(200),
   offset: z.number().int().min(0),
-  rows: z.array(orderSchema),
+  rows: z.array(orderUISchema),
 });
 
 export const attendeesPageSchema = z.object({
@@ -65,7 +65,7 @@ export const eventDetailAdminSchema = z.object({
 
   orders: ordersPageSchema,
   orderItems: orderItemsSchema,
-  payments: paymentsSchema,
+  payments: paymentsUISchema,
 
   attendees: attendeesPageSchema,
   attendeeAnswers: attendeesAnswersSchema,

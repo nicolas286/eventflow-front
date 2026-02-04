@@ -19,17 +19,30 @@ export default function Input({
   placeholder,
   className = "",
   inputClassName = "",
+  required,
   ...rest
 }: InputProps) {
   return (
     <label className={["ui-field", className].filter(Boolean).join(" ")}>
-      {label ? <div className="ui-field__label">{label}</div> : null}
+      {label ? (
+        <div className="ui-field__label">
+          <span className="ui-field__labelText">{label}</span>
+          {required ? (
+            <span className="ui-field__required" aria-hidden>
+              *
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
       <input
         className={["ui-input", inputClassName].filter(Boolean).join(" ")}
         type={type}
         value={value}
         onChange={onChange}
         placeholder={placeholder}
+        required={required}
+        aria-required={required}
         {...rest}
       />
     </label>

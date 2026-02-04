@@ -17,7 +17,12 @@ export const paymentSchema = z.object({
   parentPaymentId: z.uuid().optional().nullable(),
 });
 
+export const paymentUISchema = paymentSchema.omit({ raw: true}); 
+
 export const paymentsSchema = z.array(paymentSchema);
+export const paymentsUISchema = z.array(paymentUISchema);
 
 export type Payment = z.infer<typeof paymentSchema>;
+export type PaymentUI = z.infer<typeof paymentUISchema>
 export type Payments = z.infer<typeof paymentsSchema>;
+export type PaymentsUI = z.infer<typeof paymentsUISchema>;

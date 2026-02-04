@@ -32,3 +32,45 @@
 .ui-input::placeholder {
   color: #9ca3af;
 }
+
+.ui-field__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ui-field__required {
+  color: #dc2626;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* Inline phone row */
+.ui-phoneRow {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+}
+
+/* dial select : largeur fixe */
+.ui-phoneRow__dial {
+  flex: 0 0 110px;
+  width: 110px;
+  min-width: 110px;
+}
+
+/* number input : prend le reste */
+.ui-phoneRow__number {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* petit mobile */
+@media (max-width: 420px) {
+  .ui-phoneRow__dial {
+    flex-basis: 96px;
+    width: 96px;
+    min-width: 96px;
+  }
+}

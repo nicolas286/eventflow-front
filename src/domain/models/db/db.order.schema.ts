@@ -22,4 +22,7 @@ export const orderSchema = z.object({
   buyerIsAttendee: z.boolean(),
 });
 
+export const orderUISchema = orderSchema.omit({ bookingToken: true}); 
+
 export type Order = z.infer<typeof orderSchema>;
+export type OrderUI = z.infer<typeof orderUISchema>;
