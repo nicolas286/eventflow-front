@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useOutletContext, useNavigate } from "react-router-dom";
 
 import { Container } from "../../ui/components";
@@ -10,6 +10,11 @@ import type { AdminOutletContext } from "./AdminDashboard";
 import { supabase } from "../../gateways/supabase/supabaseClient";
 import { useStartSubscription } from "../../features/admin/hooks/useStartSubscription";
 import { useCancelSubscription } from "../../features/admin/hooks/useCancelSubscription";
+import { useMakeOrganizationBilling } from "../../features/admin/hooks/useMakeOrganizationBilling";
+import { useUpsertOrganizationBilling } from "../../features/admin/hooks/useUpsertOrganizationBilling";
+
+import type { OrganizationBillingPatch } from "../../domain/models/db/db.organizationBilling.schema";
+import BillingModal from "../../features/admin/subscriptions/BillingModal";
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                            */
@@ -111,6 +116,8 @@ function canStartSubscription(target: PlanKey): target is "starter" | "pro" {
   return target === "starter" || target === "pro";
 }
 
+
+
 /* ------------------------------------------------------------------ */
 /* Page                                                               */
 /* ------------------------------------------------------------------ */
@@ -118,6 +125,13 @@ function canStartSubscription(target: PlanKey): target is "starter" | "pro" {
 export default function AdminAbonnementPage() {
   const { bootstrap, refetch, orgId } = useOutletContext<AdminOutletContext>();
   const location = useLocation();
+  const billingGet = useMakeOrganizationBilling({ supabase });
+  const billingUpsert = useUpsertOrganizationBilling({ supabase });
+
+  const [billingModalOpen, setBillingModalOpen] = useState(false);
+  const [billingModalMode, setBillingModalMode] = useState<"required" | "edit">("required");
+  const [pendingPlan, setPendingPlan] = useState<PlanKey | null>(null);
+
 
   const { loading: startLoading, error: startError, result, startSubscription, reset } =
     useStartSubscription({ supabase });
@@ -178,6 +192,18 @@ export default function AdminAbonnementPage() {
     })();
   }, [isReturn, refetch, navigate, location.pathname, location.search]);
 
+  async function ensureBillingOrOpenModal(nextPlan: "starter" | "pro"): Promise<boolean> {
+    // charge la billing (null si pas configuré)
+    const billing = await billingGet.fetchBilling(orgId);
+
+    if (billing) return true;
+
+    // pas de billing : on ouvre le modal et on garde le plan en attente
+    setPendingPlan(nextPlan);
+    setBillingModalMode("required");
+    setBillingModalOpen(true);
+    return false;
+  }
 
 
   if (!bootstrap || !org) {
@@ -202,16 +228,19 @@ export default function AdminAbonnementPage() {
 
   const cols = tiles.length === 2 ? "1fr 1fr" : "1fr";
 
-  async function onChoosePlan(target: PlanKey) {
+    async function onChoosePlan(target: PlanKey) {
     reset();
 
     if (!canStartSubscription(target)) return;
+
+    // ✅ gate billing
+    const okBilling = await ensureBillingOrOpenModal(target);
+    if (!okBilling) return;
 
     const res = await startSubscription({ orgId, plan: target });
     if (!res) return;
 
     if (res.ok && "action" in res && res.action === "checkout") {
-      // redirection Mollie checkout (first payment)
       window.location.href = res.checkoutUrl;
       return;
     }
@@ -221,6 +250,7 @@ export default function AdminAbonnementPage() {
       return;
     }
   }
+
 
     async function onCancelPlan() {
     resetCancel();
@@ -299,6 +329,23 @@ export default function AdminAbonnementPage() {
               )}
             </div>
           </div>
+
+          <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <Button
+            variant="secondary"
+            disabled={billingGet.loading || billingUpsert.loading}
+            onClick={async () => {
+              setBillingModalMode("edit");
+              setPendingPlan(null);
+              setBillingModalOpen(true);
+              // précharge pour pré-remplir si existe
+              await billingGet.fetchBilling(orgId);
+            }}
+          >
+            Infos de facturation
+          </Button>
+        </div>
+
 
           {/* ✅ feedback hook */}
           {(startError || result) && (
@@ -493,6 +540,49 @@ export default function AdminAbonnementPage() {
           </div>
         </CardBody>
       </Card>
+
+      {billingModalOpen && (
+  <BillingModal
+    mode={billingModalMode}
+    loading={billingGet.loading || billingUpsert.loading}
+    error={billingGet.error || billingUpsert.error}
+    initial={billingGet.billing}
+    onClose={() => {
+      setBillingModalOpen(false);
+      billingGet.reset();
+      billingUpsert.reset();
+    }}
+    onSave={async (patch) => {
+      const updated = await billingUpsert.upsertOrganizationBilling(patch);
+      if (!updated) return;
+
+      // refresh local billing state
+      await billingGet.fetchBilling(orgId);
+
+      // si on venait d'un upgrade -> on relance l'upgrade automatiquement
+      const planToContinue = pendingPlan;
+      setBillingModalOpen(false);
+      setPendingPlan(null);
+
+      if (planToContinue && canStartSubscription(planToContinue)) {
+        const res = await startSubscription({ orgId, plan: planToContinue });
+        if (!res) return;
+
+        if (res.ok && "action" in res && res.action === "checkout") {
+          window.location.href = res.checkoutUrl;
+          return;
+        }
+
+        if (res.ok && "action" in res && res.action === "sub_created") {
+          await refetch();
+          return;
+        }
+      }
+    }}
+    orgId={orgId}
+  />
+)}
+
 
     </Container>
   );
