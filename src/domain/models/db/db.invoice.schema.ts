@@ -35,33 +35,6 @@ export const invoiceSchema = z.object({
 
   createdAt: z.string(),
   updatedAt: z.string(),
-}).superRefine((val, ctx) => {
-  // total consistency
-  if (val.totalCents !== val.subtotalCents + val.vatCents) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Le total ne correspond pas au sous-total + TVA",
-      path: ["totalCents"],
-    });
-  }
-
-  // paid => paidAt
-  if (val.status === "paid" && !val.paidAt) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "paidAt est requis quand la facture est payée",
-      path: ["paidAt"],
-    });
-  }
-
-  // issued/paid => issuedAt
-  if ((val.status === "issued" || val.status === "paid") && !val.issuedAt) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "issuedAt est requis quand la facture est émise",
-      path: ["issuedAt"],
-    });
-  }
 });
 
 export const invoicesSchema = z.array(invoiceSchema);

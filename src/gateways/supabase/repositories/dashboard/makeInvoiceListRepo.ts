@@ -46,8 +46,7 @@ export function makeInvoiceListRepo(supabase: SupabaseClient) {
 
       const raw = await supabaseSafe(() => supabase.rpc("rpc_list_invoices", payload));
 
-      const camel = snakeToCamel(raw);
-      return invoicesListResponseSchema.parse(camel);
+      return invoicesListResponseSchema.parse(raw);
     },
   };
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useOutletContext, useNavigate } from "react-router-dom";
+import { useLocation, useOutletContext, useNavigate, useSearchParams } from "react-router-dom";
 
 import { Container } from "../../ui/components";
 import Card, { CardBody, CardHeader } from "../../ui/components/card/Card";
@@ -13,8 +13,9 @@ import { useCancelSubscription } from "../../features/admin/hooks/useCancelSubsc
 import { useMakeOrganizationBilling } from "../../features/admin/hooks/useMakeOrganizationBilling";
 import { useUpsertOrganizationBilling } from "../../features/admin/hooks/useUpsertOrganizationBilling";
 
-import type { OrganizationBillingPatch } from "../../domain/models/db/db.organizationBilling.schema";
 import BillingModal from "../../features/admin/subscriptions/BillingModal";
+import { InvoicesTab } from "../../features/admin/subscriptions/InvoicesTab";
+
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                            */
@@ -132,6 +133,33 @@ export default function AdminAbonnementPage() {
   const [billingModalMode, setBillingModalMode] = useState<"required" | "edit">("required");
   const [pendingPlan, setPendingPlan] = useState<PlanKey | null>(null);
 
+    type TabKey = "general" | "invoices";
+const TAB_KEYS: TabKey[] = ["general", "invoices"];
+function isTabKey(v: string | null): v is TabKey {
+  return !!v && (TAB_KEYS as string[]).includes(v);
+}
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl: TabKey = isTabKey(searchParams.get("tab")) ? (searchParams.get("tab") as TabKey) : "general";
+  const [tab, setTab] = useState<TabKey>(tabFromUrl);
+
+  useEffect(() => {
+    if (tab !== tabFromUrl) setTab(tabFromUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabFromUrl]);
+
+  function setTabAndUrl(next: TabKey) {
+    setTab(next);
+    setSearchParams(
+      (prev) => {
+        const sp = new URLSearchParams(prev);
+        sp.set("tab", next);
+        return sp;
+      },
+      { replace: true }
+    );
+  }
+
 
   const { loading: startLoading, error: startError, result, startSubscription, reset } =
     useStartSubscription({ supabase });
@@ -167,6 +195,9 @@ export default function AdminAbonnementPage() {
 
       const navigate = useNavigate();
   const didHandleReturn = useRef(false);
+
+
+
 
   useEffect(() => {
     if (!isReturn) return;
@@ -272,6 +303,17 @@ export default function AdminAbonnementPage() {
   return (
     <Container>
 
+        <div className="adminEventTabs">
+          <TabButton active={tab === "general"} onClick={() => setTabAndUrl("general")}>
+            Général
+          </TabButton>
+          <TabButton active={tab === "invoices"} onClick={() => setTabAndUrl("invoices")}>
+            Mes factures
+          </TabButton>
+      </div>
+
+      {tab === "general" && (
+        <>
       {/* ---------------------- Card 1: Résumé ---------------------- */}
       <Card>
         <CardHeader
@@ -428,6 +470,7 @@ export default function AdminAbonnementPage() {
           }
         />
         <CardBody>
+
           {/* -------- Upgrade tiles (uniquement vers le haut) -------- */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14, maxWidth: 520 }}>
             {plan === "free" && (
@@ -540,6 +583,10 @@ export default function AdminAbonnementPage() {
           </div>
         </CardBody>
       </Card>
+      </>
+    )}
+
+      {tab === "invoices" && <InvoicesTab orgId={orgId} />}
 
       {billingModalOpen && (
   <BillingModal
@@ -701,3 +748,11 @@ function PlanTile({
     </div>
   );
 }
+
+function TabButton(props: { active?: boolean; onClick: () => void; children: React.ReactNode }) {
+  const { active, onClick, children } = props;
+  return (
+    <button onClick={onClick} className={active ? "adminEventTab isActive" : "adminEventTab"} type="button">
+      {children}
+    </button>
+  )};
