@@ -22,26 +22,28 @@ export function InvoicesTab({ orgId }: { orgId: string }) {
   const invoices = useMakeInvoiceList({ supabase });
 
   useEffect(() => {
-    // charge la première page quand on arrive sur l’onglet
     invoices.fetchFirst({ orgId, limit: 25 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId]);
 
-  async function onDownloadPdf(inv: any) {
-    // Option A (souvent le plus simple) : tu stockes un pdf_url / pdf_path en DB
-    // et tu ouvres une URL signée (ou publique) renvoyée par un RPC.
-    //
-    // Exemple si tu as un champ inv.pdf_url déjà prêt :
-    if (inv.pdfUrl) {
-      window.open(inv.pdfUrl, "_blank", "noopener,noreferrer");
-      return;
-    }
+ async function onDownloadPdf(inv: any) {
+  if (!inv.pdfPath) return;
 
-    // Option B : call un RPC "get_invoice_pdf_url" qui te renvoie une URL signée
-    // const { data, error } = await supabase.rpc("get_invoice_pdf_url", { p_invoice_id: inv.id });
-    // if (!error && data?.url) window.open(data.url, "_blank", "noopener,noreferrer");
-    alert("Pas encore câblé: il me faut une url PDF (DB ou RPC).");
+  const { data, error } = await supabase.functions.invoke(
+    "get-invoice-pdf-url",
+    {
+      body: { invoice_id: inv.id },
+    }
+  );
+
+  if (error || !data?.url) {
+    console.error("PDF download failed", error);
+    return;
   }
+
+  window.open(data.url, "_blank", "noopener,noreferrer");
+}
+
 
   return (
     <Card>
