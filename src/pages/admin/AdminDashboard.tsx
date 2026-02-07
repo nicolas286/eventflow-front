@@ -85,6 +85,7 @@ export default function AdminDashboard() {
     <div className="adminPage">
       <OrgThemeSync primaryColor={primaryHex} />
       {!isOnboarding && <TopNav mode="admin" org={topNavOrg} />}
+
       <div className="adminPageGrid">
         <div className="adminPageRight">
           <Outlet

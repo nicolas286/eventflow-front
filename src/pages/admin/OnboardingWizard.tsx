@@ -13,7 +13,7 @@ import type { AdminProfileForm } from "../../domain/models/admin/admin.updateAdm
 import type { CreateOrganizationForm } from "../../domain/models/admin/admin.createOrganization.schema";
 
 import { inferCountryCode } from "../../domain/helpers/countries";
-import { Button, Input, Badge } from "../../ui/components";
+import { Button, Input, Badge, Select } from "../../ui/components";
 
 import CountrySelect from "../../ui/components/forms/CountrySelect";
 import PhoneInput from "../../ui/components/forms/PhoneInput";
@@ -117,20 +117,15 @@ export default function OnboardingWizard() {
     navigate("/admin");
   }
 
-  const detectedCode = form.countryLabel ? inferCountryCode(form.countryLabel) : null;
-
   return (
     <div className="onboardingPage">
       <div className="onboardingCard">
         <div className="onboardingHeader">
           <div>
             <h1>Bienvenue sur EventFlow</h1>
-            <p>Configurons votre espace et commencez à organiser vos événements !</p>
+            <p>Votre organisation est créée. Organisez votre premier événement !</p>
           </div>
 
-          <div className="onboardingHeader__right">
-            <Badge tone="info" label={`Étape ${step} / 3`} />
-          </div>
         </div>
 
         {error ? <div className="onboardingError">{error}</div> : null}
@@ -140,7 +135,6 @@ export default function OnboardingWizard() {
           <div className="onboardingStep">
             <div className="onboardingStep__titleRow">
               <h2>Votre profil</h2>
-              <Badge tone="info" label="Minimal" />
             </div>
 
             <div className="onboardingGrid2">
@@ -198,21 +192,14 @@ export default function OnboardingWizard() {
             </div>
 
             <div className="onboardingRow">
-              <div className="onboardingLabel">Type</div>
-              <div className="onboardingPills">
-                <Button
-                  variant={form.orgType === "association" ? "primary" : "secondary"}
-                  label="Association"
-                  onClick={() => set("orgType", "association")}
-                  disabled={loading}
-                />
-                <Button
-                  variant={form.orgType === "person" ? "primary" : "secondary"}
-                  label="Indépendant"
-                  onClick={() => set("orgType", "person")}
-                  disabled={loading}
-                />
-              </div>
+              <Select label="Type">
+                <option key="Personne physique" value="person">
+                        Personne physique
+                </option>
+                <option key="Personne morale" value="association">
+                        Personne morale
+                </option>
+              </Select>
             </div>
 
             <Input
@@ -225,21 +212,6 @@ export default function OnboardingWizard() {
           </div>
         )}
 
-        {/* -------------------- STEP 3 -------------------- */}
-        {step === 3 && (
-          <div className="onboardingStep">
-            <div className="onboardingStep__titleRow">
-              <h2>Premier événement</h2>
-              <Badge tone="info" label="Bientôt" />
-            </div>
-
-            <div className="onboardingMuted">
-              On le fera juste après. Pour l’instant, on termine la création de ton espace.
-            </div>
-
-            <Input label="Nom de l’événement" placeholder="(placeholder)" value="" disabled />
-          </div>
-        )}
 
         {/* -------------------- ACTIONS -------------------- */}
         <div className="onboardingActionsBar">

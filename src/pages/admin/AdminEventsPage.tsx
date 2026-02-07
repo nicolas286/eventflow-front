@@ -22,6 +22,7 @@ import { useCreateEvent } from "../../features/admin/hooks/useCreateEvent";
 import { useUpdateEvent } from "../../features/admin/hooks/useUpdateEvent";
 import { useDeleteEvent } from "../../features/admin/hooks/useDeleteEvent";
 import { PlusIcon } from "../../ui/components/icon/Icons";
+import { AdminNotices } from "../../features/admin/adminNotices/AdminNotices";
 
 type EditableEventFields = Partial<
   Pick<EventOverviewRow["event"], "title" | "isPublished" | "startsAt" | "endsAt">
@@ -36,7 +37,7 @@ type ConfirmState = {
 
 
 export default function AdminEventsPage() {
-  const { events, orgId, refetch } = useOutletContext<AdminOutletContext>();
+  const { events, orgId, bootstrap, refetch } = useOutletContext<AdminOutletContext>();
 
   const {
     createEvent,
@@ -155,6 +156,7 @@ export default function AdminEventsPage() {
 
   return (
     <>
+      <AdminNotices bootstrap={bootstrap} />
       <AdminStats stats={stats} />
 
       <div className="adminEventsActions">
