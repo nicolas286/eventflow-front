@@ -30,7 +30,7 @@ export function AdminNotices({ bootstrap, className }: Props) {
     notices.push({
       key: "plan-free",
       title: "Plan Free",
-      body: "Certaines options sont limitées (branding, etc.). Passe en Starter/Pro pour débloquer.",
+      body: "Certaines options sont limitées (branding, etc.). Passez en Starter/Pro pour débloquer.",
       to: "/admin/abonnement",
       cta: "Voir les plans",
     });
@@ -49,7 +49,7 @@ export function AdminNotices({ bootstrap, className }: Props) {
     notices.push({
       key: "profile-address",
       title: "Profil incomplet",
-      body: "Ajoute ton adresse (utile pour la facturation et les documents).",
+      body: "Ajoutez votre adresse à votre profil.",
       to: "/admin/profil",
       cta: "Compléter mon profil",
     });
@@ -63,7 +63,7 @@ export function AdminNotices({ bootstrap, className }: Props) {
     notices.push({
       key: "org-description",
       title: "Structure à compléter",
-      body: "Ajoute une description de ton organisation (ça aide aussi sur la page publique).",
+      body: "Ajoutez une description de votre organisation, visible sur votre page publique.",
       to: "/admin/structure",
       cta: "Compléter la structure",
     });
@@ -76,8 +76,8 @@ export function AdminNotices({ bootstrap, className }: Props) {
       title: "Paiements non configurés",
       body:
         paymentsStatus === "pending"
-          ? "Mollie est en attente de validation. Termine la configuration pour activer les paiements."
-          : "Connecte Mollie pour pouvoir encaisser en ligne.",
+          ? "Mollie est en attente de validation. Terminez la configuration pour activer les paiements."
+          : "Connectez Mollie pour pouvoir encaisser en ligne.",
       to: "/admin/structure",
       cta: "Configurer Mollie",
     });
