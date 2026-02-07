@@ -127,13 +127,11 @@
   background: rgb(var(--primary) / 0.12);
 }
 
-
 .adminEventTab.isActive{
   background: rgb(var(--primary));
   border-color: rgb(var(--primary));
   color: rgb(var(--primary-contrast));
 }
-
 
 .adminEventSection{
   margin-top: 8px;
@@ -521,11 +519,76 @@
   gap:12px;
 }
 
-.adminRegGrid{
-  display:grid;
-  grid-template-columns: minmax(0, 1fr) 420px;
-  gap:14px;
-  align-items:start;
+/* ✅ NEW: shell animé (remplace le besoin de .adminRegGrid) */
+.adminRegShell{
+  --editor-w: 420px;
+  --editor-gap: 14px;
+
+  width:100%;
+  position:relative;
+  min-width:0;
+}
+
+.adminRegLeft{
+  width:100%;
+  min-width:0;
+  transition: width 180ms ease, transform 180ms ease;
+}
+
+.adminRegLeft *{
+  min-width:0;
+}
+
+.adminRegRight{
+  position:absolute;
+  right:0;
+  top:0;
+  width:var(--editor-w);
+  box-sizing:border-box;
+}
+
+.adminRegShell.isEditorOpen .adminRegLeft{
+  width: calc(100% - (var(--editor-w) + var(--editor-gap)));
+  transform: translateX(0);
+}
+
+/* ✅ NEW: panel animé (in/out) */
+.regEditorPanel{
+  transform-origin: top right;
+  animation-duration: 180ms;
+  animation-fill-mode: both;
+}
+
+.regEditorPanel.isOpen{
+  animation-name: regEditorIn;
+  animation-timing-function: ease-out;
+}
+
+.regEditorPanel.isClosing{
+  animation-name: regEditorOut;
+  animation-timing-function: ease-in;
+}
+
+@keyframes regEditorIn{
+  from{
+    opacity:0;
+    transform: translateX(8px) scale(0.98);
+  }
+  to{
+    opacity:1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes regEditorOut{
+  from{
+    opacity:1;
+    transform: translateX(0) scale(1);
+  }
+  to{
+    opacity:0;
+    transform: translateX(8px) scale(0.98);
+  }
 }
 
 .adminRegList{
@@ -615,18 +678,26 @@
   flex-wrap:wrap;
 }
 
-.adminRegEditor{
-  position:sticky;
-  top:12px;
-  align-self:start;
-}
-
+/* ✅ Mobile: editor en dessous, pas de shrink */
 @media (max-width: 1050px){
-  .adminRegGrid{
-    grid-template-columns: 1fr;
+  .adminRegLeft{
+    width:100%;
+    transform:none;
   }
-  .adminRegEditor{
+
+  .adminRegShell.isEditorOpen .adminRegLeft{
+    width:100%;
+    transform:none;
+  }
+
+  .adminRegRight{
     position:static;
+    width:100%;
+    margin-top:14px;
+  }
+
+  .regEditorPanel{
+    transform-origin: top center;
   }
 }
 

@@ -28,7 +28,7 @@ export function getContrastTriplet(hex: string) {
   const b = parseInt(full.slice(4, 6), 16);
 
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.62 ? "17 24 39" : "255 255 255"; // ✅
+  return luminance > 0.20 ? "17 24 39" : "255 255 255"; // ✅
 }
 
 

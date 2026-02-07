@@ -41,8 +41,18 @@
 /* Semantic aliases          */
 /* ========================= */
 
-.ui-button--primary,
+.ui-button--primary {
+  
+  background: rgb(var(--primary) / 0.55);
+  color: rgb(var(--primary-contrast));
+  border: 1px solid rgb(var(--primary) / 0.55);
+
+}
 .ui-button--secondary {
+
+  background: rgb(var(--primary) / 0.15);
+  color: rgb(var(--primary-contrast));
+  border: 1px solid rgb(var(--primary) / 0.55);
 
 }
 

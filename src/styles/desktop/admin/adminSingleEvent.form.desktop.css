@@ -1,0 +1,124 @@
+/* ---------- Registration editor: static in section, then sticky under navbar ---------- */
+
+.adminRegShell{
+  --editor-w: 420px;
+  --editor-gap: 14px;
+
+  /* hauteur navbar + petite marge (ajuste si besoin) */
+  --admin-nav-h: 72px;
+  --admin-top-gap: 100px;
+
+  width:100%;
+  position:relative;
+  min-width:0;
+}
+
+.adminRegLeft{
+  width:100%;
+  min-width:0;
+  transition: width 180ms ease, transform 180ms ease;
+}
+
+.adminRegLeft *{
+  min-width:0;
+}
+
+/* ✅ La colonne droite existe dans la section (place réservée) */
+.adminRegRight{
+  position:absolute;
+  right:0;
+  top:0;
+  bottom:0;              /* ✅ IMPORTANT: donne une vraie hauteur au conteneur */
+  width:var(--editor-w);
+  box-sizing:border-box;
+
+  display:flex;          /* optionnel mais propre */
+  align-items:flex-start;/* optionnel */
+}
+
+
+/* Quand l’editor est ouvert, la liste se rétrécit */
+.adminRegShell.isEditorOpen .adminRegLeft{
+  width: calc(100% - (var(--editor-w) + var(--editor-gap)));
+  transform: translateX(0);
+}
+
+/* ✅ Sticky: reste dans la section puis colle sous la navbar en scrollant */
+.regEditorPanel{
+  position: sticky;
+  top: calc(var(--admin-nav-h) + var(--admin-top-gap));
+
+  max-height: calc(100vh - (var(--admin-nav-h) + var(--admin-top-gap) + 12px));
+  overflow: auto;
+
+  z-index: 20;
+  padding-right: 2px;
+}
+
+/* Animation in/out */
+.regEditorPanel{
+  transform-origin: top right;
+  animation-duration: 180ms;
+  animation-fill-mode: both;
+}
+
+.regEditorPanel.isOpen{
+  animation-name: regEditorIn;
+  animation-timing-function: ease-out;
+}
+
+.regEditorPanel.isClosing{
+  animation-name: regEditorOut;
+  animation-timing-function: ease-in;
+}
+
+@keyframes regEditorIn{
+  from{
+    opacity:0;
+    transform: translateX(8px) scale(0.98);
+  }
+  to{
+    opacity:1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes regEditorOut{
+  from{
+    opacity:1;
+    transform: translateX(0) scale(1);
+  }
+  to{
+    opacity:0;
+    transform: translateX(8px) scale(0.98);
+  }
+}
+
+/* Mobile: panel en dessous, pas de shrink, pas de sticky */
+@media (max-width: 1050px){
+  .adminRegLeft{
+    width:100%;
+    transform:none;
+  }
+
+  .adminRegShell.isEditorOpen .adminRegLeft{
+    width:100%;
+    transform:none;
+  }
+
+  .adminRegRight{
+    position:static;
+    width:100%;
+    margin-top:14px;
+  }
+
+  .regEditorPanel{
+    position: static;
+    top:auto;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+    z-index:auto;
+    transform-origin: top center;
+  }
+}

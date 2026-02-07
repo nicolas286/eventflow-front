@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { EventFormField } from "../../../../domain/models/db/db.eventFormFields.schema";
@@ -17,8 +17,6 @@ type Props = {
   onChanged?: () => void;
 };
 
-const FIELDS_TABLE = "event_form_fields";
-
 const FIELD_TYPES = [
   { value: "text", label: "Texte" },
   { value: "email", label: "Email" },
@@ -35,19 +33,30 @@ const FIELD_TYPES = [
 type FieldType = (typeof FIELD_TYPES)[number]["value"];
 
 type EditState = {
-  id: string | null;
+  id: string | null; // clientId (pas l'id DB)
   label: string;
   fieldType: FieldType;
   isRequired: boolean;
   isActive: boolean;
-  // ✅ plus affiché / éditable par l’utilisateur, mais on le calcule pour l’insert
-  sortOrder: number;
   optionsText: string;
 };
 
-/* ------------------------------------------------------------------ */
-/* Utils                                                               */
-/* ------------------------------------------------------------------ */
+type DraftField = {
+  id: string | null; // id DB
+  clientId: string; // id UI stable
+
+  label: string;
+  fieldKey: string;
+  fieldType: FieldType;
+  isRequired: boolean;
+  isActive: boolean;
+  sortOrder: number; // contigu (1..n)
+  options: EventFormField["options"];
+
+  isNew?: boolean;
+};
+
+type EditorAnimState = "closed" | "open" | "closing";
 
 function slugKey(value: string) {
   return value
@@ -70,25 +79,15 @@ function normalizeOptionsToText(options: EventFormField["options"]): string {
   if (!options) return "";
   if (typeof options === "string") return options;
 
-  // ✅ on accepte encore l’ancien stockage json côté DB,
-  // mais côté UI on veut "une option par ligne"
   if (Array.isArray(options)) {
     return options
       .map((o: any) => String(o?.label ?? o?.value ?? "").trim())
       .filter(Boolean)
       .join("\n");
   }
-
   return "";
 }
 
-/**
- * UI: une option par ligne
- * - "Oui"
- * - "Non"
- *
- * DB: [{label, value}]
- */
 function parseOptionsLines(text: string): EventFormField["options"] {
   const t = (text ?? "").trim();
   if (!t) return null;
@@ -113,9 +112,19 @@ function uniqueKey(base: string, existing: Set<string>) {
   return k;
 }
 
-/* ------------------------------------------------------------------ */
-/* Component                                                           */
-/* ------------------------------------------------------------------ */
+function makeClientId() {
+  return `tmp_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+function normalizeContiguousSortOrder(list: DraftField[]) {
+  return list.map((f, idx) => ({ ...f, sortOrder: idx + 1 }));
+}
+
+function sortFromDB(fields: EventFormField[]) {
+  const arr = Array.isArray(fields) ? [...fields] : [];
+  arr.sort((a, b) => clampInt(a.sortOrder ?? 0, 0) - clampInt(b.sortOrder ?? 0, 0));
+  return arr;
+}
 
 export function EventRegistrationFormPanel(props: Props) {
   const { supabase, event, fields, onChanged } = props;
@@ -124,179 +133,313 @@ export function EventRegistrationFormPanel(props: Props) {
   const update = useUpdateEventFormField({ supabase });
   const del = useDeleteEventFormField({ supabase });
 
-  const sorted = useMemo(() => {
-    const arr = Array.isArray(fields) ? [...fields] : [];
-    arr.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-    return arr;
-  }, [fields]);
-
-  const existingKeys = useMemo(() => {
-    const s = new Set<string>();
-    for (const f of sorted) {
-      const k = String(f.fieldKey ?? "").trim();
-      if (k) s.add(k);
-    }
-    return s;
-  }, [sorted]);
+  const [draft, setDraft] = useState<DraftField[]>([]);
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
 
   const [editing, setEditing] = useState<EditState | null>(null);
   const [creating, setCreating] = useState(false);
 
-  const isSaving = create.loading || update.loading;
-  const saveError = create.error || update.error;
+  const [isDirty, setIsDirty] = useState(false);
+  const [isSavingAll, setIsSavingAll] = useState(false);
+  const [saveAllError, setSaveAllError] = useState<string | null>(null);
 
-  const isDeleting = del.loading;
-  const deleteError = del.error;
+  // ✅ animation état editor (comme tickets)
+  const [editorAnim, setEditorAnim] = useState<EditorAnimState>("closed");
+  const closeTimerRef = useRef<number | null>(null);
 
-  function nextSortOrder() {
-    const last = sorted.at(-1)?.sortOrder ?? 0;
-    return clampInt(last, 0) + 1;
-  }
+  const lastLoadedSigRef = useRef<string>("");
 
-  function openCreate() {
-    create.reset();
-    update.reset();
-    del.reset();
+  const isSaving = isSavingAll || create.loading || update.loading || del.loading;
 
-    setCreating(true);
-    setEditing({
-      id: null,
-      label: "",
-      fieldType: "text",
-      isRequired: false,
-      isActive: true,
-      sortOrder: nextSortOrder(), // ✅ auto last+1
-      optionsText: "",
-    });
-  }
+  const incomingSig = useMemo(() => {
+    const sorted = sortFromDB(fields);
+    return sorted
+      .map((f) => `${String(f.id)}:${String((f as any).updatedAt ?? "")}:${clampInt(f.sortOrder ?? 0, 0)}`)
+      .join("|");
+  }, [fields]);
 
-  function openEdit(f: EventFormField) {
-    create.reset();
-    update.reset();
-    del.reset();
+  useEffect(() => {
+    if (isDirty) return;
+    if (lastLoadedSigRef.current === incomingSig) return;
 
-    setCreating(false);
-    setEditing({
-      id: f.id,
-      label: f.label ?? "",
-      fieldType: (f.fieldType ?? "text") as FieldType,
-      isRequired: Boolean(f.isRequired),
-      isActive: Boolean(f.isActive ?? true),
-      // ✅ on garde en state pour patch (mais plus de champ UI)
-      sortOrder: clampInt(f.sortOrder ?? 0, 0),
-      optionsText: normalizeOptionsToText(f.options ?? null),
-    });
-  }
+    const sorted = sortFromDB(fields);
+    const next: DraftField[] = normalizeContiguousSortOrder(
+      sorted.map((f) => ({
+        id: String(f.id),
+        clientId: String(f.id),
+        label: f.label ?? "",
+        fieldKey: String((f as any).fieldKey ?? ""),
+        fieldType: ((f as any).fieldType ?? "text") as FieldType,
+        isRequired: Boolean((f as any).isRequired),
+        isActive: Boolean((f as any).isActive ?? true),
+        sortOrder: clampInt((f as any).sortOrder ?? 0, 0),
+        options: ((f as any).options ?? null) as any,
+      }))
+    );
 
-  function closeEditor() {
-    setEditing(null);
-    setCreating(false);
-    create.reset();
-    update.reset();
-    del.reset();
-  }
+    setDraft(next);
+    setDeletedIds(new Set());
+    setSaveAllError(null);
+    lastLoadedSigRef.current = incomingSig;
+  }, [incomingSig, fields, isDirty]);
 
-  async function quickToggle(id: string, patch: Record<string, any>) {
-    const { error } = await supabase.from(FIELDS_TABLE).update(patch).eq("id", id);
-    if (error) return;
-    onChanged?.();
-  }
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+    };
+  }, []);
 
-  async function move(id: string, dir: -1 | 1) {
-    const idx = sorted.findIndex((x) => String(x.id) === String(id));
-    if (idx < 0) return;
+  const existingKeys = useMemo(() => {
+    const s = new Set<string>();
+    for (const f of draft) {
+      const k = String(f.fieldKey ?? "").trim();
+      if (k) s.add(k);
+    }
+    return s;
+  }, [draft]);
 
-    const a = sorted[idx];
-    const b = sorted[idx + dir];
-    if (!b) return;
-
-    const aOrder = clampInt(a.sortOrder ?? 0, 0);
-    const bOrder = clampInt(b.sortOrder ?? 0, 0);
-
-    const { error: e1 } = await supabase.from(FIELDS_TABLE).update({ sort_order: bOrder }).eq("id", a.id);
-    if (e1) return;
-
-    const { error: e2 } = await supabase.from(FIELDS_TABLE).update({ sort_order: aOrder }).eq("id", b.id);
-    if (e2) return;
-
-    onChanged?.();
+  function markDirty() {
+    setIsDirty(true);
+    setSaveAllError(null);
   }
 
   function buildKeyFromLabel(label: string, forCreate: boolean) {
     const base = slugKey(label);
-    return forCreate ? uniqueKey(base, existingKeys) : base;
+    return forCreate ? uniqueKey(base, existingKeys) : uniqueKey(base, existingKeys);
   }
 
-  function buildOptions(edit: EditState) {
-    if (edit.fieldType === "select" || edit.fieldType === "radio") {
-      return parseOptionsLines(edit.optionsText);
+  function buildOptions(fieldType: FieldType, optionsText: string) {
+    if (fieldType === "select" || fieldType === "radio") {
+      return parseOptionsLines(optionsText);
     }
     return null;
   }
 
-  async function save() {
-    if (!editing || isSaving) return;
-    if (!event?.id) return;
+  // ✅ ouvre editor + anim in
+  function openEditor(nextEditing: EditState, isCreate: boolean) {
+    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+
+    setSaveAllError(null);
+    create.reset();
+    update.reset();
+    del.reset();
+
+    setCreating(isCreate);
+    setEditing(nextEditing);
+
+    // si on était en closing, on repasse open
+    setEditorAnim("open");
+  }
+
+  function openCreate() {
+    openEditor(
+      {
+        id: null,
+        label: "",
+        fieldType: "text",
+        isRequired: false,
+        isActive: true,
+        optionsText: "",
+      },
+      true
+    );
+  }
+
+  function openEdit(f: DraftField) {
+    openEditor(
+      {
+        id: f.clientId,
+        label: f.label ?? "",
+        fieldType: (f.fieldType ?? "text") as FieldType,
+        isRequired: Boolean(f.isRequired),
+        isActive: Boolean(f.isActive ?? true),
+        optionsText: normalizeOptionsToText(f.options ?? null),
+      },
+      false
+    );
+  }
+
+  // ✅ ferme avec anim out puis cleanup
+  function closeEditor() {
+    if (editorAnim === "closed") return;
+    setEditorAnim("closing");
+
+    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = window.setTimeout(() => {
+      setEditing(null);
+      setCreating(false);
+      setEditorAnim("closed");
+
+      create.reset();
+      update.reset();
+      del.reset();
+    }, 180);
+  }
+
+  function toggleLocal(clientId: string, patch: Partial<Pick<DraftField, "isRequired" | "isActive">>) {
+    setDraft((prev) => prev.map((f) => (f.clientId === clientId ? { ...f, ...patch } : f)));
+    markDirty();
+  }
+
+  function moveLocal(clientId: string, dir: -1 | 1) {
+    setDraft((prev) => {
+      const idx = prev.findIndex((x) => x.clientId === clientId);
+      if (idx < 0) return prev;
+      const nextIdx = idx + dir;
+      if (nextIdx < 0 || nextIdx >= prev.length) return prev;
+
+      const copy = [...prev];
+      const tmp = copy[idx];
+      copy[idx] = copy[nextIdx];
+      copy[nextIdx] = tmp;
+
+      return normalizeContiguousSortOrder(copy);
+    });
+    markDirty();
+  }
+
+  function removeLocal(clientId: string) {
+    setDraft((prev) => {
+      const f = prev.find((x) => x.clientId === clientId);
+      if (!f) return prev;
+
+      if (f.id) {
+        setDeletedIds((s) => {
+          const ns = new Set(s);
+          ns.add(f.id!);
+          return ns;
+        });
+      }
+
+      const next = prev.filter((x) => x.clientId !== clientId);
+      return normalizeContiguousSortOrder(next);
+    });
+
+    if (editing?.id === clientId) closeEditor();
+    markDirty();
+  }
+
+  function upsertLocalFromEditor() {
+    if (!editing) return;
 
     const label = editing.label.trim();
     if (!label) return;
 
-    const key = buildKeyFromLabel(label, creating);
-    const options = buildOptions(editing);
+    const isCreate = creating;
+    const options = buildOptions(editing.fieldType, editing.optionsText);
+    const key = buildKeyFromLabel(label, isCreate);
 
-    if (creating) {
-      const input: CreateEventFormFieldInput = {
-        eventId: event.id,
+    if (isCreate) {
+      const clientId = makeClientId();
+      const nextField: DraftField = {
+        id: null,
+        clientId,
         label,
-        fieldKey: key, // ✅ toujours généré
-        fieldType: editing.fieldType as any,
+        fieldKey: key,
+        fieldType: editing.fieldType,
         isRequired: editing.isRequired,
         isActive: editing.isActive,
-        sortOrder: nextSortOrder(), // ✅ toujours last+1 (pas editable)
+        sortOrder: draft.length + 1,
         options,
-      } as CreateEventFormFieldInput;
+        isNew: true,
+      };
 
-      const created = await create.createEventFormField(input);
-      if (!created) return;
-
+      setDraft((prev) => normalizeContiguousSortOrder([...prev, nextField]));
+      markDirty();
       closeEditor();
-      onChanged?.();
       return;
     }
 
-    if (!editing.id) return;
+    const clientId = editing.id;
+    if (!clientId) return;
 
-    const patch: Omit<UpdateEventFormFieldPatch, "id"> = {
-      label,
-      fieldKey: key, // ✅ régénéré depuis label à chaque save (comme demandé)
-      fieldType: editing.fieldType as any,
-      isRequired: editing.isRequired,
-      isActive: editing.isActive,
-      // ✅ on conserve l’ordre actuel (pas de champ UI)
-      sortOrder: clampInt(editing.sortOrder, 0),
-      options,
-    };
+    setDraft((prev) =>
+      prev.map((f) =>
+        f.clientId === clientId
+          ? {
+              ...f,
+              label,
+              fieldKey: key,
+              fieldType: editing.fieldType,
+              isRequired: editing.isRequired,
+              isActive: editing.isActive,
+              options,
+            }
+          : f
+      )
+    );
 
-    const updated = await update.updateEventFormField({
-      fieldId: editing.id,
-      patch,
-    });
-
-    if (!updated) return;
-
+    markDirty();
     closeEditor();
-    onChanged?.();
   }
 
-  async function remove(fieldId: string) {
-    if (!fieldId || isDeleting) return;
-
-    const ok = await del.deleteEventFormField({ id: fieldId });
-    if (!ok) return;
-
-    if (editing?.id === fieldId) closeEditor();
-    onChanged?.();
+  function resetLocalChanges() {
+    setIsDirty(false);
+    setSaveAllError(null);
+    lastLoadedSigRef.current = "";
   }
+
+  async function saveAll() {
+    if (!event?.id) return;
+    if (isSaving) return;
+
+    setIsSavingAll(true);
+    setSaveAllError(null);
+
+    try {
+      const normalized = normalizeContiguousSortOrder(draft);
+
+      const toDelete = Array.from(deletedIds);
+      for (const id of toDelete) {
+        const ok = await del.deleteEventFormField({ id });
+        if (!ok) throw new Error(String(del.error || "Erreur suppression"));
+      }
+
+      for (const f of normalized) {
+        const options = f.options ?? null;
+
+        if (!f.id) {
+          const input: CreateEventFormFieldInput = {
+            eventId: event.id,
+            label: f.label,
+            fieldKey: f.fieldKey,
+            fieldType: f.fieldType as any,
+            isRequired: f.isRequired,
+            isActive: f.isActive,
+            sortOrder: f.sortOrder,
+            options,
+          } as CreateEventFormFieldInput;
+
+          const created = await create.createEventFormField(input);
+          if (!created) throw new Error(String(create.error || "Erreur création"));
+          continue;
+        }
+
+        const patch: Omit<UpdateEventFormFieldPatch, "id"> = {
+          label: f.label,
+          fieldKey: f.fieldKey,
+          fieldType: f.fieldType as any,
+          isRequired: f.isRequired,
+          isActive: f.isActive,
+          sortOrder: f.sortOrder,
+          options,
+        };
+
+        const updated = await update.updateEventFormField({ fieldId: f.id, patch });
+        if (!updated) throw new Error(String(update.error || "Erreur mise à jour"));
+      }
+
+      setIsDirty(false);
+      setDeletedIds(new Set());
+      onChanged?.();
+    } catch (e: any) {
+      setSaveAllError(e?.message ? String(e.message) : "Erreur inconnue");
+    } finally {
+      setIsSavingAll(false);
+    }
+  }
+
+  const isEditorOpen = editorAnim === "open" || editorAnim === "closing";
 
   return (
     <div className="adminRegForm">
@@ -305,193 +448,232 @@ export function EventRegistrationFormPanel(props: Props) {
           <h3 style={{ margin: 0 }}>Formulaire d’inscription</h3>
           <div className="adminEventHint">
             Gère les champs demandés aux participants. Tu peux activer/désactiver et rendre requis.
+            {isDirty ? (
+              <span style={{ marginLeft: 10, fontWeight: 900, color: "#b45309" }}>
+                • Modifications non sauvegardées
+              </span>
+            ) : null}
           </div>
         </div>
 
         <div className="adminEventHeaderActions">
-          <Button onClick={openCreate} disabled={!event?.id}>
+          <Button onClick={openCreate} disabled={!event?.id || isSaving}>
             Ajouter un champ
           </Button>
+
+          <Button onClick={saveAll} disabled={!event?.id || !isDirty || isSaving}>
+            {isSavingAll ? "Sauvegarde…" : "Sauvegarder"}
+          </Button>
+
+          {isDirty ? (
+            <Button onClick={resetLocalChanges} disabled={isSaving}>
+              Annuler
+            </Button>
+          ) : null}
         </div>
       </div>
 
-      <div className="adminRegGrid">
-        <div className="adminRegList">
-          {sorted.length === 0 ? (
-            <div className="adminEventEmpty">Aucun champ. Clique “Ajouter un champ”.</div>
-          ) : (
-            sorted.map((f, idx) => {
-              const id = String(f.id);
-              const active = Boolean(f.isActive ?? true);
-              const required = Boolean(f.isRequired ?? false);
-              const type = String(f.fieldType ?? "text");
+      {saveAllError ? (
+        <div className="adminEventHint" style={{ color: "crimson", marginTop: 2 }}>
+          {saveAllError}
+        </div>
+      ) : null}
 
-              return (
-                <div key={id} className={active ? "adminRegCard" : "adminRegCard isInactive"}>
-                  <div className="adminRegTop">
-                    <div className="adminRegTitle">{f.label}</div>
+      <div className={`adminRegShell ${isEditorOpen ? "isEditorOpen" : ""}`}>
+        <div className="adminRegLeft">
+          <div className="adminRegList">
+            {draft.length === 0 ? (
+              <div className="adminEventEmpty">Aucun champ. Clique “Ajouter un champ”.</div>
+            ) : (
+              draft.map((f, idx) => {
+                const active = Boolean(f.isActive ?? true);
+                const required = Boolean(f.isRequired ?? false);
+                const type = String(f.fieldType ?? "text");
 
-                    <div className="adminRegPills">
-                      <span className={active ? "adminRegPill" : "adminRegPill isOff"}>
-                        {active ? "Actif" : "Inactif"}
-                      </span>
-                      <span className={required ? "adminRegPill isReq" : "adminRegPill isOpt"}>
-                        {required ? "Requis" : "Optionnel"}
-                      </span>
+                return (
+                  <div key={f.clientId} className={active ? "adminRegCard" : "adminRegCard isInactive"}>
+                    <div className="adminRegTop">
+                      <div className="adminRegTitle">{f.label}</div>
+
+                      <div className="adminRegPills">
+                        <span className={active ? "adminRegPill" : "adminRegPill isOff"}>
+                          {active ? "Actif" : "Inactif"}
+                        </span>
+                        <span className={required ? "adminRegPill isReq" : "adminRegPill isOpt"}>
+                          {required ? "Requis" : "Optionnel"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="adminRegMeta">
+                      <span>Type : {type}</span>
+                    </div>
+
+                    <div className="adminRegActions">
+                      <button type="button" className="adminTicketBtn" onClick={() => openEdit(f)} disabled={isSaving}>
+                        Modifier
+                      </button>
+
+                      <button
+                        type="button"
+                        className="adminTicketBtn"
+                        onClick={() => toggleLocal(f.clientId, { isRequired: !required })}
+                        disabled={isSaving}
+                      >
+                        {required ? "Rendre optionnel" : "Rendre requis"}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="adminTicketBtn"
+                        onClick={() => toggleLocal(f.clientId, { isActive: !active })}
+                        disabled={isSaving}
+                      >
+                        {active ? "Désactiver" : "Activer"}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="adminTicketBtn"
+                        onClick={() => moveLocal(f.clientId, -1)}
+                        disabled={isSaving || idx === 0}
+                      >
+                        ↑
+                      </button>
+
+                      <button
+                        type="button"
+                        className="adminTicketBtn"
+                        onClick={() => moveLocal(f.clientId, 1)}
+                        disabled={isSaving || idx === draft.length - 1}
+                      >
+                        ↓
+                      </button>
+
+                      <button
+                        type="button"
+                        className="adminTicketBtn danger"
+                        onClick={() => removeLocal(f.clientId)}
+                        disabled={isSaving}
+                      >
+                        Supprimer
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        <div className="adminRegRight">
+          {editing ? (
+            <div
+              className={[
+                "regEditorPanel",
+                editorAnim === "open" ? "isOpen" : "",
+                editorAnim === "closing" ? "isClosing" : "",
+              ].join(" ")}
+            >
+              <div className="adminTicketsEditorCard">
+                <div className="adminTicketsEditorHeader">
+                  <div>
+                    <div className="adminTicketsEditorTitle">{creating ? "Nouveau champ" : "Modifier champ"}</div>
+                    <div className="adminEventHint">
+                      Pour <code>select</code>/<code>radio</code> : une option par ligne (ex: Oui, Non).
                     </div>
                   </div>
 
-                  <div className="adminRegMeta">
-                    <span>Type : {type}</span>
-                    {/* ✅ ordre + fieldKey virés de la visualisation */}
-                  </div>
-
-                  <div className="adminRegActions">
-                    <button type="button" className="adminTicketBtn" onClick={() => openEdit(f)}>
-                      Modifier
-                    </button>
-
-                    <button
-                      type="button"
-                      className="adminTicketBtn"
-                      onClick={() => quickToggle(id, { is_required: !required })}
-                    >
-                      {required ? "Rendre optionnel" : "Rendre requis"}
-                    </button>
-
-                    <button
-                      type="button"
-                      className="adminTicketBtn"
-                      onClick={() => quickToggle(id, { is_active: !active })}
-                    >
-                      {active ? "Désactiver" : "Activer"}
-                    </button>
-
-                    <button type="button" className="adminTicketBtn" onClick={() => move(id, -1)} disabled={idx === 0}>
-                      ↑
-                    </button>
-
-                    <button
-                      type="button"
-                      className="adminTicketBtn"
-                      onClick={() => move(id, 1)}
-                      disabled={idx === sorted.length - 1}
-                    >
-                      ↓
-                    </button>
-
-                    <button
-                      type="button"
-                      className="adminTicketBtn danger"
-                      onClick={() => remove(id)}
-                      disabled={isDeleting}
-                    >
-                      {isDeleting ? "Suppression…" : "Supprimer"}
-                    </button>
-                  </div>
+                  {/* ✅ Petit bouton fermer */}
+                  <button
+                    type="button"
+                    className="adminEditorCloseBtn"
+                    onClick={closeEditor}
+                    disabled={isSaving}
+                    aria-label="Fermer"
+                    title="Fermer"
+                  >
+                    ✕
+                  </button>
                 </div>
-              );
-            })
-          )}
 
-          {deleteError ? (
-            <div className="adminEventHint" style={{ color: "crimson", marginTop: 10 }}>
-              {deleteError}
+                <div className="adminEventFormGrid" style={{ marginTop: 12 }}>
+                  <div className="adminEventField">
+                    <div className="adminEventLabel">Label</div>
+                    <input
+                      className="adminEventInput"
+                      value={editing.label}
+                      onChange={(e) => setEditing({ ...editing, label: e.target.value })}
+                      placeholder="Ex: Allergies"
+                      disabled={isSaving}
+                    />
+                  </div>
+
+                  <div className="adminEventField">
+                    <div className="adminEventLabel">Type</div>
+                    <select
+                      className="adminEventInput"
+                      value={editing.fieldType}
+                      onChange={(e) => setEditing({ ...editing, fieldType: e.target.value as FieldType })}
+                      disabled={isSaving}
+                    >
+                      {FIELD_TYPES.map((t) => (
+                        <option key={t.value} value={t.value}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="adminEventField">
+                    <label style={{ display: "flex", gap: 10, alignItems: "center", paddingTop: 6 }}>
+                      <input
+                        type="checkbox"
+                        checked={editing.isRequired}
+                        onChange={(e) => setEditing({ ...editing, isRequired: e.target.checked })}
+                        disabled={isSaving}
+                      />
+                      <span>Requis</span>
+                    </label>
+
+                    <label style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 10 }}>
+                      <input
+                        type="checkbox"
+                        checked={editing.isActive}
+                        onChange={(e) => setEditing({ ...editing, isActive: e.target.checked })}
+                        disabled={isSaving}
+                      />
+                      <span>Actif</span>
+                    </label>
+                  </div>
+
+                  {(editing.fieldType === "select" || editing.fieldType === "radio") && (
+                    <div className="adminEventField adminEventFieldSpan2">
+                      <div className="adminEventLabel">Options</div>
+                      <textarea
+                        className="adminEventTextarea"
+                        value={editing.optionsText}
+                        onChange={(e) => setEditing({ ...editing, optionsText: e.target.value })}
+                        placeholder={`Une option par ligne :\nOui\nNon\nPeut-être`}
+                        disabled={isSaving}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="adminTicketsEditorFooter">
+                  <button
+                    type="button"
+                    className="adminEventBtn"
+                    onClick={upsertLocalFromEditor}
+                    disabled={!editing.label.trim() || isSaving}
+                  >
+                    {creating ? "Ajouter (local)" : "Appliquer (local)"}
+                  </button>
+                </div>
+              </div>
             </div>
           ) : null}
-        </div>
-
-        <div className="adminRegEditor">
-          {editing ? (
-            <div className="adminTicketsEditorCard">
-              <div className="adminTicketsEditorHeader">
-                <div>
-                  <div className="adminTicketsEditorTitle">{creating ? "Nouveau champ" : "Modifier champ"}</div>
-                  <div className="adminEventHint">
-                    Pour <code>select</code>/<code>radio</code> : une option par ligne (ex: Oui, Non).
-                  </div>
-                </div>
-
-                <button type="button" className="adminTicketBtn" onClick={closeEditor}>
-                  Fermer
-                </button>
-              </div>
-
-              <div className="adminEventFormGrid" style={{ marginTop: 12 }}>
-                <div className="adminEventField">
-                  <div className="adminEventLabel">Label</div>
-                  <input
-                    className="adminEventInput"
-                    value={editing.label}
-                    onChange={(e) => setEditing({ ...editing, label: e.target.value })}
-                    placeholder="Ex: Allergies"
-                  />
-                </div>
-
-                <div className="adminEventField">
-                  <div className="adminEventLabel">Type</div>
-                  <select
-                    className="adminEventInput"
-                    value={editing.fieldType}
-                    onChange={(e) => setEditing({ ...editing, fieldType: e.target.value as FieldType })}
-                  >
-                    {FIELD_TYPES.map((t) => (
-                      <option key={t.value} value={t.value}>
-                        {t.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* ✅ Actif / Requis simplifiés : juste les cases (pas de cadre/titre) */}
-                <div className="adminEventField">
-                  <label style={{ display: "flex", gap: 10, alignItems: "center", paddingTop: 6 }}>
-                    <input
-                      type="checkbox"
-                      checked={editing.isRequired}
-                      onChange={(e) => setEditing({ ...editing, isRequired: e.target.checked })}
-                    />
-                    <span>Requis</span>
-                  </label>
-
-                  <label style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 10 }}>
-                    <input
-                      type="checkbox"
-                      checked={editing.isActive}
-                      onChange={(e) => setEditing({ ...editing, isActive: e.target.checked })}
-                    />
-                    <span>Actif</span>
-                  </label>
-                </div>
-
-                {(editing.fieldType === "select" || editing.fieldType === "radio") && (
-                  <div className="adminEventField adminEventFieldSpan2">
-                    <div className="adminEventLabel">Options</div>
-                    <textarea
-                      className="adminEventTextarea"
-                      value={editing.optionsText}
-                      onChange={(e) => setEditing({ ...editing, optionsText: e.target.value })}
-                      placeholder={`Une option par ligne :\nOui\nNon\nPeut-être`}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {saveError ? (
-                <div className="adminEventHint" style={{ color: "crimson", marginTop: 10 }}>
-                  {saveError}
-                </div>
-              ) : null}
-
-              <div className="adminTicketsEditorFooter">
-                <button type="button" className="adminEventBtn" onClick={save} disabled={!editing.label.trim() || isSaving}>
-                  {isSaving ? "Enregistrement…" : "Enregistrer"}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="adminEventEmpty">Sélectionne un champ (ou “Ajouter un champ”).</div>
-          )}
         </div>
       </div>
     </div>
