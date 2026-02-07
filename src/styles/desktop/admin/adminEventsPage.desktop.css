@@ -108,18 +108,32 @@
 .adminEventTab{
   padding:8px 10px;
   border-radius:10px;
-  border:1px solid #e5e7eb;
-  background:#fff;
-  color:#111827;
+
+  background: rgb(var(--primary) / 0.02);
+  border:1px solid rgb(var(--primary) / 0.55);
+  color: rgb(var(--primary));
+
   font-size:13px;
+  font-weight:800;
   cursor:pointer;
+
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
 }
 
-.adminEventTab.isActive{
-  background:#111827;
-  color:#fff;
-  border-color:#111827;
+.adminEventTab:hover{
+  background: rgb(var(--primary) / 0.12);
 }
+
+
+.adminEventTab.isActive{
+  background: rgb(var(--primary));
+  border-color: rgb(var(--primary));
+  color: rgb(var(--primary-contrast));
+}
+
 
 .adminEventSection{
   margin-top: 8px;

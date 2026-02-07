@@ -60,7 +60,7 @@ export function PublicEventHeader({ orgSlug, org, event }: Props) {
 
         <div className="publicActions">
           <Link to={`/o/${orgSlug}`}>
-            <Button variant="secondary" label="Retour" />
+            <Button variant="primary" label="Retour" />
           </Link>
         </div>
       </div>

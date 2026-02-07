@@ -450,7 +450,7 @@ export function EventAttendeesPage() {
           <div className="publicDivider" />
 
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-            <Button variant="secondary" label="Retour aux billets" onClick={goBack} />
+            <Button variant="primary" label="Retour aux billets" onClick={goBack} />
             <Button label="Continuer" onClick={goNext} disabled={totalSelected <= 0 || !allValid} />
           </div>
         </div>

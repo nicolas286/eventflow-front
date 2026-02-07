@@ -8,6 +8,7 @@ import type { UpdateEventFormFieldPatch } from "../../../../domain/models/admin/
 import { useCreateEventFormField } from "../../hooks/useCreateEventFormField";
 import { useUpdateEventFormField } from "../../hooks/useUpdateEventFormField";
 import { useDeleteEventFormField } from "../../hooks/useDeleteEventFormField";
+import { Button } from "../../../../ui/components";
 
 type Props = {
   supabase: SupabaseClient;
@@ -308,9 +309,9 @@ export function EventRegistrationFormPanel(props: Props) {
         </div>
 
         <div className="adminEventHeaderActions">
-          <button type="button" className="adminEventBtn" onClick={openCreate} disabled={!event?.id}>
+          <Button onClick={openCreate} disabled={!event?.id}>
             Ajouter un champ
-          </button>
+          </Button>
         </div>
       </div>
 
