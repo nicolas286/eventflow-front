@@ -157,7 +157,7 @@ export function EventTicketsPage() {
                 {sortedProducts.map((p) => {
                   const qty = quantities[p.id] ?? 0;
                   const soldOut = p.stockQty === 0;
-                  const stockLabel = p.stockQty == null ? "Illimité" : `Stock : ${p.stockQty}`;
+                  const stockLabel = p.stockQty == null ? "Illimité" : `Stock : ${p.stockQty - p.soldQty - p.reservedQty}`;
 
                   const badgeTone = soldOut ? "danger" : "success";
                   const badgeLabel = soldOut ? "Épuisé" : "Disponible";

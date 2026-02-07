@@ -242,9 +242,9 @@ export function EventTicketsPanel(props: Props) {
   }
 
   function formatStockLine(sold: number, stockQty: number | null | undefined) {
-    if (stockQty == null) return `${sold} / illimité`;
+    if (stockQty == null) return `${sold} vendus / illimité`;
     const stock = clampInt(stockQty, 0);
-    return `${sold} / ${stock}`;
+    return `${stock - sold} / ${stock}`;
   }
 
   return (

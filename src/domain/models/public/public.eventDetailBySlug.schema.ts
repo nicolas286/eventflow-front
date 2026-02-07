@@ -31,6 +31,8 @@ export const publicEventProductSchema = eventProductSchema.pick({
   currency: true,
   priceCents: true,
   stockQty: true,
+  reservedQty: true,
+  soldQty: true,
   createsAttendees: true,
   attendeesPerUnit: true,
   sortOrder: true,
