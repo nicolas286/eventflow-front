@@ -7,6 +7,7 @@ import "../../../../styles/mobile/admin/adminSingleEvent.tickets.mobile.css";
 import { EventTicketsPanel } from "../../../../features/admin/events/singleEvent/EventTicketsPanel";
 import { useCreateEventProduct } from "../../../../features/admin/hooks/useCreateEventProduct";
 import { useDeleteEventProduct } from "../../../../features/admin/hooks/useDeleteEventProduct";
+import { useUpdateEventProduct } from "../../../../features/admin/hooks/useUpdateEventProduct";
 
 type AnyRecord = Record<string, any>;
 
@@ -25,6 +26,7 @@ export function SingleEventTicketsSection(props: {
   const { orgId, event, data, onChanged } = props;
 
   const createProduct = useCreateEventProduct({ supabase });
+  const updateProduct = useUpdateEventProduct({ supabase });
   const removeProduct = useDeleteEventProduct({ supabase });
 
   const products = useMemo(() => toRows(data.products), [data.products]);
@@ -46,6 +48,10 @@ export function SingleEventTicketsSection(props: {
         payments={payments}
         createLoading={createProduct.loading}
         createError={createProduct.error}
+          onUpdate={async ({ productId, patch }) => {
+          await updateProduct.updateEventProduct({ productId: productId, patch });
+          await onChanged();
+        }}
         onCreate={async (input) => {
           await createProduct.createEventProduct(input);
           await onChanged();
