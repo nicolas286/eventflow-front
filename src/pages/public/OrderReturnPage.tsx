@@ -6,6 +6,7 @@ import { usePublicEventDetail } from "../../features/admin/hooks/usePublicEventD
 
 import Container from "../../ui/components/container/Container";
 import Card, { CardBody } from "../../ui/components/card/Card";
+import Button from "../../ui/components/button/Button"
 
 import { PublicEventHeader } from "./checkout/PublicEventHeader";
 
@@ -421,9 +422,9 @@ export function OrderReturnPage() {
                     Retour automatique dans <span className="orderReturnStrong">{countdown ?? 10}s</span>
                   </div>
 
-                  <button className="orderReturnButton" onClick={() => navigate(backUrl, { replace: true })}>
+                  <Button onClick={() => navigate(backUrl, { replace: true })}>
                     Retour maintenant
-                  </button>
+                  </Button>
                 </div>
               </CardBody>
             </Card>
@@ -437,9 +438,9 @@ export function OrderReturnPage() {
                 <h2 className="orderReturnTitle">Oups…</h2>
                 <p className="orderReturnSubtitle">Statut : {order.status}</p>
                 <div className="orderReturnFooter" style={{ justifyContent: "center" }}>
-                  <button className="orderReturnButton" onClick={() => navigate(backUrl, { replace: true })}>
+                  <Button onClick={() => navigate(backUrl, { replace: true })}>
                     Retour à l’organisation
-                  </button>
+                  </Button>
                 </div>
               </CardBody>
             </Card>

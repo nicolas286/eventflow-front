@@ -6,6 +6,8 @@ import {
   type UpdateEventFullPatch,
 } from "../../../../domain/models/admin/admin.updateEventFullPatch.schema";
 
+import Button from "../../../../ui/components/button/Button"
+
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
 /* ------------------------------------------------------------------ */
@@ -437,14 +439,14 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
           <div className="adminEventLabel">Bannière</div>
 
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button type="button" className="adminEventBtn isSecondary" onClick={openBannerPicker}>
+            <Button  onClick={openBannerPicker}>
               {hasCustomBannerNow || bannerFile ? "Remplacer" : "Choisir un fichier"}
-            </button>
+            </Button>
 
             {(hasCustomBannerNow || bannerFile) ? (
-              <button type="button" className="adminEventBtn isSecondary" onClick={clearBanner}>
+              <Button onClick={clearBanner}>
                 Retirer
-              </button>
+              </Button>
             ) : null}
 
             {bannerFile ? (
@@ -485,23 +487,19 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
           className="adminEventField adminEventFieldSpan2"
           style={{ marginTop: 12, display: "flex", gap: 8 }}
         >
-          <button
-            type="button"
-            className="adminEventBtn isSecondary"
+          <Button
             disabled={!canSave || saving}
             onClick={() => void save(false)}
           >
             {secondaryLabel}
-          </button>
+          </Button>
 
-          <button
-            type="button"
-            className="adminEventBtn"
+          <Button
             disabled={isPrimaryDisabled}
             onClick={() => void save(true)}
           >
             {saving ? "Enregistrement…" : primaryLabel}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -376,7 +376,7 @@ export function EventPaymentPage() {
           <div className="publicDivider" />
 
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-            <Button variant="secondary" label="Retour" onClick={goBack} disabled={registering} />
+            <Button variant="primary" label="Retour" onClick={goBack} disabled={registering} />
             <Button
               label={
                 totalCents === 0

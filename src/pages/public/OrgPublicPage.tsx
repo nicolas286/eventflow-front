@@ -69,13 +69,13 @@ export function OrgPublicPage() {
                 <div className="publicActions">
                   {profile.website ? (
                     <a href={profile.website} target="_blank" rel="noreferrer">
-                      <Button variant="secondary" label="Site web" />
+                      <Button variant="primary" label="Site web" />
                     </a>
                   ) : null}
 
                   {profile.publicEmail ? (
                     <a href={`mailto:${profile.publicEmail}`}>
-                      <Button variant="ghost" label="Contact" />
+                      <Button variant="primary" label="Contact" />
                     </a>
                   ) : null}
                 </div>

@@ -527,7 +527,7 @@ function isTabKey(v: string | null): v is TabKey {
 
                 <div style={{ marginTop: 12 }}>
                   <Button
-                    variant="secondary"
+                    variant="danger"
                     style={{ width: "100%" }}
                     disabled={startLoading || cancelLoading}
                     onClick={onCancelPlan}

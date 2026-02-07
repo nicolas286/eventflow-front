@@ -204,7 +204,7 @@ export function EventTicketsPage() {
                           <div className="publicTicketRight">
                             <div className="publicQtyBlock">
                               <Button
-                                variant="secondary"
+                                variant="primary"
                                 label="−"
                                 onClick={() => updateQty(p.id, qty - 1)}
                                 disabled={qty <= 0}
@@ -222,7 +222,7 @@ export function EventTicketsPage() {
                               />
 
                               <Button
-                                variant="secondary"
+                                variant="primary"
                                 label="+"
                                 onClick={() => updateQty(p.id, qty + 1)}
                                 disabled={soldOut || qty >= maxQty}

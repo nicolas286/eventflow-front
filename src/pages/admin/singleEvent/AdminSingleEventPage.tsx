@@ -10,6 +10,7 @@ import { useUpdateEvent } from "../../../features/admin/hooks/useUpdateEvent";
 import type { UpdateEventFullPatch } from "../../../domain/models/admin/admin.updateEventFullPatch.schema";
 
 import { uploadOrgAssetsRepo } from "../../../gateways/supabase/repositories/dashboard/uploadOrgAssets.repo";
+import Button from "../../../ui/components/button/Button"
 
 import { SingleEventDetailsSection } from "../../../pages/admin/singleEvent/sections/SingleEventDetailsSection";
 import { SingleEventTicketsSection } from "../../../pages/admin/singleEvent/sections/SingleEventTicketsSection";
@@ -168,11 +169,21 @@ export function AdminSingleEventPage() {
   );
 }
 
-function TabButton(props: { active?: boolean; onClick: () => void; children: React.ReactNode }) {
-  const { active, onClick, children } = props;
+function TabButton(props: {
+  active?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  const { active = false, onClick, children } = props;
+
   return (
-    <button onClick={onClick} className={active ? "adminEventTab isActive" : "adminEventTab"} type="button">
+    <Button
+      type="button"
+      onClick={onClick}
+      className={`adminEventTab${active ? " isActive" : ""}`}
+    >
       {children}
-    </button>
+    </Button>
   );
 }
+
