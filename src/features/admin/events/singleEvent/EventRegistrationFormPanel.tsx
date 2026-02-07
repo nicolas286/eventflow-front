@@ -8,7 +8,7 @@ import type { UpdateEventFormFieldPatch } from "../../../../domain/models/admin/
 import { useCreateEventFormField } from "../../hooks/useCreateEventFormField";
 import { useUpdateEventFormField } from "../../hooks/useUpdateEventFormField";
 import { useDeleteEventFormField } from "../../hooks/useDeleteEventFormField";
-import { Button } from "../../../../ui/components";
+import { Button, EditorShell } from "../../../../ui/components";
 
 type Props = {
   supabase: SupabaseClient;
@@ -56,7 +56,7 @@ type DraftField = {
   isNew?: boolean;
 };
 
-type EditorAnimState = "closed" | "open" | "closing";
+type MoveDir = "up" | "down";
 
 function slugKey(value: string) {
   return value
@@ -143,11 +143,11 @@ export function EventRegistrationFormPanel(props: Props) {
   const [isSavingAll, setIsSavingAll] = useState(false);
   const [saveAllError, setSaveAllError] = useState<string | null>(null);
 
-  // ✅ animation état editor (comme tickets)
-  const [editorAnim, setEditorAnim] = useState<EditorAnimState>("closed");
-  const closeTimerRef = useRef<number | null>(null);
-
   const lastLoadedSigRef = useRef<string>("");
+
+  // ✅ Anim move (cartes + flèches) : on garde une trace courte des items concernés
+  const [moveAnim, setMoveAnim] = useState<Record<string, MoveDir>>({});
+  const moveTimerRef = useRef<number | null>(null);
 
   const isSaving = isSavingAll || create.loading || update.loading || del.loading;
 
@@ -185,7 +185,7 @@ export function EventRegistrationFormPanel(props: Props) {
 
   useEffect(() => {
     return () => {
-      if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+      if (moveTimerRef.current) window.clearTimeout(moveTimerRef.current);
     };
   }, []);
 
@@ -215,65 +215,46 @@ export function EventRegistrationFormPanel(props: Props) {
     return null;
   }
 
-  // ✅ ouvre editor + anim in
-  function openEditor(nextEditing: EditState, isCreate: boolean) {
-    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
-
+  function openCreate() {
     setSaveAllError(null);
     create.reset();
     update.reset();
     del.reset();
 
-    setCreating(isCreate);
-    setEditing(nextEditing);
-
-    // si on était en closing, on repasse open
-    setEditorAnim("open");
-  }
-
-  function openCreate() {
-    openEditor(
-      {
-        id: null,
-        label: "",
-        fieldType: "text",
-        isRequired: false,
-        isActive: true,
-        optionsText: "",
-      },
-      true
-    );
+    setCreating(true);
+    setEditing({
+      id: null,
+      label: "",
+      fieldType: "text",
+      isRequired: false,
+      isActive: true,
+      optionsText: "",
+    });
   }
 
   function openEdit(f: DraftField) {
-    openEditor(
-      {
-        id: f.clientId,
-        label: f.label ?? "",
-        fieldType: (f.fieldType ?? "text") as FieldType,
-        isRequired: Boolean(f.isRequired),
-        isActive: Boolean(f.isActive ?? true),
-        optionsText: normalizeOptionsToText(f.options ?? null),
-      },
-      false
-    );
+    setSaveAllError(null);
+    create.reset();
+    update.reset();
+    del.reset();
+
+    setCreating(false);
+    setEditing({
+      id: f.clientId,
+      label: f.label ?? "",
+      fieldType: (f.fieldType ?? "text") as FieldType,
+      isRequired: Boolean(f.isRequired),
+      isActive: Boolean(f.isActive ?? true),
+      optionsText: normalizeOptionsToText(f.options ?? null),
+    });
   }
 
-  // ✅ ferme avec anim out puis cleanup
   function closeEditor() {
-    if (editorAnim === "closed") return;
-    setEditorAnim("closing");
-
-    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
-    closeTimerRef.current = window.setTimeout(() => {
-      setEditing(null);
-      setCreating(false);
-      setEditorAnim("closed");
-
-      create.reset();
-      update.reset();
-      del.reset();
-    }, 180);
+    setEditing(null);
+    setCreating(false);
+    create.reset();
+    update.reset();
+    del.reset();
   }
 
   function toggleLocal(clientId: string, patch: Partial<Pick<DraftField, "isRequired" | "isActive">>) {
@@ -281,20 +262,44 @@ export function EventRegistrationFormPanel(props: Props) {
     markDirty();
   }
 
+  function triggerMoveAnim(aId: string, aDir: MoveDir, bId?: string, bDir?: MoveDir) {
+    if (moveTimerRef.current) window.clearTimeout(moveTimerRef.current);
+
+    setMoveAnim((prev) => {
+      const next = { ...prev, [aId]: aDir };
+      if (bId && bDir) next[bId] = bDir;
+      return next;
+    });
+
+    moveTimerRef.current = window.setTimeout(() => {
+      setMoveAnim({});
+      moveTimerRef.current = null;
+    }, 220);
+  }
+
   function moveLocal(clientId: string, dir: -1 | 1) {
     setDraft((prev) => {
       const idx = prev.findIndex((x) => x.clientId === clientId);
       if (idx < 0) return prev;
+
       const nextIdx = idx + dir;
       if (nextIdx < 0 || nextIdx >= prev.length) return prev;
 
       const copy = [...prev];
-      const tmp = copy[idx];
-      copy[idx] = copy[nextIdx];
-      copy[nextIdx] = tmp;
+      const a = copy[idx];
+      const b = copy[nextIdx];
+
+      copy[idx] = b;
+      copy[nextIdx] = a;
+
+      // ✅ anim: a bouge dans dir, b bouge dans l'inverse
+      const aDir: MoveDir = dir === -1 ? "up" : "down";
+      const bDir: MoveDir = dir === -1 ? "down" : "up";
+      triggerMoveAnim(a.clientId, aDir, b.clientId, bDir);
 
       return normalizeContiguousSortOrder(copy);
     });
+
     markDirty();
   }
 
@@ -439,7 +444,7 @@ export function EventRegistrationFormPanel(props: Props) {
     }
   }
 
-  const isEditorOpen = editorAnim === "open" || editorAnim === "closing";
+  const isOpen = Boolean(editing);
 
   return (
     <div className="adminRegForm">
@@ -479,8 +484,13 @@ export function EventRegistrationFormPanel(props: Props) {
         </div>
       ) : null}
 
-      <div className={`adminRegShell ${isEditorOpen ? "isEditorOpen" : ""}`}>
-        <div className="adminRegLeft">
+      <EditorShell
+        isOpen={isOpen}
+        onRequestClose={closeEditor}
+        editorWidth={420}
+        editorGap={14}
+        stickyTop={84}
+        left={
           <div className="adminRegList">
             {draft.length === 0 ? (
               <div className="adminEventEmpty">Aucun champ. Clique “Ajouter un champ”.</div>
@@ -490,8 +500,18 @@ export function EventRegistrationFormPanel(props: Props) {
                 const required = Boolean(f.isRequired ?? false);
                 const type = String(f.fieldType ?? "text");
 
+                const animDir = moveAnim[f.clientId]; // "up" | "down" | undefined
+                const cardAnimClass =
+                  animDir === "up" ? "isMoveUp" : animDir === "down" ? "isMoveDown" : "";
+
                 return (
-                  <div key={f.clientId} className={active ? "adminRegCard" : "adminRegCard isInactive"}>
+                  <div
+                    key={f.clientId}
+                    className={[
+                      active ? "adminRegCard" : "adminRegCard isInactive",
+                      cardAnimClass,
+                    ].join(" ")}
+                  >
                     <div className="adminRegTop">
                       <div className="adminRegTitle">{f.label}</div>
 
@@ -510,172 +530,151 @@ export function EventRegistrationFormPanel(props: Props) {
                     </div>
 
                     <div className="adminRegActions">
-                      <button type="button" className="adminTicketBtn" onClick={() => openEdit(f)} disabled={isSaving}>
+                      <Button onClick={() => openEdit(f)} disabled={isSaving}>
                         Modifier
-                      </button>
+                      </Button>
 
-                      <button
-                        type="button"
-                        className="adminTicketBtn"
+                      <Button
                         onClick={() => toggleLocal(f.clientId, { isRequired: !required })}
                         disabled={isSaving}
                       >
                         {required ? "Rendre optionnel" : "Rendre requis"}
-                      </button>
+                      </Button>
 
-                      <button
-                        type="button"
-                        className="adminTicketBtn"
+                      <Button
                         onClick={() => toggleLocal(f.clientId, { isActive: !active })}
                         disabled={isSaving}
                       >
                         {active ? "Désactiver" : "Activer"}
-                      </button>
+                      </Button>
 
-                      <button
-                        type="button"
-                        className="adminTicketBtn"
+                      <Button
                         onClick={() => moveLocal(f.clientId, -1)}
                         disabled={isSaving || idx === 0}
+                        className={[
+                          "adminMoveBtn",
+                          animDir === "up" ? "isBumpUp" : "",
+                        ].join(" ")}
+                        aria-label="Monter"
                       >
                         ↑
-                      </button>
+                      </Button>
 
-                      <button
-                        type="button"
-                        className="adminTicketBtn"
+                      <Button
                         onClick={() => moveLocal(f.clientId, 1)}
                         disabled={isSaving || idx === draft.length - 1}
+                        className={[
+                          "adminMoveBtn",
+                          animDir === "down" ? "isBumpDown" : "",
+                        ].join(" ")}
+                        aria-label="Descendre"
                       >
                         ↓
-                      </button>
+                      </Button>
 
-                      <button
-                        type="button"
-                        className="adminTicketBtn danger"
+                      <Button
+                        variant="danger"
                         onClick={() => removeLocal(f.clientId)}
                         disabled={isSaving}
                       >
                         Supprimer
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 );
               })
             )}
           </div>
-        </div>
-
-        <div className="adminRegRight">
-          {editing ? (
-            <div
-              className={[
-                "regEditorPanel",
-                editorAnim === "open" ? "isOpen" : "",
-                editorAnim === "closing" ? "isClosing" : "",
-              ].join(" ")}
-            >
-              <div className="adminTicketsEditorCard">
-                <div className="adminTicketsEditorHeader">
-                  <div>
-                    <div className="adminTicketsEditorTitle">{creating ? "Nouveau champ" : "Modifier champ"}</div>
-                    <div className="adminEventHint">
-                      Pour <code>select</code>/<code>radio</code> : une option par ligne (ex: Oui, Non).
-                    </div>
+        }
+        right={
+          editing ? (
+            <div className="adminTicketsEditorCard">
+              <div className="adminTicketsEditorHeader">
+                <div>
+                  <div className="adminTicketsEditorTitle">{creating ? "Nouveau champ" : "Modifier champ"}</div>
+                  <div className="adminEventHint">
+                    Pour <code>select</code>/<code>radio</code> : une option par ligne (ex: Oui, Non).
                   </div>
+                </div>
+              </div>
 
-                  {/* ✅ Petit bouton fermer */}
-                  <button
-                    type="button"
-                    className="adminEditorCloseBtn"
-                    onClick={closeEditor}
+              <div className="adminEventFormGrid" style={{ marginTop: 12 }}>
+                <div className="adminEventField">
+                  <div className="adminEventLabel">Label</div>
+                  <input
+                    className="adminEventInput"
+                    value={editing.label}
+                    onChange={(e) => setEditing({ ...editing, label: e.target.value })}
+                    placeholder="Ex: Allergies"
                     disabled={isSaving}
-                    aria-label="Fermer"
-                    title="Fermer"
-                  >
-                    ✕
-                  </button>
+                  />
                 </div>
 
-                <div className="adminEventFormGrid" style={{ marginTop: 12 }}>
-                  <div className="adminEventField">
-                    <div className="adminEventLabel">Label</div>
+                <div className="adminEventField">
+                  <div className="adminEventLabel">Type</div>
+                  <select
+                    className="adminEventInput"
+                    value={editing.fieldType}
+                    onChange={(e) => setEditing({ ...editing, fieldType: e.target.value as FieldType })}
+                    disabled={isSaving}
+                  >
+                    {FIELD_TYPES.map((t) => (
+                      <option key={t.value} value={t.value}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="adminEventField">
+                  <label style={{ display: "flex", gap: 10, alignItems: "center", paddingTop: 6 }}>
                     <input
-                      className="adminEventInput"
-                      value={editing.label}
-                      onChange={(e) => setEditing({ ...editing, label: e.target.value })}
-                      placeholder="Ex: Allergies"
+                      type="checkbox"
+                      checked={editing.isRequired}
+                      onChange={(e) => setEditing({ ...editing, isRequired: e.target.checked })}
+                      disabled={isSaving}
+                    />
+                    <span>Requis</span>
+                  </label>
+
+                  <label style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 10 }}>
+                    <input
+                      type="checkbox"
+                      checked={editing.isActive}
+                      onChange={(e) => setEditing({ ...editing, isActive: e.target.checked })}
+                      disabled={isSaving}
+                    />
+                    <span>Actif</span>
+                  </label>
+                </div>
+
+                {(editing.fieldType === "select" || editing.fieldType === "radio") && (
+                  <div className="adminEventField adminEventFieldSpan2">
+                    <div className="adminEventLabel">Options</div>
+                    <textarea
+                      className="adminEventTextarea"
+                      value={editing.optionsText}
+                      onChange={(e) => setEditing({ ...editing, optionsText: e.target.value })}
+                      placeholder={`Une option par ligne :\nOui\nNon\nPeut-être`}
                       disabled={isSaving}
                     />
                   </div>
+                )}
+              </div>
 
-                  <div className="adminEventField">
-                    <div className="adminEventLabel">Type</div>
-                    <select
-                      className="adminEventInput"
-                      value={editing.fieldType}
-                      onChange={(e) => setEditing({ ...editing, fieldType: e.target.value as FieldType })}
-                      disabled={isSaving}
-                    >
-                      {FIELD_TYPES.map((t) => (
-                        <option key={t.value} value={t.value}>
-                          {t.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="adminEventField">
-                    <label style={{ display: "flex", gap: 10, alignItems: "center", paddingTop: 6 }}>
-                      <input
-                        type="checkbox"
-                        checked={editing.isRequired}
-                        onChange={(e) => setEditing({ ...editing, isRequired: e.target.checked })}
-                        disabled={isSaving}
-                      />
-                      <span>Requis</span>
-                    </label>
-
-                    <label style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 10 }}>
-                      <input
-                        type="checkbox"
-                        checked={editing.isActive}
-                        onChange={(e) => setEditing({ ...editing, isActive: e.target.checked })}
-                        disabled={isSaving}
-                      />
-                      <span>Actif</span>
-                    </label>
-                  </div>
-
-                  {(editing.fieldType === "select" || editing.fieldType === "radio") && (
-                    <div className="adminEventField adminEventFieldSpan2">
-                      <div className="adminEventLabel">Options</div>
-                      <textarea
-                        className="adminEventTextarea"
-                        value={editing.optionsText}
-                        onChange={(e) => setEditing({ ...editing, optionsText: e.target.value })}
-                        placeholder={`Une option par ligne :\nOui\nNon\nPeut-être`}
-                        disabled={isSaving}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="adminTicketsEditorFooter">
-                  <button
-                    type="button"
-                    className="adminEventBtn"
-                    onClick={upsertLocalFromEditor}
-                    disabled={!editing.label.trim() || isSaving}
-                  >
-                    {creating ? "Ajouter (local)" : "Appliquer (local)"}
-                  </button>
-                </div>
+              <div className="adminTicketsEditorFooter">
+                <Button
+                  onClick={upsertLocalFromEditor}
+                  disabled={!editing.label.trim() || isSaving}
+                  variant="primary"
+                >
+                  {creating ? "Ajouter (local)" : "Appliquer (local)"}
+                </Button>
               </div>
             </div>
-          ) : null}
-        </div>
-      </div>
+          ) : null
+        }
+      />
     </div>
   );
 }

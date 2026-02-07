@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import Button from "../../../../ui/components/button/Button";
 
+import { AttendeeEditorPanel, type RegistrationFieldLike } from "../../../../features/admin/events/singleEvent/AttendeeEditorPanel";
+
 type AnyRecord = Record<string, any>;
 
 type Attendee = {
@@ -95,6 +97,14 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [query, setQuery] = useState("");
 
+  /* -------------------- EDITOR STATE -------------------- */
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorMode, setEditorMode] = useState<"create" | "edit">("create");
+  const [editorOrderId, setEditorOrderId] = useState<string | null>(null);
+  const [editingAttendeeId, setEditingAttendeeId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [editorError, setEditorError] = useState<string | null>(null);
+
   /* -------------------- DATA -------------------- */
 
   const attendees = useMemo(
@@ -126,6 +136,19 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
     () => toRows<AnyRecord>(data?.orders ?? data?.orderRows ?? data?.order_rows),
     [data]
   );
+
+  // ✅ champs du formulaire d’inscription (source DB)
+  // ajuste les clés si ton backend les nomme autrement.
+  const regFields = useMemo(() => {
+    return toRows<RegistrationFieldLike>(
+      data?.eventFormFields ??
+        data?.event_form_fields ??
+        data?.registrationFields ??
+        data?.registration_fields ??
+        data?.formFields ??
+        data?.form_fields
+    );
+  }, [data]);
 
   /* -------------------- ORDER META -------------------- */
 
@@ -162,7 +185,7 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
 
     for (const [id, arr] of map.entries()) {
       const uniq = new Map<string, { key: string; label: string; value: string }>();
-      for (const f of arr) uniq.set(f.key, f); // garde la dernière valeur par key
+      for (const f of arr) uniq.set(f.key, f);
       const list = Array.from(uniq.values());
       list.sort((a, b) => a.label.localeCompare(b.label));
       map.set(id, list);
@@ -174,10 +197,8 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
   /* -------------------- FIELDS OPTIONS (dropdown) -------------------- */
 
   const fieldOptions = useMemo(() => {
-    const m = new Map<string, string>(); // key -> label
+    const m = new Map<string, string>();
     for (const a of answers) {
-      // on liste les champs existants (remplis ou non) : à toi de choisir
-      // ici je garde ceux qui existent au moins une fois
       const key = a.fieldKeySnapshot;
       const label = a.fieldLabelSnapshot || key;
       if (!key) continue;
@@ -211,19 +232,16 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
 
     const mode = filterMode;
 
-    // helper: match order number
     const matchOrder = (orderId: string) => {
       const orderNum = orderMetaById.get(orderId)?.orderNumber ?? "";
       return normalizeSearch(orderNum).includes(q);
     };
 
-    // helper: match any field value
     const matchAnyField = (attendeeId: string) => {
       const fields = filledFieldsByAttendeeId.get(attendeeId) ?? [];
       return fields.some((f) => normalizeSearch(f.value).includes(q));
     };
 
-    // helper: match specific field key
     const matchFieldKey = (attendeeId: string, key: string) => {
       const fields = filledFieldsByAttendeeId.get(attendeeId) ?? [];
       const found = fields.find((f) => f.key === key);
@@ -239,7 +257,6 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
         return matchFieldKey(att.id, key);
       }
 
-      // all (global): order OR any field
       return matchOrder(att.orderId) || matchAnyField(att.id);
     });
   }, [attendees, query, filterMode, orderMetaById, filledFieldsByAttendeeId]);
@@ -262,13 +279,78 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
       return bd.localeCompare(ad);
     });
 
-    // tri participants dans la commande
     for (const [, arr] of entries) {
       arr.sort((x, y) => (x.attendeeIndex ?? 0) - (y.attendeeIndex ?? 0));
     }
 
     return entries;
   }, [filteredAttendees, orderMetaById]);
+
+  /* -------------------- EDITOR HELPERS -------------------- */
+
+  function openCreate(orderId: string) {
+    setEditorError(null);
+    setEditorMode("create");
+    setEditorOrderId(orderId);
+    setEditingAttendeeId(null);
+    setEditorOpen(true);
+  }
+
+  function openEdit(attendeeId: string, orderId: string) {
+    setEditorError(null);
+    setEditorMode("edit");
+    setEditorOrderId(orderId);
+    setEditingAttendeeId(attendeeId);
+    setEditorOpen(true);
+  }
+
+  function closeEditor() {
+    setEditorOpen(false);
+    setEditingAttendeeId(null);
+    setEditorOrderId(null);
+    setEditorError(null);
+  }
+
+  const initialEditorValue = useMemo(() => {
+    // base vide
+    const base: Record<string, any> = {};
+
+    // si edit -> préremplir depuis answers snapshot
+    if (editingAttendeeId) {
+      const filled = filledFieldsByAttendeeId.get(editingAttendeeId) ?? [];
+      for (const f of filled) {
+        base[f.key] = f.value;
+      }
+    }
+
+    return base;
+  }, [editingAttendeeId, filledFieldsByAttendeeId]);
+
+  async function handleSubmitParticipant(value: Record<string, any>) {
+    // ✅ ici tu brancheras ton repo/RPC plus tard.
+    // Pour l’instant : on simule.
+    try {
+      setSaving(true);
+      setEditorError(null);
+
+      // EXEMPLE : payload minimal
+      const payload = {
+        mode: editorMode,
+        orderId: editorOrderId,
+        attendeeId: editingAttendeeId,
+        answers: value,
+      };
+
+      // eslint-disable-next-line no-console
+      console.log("SUBMIT PARTICIPANT", payload);
+
+      closeEditor();
+    } catch (e: any) {
+      setEditorError(e?.message ? String(e.message) : "Erreur inconnue");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   /* -------------------- RENDER -------------------- */
 
@@ -291,11 +373,12 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
           <option value="all">Tous</option>
           <option value="order">Commande</option>
 
-          {/* champs dynamiques */}
           {fieldOptions.length > 0 ? (
             <optgroup label="Champs participant">
               {fieldOptions.map((f) => (
-                <option key={f.key} value={`field:${f.key}`}>{f.label}</option>
+                <option key={f.key} value={`field:${f.key}`}>
+                  {f.label}
+                </option>
               ))}
             </optgroup>
           ) : null}
@@ -324,86 +407,98 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
 
       {groups.length === 0 ? (
         <div className="adminEventEmpty">
-          {query.trim()
-            ? "Aucun résultat avec ces filtres."
-            : "Aucune inscription pour le moment."}
+          {query.trim() ? "Aucun résultat avec ces filtres." : "Aucune inscription pour le moment."}
         </div>
       ) : (
-        <div className="adminOrdersGrid">
-          {groups.map(([orderId, people]) => {
-            const meta = orderMetaById.get(orderId);
-            const orderNumber = meta?.orderNumber ?? orderId.slice(0, 8);
+        <AttendeeEditorPanel
+          isOpen={editorOpen}
+          mode={editorMode}
+          fields={regFields}
+          initialValue={initialEditorValue}
+          onRequestClose={closeEditor}
+          onSubmit={handleSubmitParticipant}
+          isSaving={saving}
+          error={editorError}
+          stickyTop={84}
+          editorWidth={420}
+          editorGap={14}
+          left={
+            <div className="adminOrdersGrid">
+              {groups.map(([orderId, people]) => {
+                const meta = orderMetaById.get(orderId);
+                const orderNumber = meta?.orderNumber ?? orderId.slice(0, 8);
 
-            return (
-              <div key={orderId} className="adminOrderCard">
-                {/* ---------- ORDER HEADER ---------- */}
-                <div className="adminOrderHeader">
-                  <div>
-                    <div className="adminOrderTitle">Commande {orderNumber}</div>
-                    <div className="adminOrderSub">Créée le {formatDateTime(meta?.createdAt)}</div>
-                  </div>
-
-                  <div className="adminOrderHeaderRight">
-                    <span className="adminOrderPill">
-                      {people.length} inscrit{people.length > 1 ? "s" : ""}
-                    </span>
-
-                    <Button variant="primary">+ Ajouter un participant</Button>
-                  </div>
-                </div>
-
-                {/* ---------- PARTICIPANTS ---------- */}
-                <div className="adminOrderPeople">
-                  {people.map((att) => {
-                    const identity = computeIdentity(att.id);
-                    const filled = filledFieldsByAttendeeId.get(att.id) ?? [];
-
-                    return (
-                      <div key={att.id} className="adminPersonCard">
-                        <div className="adminPersonTop">
-                          <div>
-                            <div className="adminPersonName">
-                              {identity.title}{" "}
-                              <span className="adminPersonIndex">#{att.attendeeIndex}</span>
-                            </div>
-                            {identity.subtitle ? (
-                              <div className="adminPersonSub">{identity.subtitle}</div>
-                            ) : null}
-                          </div>
-
-                          <div className="adminPersonBadges">
-                            <span className={`adminStatusBadge is-${att.status}`}>{att.status}</span>
-                            <span className="adminProductBadge">{att.productNameSnapshot}</span>
-                          </div>
-                        </div>
-
-                        {/* Champs remplis */}
-                        <div className="adminFilledGrid">
-                          {filled.length > 0 ? (
-                            filled.map((f) => (
-                              <div key={f.key} className="adminFieldLine">
-                                <span className="adminFieldLabel">{f.label}</span>
-                                <span className="adminFieldValue">{normalizeStr(f.value)}</span>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="adminFilledEmpty">Aucun champ rempli.</div>
-                          )}
-                        </div>
-
-                        {/* ---------- ACTIONS (BAS DE CARD) ---------- */}
-                        <div className="adminPersonActionsBottom">
-                          <Button variant="primary">Modifier</Button>
-                          <Button variant="danger">Supprimer</Button>
-                        </div>
+                return (
+                  <div key={orderId} className="adminOrderCard">
+                    {/* ---------- ORDER HEADER ---------- */}
+                    <div className="adminOrderHeader">
+                      <div>
+                        <div className="adminOrderTitle">Commande {orderNumber}</div>
+                        <div className="adminOrderSub">Créée le {formatDateTime(meta?.createdAt)}</div>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+
+                      <div className="adminOrderHeaderRight">
+                        <span className="adminOrderPill">
+                          {people.length} inscrit{people.length > 1 ? "s" : ""}
+                        </span>
+
+                        <Button variant="primary" onClick={() => openCreate(orderId)}>
+                          + Ajouter un participant
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* ---------- PARTICIPANTS ---------- */}
+                    <div className="adminOrderPeople">
+                      {people.map((att) => {
+                        const identity = computeIdentity(att.id);
+                        const filled = filledFieldsByAttendeeId.get(att.id) ?? [];
+
+                        return (
+                          <div key={att.id} className="adminPersonCard">
+                            <div className="adminPersonTop">
+                              <div>
+                                <div className="adminPersonName">
+                                  {identity.title} <span className="adminPersonIndex">#{att.attendeeIndex}</span>
+                                </div>
+                                {identity.subtitle ? <div className="adminPersonSub">{identity.subtitle}</div> : null}
+                              </div>
+
+                              <div className="adminPersonBadges">
+                                <span className={`adminStatusBadge is-${att.status}`}>{att.status}</span>
+                                <span className="adminProductBadge">{att.productNameSnapshot}</span>
+                              </div>
+                            </div>
+
+                            <div className="adminFilledGrid">
+                              {filled.length > 0 ? (
+                                filled.map((f) => (
+                                  <div key={f.key} className="adminFieldLine">
+                                    <span className="adminFieldLabel">{f.label}</span>
+                                    <span className="adminFieldValue">{normalizeStr(f.value)}</span>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="adminFilledEmpty">Aucun champ rempli.</div>
+                              )}
+                            </div>
+
+                            <div className="adminPersonActionsBottom">
+                              <Button variant="primary" onClick={() => openEdit(att.id, orderId)}>
+                                Modifier
+                              </Button>
+                              <Button variant="danger">Supprimer</Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          }
+        />
       )}
     </div>
   );

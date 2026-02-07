@@ -1,0 +1,119 @@
+/* ------------------------------------------------------------------ */
+/*  EditorShell layout + animation + close button top-right            */
+/* ------------------------------------------------------------------ */
+
+.uiEditorShell{
+  width:100%;
+  position:relative;
+  min-width:0;
+
+  /* variables injectées via style inline */
+  --editor-w: 420px;
+  --editor-gap: 14px;
+  --sticky-top: 84px;
+}
+
+.uiEditorLeft{
+  width:100%;
+  min-width:0;
+  transition: width 180ms ease, transform 180ms ease;
+}
+
+.uiEditorLeft *{
+  min-width:0;
+}
+
+.uiEditorRight{
+  position:absolute;
+  right:0;
+  top:0;
+  width:var(--editor-w);
+  box-sizing:border-box;
+}
+
+/* Quand ouvert => la liste shrink à gauche */
+.uiEditorShell.isEditorOpen .uiEditorLeft{
+  width: calc(100% - (var(--editor-w) + var(--editor-gap)));
+  transform: translateX(0);
+}
+
+/* Panel sticky (colle sous la navbar avec marge via --sticky-top) */
+.uiEditorPanel{
+  position: sticky;
+  top: var(--sticky-top);
+  width: var(--editor-w);
+  z-index: 40;
+
+  transform-origin: top right;
+  animation-duration: 180ms;
+  animation-fill-mode: both;
+}
+
+.uiEditorPanel.isOpen{
+  animation-name: uiEditorIn;
+  animation-timing-function: ease-out;
+}
+
+.uiEditorPanel.isClosing{
+  animation-name: uiEditorOut;
+  animation-timing-function: ease-in;
+}
+
+@keyframes uiEditorIn{
+  from { opacity:0; transform: translateX(8px) scale(0.98); }
+  to   { opacity:1; transform: translateX(0)   scale(1); }
+}
+
+@keyframes uiEditorOut{
+  from { opacity:1; transform: translateX(0)   scale(1); }
+  to   { opacity:0; transform: translateX(8px) scale(0.98); }
+}
+
+/* Inner wrapper pour pouvoir positionner la croix en absolute */
+.uiEditorPanelInner{
+  position: relative;
+}
+
+/* ✅ Croix top-right du panel */
+.uiEditorCloseBtn{
+  position:absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+
+  /* un peu plus compact visuellement */
+  padding: 8px !important;
+  border-radius: 999px !important;
+  line-height: 0 !important;
+}
+
+/* Mobile: on repasse en flux normal, pas de shrink */
+@media (max-width: 1050px){
+  .uiEditorLeft{
+    width:100%;
+    transform:none;
+  }
+
+  .uiEditorShell.isEditorOpen .uiEditorLeft{
+    width:100%;
+    transform:none;
+  }
+
+  .uiEditorRight{
+    position:static;
+    width:100%;
+    margin-top:14px;
+  }
+
+  .uiEditorPanel{
+    position: static;
+    top:auto;
+    width:100%;
+    transform-origin: top center;
+  }
+
+  .uiEditorCloseBtn{
+    top: 10px;
+    right: 10px;
+  }
+}

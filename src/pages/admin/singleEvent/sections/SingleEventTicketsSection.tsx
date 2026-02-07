@@ -48,21 +48,21 @@ export function SingleEventTicketsSection(props: {
         payments={payments}
         createLoading={createProduct.loading}
         createError={createProduct.error}
-          onUpdate={async ({ productId, patch }) => {
-          await updateProduct.updateEventProduct({ productId: productId, patch });
-          await onChanged();
-        }}
-        onCreate={async (input) => {
-          await createProduct.createEventProduct(input);
-          await onChanged();
-        }}
+        updateLoading={updateProduct.loading}
         deleteLoading={removeProduct.loading}
         deleteError={removeProduct.error}
+        // ✅ IMPORTANT: ici on NE refetch PAS à chaque action
+        onCreate={async (input) => {
+          await createProduct.createEventProduct(input);
+        }}
+        onUpdate={async ({ productId, patch }) => {
+          await updateProduct.updateEventProduct({ productId, patch });
+        }}
         onRemove={async (productId) => {
           const ok = await removeProduct.deleteEventProduct({ id: productId });
           if (!ok) return;
-          await onChanged();
         }}
+        // ✅ UN seul refetch, appelé une fois (à la fin du saveAll du panel)
         onChanged={onChanged}
       />
     </div>
