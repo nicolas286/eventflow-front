@@ -66,6 +66,9 @@ export function applyOrgTheme(primaryHex: string) {
     // brand
     el.style.setProperty("--primary", primaryTriplet);
 
+    // ✅ AJOUT: utilisé par les backgrounds (rgba(var(--primary-bg) / x))
+    el.style.setProperty("--primary-bg", primaryTriplet);
+
     // ✅ primary "dominant"
     el.style.setProperty("--primary-strong", primaryStrongTriplet);
     el.style.setProperty("--primary-strong-contrast", primaryStrongContrast);
