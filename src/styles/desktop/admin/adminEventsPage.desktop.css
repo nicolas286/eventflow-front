@@ -502,6 +502,73 @@
   justify-content:flex-end;
 }
 
+/* ✅ NEW: animation “swap” pour ↑/↓ (Tickets + Forms) */
+:root{
+  --admin-swap-dy: 22px; /* distance visuelle (ne dépend pas de la vraie hauteur) */
+}
+
+/* Ticket card */
+.adminTicketCard.isMoveUp{
+  animation: adminSwapUp 220ms cubic-bezier(.2,.9,.2,1) both;
+}
+.adminTicketCard.isMoveDown{
+  animation: adminSwapDown 220ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+/* Form card */
+.adminRegCard.isMoveUp{
+  animation: adminSwapUp 220ms cubic-bezier(.2,.9,.2,1) both;
+}
+.adminRegCard.isMoveDown{
+  animation: adminSwapDown 220ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+@keyframes adminSwapUp{
+  0%{
+    transform: translateY(0);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.05);
+  }
+  40%{
+    transform: translateY(calc(-1 * var(--admin-swap-dy)));
+    box-shadow: 0 16px 34px rgba(0,0,0,0.08);
+  }
+  100%{
+    transform: translateY(0);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.05);
+  }
+}
+
+@keyframes adminSwapDown{
+  0%{
+    transform: translateY(0);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.05);
+  }
+  40%{
+    transform: translateY(var(--admin-swap-dy));
+    box-shadow: 0 16px 34px rgba(0,0,0,0.08);
+  }
+  100%{
+    transform: translateY(0);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .adminTicketCard.isMoveUp,
+  .adminTicketCard.isMoveDown,
+  .adminRegCard.isMoveUp,
+  .adminRegCard.isMoveDown{
+    animation: none !important;
+  }
+}
+
+/* ✅ Mobile: on réduit l’amplitude (plus discret) */
+@media (max-width: 1050px){
+  :root{
+    --admin-swap-dy: 16px;
+  }
+}
+
 @media (max-width: 1050px){
   .adminTicketsGrid{
     grid-template-columns: 1fr;
