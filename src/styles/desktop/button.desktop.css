@@ -37,24 +37,40 @@
   box-shadow: 0 0 0 4px rgb(var(--primary) / 0.18);
 }
 
-/* ========================= */
-/* Semantic aliases          */
-/* ========================= */
+/*--- PRIMARY BUTTON ---*/
 
 .ui-button--primary {
-  
-  background: rgb(var(--primary) / 0.55);
-  color: rgb(var(--primary-contrast));
-  border: 1px solid rgb(var(--primary) / 0.55);
-
+  background: rgb(var(--primary-strong) / 0.85);
+  color: rgb(var(--primary-strong-contrast));
+  border: 1px solid rgb(var(--primary-strong) / 0.85);
 }
+
+.ui-button--primary:hover {
+  background: rgb(var(--primary-strong) / 0.95);
+}
+
+/*--- SECONDARY BUTTON ---*/
+
 .ui-button--secondary {
-
-  background: rgb(var(--primary) / 0.15);
-  color: rgb(var(--primary-contrast));
+  background: rgb(var(--primary) / 0.05);
+  color: rgb(var(--primary));
   border: 1px solid rgb(var(--primary) / 0.55);
-
 }
+
+.ui-button--secondary:hover {
+  background: rgb(var(--primary) / 0.14);
+}
+
+html.theme--primaryLight .ui-button--secondary {
+  background: rgb(var(--secondary-derived) / 0.75);
+  color: rgb(var(--secondary-derived-contrast));
+  border: 1px solid rgb(var(--secondary-derived) / 0.75);
+}
+
+html.theme--primaryLight .ui-button--secondary:hover {
+  background: rgb(var(--secondary-derived) / 0.85);
+}
+
 
 /* ========================= */
 /* Ghost                     */
@@ -68,6 +84,17 @@
 .ui-button--ghost:hover {
   background: rgb(var(--primary) / 0.08);
 }
+
+/* ✅ si primary est trop claire : rendre le ghost visible */
+html.theme--primaryLight .ui-button--ghost {
+  border-color: rgb(var(--ghost-border) / 0.55);
+  color: rgb(var(--ghost-fg));
+}
+
+html.theme--primaryLight .ui-button--ghost:hover {
+  background: rgb(var(--ghost-border) / 0.12);
+}
+
 
 /* ========================= */
 /* Danger (light)            */
