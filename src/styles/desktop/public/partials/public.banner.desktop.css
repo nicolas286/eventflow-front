@@ -1,24 +1,72 @@
 /* src/styles/public/partials/public.banner.css */
 
-/* ---------- Banner ---------- */
+/* =========================================================
+   🖼️ Banner – Full width + logo qui OVERLAP correctement
+   ✅ Important :
+   - Le WRAP doit rester overflow: visible (pour que le logo dépasse)
+   - On clippe l’image via un conteneur interne (overflow: hidden)
+   ========================================================= */
+
+/* ---------- Wrapper (doit laisser dépasser le logo) ---------- */
 
 .publicBannerWrap {
   position: relative;
-  margin-top: 12px;
-  overflow: visible;
-}
-
-.publicBanner {
   width: 100%;
-  height: clamp(160px, 30vw, 280px);
-  border-radius: clamp(14px, 3vw, 18px);
-  object-fit: cover;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  margin-top: 12px;
+
+  overflow: visible; /* ✅ sinon le logo ne peut pas “sortir” */
 }
 
-/* Logo overlay */
+/* ---------- Clip (contient la bannière, crop interne) ---------- */
+
+.publicBannerClip {
+  position: relative;
+  overflow: hidden; /* ✅ on croppe l’image ici */
+  height: clamp(180px, 28vw, 320px);
+
+  border-radius: clamp(14px, 3vw, 18px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: #ffffff;
+}
+
+/* ✅ Image de bannière (plein width) */
+.publicBanner {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+
+  width: 100%;
+  height: 100%;
+
+  background-image: var(--banner-url);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+
+  display: block;
+}
+
+/* ✅ Overlay discret (dans le clip, sous le logo) */
+.publicBannerClip::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.06) 0%,
+    rgba(0, 0, 0, 0.00) 55%,
+    rgba(0, 0, 0, 0.06) 100%
+  );
+}
+
+/* ✅ Logo overlay (au-dessus de tout + dépasse le clip) */
 .publicBannerLogo {
   position: absolute;
+  z-index: 10; /* ✅ au-dessus du clip ET des cards */
+
   left: clamp(12px, 3vw, 16px);
   bottom: calc(-1 * clamp(36px, 8vw, 55px));
 
@@ -32,6 +80,15 @@
   box-shadow: 0 18px 36px rgba(0, 0, 0, 0.22);
 }
 
+/* Espace sous bannière pour ne pas que le contenu “mange” le logo */
 .publicBannerUnderSpace {
   height: clamp(44px, 10vw, 64px);
+}
+
+/* ---------- Mobile ---------- */
+
+@media (max-width: 900px) {
+  .publicBannerClip {
+    height: clamp(180px, 44vw, 320px);
+  }
 }

@@ -168,8 +168,7 @@ function buildUpdateAttendeeFromForm(params: {
     if (!k) continue;
 
     const f = byKey.get(k);
-    const fieldType = String(f?.fieldType ?? "text");
-
+    const fieldType = String(f?.fieldType ?? "text"); // ✅ string, plus de literal "text"
     const isCheckbox = fieldType === "checkbox";
 
     const trimmed = String(raw ?? "").trim();
@@ -192,6 +191,7 @@ function buildUpdateAttendeeFromForm(params: {
   return { answers };
 }
 
+
 export function SingleEventParticipantsSection(props: { data: AnyRecord; onChanged?: () => Promise<void> }) {
   const { data, onChanged } = props;
 
@@ -211,7 +211,7 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
   /* -------------------- EDITOR STATE (ORDER) -------------------- */
   const [orderEditorOpen, setOrderEditorOpen] = useState(false);
 
-  /* -------------------- DATA (initial -> local state) -------------------- */
+  /* -------------------- DATA -------------------- */
   const initialAttendees = useMemo(
     () =>
       toRows<Attendee>(
@@ -247,7 +247,6 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
   useEffect(() => setLocalAnswers(initialAnswers), [initialAnswers]);
   useEffect(() => setLocalOrders(initialOrders), [initialOrders]);
 
-  // ✅ champs du formulaire d’inscription (source DB)
   const regFields = useMemo(() => {
     return toRows<RegistrationFieldLike>(
       data?.eventFormFields ??
@@ -300,7 +299,7 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
     return map;
   }, [localAnswers]);
 
-  /* -------------------- FIELDS OPTIONS (dropdown) -------------------- */
+  /* -------------------- FIELDS OPTIONS -------------------- */
   const fieldOptions = useMemo(() => {
     const m = new Map<string, string>();
     for (const a of localAnswers) {
@@ -314,7 +313,6 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
     return arr;
   }, [localAnswers]);
 
-  /* -------------------- IDENTITY -------------------- */
   function computeIdentity(attendeeId: string) {
     const fields = filledFieldsByAttendeeId.get(attendeeId) ?? [];
     const getVal = (...keys: string[]) => fields.find((f) => keys.includes(f.key))?.value ?? "";
@@ -364,7 +362,7 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
     });
   }, [localAttendees, query, filterMode, orderMetaById, filledFieldsByAttendeeId]);
 
-  /* -------------------- GROUPS BY ORDER (orders + attendees) -------------------- */
+  /* -------------------- GROUPS BY ORDER -------------------- */
   const groups = useMemo(() => {
     const byOrder = new Map<string, Attendee[]>();
     for (const a of filteredAttendees) {
@@ -420,7 +418,6 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
     setEditorOrderId(orderId);
     setEditingAttendeeId(null);
 
-    // ✅ un seul panel à la fois
     setOrderEditorOpen(false);
     setEditorOpen(true);
   }
@@ -431,7 +428,6 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
     setEditorOrderId(orderId);
     setEditingAttendeeId(attendeeId);
 
-    // ✅ un seul panel à la fois
     setOrderEditorOpen(false);
     setEditorOpen(true);
   }
@@ -444,11 +440,11 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
   }
 
   function openCreateOrder() {
-    // ✅ un seul panel à la fois
     setEditorOpen(false);
     setEditingAttendeeId(null);
     setEditorOrderId(null);
     setEditorError(null);
+
     setOrderEditorOpen(true);
   }
 
@@ -514,7 +510,7 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
     }
   }
 
-  /* -------------------- LEFT CONTENT (shared) -------------------- */
+  /* -------------------- LEFT CONTENT -------------------- */
   const leftContent = (
     <div className="adminOrdersGrid">
       {groups.map(([orderId, people]) => {
@@ -541,58 +537,60 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
             </div>
 
             <div className="adminOrderPeople">
-              {people.length === 0 ? (
-                <div className="adminOrderEmptyPeople">Aucun participant dans cette commande pour le moment.</div>
-              ) : (
-                people.map((att) => {
-                  const identity = computeIdentity(att.id);
-                  const filled = filledFieldsByAttendeeId.get(att.id) ?? [];
+              {people.map((att) => {
+                const identity = computeIdentity(att.id);
+                const filled = filledFieldsByAttendeeId.get(att.id) ?? [];
 
-                  return (
-                    <div key={att.id} className="adminPersonCard">
-                      <div className="adminPersonTop">
-                        <div>
-                          <div className="adminPersonName">
-                            {identity.title} <span className="adminPersonIndex">#{att.attendeeIndex}</span>
-                          </div>
-                          {identity.subtitle ? <div className="adminPersonSub">{identity.subtitle}</div> : null}
+                return (
+                  <div key={att.id} className="adminPersonCard">
+                    <div className="adminPersonTop">
+                      <div>
+                        <div className="adminPersonName">
+                          {identity.title} <span className="adminPersonIndex">#{att.attendeeIndex}</span>
                         </div>
-
-                        <div className="adminPersonBadges">
-                          <span className={`adminStatusBadge is-${att.status}`}>{att.status}</span>
-                          <span className="adminProductBadge">{att.productNameSnapshot}</span>
-                        </div>
+                        {identity.subtitle ? <div className="adminPersonSub">{identity.subtitle}</div> : null}
                       </div>
 
-                      <div className="adminFilledGrid">
-                        {filled.length > 0 ? (
-                          filled.map((f) => (
-                            <div key={f.key} className="adminFieldLine">
-                              <span className="adminFieldLabel">{f.label}</span>
-                              <span className="adminFieldValue">{normalizeStr(f.value)}</span>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="adminFilledEmpty">Aucun champ rempli.</div>
-                        )}
-                      </div>
-
-                      <div className="adminPersonActionsBottom">
-                        <Button variant="primary" onClick={() => openEdit(att.id, orderId)}>
-                          Modifier
-                        </Button>
-                        <Button variant="danger">Supprimer</Button>
+                      <div className="adminPersonBadges">
+                        <span className={`adminStatusBadge is-${att.status}`}>{att.status}</span>
+                        <span className="adminProductBadge">{att.productNameSnapshot}</span>
                       </div>
                     </div>
-                  );
-                })
-              )}
+
+                    <div className="adminFilledGrid">
+                      {filled.length > 0 ? (
+                        filled.map((f) => (
+                          <div key={f.key} className="adminFieldLine">
+                            <span className="adminFieldLabel">{f.label}</span>
+                            <span className="adminFieldValue">{normalizeStr(f.value)}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="adminFilledEmpty">Aucun champ rempli.</div>
+                      )}
+                    </div>
+
+                    <div className="adminPersonActionsBottom">
+                      <Button variant="primary" onClick={() => openEdit(att.id, orderId)}>
+                        Modifier
+                      </Button>
+                      <Button variant="danger">Supprimer</Button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         );
       })}
     </div>
   );
+
+  // ✅ IMPORTANT: un seul left visible à la fois
+  const emptyLeft = <div style={{ display: "none" }} />;
+
+  const leftForOrderPanel = orderEditorOpen ? leftContent : emptyLeft;
+  const leftForAttendeePanel = orderEditorOpen ? emptyLeft : leftContent;
 
   /* -------------------- RENDER -------------------- */
   return (
@@ -612,9 +610,12 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
         </div>
       </div>
 
-      {/* --- SEARCH BAR --- */}
       <div className="adminParticipantsSearch">
-        <select className="adminSearchSelect" value={filterMode} onChange={(e) => setFilterMode(e.target.value as FilterMode)}>
+        <select
+          className="adminSearchSelect"
+          value={filterMode}
+          onChange={(e) => setFilterMode(e.target.value as FilterMode)}
+        >
           <option value="all">Tous</option>
           <option value="order">Commande</option>
 
@@ -651,26 +652,31 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
       </div>
 
       {groups.length === 0 ? (
-        <div className="adminEventEmpty">{query.trim() ? "Aucun résultat avec ces filtres." : "Aucune commande pour le moment."}</div>
+        <div className="adminEventEmpty">
+          {query.trim() ? "Aucun résultat avec ces filtres." : "Aucune commande pour le moment."}
+        </div>
       ) : (
         <>
-          {/* ✅ Panel commande : TOUJOURS monté => même animation que le panel participant */}
+          {/* ✅ Panel commande (monté en permanence => animation OK) */}
           <OrderEditorPanel
             isOpen={orderEditorOpen}
             onRequestClose={closeOrderEditor}
             stickyTop={84}
             editorWidth={420}
             editorGap={14}
-            left={leftContent}
+            left={leftForOrderPanel}
             onCreated={async ({ orderId, order }) => {
               setLocalOrders((prev) => {
-                const exists = prev.some((o) => String(getFirst(o, ["id", "orderId", "order_id"])) === String(orderId));
+                const exists = prev.some(
+                  (o) => String(getFirst(o, ["id", "orderId", "order_id"])) === String(orderId)
+                );
                 if (exists) return prev;
                 return [order, ...prev];
               });
 
               const orderNumber =
-                getFirst<string>(order, ["publicId", "public_id", "number", "ref", "reference"]) ?? orderId.slice(0, 8);
+                getFirst<string>(order, ["publicId", "public_id", "number", "ref", "reference"]) ??
+                orderId.slice(0, 8);
 
               setFilterMode("order");
               setQuery(String(orderNumber));
@@ -685,7 +691,7 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
             }}
           />
 
-          {/* ✅ Panel participant : TOUJOURS monté => animation inchangée */}
+          {/* ✅ Panel participant (monté en permanence) */}
           <AttendeeEditorPanel
             supabase={supabase}
             isOpen={editorOpen}
@@ -737,7 +743,7 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
                 }
               }
             }}
-            left={leftContent}
+            left={leftForAttendeePanel}
           />
         </>
       )}
