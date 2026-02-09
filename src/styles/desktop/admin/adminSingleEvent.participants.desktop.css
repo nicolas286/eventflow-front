@@ -228,6 +228,32 @@
   padding-top: 16px;
 }
 
+/* Header right action */
+.adminParticipantsHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.adminParticipantsHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Order empty state */
+.adminOrderEmptyPeople {
+  padding: 10px 12px;
+  border: 1px dashed rgba(0,0,0,0.14);
+  border-radius: 14px;
+  background: rgba(0,0,0,0.02);
+  font-size: 12px;
+  font-weight: 800;
+  opacity: 0.75;
+}
+
 
 /* ============================= */
 /* Responsive                    */
