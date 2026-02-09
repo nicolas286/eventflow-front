@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { Button, EditorShell } from "../../../../ui/components";
+import { useAdminAddOrderAttendee } from "../../hooks/useAddOrderAttendee";
+
+/* -------------------- TYPES -------------------- */
 
 type FieldType =
   | "text"
@@ -27,8 +31,17 @@ export type RegistrationFieldLike = {
 };
 
 export type AttendeeEditorMode = "create" | "edit";
-
 export type AttendeeEditorValue = Record<string, any>;
+
+/** ⚠️ type light */
+export type TicketProductLike = {
+  id: string;
+  name?: string | null;
+  createsAttendees?: boolean | null;
+  isActive?: boolean | null;
+};
+
+/* -------------------- HELPERS -------------------- */
 
 function clampInt(v: unknown, fallback = 0) {
   const n = typeof v === "number" ? v : Number(String(v ?? ""));
@@ -47,7 +60,6 @@ function toOptions(value: any): FieldOption[] {
       .filter((o) => o.label && o.value);
   }
   if (typeof value === "string") {
-    // compat: "Oui\nNon"
     return value
       .split("\n")
       .map((x) => x.trim())
@@ -59,7 +71,7 @@ function toOptions(value: any): FieldOption[] {
 
 function normalizeFields(fields: RegistrationFieldLike[]) {
   const arr = Array.isArray(fields) ? [...fields] : [];
-  arr.sort((a, b) => clampInt(a.sortOrder ?? 0, 0) - clampInt(b.sortOrder ?? 0, 0));
+  arr.sort((a, b) => clampInt(a.sortOrder ?? 0) - clampInt(b.sortOrder ?? 0));
   return arr.filter((f) => {
     const key = String(f.fieldKey ?? "").trim();
     const active = Boolean(f.isActive ?? true);
@@ -71,45 +83,92 @@ function inputTypeFor(fieldType: FieldType) {
   if (fieldType === "email") return "email";
   if (fieldType === "number") return "number";
   if (fieldType === "date") return "date";
-  // phone/country -> text (tu pourras spécialiser plus tard)
   return "text";
 }
 
+/**
+ * Construit le payload attendu par la RPC
+ * + garde value brut pour le patch local
+ */
+function buildAttendeePayload(params: {
+  fields: RegistrationFieldLike[];
+  value: AttendeeEditorValue;
+}) {
+  const { fields, value } = params;
+
+  const attendee: any = {};
+  const answers: any[] = [];
+
+  const reservedKeys = new Set(["email", "phone", "first_name", "last_name"]);
+
+  for (const f of fields) {
+    const key = String(f.fieldKey ?? "").trim();
+    if (!key) continue;
+
+    const type = (f.fieldType ?? "text") as FieldType;
+    const raw = value[key];
+
+    const isEmpty =
+      type === "checkbox" ? false : String(raw ?? "").trim().length === 0;
+    if (isEmpty) continue;
+
+    if (key === "email") attendee.email = String(raw ?? "").trim();
+    else if (key === "phone") attendee.phone = String(raw ?? "").trim();
+    else if (key === "first_name") attendee.firstName = String(raw ?? "").trim();
+    else if (key === "last_name") attendee.lastName = String(raw ?? "").trim();
+
+    if (!reservedKeys.has(key)) {
+      if (type === "checkbox") answers.push({ fieldKey: key, valueBool: Boolean(raw) });
+      else if (type === "number") answers.push({ fieldKey: key, valueInt: clampInt(raw, 0) });
+      else if (type === "date") answers.push({ fieldKey: key, valueDate: String(raw ?? "").trim() });
+      else answers.push({ fieldKey: key, valueText: String(raw ?? "").trim() });
+    }
+  }
+
+  if (answers.length) attendee.answers = answers;
+
+  return { attendee, rawValue: value };
+}
+
+/* -------------------- COMPONENT -------------------- */
+
 export function AttendeeEditorPanel(props: {
+  supabase: SupabaseClient;
+
   isOpen: boolean;
   mode: AttendeeEditorMode;
 
-  /** Champs venant du builder de formulaire d’inscription */
-  fields: RegistrationFieldLike[];
+  orderId?: string | null;
+  products: TicketProductLike[];
 
-  /** Valeurs initiales (edit) ou {} (create) */
+  fields: RegistrationFieldLike[];
   initialValue: AttendeeEditorValue;
 
-  /** Hook de fermeture */
   onRequestClose: () => void;
-
-  /** Submit final (à brancher sur ton repo/RPC ensuite) */
   onSubmit: (value: AttendeeEditorValue) => Promise<void> | void;
 
-  /** Loading externe éventuel */
   isSaving?: boolean;
-
-  /** Sticky top sous la navbar */
   stickyTop?: number;
-
-  /** Largeur editor */
   editorWidth?: number;
   editorGap?: number;
 
-  /** Erreur */
   error?: string | null;
-
-  /** Contenu à gauche (liste / page) */
   left: React.ReactNode;
+
+  /** ⬅️ enrichi pour patch local */
+  onAdded?: (res: {
+    attendeeId: string;
+    orderId: string;
+    eventProductId: string;
+    value: AttendeeEditorValue;
+  }) => void;
 }) {
   const {
+    supabase,
     isOpen,
     mode,
+    orderId,
+    products,
     fields,
     initialValue,
     onRequestClose,
@@ -118,38 +177,48 @@ export function AttendeeEditorPanel(props: {
     stickyTop = 84,
     editorWidth = 420,
     editorGap = 14,
-    error = null,
+    error: externalError = null,
     left,
+    onAdded,
   } = props;
 
   const normalizedFields = useMemo(() => normalizeFields(fields), [fields]);
+  const addHook = useAdminAddOrderAttendee({ supabase });
+
+  /* -------------------- TICKETS -------------------- */
+
+  const ticketOptions = useMemo(() => {
+    return (Array.isArray(products) ? products : [])
+      .filter((p) => Boolean(p?.isActive ?? true))
+      .filter((p) => Boolean(p?.createsAttendees ?? true))
+      .map((p) => ({
+        id: String(p.id),
+        name: String(p?.name ?? "Ticket").trim() || "Ticket",
+      }));
+  }, [products]);
+
+  const [selectedTicketId, setSelectedTicketId] = useState<string>(() => ticketOptions?.[0]?.id ?? "");
+
+  useEffect(() => {
+    setSelectedTicketId((prev) => {
+      if (prev && ticketOptions.some((t) => t.id === prev)) return prev;
+      return ticketOptions?.[0]?.id ?? "";
+    });
+  }, [ticketOptions.map((t) => t.id).join("|")]);
+
+  /* -------------------- FORM STATE -------------------- */
 
   const [value, setValue] = useState<AttendeeEditorValue>({ ...(initialValue ?? {}) });
 
-  // ✅ s’adapte “en temps réel” si les champs changent :
-  // - on garde les valeurs existantes
-  // - on ajoute les nouvelles keys à vide
-  // - on ne supprime pas les anciennes (au cas où) -> tu peux changer si tu veux.
   useEffect(() => {
     const next = { ...(initialValue ?? {}) };
-
     for (const f of normalizedFields) {
       const key = String(f.fieldKey ?? "").trim();
-      if (!key) continue;
-      if (next[key] === undefined) next[key] = "";
+      if (key && next[key] === undefined) next[key] = "";
     }
-
-    setValue((prev) => {
-      // merge doux : prev gagne sur initial (si user a déjà tapé)
-      return { ...next, ...prev };
-    });
+    setValue(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [normalizedFields.map((f) => String(f.fieldKey ?? "")).join("|")]);
-
-  // si on change complètement de cible (edit d’un autre attendee), on reset
-  useEffect(() => {
-    setValue({ ...(initialValue ?? {}) });
-  }, [initialValue, isOpen]);
+  }, [normalizedFields.map((f) => String(f.fieldKey ?? "")).join("|"), isOpen]);
 
   function setField(key: string, v: any) {
     setValue((prev) => ({ ...prev, [key]: v }));
@@ -160,25 +229,61 @@ export function AttendeeEditorPanel(props: {
   }
 
   function isValid() {
+    if (mode === "create") {
+      if (!orderId || !selectedTicketId) return false;
+    }
     for (const f of normalizedFields) {
       const key = String(f.fieldKey ?? "").trim();
-      if (!key) continue;
-      if (!isRequired(f)) continue;
-
+      if (!key || !isRequired(f)) continue;
       const v = value[key];
       if (f.fieldType === "checkbox") {
         if (!Boolean(v)) return false;
-        continue;
+      } else if (String(v ?? "").trim().length === 0) {
+        return false;
       }
-      if (String(v ?? "").trim().length === 0) return false;
     }
     return true;
   }
 
+  const saving = mode === "create" ? addHook.loading : isSaving;
+  const error = mode === "create" ? addHook.error : externalError;
+
+  /* -------------------- SUBMIT -------------------- */
+
   async function handleSubmit() {
-    if (isSaving) return;
+    if (saving) return;
+
+    if (mode === "create") {
+      if (!orderId) return;
+
+      const { attendee, rawValue } = buildAttendeePayload({
+        fields: normalizedFields,
+        value,
+      });
+
+      const res = await addHook.addOrderAttendee({
+        orderId,
+        eventProductId: selectedTicketId,
+        attendee,
+        markPaid: false,
+      });
+
+      if (res?.attendeeId) {
+        onAdded?.({
+          attendeeId: res.attendeeId,
+          orderId,
+          eventProductId: selectedTicketId,
+          value: rawValue,
+        });
+        onRequestClose();
+      }
+      return;
+    }
+
     await onSubmit(value);
   }
+
+  /* -------------------- RENDER -------------------- */
 
   return (
     <EditorShell
@@ -208,148 +313,119 @@ export function AttendeeEditorPanel(props: {
               </div>
             ) : null}
 
-            <div className="adminEventFormGrid" style={{ marginTop: 12 }}>
-              {normalizedFields.length === 0 ? (
-                <div className="adminEventEmpty">
-                  Aucun champ actif dans le formulaire d’inscription. Ajoute des champs pour pouvoir remplir un participant.
+            {mode === "create" ? (
+              <div className="adminEventFormGrid" style={{ marginTop: 12 }}>
+                <div className="adminEventField adminEventFieldSpan2">
+                  <div className="adminEventLabel">Type de ticket *</div>
+                  <select
+                    className="adminEventInput"
+                    value={selectedTicketId}
+                    onChange={(e) => setSelectedTicketId(e.target.value)}
+                    disabled={saving}
+                  >
+                    <option value="">—</option>
+                    {ticketOptions.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              ) : (
-                normalizedFields.map((f) => {
-                  const key = String(f.fieldKey ?? "").trim();
-                  const label = String(f.label ?? key).trim();
-                  const type = (f.fieldType ?? "text") as FieldType;
+              </div>
+            ) : null}
 
-                  const req = isRequired(f);
-                  const options = toOptions(f.options);
+            <div className="adminEventFormGrid" style={{ marginTop: 12 }}>
+              {normalizedFields.map((f) => {
+                const key = String(f.fieldKey ?? "").trim();
+                if (!key) return null;
 
-                  // layout: textarea / select-radio en span2 (plus confortable)
-                  const span2 =
-                    type === "textarea" || type === "select" || type === "radio" ? "adminEventFieldSpan2" : "";
+                const label = String(f.label ?? key).trim();
+                const type = (f.fieldType ?? "text") as FieldType;
+                const req = isRequired(f);
+                const options = toOptions(f.options);
 
-                  if (!key) return null;
-
-                  if (type === "checkbox") {
-                    return (
-                      <div key={key} className={`adminEventField ${span2}`}>
-                        <div className="adminEventLabel">
-                          {label} {req ? "*" : ""}
-                        </div>
-
-                        <label className="adminEventToggle">
-                          <input
-                            type="checkbox"
-                            checked={Boolean(value[key])}
-                            onChange={(e) => setField(key, e.target.checked)}
-                            disabled={isSaving}
-                          />
-                          <span>{Boolean(value[key]) ? "Oui" : "Non"}</span>
-                        </label>
-                      </div>
-                    );
-                  }
-
-                  if (type === "select") {
-                    return (
-                      <div key={key} className={`adminEventField ${span2}`}>
-                        <div className="adminEventLabel">
-                          {label} {req ? "*" : ""}
-                        </div>
-
-                        <select
-                          className="adminEventInput"
-                          value={String(value[key] ?? "")}
-                          onChange={(e) => setField(key, e.target.value)}
-                          disabled={isSaving}
-                        >
-                          <option value="">—</option>
-                          {options.map((o) => (
-                            <option key={`${key}:${o.value}`} value={o.value}>
-                              {o.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    );
-                  }
-
-                  if (type === "radio") {
-                    return (
-                      <div key={key} className={`adminEventField ${span2}`}>
-                        <div className="adminEventLabel">
-                          {label} {req ? "*" : ""}
-                        </div>
-
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                          {options.length ? (
-                            options.map((o) => (
-                              <label key={`${key}:${o.value}`} className="adminEventToggle" style={{ cursor: "pointer" }}>
-                                <input
-                                  type="radio"
-                                  name={key}
-                                  value={o.value}
-                                  checked={String(value[key] ?? "") === o.value}
-                                  onChange={() => setField(key, o.value)}
-                                  disabled={isSaving}
-                                />
-                                <span>{o.label}</span>
-                              </label>
-                            ))
-                          ) : (
-                            <div className="adminEventHint">
-                              Aucune option pour ce champ (radio). Ajoute des options dans le builder.
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  if (type === "textarea") {
-                    return (
-                      <div key={key} className={`adminEventField ${span2}`}>
-                        <div className="adminEventLabel">
-                          {label} {req ? "*" : ""}
-                        </div>
-
-                        <textarea
-                          className="adminEventTextarea"
-                          value={String(value[key] ?? "")}
-                          onChange={(e) => setField(key, e.target.value)}
-                          disabled={isSaving}
-                        />
-                      </div>
-                    );
-                  }
-
+                if (type === "checkbox") {
                   return (
-                    <div key={key} className={`adminEventField ${span2}`}>
+                    <div key={key} className="adminEventField">
                       <div className="adminEventLabel">
                         {label} {req ? "*" : ""}
                       </div>
+                      <label className="adminEventToggle">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(value[key])}
+                          onChange={(e) => setField(key, e.target.checked)}
+                          disabled={saving}
+                        />
+                        <span>{Boolean(value[key]) ? "Oui" : "Non"}</span>
+                      </label>
+                    </div>
+                  );
+                }
 
-                      <input
+                if (type === "select" || type === "radio") {
+                  return (
+                    <div key={key} className="adminEventField adminEventFieldSpan2">
+                      <div className="adminEventLabel">
+                        {label} {req ? "*" : ""}
+                      </div>
+                      <select
                         className="adminEventInput"
-                        type={inputTypeFor(type)}
-                        value={type === "number" ? String(value[key] ?? "") : String(value[key] ?? "")}
-                        onChange={(e) => {
-                          if (type === "number") {
-                            const raw = e.target.value;
-                            setField(key, raw === "" ? "" : clampInt(raw, 0));
-                            return;
-                          }
-                          setField(key, e.target.value);
-                        }}
-                        disabled={isSaving}
+                        value={String(value[key] ?? "")}
+                        onChange={(e) => setField(key, e.target.value)}
+                        disabled={saving}
+                      >
+                        <option value="">—</option>
+                        {options.map((o) => (
+                          <option key={`${key}:${o.value}`} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                }
+
+                if (type === "textarea") {
+                  return (
+                    <div key={key} className="adminEventField adminEventFieldSpan2">
+                      <div className="adminEventLabel">
+                        {label} {req ? "*" : ""}
+                      </div>
+                      <textarea
+                        className="adminEventTextarea"
+                        value={String(value[key] ?? "")}
+                        onChange={(e) => setField(key, e.target.value)}
+                        disabled={saving}
                       />
                     </div>
                   );
-                })
-              )}
+                }
+
+                return (
+                  <div key={key} className="adminEventField">
+                    <div className="adminEventLabel">
+                      {label} {req ? "*" : ""}
+                    </div>
+                    <input
+                      className="adminEventInput"
+                      type={inputTypeFor(type)}
+                      value={String(value[key] ?? "")}
+                      onChange={(e) =>
+                        type === "number"
+                          ? setField(key, e.target.value === "" ? "" : clampInt(e.target.value))
+                          : setField(key, e.target.value)
+                      }
+                      disabled={saving}
+                    />
+                  </div>
+                );
+              })}
             </div>
 
             <div className="adminTicketsEditorFooter">
-              <Button variant="primary" onClick={handleSubmit} disabled={!isValid() || isSaving}>
-                {isSaving ? "Enregistrement…" : mode === "create" ? "Ajouter" : "Mettre à jour"}
+              <Button variant="primary" onClick={handleSubmit} disabled={!isValid() || saving}>
+                {saving ? "Enregistrement…" : mode === "create" ? "Ajouter" : "Mettre à jour"}
               </Button>
             </div>
           </div>

@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Button from "../../../../ui/components/button/Button";
+import { supabase } from "../../../../gateways/supabase/supabaseClient";
 
 import { AttendeeEditorPanel, type RegistrationFieldLike } from "../../../../features/admin/events/singleEvent/AttendeeEditorPanel";
 
@@ -88,10 +89,66 @@ function formatDateTime(value: any): string {
   }
 }
 
+function nextAttendeeIndexForOrder(orderId: string, attendees: Attendee[]) {
+  let max = 0;
+  for (const a of attendees) {
+    if (a.orderId === orderId) max = Math.max(max, a.attendeeIndex ?? 0);
+  }
+  return max + 1;
+}
+
+function makeLocalAnswers(params: {
+  attendeeId: string;
+  regFields: RegistrationFieldLike[];
+  value: Record<string, any>;
+}) {
+  const { attendeeId, regFields, value } = params;
+  const now = new Date().toISOString();
+
+  const byKey = new Map<string, RegistrationFieldLike>();
+  for (const f of regFields) {
+    const k = String(f.fieldKey ?? "").trim();
+    if (k) byKey.set(k, f);
+  }
+
+  const out: AttendeeAnswer[] = [];
+
+  for (const [key, raw] of Object.entries(value ?? {})) {
+    const k = String(key ?? "").trim();
+    if (!k) continue;
+
+    const field = byKey.get(k);
+    const fieldType = (field?.fieldType ?? "text") as AttendeeAnswer["fieldTypeSnapshot"];
+    const label = String(field?.label ?? k).trim();
+
+    const isCheckbox = fieldType === "checkbox";
+    const isEmpty = !isCheckbox && String(raw ?? "").trim().length === 0;
+    if (isEmpty) continue;
+
+    const v = isCheckbox ? (Boolean(raw) ? "Oui" : "Non") : String(raw ?? "").trim();
+
+    out.push({
+      id: `local:${attendeeId}:${k}`,
+      attendeeId,
+      fieldKeySnapshot: k,
+      fieldTypeSnapshot: fieldType,
+      fieldLabelSnapshot: label,
+      value: v,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+
+  return out;
+}
+
 type FilterMode = "all" | "order" | `field:${string}`;
 
-export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
-  const data = props.data;
+export function SingleEventParticipantsSection(props: {
+  data: AnyRecord;
+  onChanged?: () => Promise<void>;
+}) {
+  const { data, onChanged } = props;
 
   /* -------------------- FILTER UI STATE -------------------- */
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
@@ -105,9 +162,9 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
   const [saving, setSaving] = useState(false);
   const [editorError, setEditorError] = useState<string | null>(null);
 
-  /* -------------------- DATA -------------------- */
+  /* -------------------- DATA (initial -> local state) -------------------- */
 
-  const attendees = useMemo(
+  const initialAttendees = useMemo(
     () =>
       toRows<Attendee>(
         data?.attendees ??
@@ -120,7 +177,7 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
     [data]
   );
 
-  const answers = useMemo(
+  const initialAnswers = useMemo(
     () =>
       toRows<AttendeeAnswer>(
         data?.attendeeAnswers ??
@@ -132,13 +189,24 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
     [data]
   );
 
+  const [localAttendees, setLocalAttendees] = useState<Attendee[]>(() => initialAttendees);
+  const [localAnswers, setLocalAnswers] = useState<AttendeeAnswer[]>(() => initialAnswers);
+
+  // ✅ resync quand data change (refetch, switch tab, etc.)
+  useEffect(() => {
+    setLocalAttendees(initialAttendees);
+  }, [initialAttendees]);
+
+  useEffect(() => {
+    setLocalAnswers(initialAnswers);
+  }, [initialAnswers]);
+
   const orders = useMemo(
     () => toRows<AnyRecord>(data?.orders ?? data?.orderRows ?? data?.order_rows),
     [data]
   );
 
   // ✅ champs du formulaire d’inscription (source DB)
-  // ajuste les clés si ton backend les nomme autrement.
   const regFields = useMemo(() => {
     return toRows<RegistrationFieldLike>(
       data?.eventFormFields ??
@@ -172,7 +240,7 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
   const filledFieldsByAttendeeId = useMemo(() => {
     const map = new Map<string, { key: string; label: string; value: string }[]>();
 
-    for (const a of answers) {
+    for (const a of localAnswers) {
       if (!isFilled(a.value)) continue;
       const arr = map.get(a.attendeeId) ?? [];
       arr.push({
@@ -192,13 +260,13 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
     }
 
     return map;
-  }, [answers]);
+  }, [localAnswers]);
 
   /* -------------------- FIELDS OPTIONS (dropdown) -------------------- */
 
   const fieldOptions = useMemo(() => {
     const m = new Map<string, string>();
-    for (const a of answers) {
+    for (const a of localAnswers) {
       const key = a.fieldKeySnapshot;
       const label = a.fieldLabelSnapshot || key;
       if (!key) continue;
@@ -207,7 +275,7 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
     const arr = Array.from(m.entries()).map(([key, label]) => ({ key, label }));
     arr.sort((a, b) => a.label.localeCompare(b.label));
     return arr;
-  }, [answers]);
+  }, [localAnswers]);
 
   /* -------------------- IDENTITY -------------------- */
 
@@ -215,7 +283,7 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
     const fields = filledFieldsByAttendeeId.get(attendeeId) ?? [];
     const getVal = (...keys: string[]) => fields.find((f) => keys.includes(f.key))?.value ?? "";
 
-    const full = `${getVal("firstName", "prenom")} ${getVal("lastName", "nom")}`.trim();
+    const full = `${getVal("firstName", "prenom", "first_name")} ${getVal("lastName", "nom", "last_name")}`.trim();
     const email = getVal("email");
 
     return {
@@ -228,7 +296,7 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
 
   const filteredAttendees = useMemo(() => {
     const q = normalizeSearch(query);
-    if (!q) return attendees;
+    if (!q) return localAttendees;
 
     const mode = filterMode;
 
@@ -248,7 +316,7 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
       return found ? normalizeSearch(found.value).includes(q) : false;
     };
 
-    return attendees.filter((att) => {
+    return localAttendees.filter((att) => {
       if (mode === "order") return matchOrder(att.orderId);
 
       if (mode.startsWith("field:")) {
@@ -259,7 +327,7 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
 
       return matchOrder(att.orderId) || matchAnyField(att.id);
     });
-  }, [attendees, query, filterMode, orderMetaById, filledFieldsByAttendeeId]);
+  }, [localAttendees, query, filterMode, orderMetaById, filledFieldsByAttendeeId]);
 
   /* -------------------- GROUP BY ORDER (on filtered) -------------------- */
 
@@ -312,28 +380,19 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
   }
 
   const initialEditorValue = useMemo(() => {
-    // base vide
     const base: Record<string, any> = {};
-
-    // si edit -> préremplir depuis answers snapshot
     if (editingAttendeeId) {
       const filled = filledFieldsByAttendeeId.get(editingAttendeeId) ?? [];
-      for (const f of filled) {
-        base[f.key] = f.value;
-      }
+      for (const f of filled) base[f.key] = f.value;
     }
-
     return base;
   }, [editingAttendeeId, filledFieldsByAttendeeId]);
 
   async function handleSubmitParticipant(value: Record<string, any>) {
-    // ✅ ici tu brancheras ton repo/RPC plus tard.
-    // Pour l’instant : on simule.
     try {
       setSaving(true);
       setEditorError(null);
 
-      // EXEMPLE : payload minimal
       const payload = {
         mode: editorMode,
         orderId: editorOrderId,
@@ -411,6 +470,7 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
         </div>
       ) : (
         <AttendeeEditorPanel
+          supabase={supabase}
           isOpen={editorOpen}
           mode={editorMode}
           fields={regFields}
@@ -422,6 +482,46 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
           stickyTop={84}
           editorWidth={420}
           editorGap={14}
+          products={toRows(data.products)}
+          orderId={editorOrderId}
+          onAdded={async ({ attendeeId, orderId, eventProductId, value }) => {
+            const now = new Date().toISOString();
+
+            const products = toRows<any>(data?.products);
+            const prod = products.find((p) => String(p.id) === String(eventProductId));
+
+            const newAttendee: Attendee = {
+              id: attendeeId,
+              orderId,
+              productId: eventProductId,
+              productNameSnapshot: String(prod?.name ?? "Ticket"),
+              attendeeIndex: nextAttendeeIndexForOrder(orderId, localAttendees),
+              createdAt: now,
+              status: "reserved",
+              confirmedAt: null,
+              expiresAt: null,
+              detailsCompletedAt: null,
+              canceledAt: null,
+            };
+
+            const newAnswers = makeLocalAnswers({ attendeeId, regFields, value });
+
+            setLocalAttendees((prev) => [newAttendee, ...prev]);
+            setLocalAnswers((prev) => [...newAnswers, ...prev]);
+
+            // petit confort: focus sur la commande où on vient d’ajouter
+            setFilterMode("order");
+            setQuery(orderMetaById.get(orderId)?.orderNumber ?? orderId.slice(0, 8));
+
+            // resync serveur (optionnel mais conseillé)
+            if (typeof onChanged === "function") {
+              try {
+                await onChanged();
+              } catch {
+                // noop
+              }
+            }
+          }}
           left={
             <div className="adminOrdersGrid">
               {groups.map(([orderId, people]) => {
@@ -459,9 +559,12 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord }) {
                             <div className="adminPersonTop">
                               <div>
                                 <div className="adminPersonName">
-                                  {identity.title} <span className="adminPersonIndex">#{att.attendeeIndex}</span>
+                                  {identity.title}{" "}
+                                  <span className="adminPersonIndex">#{att.attendeeIndex}</span>
                                 </div>
-                                {identity.subtitle ? <div className="adminPersonSub">{identity.subtitle}</div> : null}
+                                {identity.subtitle ? (
+                                  <div className="adminPersonSub">{identity.subtitle}</div>
+                                ) : null}
                               </div>
 
                               <div className="adminPersonBadges">

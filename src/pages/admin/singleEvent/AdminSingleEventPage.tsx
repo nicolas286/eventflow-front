@@ -161,7 +161,10 @@ export function AdminSingleEventPage() {
 
             {tab === "form" && <SingleEventFormSection event={event} data={data as any} onChanged={refreshAll} />}
 
-            {tab === "participants" && <SingleEventParticipantsSection data={data as any} />}
+            {tab === "participants" && (
+              <SingleEventParticipantsSection data={data as any} onChanged={refreshAll} />
+            )}
+
           </>
         )}
       </div>
