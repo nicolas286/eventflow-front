@@ -156,13 +156,20 @@ export function EventTicketsPage() {
               <div className="publicList">
                 {sortedProducts.map((p) => {
                   const qty = quantities[p.id] ?? 0;
-                  const soldOut = p.stockQty === 0;
-                  const stockLabel = p.stockQty == null ? "Illimité" : `Stock : ${p.stockQty - p.soldQty - p.reservedQty}`;
+                  const remaining =
+                    p.stockQty == null ? null : Math.max(0, (p.stockQty ?? 0) - (p.soldQty ?? 0) - (p.reservedQty ?? 0));
+
+                  const soldOut = remaining === 0 && p.stockQty != null;
+
+                  const stockLabel =
+                    remaining == null ? "Illimité" : `Stock : ${remaining}`;
+
+                  const maxQty = remaining == null ? 99 : remaining;
+
 
                   const badgeTone = soldOut ? "danger" : "success";
                   const badgeLabel = soldOut ? "Épuisé" : "Disponible";
 
-                  const maxQty = p.stockQty == null ? 99 : Math.max(0, p.stockQty);
 
                   const createsAtt = p.createsAttendees === true;
                   const perUnit = p.attendeesPerUnit ?? 0;

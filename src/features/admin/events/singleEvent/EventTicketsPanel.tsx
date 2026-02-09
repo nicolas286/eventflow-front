@@ -555,11 +555,11 @@ export function EventTicketsPanel(props: Props) {
                     {t.description ? <div className="adminTicketDesc">{t.description}</div> : null}
 
                     <div className="adminTicketActions">
-                      <Button onClick={() => openEdit(t)} disabled={isSaving}>
+                      <Button variant="secondary" onClick={() => openEdit(t)} disabled={isSaving}>
                         Modifier
                       </Button>
 
-                      <Button onClick={() => toggleLocal(t.clientId, { isActive: !active })} disabled={isSaving}>
+                      <Button variant="secondary" onClick={() => toggleLocal(t.clientId, { isActive: !active })} disabled={isSaving}>
                         {active ? "Désactiver" : "Activer"}
                       </Button>
 
