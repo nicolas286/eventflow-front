@@ -530,13 +530,14 @@ export function EventRegistrationFormPanel(props: Props) {
                     </div>
 
                     <div className="adminRegActions">
-                      <Button onClick={() => openEdit(f)} disabled={isSaving}>
+                      <Button variant="secondary" onClick={() => openEdit(f)} disabled={isSaving}>
                         Modifier
                       </Button>
 
                       <Button
                         onClick={() => toggleLocal(f.clientId, { isRequired: !required })}
                         disabled={isSaving}
+                        variant="secondary"
                       >
                         {required ? "Rendre optionnel" : "Rendre requis"}
                       </Button>
@@ -544,6 +545,7 @@ export function EventRegistrationFormPanel(props: Props) {
                       <Button
                         onClick={() => toggleLocal(f.clientId, { isActive: !active })}
                         disabled={isSaving}
+                        variant="secondary"
                       >
                         {active ? "Désactiver" : "Activer"}
                       </Button>
@@ -556,6 +558,7 @@ export function EventRegistrationFormPanel(props: Props) {
                           animDir === "up" ? "isBumpUp" : "",
                         ].join(" ")}
                         aria-label="Monter"
+                        variant="secondary"
                       >
                         ↑
                       </Button>
@@ -568,6 +571,7 @@ export function EventRegistrationFormPanel(props: Props) {
                           animDir === "down" ? "isBumpDown" : "",
                         ].join(" ")}
                         aria-label="Descendre"
+                        variant="secondary"
                       >
                         ↓
                       </Button>
