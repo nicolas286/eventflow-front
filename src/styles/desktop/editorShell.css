@@ -7,12 +7,27 @@
   position:relative;
   min-width:0;
 
-  /* variables injectées via style inline */
   --editor-w: 420px;
   --editor-gap: 14px;
   --sticky-top: 84px;
 }
 
+/* ✅ IMPORTANT: quand inactif, la colonne droite ne doit JAMAIS bloquer */
+.uiEditorShell.isEditorInactive .uiEditorRight{
+  pointer-events: none;
+}
+
+/* et le panel aussi (double sécurité) */
+.uiEditorShell.isEditorInactive .uiEditorPanel{
+  pointer-events: none;
+}
+
+/* quand actif (open ou closing), interactions OK */
+.uiEditorShell.isEditorActive .uiEditorRight{
+  pointer-events: auto;
+}
+
+/* Left */
 .uiEditorLeft{
   width:100%;
   min-width:0;
@@ -37,7 +52,7 @@
   transform: translateX(0);
 }
 
-/* Panel sticky (colle sous la navbar avec marge via --sticky-top) */
+/* Panel sticky */
 .uiEditorPanel{
   position: sticky;
   top: var(--sticky-top);
@@ -69,11 +84,6 @@
   to   { opacity:0; transform: translateX(8px) scale(0.98); }
 }
 
-/* Inner wrapper pour pouvoir positionner la croix en absolute */
-.uiEditorPanelInner{
-  position: relative;
-}
-
 /* ✅ Croix top-right du panel */
 .uiEditorCloseBtn{
   position:absolute;
@@ -81,7 +91,6 @@
   right: 10px;
   z-index: 2;
 
-  /* un peu plus compact visuellement */
   padding: 8px !important;
   border-radius: 999px !important;
   line-height: 0 !important;
@@ -103,6 +112,7 @@
     position:static;
     width:100%;
     margin-top:14px;
+    pointer-events: auto; /* mobile OK, panel dans le flux */
   }
 
   .uiEditorPanel{

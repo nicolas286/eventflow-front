@@ -29,16 +29,19 @@ export function PublicEventHeader({ orgSlug, org, event }: Props) {
     <>
       {banner ? (
         <>
-          <div className="publicBannerWrap">
-            <img src={banner} alt={event.title} className="publicBanner" />
+          <div
+            className="publicBannerWrap"
+            style={{ ["--banner-url" as any]: `url("${banner}")` }}
+          >
+            <div className="publicBannerClip">
+              <div className="publicBanner" aria-label={event.title} />
+            </div>
+
             {org?.logoUrl ? (
-              <img
-                src={org.logoUrl}
-                alt={org.slug}
-                className="publicBannerLogo"
-              />
+              <img src={org.logoUrl} alt={org.slug} className="publicBannerLogo" />
             ) : null}
           </div>
+
           <div className="publicBannerUnderSpace" />
         </>
       ) : null}

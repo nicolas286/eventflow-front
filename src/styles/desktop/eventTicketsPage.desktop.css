@@ -1,7 +1,7 @@
 /* src/styles/eventTicketsPage.css */
 
 /* =========================================================
-   🎟️ Ticket card – Branding diffus centré + coin statut + grain
+   🎟️ Ticket card – Branding diffus ultra léger + coin statut + grain subtil
    ========================================================= */
 
 .publicTicketCard {
@@ -10,22 +10,22 @@
 
   background-color: #ffffff;
 
-  /* Halo branding (un peu plus à gauche, légèrement plus bas)
+  /* Halo branding (très léger, centré et discret)
      + coin haut-droite lié au badge */
   background-image:
     /* Coin statut (piloté par --status-rgb) */
     radial-gradient(
-      220px 160px at 100% 0%,
-      rgb(var(--status-rgb) / 0.18) 0%,
-      rgb(var(--status-rgb) / 0.10) 35%,
+      200px 140px at 100% 0%,
+      rgb(var(--status-rgb) / 0.10) 0%,
+      rgb(var(--status-rgb) / 0.05) 35%,
       transparent 65%
     ),
 
-    /* Halo branding gauche, recentré verticalement */
+    /* Halo branding gauche, atténué */
     radial-gradient(
-      420px 160px at 12% 55%,
-      rgb(var(--primary-bg) / 0.14),
-      transparent 70%
+      360px 140px at 12% 55%,
+      rgb(var(--primary-bg) / 0.08),
+      transparent 85%
     );
 
   background-repeat: no-repeat;
@@ -36,8 +36,8 @@
   border-radius: 18px;
 
   box-shadow:
-    0 12px 30px rgba(0, 0, 0, 0.08),
-    0 1px 0 rgba(255, 255, 255, 0.7) inset;
+    0 10px 24px rgba(0, 0, 0, 0.06),
+    0 1px 0 rgba(255, 255, 255, 0.75) inset;
 
   transition:
     transform 160ms ease,
@@ -54,37 +54,37 @@
 /* “complet” = rouge */
 .publicTicketCard.isSoldOut {
   --status-rgb: 239 68 68;
-  opacity: 0.82;
+  opacity: 0.9;
 }
 
-/* 🌫️ Grain léger (un peu plus présent, toujours fin) */
+/* 🌫️ Grain très subtil */
 .publicTicketCard::after {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
 
-  opacity: 0.50;                 /* 🔼 grain renforcé */
+  opacity: 0.035;
   mix-blend-mode: multiply;
 
   background-image:
     repeating-linear-gradient(
       45deg,
-      rgba(0, 0, 0, 0.045) 0px,
-      rgba(0, 0, 0, 0.045) 1px,
+      rgba(0, 0, 0, 0.025) 0px,
+      rgba(0, 0, 0, 0.025) 1px,
       transparent 1px,
-      transparent 5px
+      transparent 6px
     );
 
   border-radius: inherit;
 }
 
 .publicTicketCard:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   border-color: rgba(0, 0, 0, 0.10);
   box-shadow:
-    0 18px 44px rgba(0, 0, 0, 0.10),
-    0 1px 0 rgba(255, 255, 255, 0.7) inset;
+    0 14px 34px rgba(0, 0, 0, 0.08),
+    0 1px 0 rgba(255, 255, 255, 0.8) inset;
 }
 
 /* ---------- Ticket layout ---------- */
@@ -132,10 +132,10 @@
   padding: 10px 12px;
   border-radius: 14px;
 
-  background: rgba(255, 255, 255, 0.75);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.07);
 
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.05);
 }
 
 .publicQtyInput {
@@ -166,8 +166,8 @@
   padding: 10px 12px;
   border-radius: 999px;
 
-  background: rgba(17, 24, 39, 0.04);
-  border: 1px solid rgba(17, 24, 39, 0.10);
+  background: rgba(17, 24, 39, 0.035);
+  border: 1px solid rgba(17, 24, 39, 0.08);
   white-space: nowrap;
 }
 

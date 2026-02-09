@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import Button from "../../components/button/Button"
+import Button from "../../components/button/Button";
 import "../../../styles/desktop/editorShell.css";
 
 type AnimState = "closed" | "open" | "closing";
@@ -89,7 +89,6 @@ export function EditorShell({
 
     const update = () => {
       const r = el.getBoundingClientRect();
-      // distance entre le bord droit du shell et le bord droit de la fenêtre
       const rightOffset = Math.max(0, Math.round(window.innerWidth - r.right));
       el.style.setProperty("--editor-fixed-right", `${rightOffset}px`);
     };
@@ -108,7 +107,8 @@ export function EditorShell({
     };
   }, [mode]);
 
-  const shellOpen = isOpen || anim === "closing";
+  // ✅ "actif" = ouvert OU en train de se fermer (pour garder l’animation)
+  const shellActive = isOpen || anim === "closing";
   const showPanel = anim !== "closed";
 
   const styleVars = useMemo(
@@ -116,7 +116,7 @@ export function EditorShell({
       ({
         ["--editor-w" as any]: `${editorWidth}px`,
         ["--editor-gap" as any]: `${editorGap}px`,
-        ["--editor-sticky-top" as any]: `${stickyTop}px`,
+        ["--sticky-top" as any]: `${stickyTop}px`, // ✅ fix: même variable que le CSS
       }) as React.CSSProperties,
     [editorWidth, editorGap, stickyTop]
   );
@@ -126,7 +126,7 @@ export function EditorShell({
       ref={shellRef}
       className={[
         "uiEditorShell",
-        shellOpen ? "isEditorOpen" : "",
+        shellActive ? "isEditorOpen isEditorActive" : "isEditorInactive",
         mode === "fixed" ? "isFixed" : "",
         className ?? "",
       ].join(" ")}
@@ -134,7 +134,7 @@ export function EditorShell({
     >
       <div className="uiEditorLeft">{left}</div>
 
-      <div className="uiEditorRight">
+      <div className="uiEditorRight" aria-hidden={!shellActive}>
         {showPanel ? (
           <div
             className={[

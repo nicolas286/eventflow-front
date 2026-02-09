@@ -13,7 +13,6 @@
 
 .publicTitleBlock {
   min-width: 0;
-  text-align: center;
 }
 
 .publicTitle {
@@ -23,6 +22,7 @@
   font-weight: 800;
   letter-spacing: -0.02em;
   color: #0f172a;
+  text-align: center;
 }
 
 /* subtitle = lieu / infos */
