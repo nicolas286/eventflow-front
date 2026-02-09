@@ -2,8 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import Button from "../../../../ui/components/button/Button";
 import { supabase } from "../../../../gateways/supabase/supabaseClient";
 
-import { AttendeeEditorPanel, type RegistrationFieldLike } from "../../../../features/admin/events/singleEvent/AttendeeEditorPanel";
+import {
+  AttendeeEditorPanel,
+  type RegistrationFieldLike,
+} from "../../../../features/admin/events/singleEvent/AttendeeEditorPanel";
 import { useAdminUpdateOrderAttendee } from "../../../../features/admin/hooks/useUpdateOrderAttendeeAnswers";
+import { OrderEditorPanel } from "../../../../features/admin/events/singleEvent/OrderEditorPanel";
 
 type AnyRecord = Record<string, any>;
 
@@ -168,18 +172,14 @@ function buildUpdateAttendeeFromForm(params: {
 
     const isCheckbox = fieldType === "checkbox";
 
-    // ✅ on NE skip PAS les vides (sinon impossible de clear)
     const trimmed = String(raw ?? "").trim();
     const isEmpty = !isCheckbox && trimmed.length === 0;
 
-    // ✅ tout est dans answers (snake case)
-    const fieldKey = k; // déjà snake si tes regFields sont snake
-    // si tu veux bétonner: const fieldKey = toSnakeKey(k);
+    const fieldKey = k;
 
     if (fieldType === "checkbox") {
       answers.push({ fieldKey, valueBool: Boolean(raw) });
     } else if (fieldType === "number") {
-      // si vide => delete => on envoie rien en value_int (ou valueText vide)
       if (isEmpty) answers.push({ fieldKey, valueText: "" });
       else answers.push({ fieldKey, valueInt: Number(raw) });
     } else if (fieldType === "date") {
@@ -189,22 +189,17 @@ function buildUpdateAttendeeFromForm(params: {
     }
   }
 
-  return { answers }; // ✅ uniquement answers
+  return { answers };
 }
 
-
-
-export function SingleEventParticipantsSection(props: {
-  data: AnyRecord;
-  onChanged?: () => Promise<void>;
-}) {
+export function SingleEventParticipantsSection(props: { data: AnyRecord; onChanged?: () => Promise<void> }) {
   const { data, onChanged } = props;
 
   /* -------------------- FILTER UI STATE -------------------- */
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [query, setQuery] = useState("");
 
-  /* -------------------- EDITOR STATE -------------------- */
+  /* -------------------- EDITOR STATE (ATTENDEE) -------------------- */
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState<"create" | "edit">("create");
   const [editorOrderId, setEditorOrderId] = useState<string | null>(null);
@@ -213,9 +208,10 @@ export function SingleEventParticipantsSection(props: {
   const [editorError, setEditorError] = useState<string | null>(null);
   const updateAttendee = useAdminUpdateOrderAttendee({ supabase });
 
+  /* -------------------- EDITOR STATE (ORDER) -------------------- */
+  const [orderEditorOpen, setOrderEditorOpen] = useState(false);
 
   /* -------------------- DATA (initial -> local state) -------------------- */
-
   const initialAttendees = useMemo(
     () =>
       toRows<Attendee>(
@@ -241,22 +237,15 @@ export function SingleEventParticipantsSection(props: {
     [data]
   );
 
+  const initialOrders = useMemo(() => toRows<AnyRecord>(data?.orders ?? data?.orderRows ?? data?.order_rows), [data]);
+
   const [localAttendees, setLocalAttendees] = useState<Attendee[]>(() => initialAttendees);
   const [localAnswers, setLocalAnswers] = useState<AttendeeAnswer[]>(() => initialAnswers);
+  const [localOrders, setLocalOrders] = useState<AnyRecord[]>(() => initialOrders);
 
-  // ✅ resync quand data change (refetch, switch tab, etc.)
-  useEffect(() => {
-    setLocalAttendees(initialAttendees);
-  }, [initialAttendees]);
-
-  useEffect(() => {
-    setLocalAnswers(initialAnswers);
-  }, [initialAnswers]);
-
-  const orders = useMemo(
-    () => toRows<AnyRecord>(data?.orders ?? data?.orderRows ?? data?.order_rows),
-    [data]
-  );
+  useEffect(() => setLocalAttendees(initialAttendees), [initialAttendees]);
+  useEffect(() => setLocalAnswers(initialAnswers), [initialAnswers]);
+  useEffect(() => setLocalOrders(initialOrders), [initialOrders]);
 
   // ✅ champs du formulaire d’inscription (source DB)
   const regFields = useMemo(() => {
@@ -271,24 +260,21 @@ export function SingleEventParticipantsSection(props: {
   }, [data]);
 
   /* -------------------- ORDER META -------------------- */
-
   const orderMetaById = useMemo(() => {
     const m = new Map<string, { orderNumber: string; createdAt?: string }>();
-    for (const o of orders) {
+    for (const o of localOrders) {
       const id = getFirst<string>(o, ["id", "orderId", "order_id"]);
       if (!id) continue;
       m.set(id, {
         orderNumber:
-          getFirst<string>(o, ["publicId", "public_id", "number", "ref", "reference"]) ??
-          id.slice(0, 8),
+          getFirst<string>(o, ["publicId", "public_id", "number", "ref", "reference"]) ?? id.slice(0, 8),
         createdAt: getFirst<string>(o, ["createdAt", "created_at"]),
       });
     }
     return m;
-  }, [orders]);
+  }, [localOrders]);
 
   /* -------------------- ANSWERS BY ATTENDEE -------------------- */
-
   const filledFieldsByAttendeeId = useMemo(() => {
     const map = new Map<string, { key: string; label: string; value: string }[]>();
 
@@ -315,7 +301,6 @@ export function SingleEventParticipantsSection(props: {
   }, [localAnswers]);
 
   /* -------------------- FIELDS OPTIONS (dropdown) -------------------- */
-
   const fieldOptions = useMemo(() => {
     const m = new Map<string, string>();
     for (const a of localAnswers) {
@@ -330,7 +315,6 @@ export function SingleEventParticipantsSection(props: {
   }, [localAnswers]);
 
   /* -------------------- IDENTITY -------------------- */
-
   function computeIdentity(attendeeId: string) {
     const fields = filledFieldsByAttendeeId.get(attendeeId) ?? [];
     const getVal = (...keys: string[]) => fields.find((f) => keys.includes(f.key))?.value ?? "";
@@ -345,7 +329,6 @@ export function SingleEventParticipantsSection(props: {
   }
 
   /* -------------------- FILTERED ATTENDEES -------------------- */
-
   const filteredAttendees = useMemo(() => {
     const q = normalizeSearch(query);
     if (!q) return localAttendees;
@@ -381,38 +364,64 @@ export function SingleEventParticipantsSection(props: {
     });
   }, [localAttendees, query, filterMode, orderMetaById, filledFieldsByAttendeeId]);
 
-  /* -------------------- GROUP BY ORDER (on filtered) -------------------- */
-
+  /* -------------------- GROUPS BY ORDER (orders + attendees) -------------------- */
   const groups = useMemo(() => {
-    const m = new Map<string, Attendee[]>();
+    const byOrder = new Map<string, Attendee[]>();
     for (const a of filteredAttendees) {
-      const arr = m.get(a.orderId) ?? [];
+      const arr = byOrder.get(a.orderId) ?? [];
       arr.push(a);
-      m.set(a.orderId, arr);
+      byOrder.set(a.orderId, arr);
     }
 
-    const entries = Array.from(m.entries());
+    const q = normalizeSearch(query);
+    const mode = filterMode;
 
-    entries.sort((a, b) => {
-      const ad = orderMetaById.get(a[0])?.createdAt ?? "";
-      const bd = orderMetaById.get(b[0])?.createdAt ?? "";
-      return bd.localeCompare(ad);
+    const orderMatchesQuery = (orderId: string) => {
+      const orderNum = orderMetaById.get(orderId)?.orderNumber ?? "";
+      return normalizeSearch(orderNum).includes(q);
+    };
+
+    const shouldShowOrder = (orderId: string) => {
+      if (!q) return true;
+      if (mode === "order") return orderMatchesQuery(orderId);
+      if (mode.startsWith("field:")) return (byOrder.get(orderId) ?? []).length > 0;
+      return orderMatchesQuery(orderId) || (byOrder.get(orderId) ?? []).length > 0;
+    };
+
+    const visibleOrders = (Array.isArray(localOrders) ? localOrders : [])
+      .map((o) => ({
+        orderId: getFirst<string>(o, ["id", "orderId", "order_id"]) ?? "",
+        createdAt: getFirst<string>(o, ["createdAt", "created_at"]) ?? "",
+      }))
+      .filter((x) => x.orderId)
+      .filter((x) => shouldShowOrder(x.orderId));
+
+    visibleOrders.sort((a, b) => {
+      const ad = a.createdAt ?? "";
+      const bd = b.createdAt ?? "";
+      if (bd !== ad) return bd.localeCompare(ad);
+      return b.orderId.localeCompare(a.orderId);
     });
 
-    for (const [, arr] of entries) {
+    const out: Array<[string, Attendee[]]> = [];
+    for (const o of visibleOrders) {
+      const arr = byOrder.get(o.orderId) ?? [];
       arr.sort((x, y) => (x.attendeeIndex ?? 0) - (y.attendeeIndex ?? 0));
+      out.push([o.orderId, arr]);
     }
 
-    return entries;
-  }, [filteredAttendees, orderMetaById]);
+    return out;
+  }, [filteredAttendees, localOrders, orderMetaById, query, filterMode]);
 
   /* -------------------- EDITOR HELPERS -------------------- */
-
   function openCreate(orderId: string) {
     setEditorError(null);
     setEditorMode("create");
     setEditorOrderId(orderId);
     setEditingAttendeeId(null);
+
+    // ✅ un seul panel à la fois
+    setOrderEditorOpen(false);
     setEditorOpen(true);
   }
 
@@ -421,6 +430,9 @@ export function SingleEventParticipantsSection(props: {
     setEditorMode("edit");
     setEditorOrderId(orderId);
     setEditingAttendeeId(attendeeId);
+
+    // ✅ un seul panel à la fois
+    setOrderEditorOpen(false);
     setEditorOpen(true);
   }
 
@@ -429,6 +441,19 @@ export function SingleEventParticipantsSection(props: {
     setEditingAttendeeId(null);
     setEditorOrderId(null);
     setEditorError(null);
+  }
+
+  function openCreateOrder() {
+    // ✅ un seul panel à la fois
+    setEditorOpen(false);
+    setEditingAttendeeId(null);
+    setEditorOrderId(null);
+    setEditorError(null);
+    setOrderEditorOpen(true);
+  }
+
+  function closeOrderEditor() {
+    setOrderEditorOpen(false);
   }
 
   const initialEditorValue = useMemo(() => {
@@ -441,81 +466,155 @@ export function SingleEventParticipantsSection(props: {
   }, [editingAttendeeId, filledFieldsByAttendeeId]);
 
   async function handleSubmitParticipant(value: Record<string, any>) {
-  try {
-    setSaving(true);
-    setEditorError(null);
+    try {
+      setSaving(true);
+      setEditorError(null);
 
-    if (editorMode !== "edit" || !editingAttendeeId) {
-      closeEditor();
-      return;
-    }
-
-   const attendee = { answers: buildUpdateAttendeeFromForm({ regFields, value }).answers };
-
-
-    
-  const res = await updateAttendee.updateOrderAttendee({
-    attendeeId: editingAttendeeId,
-    attendee, 
-  });
-
-
-
-
-    if (!res) {
-      // le hook a déjà mis une erreur lisible
-      setEditorError(updateAttendee.error ?? "Impossible de modifier le participant");
-      return;
-    }
-
-    // 2) patch local UI : remplace toutes les answers de ce participant
-    const nextAnswers = makeLocalAnswers({
-      attendeeId: editingAttendeeId,
-      regFields,
-      value,
-    });
-
-    setLocalAnswers((prev) => {
-      const kept = prev.filter((a) => a.attendeeId !== editingAttendeeId);
-      return [...nextAnswers, ...kept];
-    });
-
-    closeEditor();
-
-    // 3) resync serveur (optionnel mais conseillé)
-    if (typeof onChanged === "function") {
-      try {
-        await onChanged();
-      } catch {
-        // noop
+      if (editorMode !== "edit" || !editingAttendeeId) {
+        closeEditor();
+        return;
       }
-    }
-  } catch (e: any) {
-    setEditorError(e?.message ? String(e.message) : "Erreur inconnue");
-  } finally {
-    setSaving(false);
-  }
-}
 
+      const attendee = { answers: buildUpdateAttendeeFromForm({ regFields, value }).answers };
+
+      const res = await updateAttendee.updateOrderAttendee({
+        attendeeId: editingAttendeeId,
+        attendee,
+      });
+
+      if (!res) {
+        setEditorError(updateAttendee.error ?? "Impossible de modifier le participant");
+        return;
+      }
+
+      const nextAnswers = makeLocalAnswers({
+        attendeeId: editingAttendeeId,
+        regFields,
+        value,
+      });
+
+      setLocalAnswers((prev) => {
+        const kept = prev.filter((a) => a.attendeeId !== editingAttendeeId);
+        return [...nextAnswers, ...kept];
+      });
+
+      closeEditor();
+
+      if (typeof onChanged === "function") {
+        try {
+          await onChanged();
+        } catch {
+          // noop
+        }
+      }
+    } catch (e: any) {
+      setEditorError(e?.message ? String(e.message) : "Erreur inconnue");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  /* -------------------- LEFT CONTENT (shared) -------------------- */
+  const leftContent = (
+    <div className="adminOrdersGrid">
+      {groups.map(([orderId, people]) => {
+        const meta = orderMetaById.get(orderId);
+        const orderNumber = meta?.orderNumber ?? orderId.slice(0, 8);
+
+        return (
+          <div key={orderId} className="adminOrderCard">
+            <div className="adminOrderHeader">
+              <div>
+                <div className="adminOrderTitle">Commande {orderNumber}</div>
+                <div className="adminOrderSub">Créée le {formatDateTime(meta?.createdAt)}</div>
+              </div>
+
+              <div className="adminOrderHeaderRight">
+                <span className="adminOrderPill">
+                  {people.length} inscrit{people.length > 1 ? "s" : ""}
+                </span>
+
+                <Button variant="primary" onClick={() => openCreate(orderId)}>
+                  + Ajouter un participant
+                </Button>
+              </div>
+            </div>
+
+            <div className="adminOrderPeople">
+              {people.length === 0 ? (
+                <div className="adminOrderEmptyPeople">Aucun participant dans cette commande pour le moment.</div>
+              ) : (
+                people.map((att) => {
+                  const identity = computeIdentity(att.id);
+                  const filled = filledFieldsByAttendeeId.get(att.id) ?? [];
+
+                  return (
+                    <div key={att.id} className="adminPersonCard">
+                      <div className="adminPersonTop">
+                        <div>
+                          <div className="adminPersonName">
+                            {identity.title} <span className="adminPersonIndex">#{att.attendeeIndex}</span>
+                          </div>
+                          {identity.subtitle ? <div className="adminPersonSub">{identity.subtitle}</div> : null}
+                        </div>
+
+                        <div className="adminPersonBadges">
+                          <span className={`adminStatusBadge is-${att.status}`}>{att.status}</span>
+                          <span className="adminProductBadge">{att.productNameSnapshot}</span>
+                        </div>
+                      </div>
+
+                      <div className="adminFilledGrid">
+                        {filled.length > 0 ? (
+                          filled.map((f) => (
+                            <div key={f.key} className="adminFieldLine">
+                              <span className="adminFieldLabel">{f.label}</span>
+                              <span className="adminFieldValue">{normalizeStr(f.value)}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="adminFilledEmpty">Aucun champ rempli.</div>
+                        )}
+                      </div>
+
+                      <div className="adminPersonActionsBottom">
+                        <Button variant="primary" onClick={() => openEdit(att.id, orderId)}>
+                          Modifier
+                        </Button>
+                        <Button variant="danger">Supprimer</Button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 
   /* -------------------- RENDER -------------------- */
-
   return (
     <div className="adminParticipants adminSingleEventParticipants">
       <div className="adminParticipantsHeader">
-        <h3 className="adminParticipantsTitle">Commandes</h3>
-        <div className="adminParticipantsHint">
-          {groups.length} commande(s) • {filteredAttendees.length} participant(s)
+        <div>
+          <h3 className="adminParticipantsTitle">Commandes</h3>
+          <div className="adminParticipantsHint">
+            {groups.length} commande(s) • {filteredAttendees.length} participant(s)
+          </div>
+        </div>
+
+        <div className="adminParticipantsHeaderRight">
+          <Button variant="primary" onClick={openCreateOrder}>
+            + Ajouter une commande
+          </Button>
         </div>
       </div>
 
       {/* --- SEARCH BAR --- */}
       <div className="adminParticipantsSearch">
-        <select
-          className="adminSearchSelect"
-          value={filterMode}
-          onChange={(e) => setFilterMode(e.target.value as FilterMode)}
-        >
+        <select className="adminSearchSelect" value={filterMode} onChange={(e) => setFilterMode(e.target.value as FilterMode)}>
           <option value="all">Tous</option>
           <option value="order">Commande</option>
 
@@ -552,143 +651,95 @@ export function SingleEventParticipantsSection(props: {
       </div>
 
       {groups.length === 0 ? (
-        <div className="adminEventEmpty">
-          {query.trim() ? "Aucun résultat avec ces filtres." : "Aucune inscription pour le moment."}
-        </div>
+        <div className="adminEventEmpty">{query.trim() ? "Aucun résultat avec ces filtres." : "Aucune commande pour le moment."}</div>
       ) : (
-        <AttendeeEditorPanel
-          supabase={supabase}
-          isOpen={editorOpen}
-          mode={editorMode}
-          fields={regFields}
-          initialValue={initialEditorValue}
-          onRequestClose={closeEditor}
-          onSubmit={handleSubmitParticipant}
-          isSaving={editorMode === "edit" ? updateAttendee.loading : saving}
-          error={editorMode === "edit" ? updateAttendee.error : editorError}
-          stickyTop={84}
-          editorWidth={420}
-          editorGap={14}
-          products={toRows(data.products)}
-          orderId={editorOrderId}
-          onAdded={async ({ attendeeId, orderId, eventProductId, value }) => {
-            const now = new Date().toISOString();
+        <>
+          {/* ✅ Panel commande : TOUJOURS monté => même animation que le panel participant */}
+          <OrderEditorPanel
+            isOpen={orderEditorOpen}
+            onRequestClose={closeOrderEditor}
+            stickyTop={84}
+            editorWidth={420}
+            editorGap={14}
+            left={leftContent}
+            onCreated={async ({ orderId, order }) => {
+              setLocalOrders((prev) => {
+                const exists = prev.some((o) => String(getFirst(o, ["id", "orderId", "order_id"])) === String(orderId));
+                if (exists) return prev;
+                return [order, ...prev];
+              });
 
-            const products = toRows<any>(data?.products);
-            const prod = products.find((p) => String(p.id) === String(eventProductId));
+              const orderNumber =
+                getFirst<string>(order, ["publicId", "public_id", "number", "ref", "reference"]) ?? orderId.slice(0, 8);
 
-            const newAttendee: Attendee = {
-              id: attendeeId,
-              orderId,
-              productId: eventProductId,
-              productNameSnapshot: String(prod?.name ?? "Ticket"),
-              attendeeIndex: nextAttendeeIndexForOrder(orderId, localAttendees),
-              createdAt: now,
-              status: "reserved",
-              confirmedAt: null,
-              expiresAt: null,
-              detailsCompletedAt: null,
-              canceledAt: null,
-            };
+              setFilterMode("order");
+              setQuery(String(orderNumber));
 
-            const newAnswers = makeLocalAnswers({ attendeeId, regFields, value });
-
-            setLocalAttendees((prev) => [newAttendee, ...prev]);
-            setLocalAnswers((prev) => [...newAnswers, ...prev]);
-
-            // petit confort: focus sur la commande où on vient d’ajouter
-            setFilterMode("order");
-            setQuery(orderMetaById.get(orderId)?.orderNumber ?? orderId.slice(0, 8));
-
-            // resync serveur (optionnel mais conseillé)
-            if (typeof onChanged === "function") {
-              try {
-                await onChanged();
-              } catch {
-                // noop
+              if (typeof onChanged === "function") {
+                try {
+                  await onChanged();
+                } catch {
+                  // noop
+                }
               }
-            }
-          }}
-          left={
-            <div className="adminOrdersGrid">
-              {groups.map(([orderId, people]) => {
-                const meta = orderMetaById.get(orderId);
-                const orderNumber = meta?.orderNumber ?? orderId.slice(0, 8);
+            }}
+          />
 
-                return (
-                  <div key={orderId} className="adminOrderCard">
-                    {/* ---------- ORDER HEADER ---------- */}
-                    <div className="adminOrderHeader">
-                      <div>
-                        <div className="adminOrderTitle">Commande {orderNumber}</div>
-                        <div className="adminOrderSub">Créée le {formatDateTime(meta?.createdAt)}</div>
-                      </div>
+          {/* ✅ Panel participant : TOUJOURS monté => animation inchangée */}
+          <AttendeeEditorPanel
+            supabase={supabase}
+            isOpen={editorOpen}
+            mode={editorMode}
+            fields={regFields}
+            initialValue={initialEditorValue}
+            onRequestClose={closeEditor}
+            onSubmit={handleSubmitParticipant}
+            isSaving={editorMode === "edit" ? updateAttendee.loading : saving}
+            error={editorMode === "edit" ? updateAttendee.error : editorError}
+            stickyTop={84}
+            editorWidth={420}
+            editorGap={14}
+            products={toRows(data.products)}
+            orderId={editorOrderId}
+            onAdded={async ({ attendeeId, orderId, eventProductId, value }) => {
+              const now = new Date().toISOString();
 
-                      <div className="adminOrderHeaderRight">
-                        <span className="adminOrderPill">
-                          {people.length} inscrit{people.length > 1 ? "s" : ""}
-                        </span>
+              const products = toRows<any>(data?.products);
+              const prod = products.find((p) => String(p.id) === String(eventProductId));
 
-                        <Button variant="primary" onClick={() => openCreate(orderId)}>
-                          + Ajouter un participant
-                        </Button>
-                      </div>
-                    </div>
+              const newAttendee: Attendee = {
+                id: attendeeId,
+                orderId,
+                productId: eventProductId,
+                productNameSnapshot: String(prod?.name ?? "Ticket"),
+                attendeeIndex: nextAttendeeIndexForOrder(orderId, localAttendees),
+                createdAt: now,
+                status: "reserved",
+                confirmedAt: null,
+                expiresAt: null,
+                detailsCompletedAt: null,
+                canceledAt: null,
+              };
 
-                    {/* ---------- PARTICIPANTS ---------- */}
-                    <div className="adminOrderPeople">
-                      {people.map((att) => {
-                        const identity = computeIdentity(att.id);
-                        const filled = filledFieldsByAttendeeId.get(att.id) ?? [];
+              const newAnswers = makeLocalAnswers({ attendeeId, regFields, value });
 
-                        return (
-                          <div key={att.id} className="adminPersonCard">
-                            <div className="adminPersonTop">
-                              <div>
-                                <div className="adminPersonName">
-                                  {identity.title}{" "}
-                                  <span className="adminPersonIndex">#{att.attendeeIndex}</span>
-                                </div>
-                                {identity.subtitle ? (
-                                  <div className="adminPersonSub">{identity.subtitle}</div>
-                                ) : null}
-                              </div>
+              setLocalAttendees((prev) => [newAttendee, ...prev]);
+              setLocalAnswers((prev) => [...newAnswers, ...prev]);
 
-                              <div className="adminPersonBadges">
-                                <span className={`adminStatusBadge is-${att.status}`}>{att.status}</span>
-                                <span className="adminProductBadge">{att.productNameSnapshot}</span>
-                              </div>
-                            </div>
+              setFilterMode("order");
+              setQuery(orderMetaById.get(orderId)?.orderNumber ?? orderId.slice(0, 8));
 
-                            <div className="adminFilledGrid">
-                              {filled.length > 0 ? (
-                                filled.map((f) => (
-                                  <div key={f.key} className="adminFieldLine">
-                                    <span className="adminFieldLabel">{f.label}</span>
-                                    <span className="adminFieldValue">{normalizeStr(f.value)}</span>
-                                  </div>
-                                ))
-                              ) : (
-                                <div className="adminFilledEmpty">Aucun champ rempli.</div>
-                              )}
-                            </div>
-
-                            <div className="adminPersonActionsBottom">
-                              <Button variant="primary" onClick={() => openEdit(att.id, orderId)}>
-                                Modifier
-                              </Button>
-                              <Button variant="danger">Supprimer</Button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          }
-        />
+              if (typeof onChanged === "function") {
+                try {
+                  await onChanged();
+                } catch {
+                  // noop
+                }
+              }
+            }}
+            left={leftContent}
+          />
+        </>
       )}
     </div>
   );
