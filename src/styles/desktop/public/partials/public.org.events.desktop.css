@@ -63,9 +63,10 @@
 }
 
 .publicOrgEventFooter {
-  margin-top: 14px;
-  display: flex;
-  justify-content: flex-end;
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  margin-top: 0;
 }
 
 /* Petit hover premium (sans casser le branding) */
