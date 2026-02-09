@@ -3,6 +3,7 @@ import Button from "../../../../ui/components/button/Button";
 import { supabase } from "../../../../gateways/supabase/supabaseClient";
 
 import { AttendeeEditorPanel, type RegistrationFieldLike } from "../../../../features/admin/events/singleEvent/AttendeeEditorPanel";
+import { useAdminUpdateOrderAttendee } from "../../../../features/admin/hooks/useUpdateOrderAttendeeAnswers";
 
 type AnyRecord = Record<string, any>;
 
@@ -144,6 +145,53 @@ function makeLocalAnswers(params: {
 
 type FilterMode = "all" | "order" | `field:${string}`;
 
+function buildUpdateAttendeeFromForm(params: {
+  regFields: RegistrationFieldLike[];
+  value: Record<string, any>;
+}) {
+  const { regFields, value } = params;
+
+  const byKey = new Map<string, RegistrationFieldLike>();
+  for (const f of regFields) {
+    const k = String(f.fieldKey ?? "").trim();
+    if (k) byKey.set(k, f);
+  }
+
+  const attendee: any = {};
+  const answers: any[] = [];
+
+  for (const [key, raw] of Object.entries(value ?? {})) {
+    const k = String(key ?? "").trim();
+    if (!k) continue;
+
+    const f = byKey.get(k);
+    const fieldType = String(f?.fieldType ?? "text");
+
+    // checkbox: on garde false/true, sinon on ignore les vides
+    const isCheckbox = fieldType === "checkbox";
+    const isEmpty = !isCheckbox && String(raw ?? "").trim().length === 0;
+    if (isEmpty) continue;
+
+    // champs “spéciaux” (réservés)
+    if (k === "email") attendee.email = String(raw ?? "").trim();
+    else if (k === "phone") attendee.phone = String(raw ?? "").trim();
+    else if (k === "first_name") attendee.firstName = String(raw ?? "").trim();
+    else if (k === "last_name") attendee.lastName = String(raw ?? "").trim();
+    else {
+      // answers génériques
+      if (fieldType === "checkbox") answers.push({ fieldKey: k, valueBool: Boolean(raw) });
+      else if (fieldType === "number") answers.push({ fieldKey: k, valueInt: Number(raw) });
+      else if (fieldType === "date") answers.push({ fieldKey: k, valueDate: String(raw ?? "").trim() });
+      else answers.push({ fieldKey: k, valueText: String(raw ?? "").trim() });
+    }
+  }
+
+  if (answers.length) attendee.answers = answers;
+
+  return attendee;
+}
+
+
 export function SingleEventParticipantsSection(props: {
   data: AnyRecord;
   onChanged?: () => Promise<void>;
@@ -161,6 +209,8 @@ export function SingleEventParticipantsSection(props: {
   const [editingAttendeeId, setEditingAttendeeId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [editorError, setEditorError] = useState<string | null>(null);
+  const updateAttendee = useAdminUpdateOrderAttendee({ supabase });
+
 
   /* -------------------- DATA (initial -> local state) -------------------- */
 
@@ -389,27 +439,61 @@ export function SingleEventParticipantsSection(props: {
   }, [editingAttendeeId, filledFieldsByAttendeeId]);
 
   async function handleSubmitParticipant(value: Record<string, any>) {
-    try {
-      setSaving(true);
-      setEditorError(null);
+  try {
+    setSaving(true);
+    setEditorError(null);
 
-      const payload = {
-        mode: editorMode,
-        orderId: editorOrderId,
-        attendeeId: editingAttendeeId,
-        answers: value,
-      };
-
-      // eslint-disable-next-line no-console
-      console.log("SUBMIT PARTICIPANT", payload);
-
+    if (editorMode !== "edit" || !editingAttendeeId) {
       closeEditor();
-    } catch (e: any) {
-      setEditorError(e?.message ? String(e.message) : "Erreur inconnue");
-    } finally {
-      setSaving(false);
+      return;
     }
+
+   const attendee = buildUpdateAttendeeFromForm({ regFields, value });
+
+    
+  const res = await updateAttendee.updateOrderAttendee({
+    attendeeId: editingAttendeeId,
+    attendee, 
+  });
+
+
+
+
+    if (!res) {
+      // le hook a déjà mis une erreur lisible
+      setEditorError(updateAttendee.error ?? "Impossible de modifier le participant");
+      return;
+    }
+
+    // 2) patch local UI : remplace toutes les answers de ce participant
+    const nextAnswers = makeLocalAnswers({
+      attendeeId: editingAttendeeId,
+      regFields,
+      value,
+    });
+
+    setLocalAnswers((prev) => {
+      const kept = prev.filter((a) => a.attendeeId !== editingAttendeeId);
+      return [...nextAnswers, ...kept];
+    });
+
+    closeEditor();
+
+    // 3) resync serveur (optionnel mais conseillé)
+    if (typeof onChanged === "function") {
+      try {
+        await onChanged();
+      } catch {
+        // noop
+      }
+    }
+  } catch (e: any) {
+    setEditorError(e?.message ? String(e.message) : "Erreur inconnue");
+  } finally {
+    setSaving(false);
   }
+}
+
 
   /* -------------------- RENDER -------------------- */
 
@@ -477,8 +561,8 @@ export function SingleEventParticipantsSection(props: {
           initialValue={initialEditorValue}
           onRequestClose={closeEditor}
           onSubmit={handleSubmitParticipant}
-          isSaving={saving}
-          error={editorError}
+          isSaving={editorMode === "edit" ? updateAttendee.loading : saving}
+          error={editorMode === "edit" ? updateAttendee.error : editorError}
           stickyTop={84}
           editorWidth={420}
           editorGap={14}

@@ -87,8 +87,25 @@ function inputTypeFor(fieldType: FieldType) {
 }
 
 /**
+ * ✅ IMPORTANT
+ * - `camelToSnake()` ne transforme pas la valeur d'une string.
+ * - Ici, `fieldKey` (ex: "lastName") doit devenir "last_name" AVANT d'être envoyé à la RPC.
+ */
+function toSnakeKey(key: string) {
+  const k = String(key ?? "").trim();
+  if (!k) return "";
+  // cas “réservés” explicites (pour être sûr)
+  if (k === "firstName") return "first_name";
+  if (k === "lastName") return "last_name";
+  // camelCase -> snake_case générique
+  return k.replace(/[A-Z]/g, (m) => `_${m.toLowerCase()}`);
+}
+
+/**
  * Construit le payload attendu par la RPC
  * + garde value brut pour le patch local
+ *
+ * ✅ Modif: normalise `answers[].fieldKey` en snake_case via toSnakeKey()
  */
 function buildAttendeePayload(params: {
   fields: RegistrationFieldLike[];
@@ -99,7 +116,10 @@ function buildAttendeePayload(params: {
   const attendee: any = {};
   const answers: any[] = [];
 
-  const reservedKeys = new Set(["email", "phone", "first_name", "last_name"]);
+  // ⚠️ reserved: ceux-là ne vont PAS dans attendee.answers (mais on veut quand même écrire leur answer côté SQL)
+  // Ici on conserve leur logique telle quelle: ils restent dans attendee (email/phone/firstName/lastName)
+  // et la RPC s'occupe de les mapper aux keys 'email', 'phone', 'first_name', 'last_name'
+  const reservedKeys = new Set(["email", "phone", "first_name", "last_name", "firstName", "lastName"]);
 
   for (const f of fields) {
     const key = String(f.fieldKey ?? "").trim();
@@ -108,20 +128,23 @@ function buildAttendeePayload(params: {
     const type = (f.fieldType ?? "text") as FieldType;
     const raw = value[key];
 
-    const isEmpty =
-      type === "checkbox" ? false : String(raw ?? "").trim().length === 0;
+    const isEmpty = type === "checkbox" ? false : String(raw ?? "").trim().length === 0;
     if (isEmpty) continue;
 
+    // -------- reserved mapping (pour la RPC) --------
     if (key === "email") attendee.email = String(raw ?? "").trim();
     else if (key === "phone") attendee.phone = String(raw ?? "").trim();
-    else if (key === "first_name") attendee.firstName = String(raw ?? "").trim();
-    else if (key === "last_name") attendee.lastName = String(raw ?? "").trim();
+    else if (key === "first_name" || key === "firstName") attendee.firstName = String(raw ?? "").trim();
+    else if (key === "last_name" || key === "lastName") attendee.lastName = String(raw ?? "").trim();
 
+    // -------- normal fields -> attendee.answers[] --------
     if (!reservedKeys.has(key)) {
-      if (type === "checkbox") answers.push({ fieldKey: key, valueBool: Boolean(raw) });
-      else if (type === "number") answers.push({ fieldKey: key, valueInt: clampInt(raw, 0) });
-      else if (type === "date") answers.push({ fieldKey: key, valueDate: String(raw ?? "").trim() });
-      else answers.push({ fieldKey: key, valueText: String(raw ?? "").trim() });
+      const normalizedFieldKey = toSnakeKey(key);
+
+      if (type === "checkbox") answers.push({ fieldKey: normalizedFieldKey, valueBool: Boolean(raw) });
+      else if (type === "number") answers.push({ fieldKey: normalizedFieldKey, valueInt: clampInt(raw, 0) });
+      else if (type === "date") answers.push({ fieldKey: normalizedFieldKey, valueDate: String(raw ?? "").trim() });
+      else answers.push({ fieldKey: normalizedFieldKey, valueText: String(raw ?? "").trim() });
     }
   }
 
@@ -235,6 +258,7 @@ export function AttendeeEditorPanel(props: {
     for (const f of normalizedFields) {
       const key = String(f.fieldKey ?? "").trim();
       if (!key || !isRequired(f)) continue;
+
       const v = value[key];
       if (f.fieldType === "checkbox") {
         if (!Boolean(v)) return false;
@@ -280,6 +304,7 @@ export function AttendeeEditorPanel(props: {
       return;
     }
 
+    // edit flow => ton parent gère l'update via son hook/repo
     await onSubmit(value);
   }
 
@@ -434,3 +459,4 @@ export function AttendeeEditorPanel(props: {
     />
   );
 }
+
