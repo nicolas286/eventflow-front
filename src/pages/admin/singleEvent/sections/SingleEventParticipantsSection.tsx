@@ -157,7 +157,6 @@ function buildUpdateAttendeeFromForm(params: {
     if (k) byKey.set(k, f);
   }
 
-  const attendee: any = {};
   const answers: any[] = [];
 
   for (const [key, raw] of Object.entries(value ?? {})) {
@@ -167,29 +166,32 @@ function buildUpdateAttendeeFromForm(params: {
     const f = byKey.get(k);
     const fieldType = String(f?.fieldType ?? "text");
 
-    // checkbox: on garde false/true, sinon on ignore les vides
     const isCheckbox = fieldType === "checkbox";
-    const isEmpty = !isCheckbox && String(raw ?? "").trim().length === 0;
-    if (isEmpty) continue;
 
-    // champs “spéciaux” (réservés)
-    if (k === "email") attendee.email = String(raw ?? "").trim();
-    else if (k === "phone") attendee.phone = String(raw ?? "").trim();
-    else if (k === "first_name") attendee.firstName = String(raw ?? "").trim();
-    else if (k === "last_name") attendee.lastName = String(raw ?? "").trim();
-    else {
-      // answers génériques
-      if (fieldType === "checkbox") answers.push({ fieldKey: k, valueBool: Boolean(raw) });
-      else if (fieldType === "number") answers.push({ fieldKey: k, valueInt: Number(raw) });
-      else if (fieldType === "date") answers.push({ fieldKey: k, valueDate: String(raw ?? "").trim() });
-      else answers.push({ fieldKey: k, valueText: String(raw ?? "").trim() });
+    // ✅ on NE skip PAS les vides (sinon impossible de clear)
+    const trimmed = String(raw ?? "").trim();
+    const isEmpty = !isCheckbox && trimmed.length === 0;
+
+    // ✅ tout est dans answers (snake case)
+    const fieldKey = k; // déjà snake si tes regFields sont snake
+    // si tu veux bétonner: const fieldKey = toSnakeKey(k);
+
+    if (fieldType === "checkbox") {
+      answers.push({ fieldKey, valueBool: Boolean(raw) });
+    } else if (fieldType === "number") {
+      // si vide => delete => on envoie rien en value_int (ou valueText vide)
+      if (isEmpty) answers.push({ fieldKey, valueText: "" });
+      else answers.push({ fieldKey, valueInt: Number(raw) });
+    } else if (fieldType === "date") {
+      answers.push({ fieldKey, valueDate: isEmpty ? "" : trimmed });
+    } else {
+      answers.push({ fieldKey, valueText: isEmpty ? "" : trimmed });
     }
   }
 
-  if (answers.length) attendee.answers = answers;
-
-  return attendee;
+  return { answers }; // ✅ uniquement answers
 }
+
 
 
 export function SingleEventParticipantsSection(props: {
@@ -448,7 +450,8 @@ export function SingleEventParticipantsSection(props: {
       return;
     }
 
-   const attendee = buildUpdateAttendeeFromForm({ regFields, value });
+   const attendee = { answers: buildUpdateAttendeeFromForm({ regFields, value }).answers };
+
 
     
   const res = await updateAttendee.updateOrderAttendee({
