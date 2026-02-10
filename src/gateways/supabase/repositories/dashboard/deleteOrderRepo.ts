@@ -15,19 +15,26 @@ export function deleteOrderRepo(supabase: SupabaseClient) {
       }
 
       const raw = await supabaseSafe(() =>
-        supabase
-          .from("orders")
-          .delete()
-          .eq("id", id)
-          .select("id")
+        supabase.rpc("admin_delete_order", {
+          p_order_id: id,
+        })
       );
 
-      const deletedCount = Array.isArray(raw) ? raw.length : 0;
+      /*
+        La RPC renvoie un jsonb du type :
+        {
+          deleted_order_id: uuid,
+          released: {
+            reserved_units: number,
+            sold_units: number
+          }
+        }
 
-      if (deletedCount === 0) {
-        throw new Error(
-          "deleteOrder: nothing deleted (not found or forbidden)"
-        );
+        → si on arrive ici sans throw, c’est que tout s’est bien passé
+      */
+
+      if (!raw || typeof raw !== "object") {
+        throw new Error("deleteOrder: unexpected RPC response");
       }
     },
   };

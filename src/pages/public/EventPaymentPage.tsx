@@ -234,33 +234,67 @@ export function EventPaymentPage() {
       return;
     }
 
-    const orderId: string | null = typeof r?.orderId === "string" ? r.orderId : null;
-    const confirmUrl = `/o/${orgSlug}/e/${eventSlug}/confirmation${orderId ? `?order=${orderId}` : ""}`;
+    const orderId =
+  typeof r?.orderId === "string" ? r.orderId : null;
 
-    if (r?.ok === true && r?.status === "paid") {
-      clearDraft(orgSlug, eventSlug);
-      navigate(confirmUrl);
-      return;
-    }
+const status =
+  typeof r?.status === "string" ? r.status : null;
 
-    if (r?.ok === true && r?.status === "awaiting_payment") {
-      const checkoutUrl = r?.checkoutUrl;
-      if (typeof checkoutUrl === "string" && checkoutUrl.startsWith("http")) {
-        clearDraft(orgSlug, eventSlug);
-        window.location.assign(checkoutUrl);
-        return;
-      }
+const bookingToken =
+  typeof r?.bookingToken === "string" && r.bookingToken.trim()
+    ? r.bookingToken.trim()
+    : null;
 
-      clearDraft(orgSlug, eventSlug);
-      navigate(confirmUrl);
-      return;
-    }
+// ✅ si gratuit => paid => on a (id + token) => page order return
+if (r?.ok === true && status === "paid" && orderId) {
+  clearDraft(orgSlug, eventSlug);
 
-    if (orderId) {
-      clearDraft(orgSlug, eventSlug);
-      navigate(confirmUrl);
-      return;
-    }
+  const url = bookingToken
+  ? `/order/${orderId}?token=${encodeURIComponent(bookingToken)}&org=${encodeURIComponent(
+      orgSlug
+    )}&event=${encodeURIComponent(eventSlug)}`
+  : `/order/${orderId}?org=${encodeURIComponent(orgSlug)}&event=${encodeURIComponent(eventSlug)}`;
+
+navigate(url);
+return;
+
+}
+
+// ✅ si payant => mollie checkout
+if (r?.ok === true && status === "awaiting_payment") {
+  const checkoutUrl = r?.checkoutUrl;
+
+  clearDraft(orgSlug, eventSlug);
+
+  if (typeof checkoutUrl === "string" && checkoutUrl.startsWith("http")) {
+    window.location.assign(checkoutUrl);
+    return;
+  }
+
+  // fallback si checkoutUrl absent (rare) : on tente la page order sans return=1
+  if (orderId) {
+    navigate(
+  `/order/${orderId}?token=${encodeURIComponent(bookingToken)}&org=${encodeURIComponent(
+    orgSlug
+  )}&event=${encodeURIComponent(eventSlug)}`
+);
+
+  }
+  return;
+}
+
+// fallback ultime : si on a un orderId on tente de montrer quelque chose
+if (orderId) {
+  clearDraft(orgSlug, eventSlug);
+  navigate(
+  `/order/${orderId}?token=${encodeURIComponent(bookingToken)}&org=${encodeURIComponent(
+    orgSlug
+  )}&event=${encodeURIComponent(eventSlug)}`
+);
+
+  return;
+}
+
   }
 
   return (
