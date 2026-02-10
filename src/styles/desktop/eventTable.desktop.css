@@ -1,5 +1,6 @@
 /* =========================
-   DESKTOP – single render
+   DESKTOP (no mobile @media)
+   Single render: cards list
    ========================= */
 
 .eventTable__headerRight{
@@ -12,37 +13,38 @@
   width:240px;
 }
 
-/* Liste unique */
+/* ✅ single list */
 .eventTable__list{
   display:flex;
   flex-direction:column;
-  gap:14px;
+  gap:16px;
 }
 
-/* Card */
+/* Card style (desktop base) */
 .eventCard{
-  border:1px solid #f3f4f6;
-  border-radius:14px;
-  padding:12px;
-  background:#fff;
-  box-shadow:0 1px 2px rgba(16,24,40,0.06);
+  border: 1px solid #f3f4f6;
+  border-radius: 14px;
+  padding: 16px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
 }
 
 .eventCard.isSelected{
   background:#f9fafb;
 }
 
+/* Desktop: disposition */
 .eventCard__top{
   display:flex;
   align-items:flex-start;
   justify-content:space-between;
-  gap:10px;
+  gap:14px;
 }
 
 .eventCard__title{
   font-weight:800;
   color:#111827;
-  line-height:1.2;
+  line-height:1.25;
   overflow:hidden;
   text-overflow:ellipsis;
   display:-webkit-box;
@@ -50,27 +52,32 @@
   -webkit-box-orient:vertical;
 }
 
+/* =========================
+   Meta : DATE puis LIEU en colonne
+   ========================= */
+
 .eventCard__meta{
-  margin-top:10px;
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:8px 14px;
+  margin-top:12px;
+  display:flex;
+  flex-direction:column; /* date puis lieu */
+  gap:8px;
 }
 
 .eventCard__row{
   display:grid;
-  grid-template-columns:72px 1fr;
-  gap:10px;
+  grid-template-columns: 90px 1fr;
+  gap:12px;
   align-items:baseline;
 }
 
 .eventCard__label{
-  font-size:14px;
+  font-size:14px;   /* taille normale */
+  font-weight:600;
   color:#6b7280;
 }
 
 .eventCard__value{
-  font-size:14px;
+  font-size:14px;   /* taille normale */
   color:#111827;
   overflow:hidden;
   text-overflow:ellipsis;
@@ -78,31 +85,28 @@
   min-width:0;
 }
 
-/* Actions desktop */
+/* =========================
+   Actions desktop
+   ========================= */
+
 .eventCard__actions{
-  margin-top:12px;
+  margin-top:14px;
   display:flex;
-  gap:8px;
+  gap:10px;
   justify-content:flex-end;
   align-items:center;
 }
 
-/* =========================
-   DESKTOP: boutons x2 (y compris Link)
-   ========================= */
-
-/* Le Link devient une vraie “boîte bouton” */
+/* Link button */
 .eventCard__actionLink{
-  display:block;
-  width:80px;
-  height:80px;
+  display:flex;
 }
 
-/* Tous les boutons (directs ou dans Link) */
+/* Boutons desktop (comme avant) */
 .eventCard__actions > button,
 .eventCard__actionLink .eventCard__actionBtn{
-  width:100%;
-  height:100%;
+  width:40px;
+  height:40px;
   padding:0;
 
   display:flex;
@@ -110,10 +114,10 @@
   justify-content:center;
 }
 
-/* Icônes proportionnelles */
+/* Icônes : taille lisible */
 .eventCard__actions svg{
-  width:32px;
-  height:32px;
-  min-width:24px;
-  min-height:24px;
+  width:20px;
+  height:20px;
+  min-width:16px;
+  min-height:16px;
 }
