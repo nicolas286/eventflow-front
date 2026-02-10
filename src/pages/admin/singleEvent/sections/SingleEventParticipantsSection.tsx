@@ -9,6 +9,99 @@ import {
 import { useAdminUpdateOrderAttendee } from "../../../../features/admin/hooks/useUpdateOrderAttendeeAnswers";
 import { OrderEditorPanel } from "../../../../features/admin/events/singleEvent/OrderEditorPanel";
 
+import { useDeleteOrder } from "../../../../features/admin/hooks/useDeleteOrder";
+
+/* -------------------- LOCAL CONFIRM MODAL (simple + robuste) -------------------- */
+function ConfirmModal(props: {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  loading?: boolean;
+  error?: string | null;
+  onConfirm: () => void | Promise<void>;
+  onCancel: () => void;
+}) {
+  const {
+    isOpen,
+    title,
+    message,
+    confirmLabel = "Confirmer",
+    cancelLabel = "Annuler",
+    loading = false,
+    error = null,
+    onConfirm,
+    onCancel,
+  } = props;
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        background: "rgba(0,0,0,0.45)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+      }}
+      onMouseDown={(e) => {
+        // close on backdrop click
+        if (e.target === e.currentTarget && !loading) onCancel();
+      }}
+    >
+      <div
+        style={{
+          width: "min(520px, 100%)",
+          background: "white",
+          borderRadius: 12,
+          padding: 16,
+          boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
+        }}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>{title}</div>
+        <div style={{ fontSize: 14, opacity: 0.85, marginBottom: 12, lineHeight: 1.4 }}>{message}</div>
+
+        {error ? (
+          <div
+            style={{
+              background: "rgba(255,0,0,0.06)",
+              border: "1px solid rgba(255,0,0,0.12)",
+              color: "#b00020",
+              borderRadius: 10,
+              padding: "10px 12px",
+              fontSize: 13,
+              marginBottom: 12,
+            }}
+          >
+            {error}
+          </div>
+        ) : null}
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <Button variant="secondary" onClick={onCancel} disabled={loading}>
+            {cancelLabel}
+          </Button>
+          <Button
+            variant="danger"
+            onClick={onConfirm as any}
+            disabled={loading}
+          >
+            {loading ? "Suppression…" : confirmLabel}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type AnyRecord = Record<string, any>;
 
 type Attendee = {
@@ -168,7 +261,7 @@ function buildUpdateAttendeeFromForm(params: {
     if (!k) continue;
 
     const f = byKey.get(k);
-    const fieldType = String(f?.fieldType ?? "text"); // ✅ string, plus de literal "text"
+    const fieldType = String(f?.fieldType ?? "text");
     const isCheckbox = fieldType === "checkbox";
 
     const trimmed = String(raw ?? "").trim();
@@ -191,7 +284,6 @@ function buildUpdateAttendeeFromForm(params: {
   return { answers };
 }
 
-
 export function SingleEventParticipantsSection(props: { data: AnyRecord; onChanged?: () => Promise<void> }) {
   const { data, onChanged } = props;
 
@@ -207,6 +299,16 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
   const [saving, setSaving] = useState(false);
   const [editorError, setEditorError] = useState<string | null>(null);
   const updateAttendee = useAdminUpdateOrderAttendee({ supabase });
+
+  /* -------------------- DELETE HOOKS -------------------- */
+  const deleteOrder = useDeleteOrder({ supabase });
+
+  /* -------------------- CONFIRM MODALS STATE -------------------- */
+  const [confirmDeleteAttendeeOpen, setConfirmDeleteAttendeeOpen] = useState(false);
+  const [confirmDeleteOrderOpen, setConfirmDeleteOrderOpen] = useState(false);
+
+  const [targetAttendee, setTargetAttendee] = useState<{ attendeeId: string; orderId: string } | null>(null);
+  const [targetOrderId, setTargetOrderId] = useState<string | null>(null);
 
   /* -------------------- EDITOR STATE (ORDER) -------------------- */
   const [orderEditorOpen, setOrderEditorOpen] = useState(false);
@@ -510,12 +612,57 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
     }
   }
 
+  /* -------------------- DELETE ACTIONS -------------------- */
+
+
+  function requestDeleteOrder(orderId: string) {
+    deleteOrder.reset?.();
+    setTargetOrderId(orderId);
+    setConfirmDeleteOrderOpen(true);
+  }
+
+
+  async function confirmDeleteOrder() {
+    if (!targetOrderId) return;
+
+    const ok = await deleteOrder.deleteOrder({ orderId: targetOrderId });
+    if (!ok) return;
+
+    // collect attendee ids for answers purge
+    const attendeeIds = new Set(
+      localAttendees.filter((a) => a.orderId === targetOrderId).map((a) => a.id)
+    );
+
+    // local optimistic cleanup
+    setLocalOrders((prev) => prev.filter((o) => String(getFirst(o, ["id", "orderId", "order_id"])) !== String(targetOrderId)));
+    setLocalAttendees((prev) => prev.filter((a) => a.orderId !== targetOrderId));
+    setLocalAnswers((prev) => prev.filter((ans) => !attendeeIds.has(ans.attendeeId)));
+
+    // if editor open on this order, close it to avoid weird UI
+    if (editorOrderId === targetOrderId) {
+      closeEditor();
+    }
+
+    setConfirmDeleteOrderOpen(false);
+    setTargetOrderId(null);
+
+    if (typeof onChanged === "function") {
+      try {
+        await onChanged();
+      } catch {
+        // noop
+      }
+    }
+  }
+
   /* -------------------- LEFT CONTENT -------------------- */
   const leftContent = (
     <div className="adminOrdersGrid">
       {groups.map(([orderId, people]) => {
         const meta = orderMetaById.get(orderId);
         const orderNumber = meta?.orderNumber ?? orderId.slice(0, 8);
+
+        const isDeletingThisOrder = deleteOrder.loading && targetOrderId === orderId;
 
         return (
           <div key={orderId} className="adminOrderCard">
@@ -530,8 +677,13 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
                   {people.length} inscrit{people.length > 1 ? "s" : ""}
                 </span>
 
-                <Button variant="primary" onClick={() => openCreate(orderId)}>
-                  Ajouter des participants
+  
+                <Button
+                  variant="danger"
+                  onClick={() => requestDeleteOrder(orderId)}
+                  disabled={isDeletingThisOrder}
+                >
+                  Supprimer la commande
                 </Button>
               </div>
             </div>
@@ -574,7 +726,6 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
                       <Button variant="secondary" onClick={() => openEdit(att.id, orderId)}>
                         Modifier
                       </Button>
-                      <Button variant="danger">Supprimer</Button>
                     </div>
                   </div>
                 );
@@ -595,6 +746,23 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
   /* -------------------- RENDER -------------------- */
   return (
     <div className="adminParticipants adminSingleEventParticipants">
+      {/* -------------------- MODALS -------------------- */}
+      <ConfirmModal
+        isOpen={confirmDeleteOrderOpen}
+        title="Supprimer la commande ?"
+        message="Attention : la commande et tous ses participants seront supprimés."
+        confirmLabel="Supprimer la commande"
+        loading={deleteOrder.loading}
+        error={deleteOrder.error}
+        onCancel={() => {
+          if (deleteOrder.loading) return;
+          setConfirmDeleteOrderOpen(false);
+          setTargetOrderId(null);
+          deleteOrder.reset?.();
+        }}
+        onConfirm={confirmDeleteOrder}
+      />
+
       <div className="adminParticipantsHeader">
         <div>
           <h3 className="adminParticipantsTitle">Commandes</h3>
