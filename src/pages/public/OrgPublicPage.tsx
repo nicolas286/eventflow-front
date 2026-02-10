@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "../../gateways/supabase/supabaseClient";
 import { usePublicOrgData } from "../../features/admin/hooks/usePublicOrgData";
@@ -8,10 +9,22 @@ import Button from "../../ui/components/button/Button";
 import Badge from "../../ui/components/badge/Badge";
 
 import { formatDateTimeHuman } from "../../domain/helpers/dateTime";
+import PublicFooter from "../../ui/components/publicFooter/PublicFooter";
 
 import "../../styles/desktop/publicPages.desktop.css";
 
 import type { PublicEventOverview } from "../../domain/models/public/public.orgEventsOverview.schema";
+
+type SortKey = "date" | "name";
+type SortDir = "asc" | "desc";
+
+function toDayStartISO(d: string) {
+  // d = "YYYY-MM-DD"
+  return `${d}T00:00:00.000Z`;
+}
+function toDayEndISO(d: string) {
+  return `${d}T23:59:59.999Z`;
+}
 
 export function OrgPublicPage() {
   const { orgSlug } = useParams<{ orgSlug: string }>();
@@ -20,6 +33,58 @@ export function OrgPublicPage() {
     supabase,
     orgSlug,
   });
+
+  // UI state
+  const [query, setQuery] = useState("");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+  const [sortKey, setSortKey] = useState<SortKey>("date");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  const filteredSortedEvents = useMemo(() => {
+    const q = query.trim().toLowerCase();
+
+    const fromTs = dateFrom ? Date.parse(toDayStartISO(dateFrom)) : null;
+    const toTs = dateTo ? Date.parse(toDayEndISO(dateTo)) : null;
+
+    const base = (events ?? []).filter((e) => {
+      // Recherche simple (titre + lieu)
+      if (q) {
+        const hay = `${e.title ?? ""} ${e.location ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+
+      // Filtre date : on utilise startsAt (si absent -> on laisse passer)
+      if (fromTs || toTs) {
+        if (!e.startsAt) return true;
+
+        const s = Date.parse(e.startsAt);
+        if (fromTs !== null && s < fromTs) return false;
+        if (toTs !== null && s > toTs) return false;
+      }
+
+      return true;
+    });
+
+    const dir = sortDir === "asc" ? 1 : -1;
+
+    base.sort((a, b) => {
+      if (sortKey === "name") {
+        const A = (a.title ?? "").toLocaleLowerCase();
+        const B = (b.title ?? "").toLocaleLowerCase();
+        return A.localeCompare(B) * dir;
+      }
+
+      // sortKey === "date"
+      const aTs = a.startsAt ? Date.parse(a.startsAt) : Number.POSITIVE_INFINITY;
+      const bTs = b.startsAt ? Date.parse(b.startsAt) : Number.POSITIVE_INFINITY;
+      return (aTs - bTs) * dir;
+    });
+
+    return base;
+  }, [events, query, dateFrom, dateTo, sortKey, sortDir]);
+
+  const hasActiveFilters = !!query.trim() || !!dateFrom || !!dateTo;
 
   if (loading) {
     return (
@@ -93,14 +158,100 @@ export function OrgPublicPage() {
             <div className="publicEmpty">Cette organisation n’a pas encore de description.</div>
           )}
         </div>
+        {/* Filtres + tri */}
+        <div className="publicEventsToolbar">
+          <div className="publicEventsToolbarRow">
+            <div className="publicField">
+              <div className="publicFieldLabel">Rechercher</div>
+              <input
+                className="publicInput"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Titre, lieu…"
+                aria-label="Rechercher un événement"
+              />
+            </div>
 
-        <div className="publicSectionTitle">Événements</div>
+            <div className="publicField">
+              <div className="publicFieldLabel">Du</div>
+              <input
+                className="publicInput"
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                aria-label="Date de début"
+              />
+            </div>
+
+            <div className="publicField">
+              <div className="publicFieldLabel">Au</div>
+              <input
+                className="publicInput"
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                aria-label="Date de fin"
+              />
+            </div>
+
+            <div className="publicField">
+              <div className="publicFieldLabel">Trier par</div>
+              <select
+                className="publicSelect"
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value as SortKey)}
+                aria-label="Clé de tri"
+              >
+                <option value="date">Date</option>
+                <option value="name">Nom</option>
+              </select>
+            </div>
+
+            <div className="publicField">
+              <div className="publicFieldLabel">Ordre</div>
+              <select
+                className="publicSelect"
+                value={sortDir}
+                onChange={(e) => setSortDir(e.target.value as SortDir)}
+                aria-label="Direction de tri"
+              >
+                <option value="asc">Croissant</option>
+                <option value="desc">Décroissant</option>
+              </select>
+            </div>
+
+            {hasActiveFilters ? (
+              <div className="publicToolbarActions">
+                <Button
+                  variant="secondary"
+                  label="Réinitialiser"
+                  onClick={() => {
+                    setQuery("");
+                    setDateFrom("");
+                    setDateTo("");
+                    setSortKey("date");
+                    setSortDir("asc");
+                  }}
+                />
+              </div>
+            ) : null}
+          </div>
+
+          <div className="publicEventsToolbarMeta">
+            <span className="publicMuted">
+              {filteredSortedEvents.length} événement{filteredSortedEvents.length > 1 ? "s" : ""}
+              {events.length !== filteredSortedEvents.length ? ` (filtré)` : ""}
+            </span>
+          </div>
+        </div>
 
         {events.length === 0 ? (
           <div className="publicEmpty">Aucun événement publié.</div>
+        ) : filteredSortedEvents.length === 0 ? (
+          <div className="publicEmpty">Aucun événement ne correspond à tes filtres.</div>
         ) : (
           <div className="publicOrgEventsGrid">
-            {events.map((e: PublicEventOverview) => {
+            {filteredSortedEvents.map((e: PublicEventOverview) => {
               const banner = e.bannerUrl;
 
               const startText = e.startsAt ? formatDateTimeHuman(e.startsAt) : null;
@@ -147,4 +298,7 @@ export function OrgPublicPage() {
       </Container>
     </div>
   );
+
+<PublicFooter />
+
 }

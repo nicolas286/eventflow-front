@@ -7,7 +7,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminEventsPage from "./pages/admin/AdminEventsPage";
 import AdminBrandingPage from "./pages/admin/AdminBrandingPage";
 import AdminStructurePage from "./pages/admin/AdminStructurePage";
-import AdminProfilPage  from "./pages/admin/AdminProfilPage";
+import AdminProfilPage from "./pages/admin/AdminProfilPage";
 import AdminAbonnementPage from "./pages/admin/AdminAbonnementPage";
 import { AdminSingleEventPage } from "./pages/admin/singleEvent/AdminSingleEventPage";
 import OnboardingWizard from "./pages/admin/OnboardingWizard";
@@ -22,6 +22,7 @@ import { OrderReturnPage } from "./pages/public/OrderReturnPage";
 /* Layouts */
 import { AdminLayout } from "./ui/layouts/AdminLayout";
 import { PublicLayout } from "./ui/layouts/PublicLayout";
+import { PublicShellLayout } from "./ui/layouts/PublicShellLayout";
 
 /* Misc */
 import { NotFoundPage } from "./pages/public/NotFoundPage";
@@ -50,24 +51,20 @@ function App() {
         </Route>
       </Route>
 
-      {/* PUBLIC */}
-      <Route path="/o/:orgSlug" element={<PublicLayout />}>
-        <Route index element={<OrgPublicPage />} />
+      {/* PUBLIC – shell commun (footer partout côté public) */}
+      <Route element={<PublicShellLayout />}>
+        {/* PUBLIC – org */}
+        <Route path="/o/:orgSlug" element={<PublicLayout />}>
+          <Route index element={<OrgPublicPage />} />
+          <Route path="e/:eventSlug" element={<Navigate to="billets" replace />} />
+          <Route path="e/:eventSlug/billets" element={<EventTicketsPage />} />
+          <Route path="e/:eventSlug/participants" element={<EventAttendeesPage />} />
+          <Route path="e/:eventSlug/paiement" element={<EventPaymentPage />} />
+        </Route>
 
-        {/* redirect old route to step 1 */}
-        <Route
-          path="e/:eventSlug"
-          element={<Navigate to="billets" replace />}
-        />
-
-        <Route path="e/:eventSlug/billets" element={<EventTicketsPage />} />
-        <Route path="e/:eventSlug/participants" element={<EventAttendeesPage />} />
-        <Route path="e/:eventSlug/paiement" element={<EventPaymentPage />} />
-
+        {/* PUBLIC – return Mollie */}
+        <Route path="/order/:orderId" element={<OrderReturnPage />} />
       </Route>
-
-      {/* PUBLIC - return Mollie */}
-      <Route path="/order/:orderId" element={<OrderReturnPage />} />
 
       {/* ROOT / FALLBACK */}
       <Route path="/" element={<Navigate to="/admin/login" replace />} />

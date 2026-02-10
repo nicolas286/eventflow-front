@@ -1,0 +1,17 @@
+.publicShellRoot {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.publicShellMain {
+  flex: 1;
+}
+
+.publicLayoutRoot {
+  width: 100%;
+}
+
+.publicLayoutMain {
+  width: 100%;
+}

@@ -69,6 +69,80 @@
   margin-top: 0;
 }
 
+/* ------- Public events toolbar ------- */
+
+.publicEventsToolbar {
+  margin: 12px 0 14px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(6px);
+}
+
+.publicEventsToolbarRow {
+  display: grid;
+  grid-template-columns: 1.4fr 0.8fr 0.8fr 0.7fr 0.7fr auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.publicField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.publicFieldLabel {
+  font-size: 12px;
+  opacity: 0.72;
+}
+
+.publicInput,
+.publicSelect {
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  outline: none;
+}
+
+.publicInput:focus,
+.publicSelect:focus {
+  border-color: rgba(0, 0, 0, 0.22);
+}
+
+.publicToolbarActions {
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: 1px;
+}
+
+.publicEventsToolbarMeta {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.publicMuted {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* Responsive */
+@media (max-width: 920px) {
+  .publicEventsToolbarRow {
+    grid-template-columns: 1fr 1fr;
+  }
+  .publicToolbarActions {
+    justify-content: stretch;
+  }
+}
+
+
+
 /* Petit hover premium (sans casser le branding) */
 @media (hover: hover) {
   .publicOrgEventCard {

@@ -68,10 +68,10 @@
   z-index: 10; /* ✅ au-dessus du clip ET des cards */
 
   left: clamp(12px, 3vw, 16px);
-  bottom: calc(-1 * clamp(36px, 8vw, 55px));
+  bottom: calc(-1 * clamp(36px, 8vw, 85px));
 
-  width: clamp(72px, 18vw, 104px);
-  height: clamp(72px, 18vw, 104px);
+  width: clamp(100px, 18vw, 150px);
+  height: clamp(100px, 18vw, 150px);
   border-radius: clamp(18px, 5vw, 26px);
   object-fit: cover;
 
