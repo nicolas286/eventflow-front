@@ -1,0 +1,30 @@
+@media (max-width: 1050px){
+  .uiEditorLeft{
+    width:100%;
+    transform:none;
+  }
+
+  .uiEditorShell.isEditorOpen .uiEditorLeft{
+    width:100%;
+    transform:none;
+  }
+
+  .uiEditorRight{
+    position:static;
+    width:100%;
+    margin-top:14px;
+    pointer-events: auto; /* mobile OK, panel dans le flux */
+  }
+
+  .uiEditorPanel{
+    position: static;
+    top:auto;
+    width:100%;
+    transform-origin: top center;
+  }
+
+  .uiEditorCloseBtn{
+    top: 10px;
+    right: 10px;
+  }
+}

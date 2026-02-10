@@ -8,18 +8,6 @@
   grid-template-columns: 1.2fr 1fr;
   gap:14px;
 }
-@media (max-width: 900px){
-  .structurePanel__grid2{ grid-template-columns: 1fr; }
-}
-
-.structurePanel__grid2Inner{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap:12px;
-}
-@media (max-width: 700px){
-  .structurePanel__grid2Inner{ grid-template-columns: 1fr; }
-}
 
 .structurePanel__block{
   border: 1px solid rgba(0,0,0,0.06);

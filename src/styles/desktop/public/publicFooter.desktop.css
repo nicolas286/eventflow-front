@@ -1,5 +1,3 @@
-/* ---------- Public Footer ---------- */
-
 .publicFooter {
   margin-top: 48px;
   padding: 0 16px 24px;
@@ -27,9 +25,7 @@
   margin: 0 auto;
 }
 
-.publicFooterLeft {
-  white-space: nowrap;
-}
+.publicFooterLeft { white-space: nowrap; }
 
 .publicFooterRight {
   display: flex;
@@ -46,15 +42,4 @@
   text-decoration: underline;
 }
 
-.publicFooterSep {
-  opacity: 0.5;
-}
-
-/* Responsive */
-@media (max-width: 640px) {
-  .publicFooterContent {
-    flex-direction: column;
-    text-align: center;
-    gap: 8px;
-  }
-}
+.publicFooterSep { opacity: 0.5; }

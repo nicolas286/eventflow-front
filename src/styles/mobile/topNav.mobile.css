@@ -1,10 +1,5 @@
-/* ============================= */
-/* Mobile (extrait)              */
-/* Source: topNav.css            */
-/* ============================= */
-
-@media (max-width: 1000px) {
-  .topNav__inner {
+@media (max-width: 1000px){
+  .topNav__inner{
     padding: 16px;
   }
 }

@@ -31,11 +31,6 @@
 
 /* =========================================================
    ✅ OrgPublicPage – EXACTEMENT ce que tu demandes
-   - logo légèrement plus à droite
-   - logo un peu plus grand
-   - texte + boutons à droite du logo
-   - boutons juste sous le texte
-   - texte "3x + à droite" => gros padding-left
    ========================================================= */
 
 .publicOrgPage .publicHero {
@@ -61,11 +56,10 @@
   margin-top: 120px;
   display: flex;
   flex-direction: column;
-  justify-content: center;  
+  justify-content: center;
   align-items: center;
   height: 100%;
 }
-
 
 /* Boutons : juste sous le texte, alignés à droite */
 .publicOrgPage .publicOrgHeroRight .publicActions {
@@ -80,53 +74,14 @@
   padding: 12px 20px;
   border-radius: 14px;
 }
+
 .publicOrgPage .publicTitle {
   font-size: clamp(24px, 2.6vw, 28px);
   line-height: 1.12;
-  padding-left:5px ;
+  padding-left: 5px;
 }
+
 .publicOrgPage .publicSubtitle {
   font-size: 18px;
   margin-top: 10px;
-}
-
-/* =========================================================
-   📱 Mobile : tout en colonne, centré (propre)
-   ========================================================= */
-
-@media (max-width: 860px) {
-  /* Hero repasse en colonne */
-  .publicOrgPage .publicBrand {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  /* Logo centré */
-  .publicOrgPage .publicLogo {
-    width: clamp(180px, 50vw, 240px);
-    height: clamp(180px, 50vw, 240px);
-    margin-left: 0;
-  }
-
-  /* ✅ ANNULATION TOTALE des décalages desktop */
-  .publicOrgPage .publicOrgHeroRight {
-    padding-left: 0;
-    width: 100%;
-
-    /* on enlève le centrage vertical desktop */
-    justify-content: flex-start;
-
-    /* centrage propre en mobile */
-    align-items: center;
-    text-align: center;
-
-    margin-top: 16px;
-  }
-
-  /* Boutons bien centrés sous le texte */
-  .publicOrgPage .publicOrgHeroRight .publicActions {
-    justify-content: center;
-    width: 100%;
-    margin-top: 12px;
-  }
 }

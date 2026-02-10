@@ -1,5 +1,6 @@
 import type { ChangeEventHandler, InputHTMLAttributes, ReactNode } from "react";
 import "../../../styles/desktop/input.desktop.css";
+import "../../../styles/mobile/input.mobile.css";
 
 export type InputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "onChange"> & {
   label?: ReactNode;

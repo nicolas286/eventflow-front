@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { COUNTRY_OPTIONS } from "./countryPhoneData";
 import "../../../styles/desktop/input.desktop.css";
+import "../../../styles/mobile/input.mobile.css";
 
 type Props = {
   value: string;

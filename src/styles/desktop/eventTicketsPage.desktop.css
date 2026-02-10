@@ -189,20 +189,3 @@
 .publicRecapSubtitle {
   margin-top: 4px;
 }
-
-/* ---------- Mobile ---------- */
-
-@media (max-width: 900px) {
-  .publicTicketRight {
-    width: 100%;
-    align-items: flex-start;
-  }
-
-  .publicTicketLayout {
-    flex-direction: column;
-  }
-
-  .publicQtyBlock {
-    justify-content: flex-start;
-  }
-}

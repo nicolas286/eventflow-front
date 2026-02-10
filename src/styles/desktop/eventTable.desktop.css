@@ -1,3 +1,7 @@
+/* =========================
+   DESKTOP – single render
+   ========================= */
+
 .eventTable__headerRight{
   display:flex;
   gap:10px;
@@ -8,187 +12,108 @@
   width:240px;
 }
 
-.eventTable__wrap{
-  overflow-x:auto;
-  margin-left:-6px;
-  margin-right:-6px;
+/* Liste unique */
+.eventTable__list{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
 }
 
-.eventTable__table{
-  width:100%;
-  border-collapse:collapse;
-  font-size:16px;
+/* Card */
+.eventCard{
+  border:1px solid #f3f4f6;
+  border-radius:14px;
+  padding:12px;
+  background:#fff;
+  box-shadow:0 1px 2px rgba(16,24,40,0.06);
 }
 
-.eventTable__table thead th{
-  text-align:left;
-  font-size:14px;
-  color:#6b7280;
-  padding:10px 10px;
-  border-bottom:1px solid #f3f4f6;
-}
-
-.eventTable__table thead th:first-child{
-  padding-left:0;
-}
-
-.eventTable__actionsHead{
-  text-align:right !important;
-  padding-right:0 !important;
-}
-
-.eventTable__table tbody td{
-  padding:12px 10px;
-  border-bottom:1px solid #f9fafb;
-}
-
-.eventTable__table tbody td:first-child{
-  padding-left:0;
-}
-
-.eventTable__table tbody tr:hover{
+.eventCard.isSelected{
   background:#f9fafb;
 }
 
-.eventTable__table tbody tr.isSelected{
-  background:#f9fafb;
+.eventCard__top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
 }
 
-.eventTable__table .title{
+.eventCard__title{
   font-weight:800;
   color:#111827;
+  line-height:1.2;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
 }
 
-.eventTable__actions{
-  padding-right:0 !important;
-  text-align:right;
+.eventCard__meta{
+  margin-top:10px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px 14px;
+}
+
+.eventCard__row{
+  display:grid;
+  grid-template-columns:72px 1fr;
+  gap:10px;
+  align-items:baseline;
+}
+
+.eventCard__label{
+  font-size:14px;
+  color:#6b7280;
+}
+
+.eventCard__value{
+  font-size:14px;
+  color:#111827;
+  overflow:hidden;
+  text-overflow:ellipsis;
   white-space:nowrap;
+  min-width:0;
+}
+
+/* Actions desktop */
+.eventCard__actions{
+  margin-top:12px;
   display:flex;
   gap:8px;
   justify-content:flex-end;
   align-items:center;
 }
 
-.eventTable__hint{
-  margin-top:10px;
-  font-size:14px;
-  color:#6b7280;
+/* =========================
+   DESKTOP: boutons x2 (y compris Link)
+   ========================= */
+
+/* Le Link devient une vraie “boîte bouton” */
+.eventCard__actionLink{
+  display:block;
+  width:80px;
+  height:80px;
 }
 
-/* --- Mobile cards (hidden by default) --- */
-.eventTable__mobileList {
-  display: none;
-  gap: 14px;
+/* Tous les boutons (directs ou dans Link) */
+.eventCard__actions > button,
+.eventCard__actionLink .eventCard__actionBtn{
+  width:100%;
+  height:100%;
+  padding:0;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
-/* Card style */
-.eventCard {
-  border: 1px solid #f3f4f6;
-  border-radius: 14px;
-  padding: 12px;
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
-}
-
-.eventCard.isSelected {
-  background: #f9fafb;
-}
-
-.eventCard__top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.eventCard__title {
-  font-weight: 800;
-  color: #111827;
-  line-height: 1.2;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.eventCard__meta {
-  margin-top: 10px;
-  display: grid;
-  gap: 8px;
-}
-
-.eventCard__row {
-  display: grid;
-  grid-template-columns: 72px 1fr;
-  gap: 10px;
-  align-items: baseline;
-}
-
-.eventCard__label {
-  font-size: 14px;
-  color: #6b7280;
-}
-
-.eventCard__value {
-  font-size: 14px;
-  color: #111827;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-.eventCard__actions {
-  margin-top: 12px;
-  display: flex;
-  gap: 8px;
-}
-
-/* --- Header on mobile: stack input + button --- */
-@media (max-width: 700px) {
-  .eventTable__headerRight {
-    width: 100%;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-  }
-
-  .eventTable__newInput {
-    width: 100%;
-  }
-
-  /* Hide table, show cards */
-  .eventTable__wrap {
-    display: none;
-  }
-
-  .eventTable__mobileList {
-    display: grid;
-  }
-
-  /* Buttons full width for thumb UX */
-  .eventCard__actions > * {
-    flex: 1;
-  }
-}
-
-@media (max-width: 700px) {
-  .eventCard__actions > * {
-    flex: 1;
-  }
-
-  /* ✅ le Link doit être un vrai “bloc bouton” */
-  .eventCard__actionLink {
-    display: flex;
-    flex: 1;
-  }
-
-  /* ✅ le Button doit remplir le Link */
-  .eventCard__actionBtn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  
+/* Icônes proportionnelles */
+.eventCard__actions svg{
+  width:32px;
+  height:32px;
+  min-width:24px;
+  min-height:24px;
 }

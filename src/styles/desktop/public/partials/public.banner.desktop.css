@@ -2,9 +2,6 @@
 
 /* =========================================================
    🖼️ Banner – Full width + logo qui OVERLAP correctement
-   ✅ Important :
-   - Le WRAP doit rester overflow: visible (pour que le logo dépasse)
-   - On clippe l’image via un conteneur interne (overflow: hidden)
    ========================================================= */
 
 /* ---------- Wrapper (doit laisser dépasser le logo) ---------- */
@@ -83,12 +80,4 @@
 /* Espace sous bannière pour ne pas que le contenu “mange” le logo */
 .publicBannerUnderSpace {
   height: clamp(44px, 10vw, 64px);
-}
-
-/* ---------- Mobile ---------- */
-
-@media (max-width: 900px) {
-  .publicBannerClip {
-    height: clamp(180px, 44vw, 320px);
-  }
 }

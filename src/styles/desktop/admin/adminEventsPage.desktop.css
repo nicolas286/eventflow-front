@@ -1,3 +1,9 @@
+/* =========================
+   DESKTOP ONLY (no mobile)
+   ========================= */
+
+/* ---------- Admin Events Shell ---------- */
+
 .adminEventsShell{
   --editor-w: 440px;
   --editor-gap: 24px;
@@ -67,32 +73,6 @@
   to{
     opacity:0;
     transform: translateX(8px) scale(0.98);
-  }
-}
-
-@media (max-width: 1050px){
-  .adminEventsShell{
-    padding: 12px 0;
-  }
-
-  .adminEventsLeft{
-    width:100%;
-    transform:none;
-  }
-
-  .adminEventsShell.isEditorOpen .adminEventsLeft{
-    width:100%;
-    transform:none;
-  }
-
-  .adminEventsRight{
-    position:static;
-    width:100%;
-    margin-top:16px;
-  }
-
-  .adminEventsEditorPanel{
-    transform-origin: top center;
   }
 }
 
@@ -205,7 +185,7 @@
   color:#064e3b;
 }
 
-/* 🔧 ALIGNEMENT FIX ICI */
+/* Alignement form */
 .adminEventFormGrid{
   display:grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -323,15 +303,6 @@
 .adminEventInlineBtn:disabled{
   opacity:0.45;
   cursor:not-allowed;
-}
-
-@media (max-width: 860px){
-  .adminEventFormGrid{
-    grid-template-columns: 1fr;
-  }
-  .adminEventFieldSpan2{
-    grid-column: auto;
-  }
 }
 
 /* ---------- Tickets ---------- */
@@ -502,12 +473,12 @@
   justify-content:flex-end;
 }
 
-/* ✅ NEW: animation “swap” pour ↑/↓ (Tickets + Forms) */
+/* ---------- Swap Animations (Desktop default) ---------- */
+
 :root{
-  --admin-swap-dy: 22px; /* distance visuelle (ne dépend pas de la vraie hauteur) */
+  --admin-swap-dy: 22px;
 }
 
-/* Ticket card */
 .adminTicketCard.isMoveUp{
   animation: adminSwapUp 220ms cubic-bezier(.2,.9,.2,1) both;
 }
@@ -515,7 +486,6 @@
   animation: adminSwapDown 220ms cubic-bezier(.2,.9,.2,1) both;
 }
 
-/* Form card */
 .adminRegCard.isMoveUp{
   animation: adminSwapUp 220ms cubic-bezier(.2,.9,.2,1) both;
 }
@@ -562,22 +532,6 @@
   }
 }
 
-/* ✅ Mobile: on réduit l’amplitude (plus discret) */
-@media (max-width: 1050px){
-  :root{
-    --admin-swap-dy: 16px;
-  }
-}
-
-@media (max-width: 1050px){
-  .adminTicketsGrid{
-    grid-template-columns: 1fr;
-  }
-  .adminTicketsEditor{
-    position:static;
-  }
-}
-
 /* ---------- Registration Form Builder ---------- */
 
 .adminRegForm{
@@ -586,7 +540,6 @@
   gap:12px;
 }
 
-/* ✅ NEW: shell animé (remplace le besoin de .adminRegGrid) */
 .adminRegShell{
   --editor-w: 420px;
   --editor-gap: 14px;
@@ -619,7 +572,6 @@
   transform: translateX(0);
 }
 
-/* ✅ NEW: panel animé (in/out) */
 .regEditorPanel{
   transform-origin: top right;
   animation-duration: 180ms;
@@ -743,29 +695,6 @@
   display:flex;
   gap:10px;
   flex-wrap:wrap;
-}
-
-/* ✅ Mobile: editor en dessous, pas de shrink */
-@media (max-width: 1050px){
-  .adminRegLeft{
-    width:100%;
-    transform:none;
-  }
-
-  .adminRegShell.isEditorOpen .adminRegLeft{
-    width:100%;
-    transform:none;
-  }
-
-  .adminRegRight{
-    position:static;
-    width:100%;
-    margin-top:14px;
-  }
-
-  .regEditorPanel{
-    transform-origin: top center;
-  }
 }
 
 /* ---------- Participants (Single Event) ---------- */
@@ -1031,8 +960,10 @@
   background: rgba(255,255,255,0.55);
 }
 
-@media (max-width: 980px){
-  .adminParticipantsGrid{
-    grid-template-columns: 1fr;
-  }
+.adminEventsActions {
+  display: flex;
+  justify-content: flex-start; /* desktop = à droite */
+  align-items: center;
 }
+
+

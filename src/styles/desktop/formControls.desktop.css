@@ -4,9 +4,3 @@
   gap: 10px;
   align-items: center;
 }
-
-@media (max-width: 520px) {
-  .publicPhoneGroup {
-    grid-template-columns: 1fr;
-  }
-}

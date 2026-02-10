@@ -71,7 +71,6 @@ html.theme--primaryLight .ui-button--secondary:hover {
   background: rgb(var(--secondary-derived) / 0.85);
 }
 
-
 /* ========================= */
 /* Ghost                     */
 /* ========================= */
@@ -94,7 +93,6 @@ html.theme--primaryLight .ui-button--ghost {
 html.theme--primaryLight .ui-button--ghost:hover {
   background: rgb(var(--ghost-border) / 0.12);
 }
-
 
 /* ========================= */
 /* Danger (light)            */
