@@ -531,7 +531,7 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
                 </span>
 
                 <Button variant="primary" onClick={() => openCreate(orderId)}>
-                  + Ajouter un participant
+                  Ajouter des participants
                 </Button>
               </div>
             </div>
@@ -571,7 +571,7 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
                     </div>
 
                     <div className="adminPersonActionsBottom">
-                      <Button variant="primary" onClick={() => openEdit(att.id, orderId)}>
+                      <Button variant="secondary" onClick={() => openEdit(att.id, orderId)}>
                         Modifier
                       </Button>
                       <Button variant="danger">Supprimer</Button>
