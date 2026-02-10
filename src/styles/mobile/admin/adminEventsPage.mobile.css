@@ -35,8 +35,11 @@
     display:none;
   }
 
-  /* ✅ inline editor (injecté par renderInlineEditor) */
+  /* ✅ inline editor (injecté par renderInlineEditor)
+     IMPORTANT: on force l'affichage car il est caché en desktop */
   .adminEventsInlineEditor{
+    display:block !important;
+    width:100%;
     margin-top:10px;
     margin-bottom:14px;
   }
