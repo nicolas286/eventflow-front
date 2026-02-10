@@ -35,11 +35,27 @@
     width:100%;
   }
 
-  /* Le Link doit occuper la même case que les boutons */
+  /* ✅ Le Link doit occuper la même case que les boutons
+        + reset des styles de <a> pour qu'il se comporte comme un bouton */
   .eventCard__actionLink{
     display:block;
     width:100%;
     height:48px;
+
+    text-decoration:none;
+    color:inherit;
+    line-height:0; /* évite des écarts verticaux liés au inline */
+  }
+
+  /* ✅ Le Button dans le Link remplit exactement la case */
+  .eventCard__actionLink .eventCard__actionBtn{
+    width:100%;
+    height:100%;
+    padding:0;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
   }
 
   /* Tous les boutons remplissent leur case */

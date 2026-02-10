@@ -966,4 +966,7 @@
   align-items: center;
 }
 
-
+/* ✅ Desktop: pas d'éditeur inline (réservé mobile) */
+.adminEventsInlineEditor{
+  display:none;
+}
