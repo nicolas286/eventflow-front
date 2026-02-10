@@ -3,7 +3,6 @@
 /* =========================================================
    OrgPublicPage – Events grid + cards with banner
    - Desktop: 2 colonnes
-   - Mobile: 1 colonne
    ========================================================= */
 
 .publicOrgEventsGrid {
@@ -131,18 +130,6 @@
   opacity: 0.7;
 }
 
-/* Responsive */
-@media (max-width: 920px) {
-  .publicEventsToolbarRow {
-    grid-template-columns: 1fr 1fr;
-  }
-  .publicToolbarActions {
-    justify-content: stretch;
-  }
-}
-
-
-
 /* Petit hover premium (sans casser le branding) */
 @media (hover: hover) {
   .publicOrgEventCard {
@@ -156,20 +143,5 @@
   }
   .publicOrgEventCard:hover .publicOrgEventBanner {
     transform: scale(1.02);
-  }
-}
-
-/* ✅ Mobile */
-@media (max-width: 860px) {
-  .publicOrgEventsGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .publicOrgEventBanner {
-    height: 180px;
-  }
-
-  .publicOrgEventFooter {
-    justify-content: center;
   }
 }

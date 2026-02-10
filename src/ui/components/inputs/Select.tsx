@@ -1,5 +1,6 @@
 import type { SelectHTMLAttributes, ReactNode } from "react";
 import "../../../styles/desktop/input.desktop.css";
+import "../../../styles/mobile/input.mobile.css";
 import "../../../styles/desktop/select.desktop.css";
 
 type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, "onChange"> & {

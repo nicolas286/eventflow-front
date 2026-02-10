@@ -1,0 +1,15 @@
+@media (max-width: 520px) {
+  .onboardingCard {
+    max-width: 92vw;
+  }
+
+  .onboardingGrid2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .onboardingPage .profilePanel__select {
+    min-width: 84px;
+  }
+}

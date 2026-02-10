@@ -1,0 +1,7 @@
+@media (max-width: 420px) {
+  .ui-phoneRow__dial {
+    flex-basis: 96px;
+    width: 96px;
+    min-width: 96px;
+  }
+}

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { COUNTRY_OPTIONS, parseE164, buildE164 } from "./countryPhoneData";
 import "../../../styles/desktop/input.desktop.css";
+import "../../../styles/mobile/input.mobile.css";
 
 type Props = {
   /** valeur e164 actuelle (ex: "+33612345678") ou autre texte ; null/"" autorisé */

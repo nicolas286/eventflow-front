@@ -1,9 +1,19 @@
-/* ============================= */
-/* Mobile (extrait)              */
-/* Source: adminEventsPage.css   */
-/* ============================= */
+/* =========================
+   MOBILE ONLY (responsive)
+   ========================= */
 
+/* <= 700px : bouton “Nouvel événement” centré uniquement sur mobile */
+@media (max-width: 700px) {
+  .adminEventsActions {
+    justify-content: center;
+    width: 100%;
+  }
+}
+
+/* <= 1050px : layout en colonne + editor INLINE sous la card sélectionnée */
 @media (max-width: 1050px){
+
+  /* Events shell */
   .adminEventsShell{
     padding: 12px 0;
   }
@@ -18,17 +28,106 @@
     transform:none;
   }
 
+  /* ❌ Avant: editor global sous toute la liste
+     ✅ Maintenant: on masque le panel global (desktop) en mobile,
+     et on utilise l’éditeur inline injecté sous la card sélectionnée. */
   .adminEventsRight{
-    position:static;
-    width:100%;
-    margin-top:16px;
+    display:none;
   }
 
-  .adminEventsEditorPanel{
+  /* ✅ inline editor (injecté par renderInlineEditor) */
+  .adminEventsInlineEditor{
+    margin-top:10px;
+    margin-bottom:14px;
+  }
+
+  /* Petit effet “rattaché à la card” */
+  .eventCardWrap .adminEventsInlineEditor{
+    margin-top:-6px;
+  }
+
+  /* Origine d'animation plus naturelle en dessous */
+  .adminEventsEditorPanel--inline{
     transform-origin: top center;
+  }
+
+  /* Animation douce dédiée à l’inline (sans casser tes anims desktop) */
+  .adminEventsEditorPanel--inline.isOpen{
+    animation-name: adminInlineIn;
+    animation-timing-function: ease-out;
+  }
+
+  .adminEventsEditorPanel--inline.isClosing{
+    animation-name: adminInlineOut;
+    animation-timing-function: ease-in;
+  }
+
+  @keyframes adminInlineIn{
+    from{
+      opacity:0;
+      transform: translateY(-6px) scale(0.99);
+    }
+    to{
+      opacity:1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes adminInlineOut{
+    from{
+      opacity:1;
+      transform: translateY(0) scale(1);
+    }
+    to{
+      opacity:0;
+      transform: translateY(-6px) scale(0.99);
+    }
+  }
+
+  /* Swap animation distance (un peu plus petite sur mobile) */
+  :root{
+    --admin-swap-dy: 16px;
+  }
+
+  /* Tickets */
+  .adminTicketsGrid{
+    grid-template-columns: 1fr;
+  }
+  .adminTicketsEditor{
+    position:static;
+  }
+
+  /* Registration shell */
+  .adminRegLeft{
+    width:100%;
+    transform:none;
+  }
+
+  .adminRegShell.isEditorOpen .adminRegLeft{
+    width:100%;
+    transform:none;
+  }
+
+  .adminRegRight{
+    position:static;
+    width:100%;
+    margin-top:14px;
+  }
+
+  .regEditorPanel{
+    transform-origin: top center;
+  }
+
+  /* Legacy (si encore utilisé ailleurs) */
+  .adminRegGrid{
+    grid-template-columns: 1fr;
+  }
+  .adminRegEditor{
+    position:static;
   }
 }
 
+/* <= 860px : formulaire event en 1 colonne */
 @media (max-width: 860px){
   .adminEventFormGrid{
     grid-template-columns: 1fr;
@@ -38,24 +137,7 @@
   }
 }
 
-@media (max-width: 1050px){
-  .adminTicketsGrid{
-    grid-template-columns: 1fr;
-  }
-  .adminTicketsEditor{
-    position:static;
-  }
-}
-
-@media (max-width: 1050px){
-  .adminRegGrid{
-    grid-template-columns: 1fr;
-  }
-  .adminRegEditor{
-    position:static;
-  }
-}
-
+/* <= 980px : participants en 1 colonne */
 @media (max-width: 980px){
   .adminParticipantsGrid{
     grid-template-columns: 1fr;

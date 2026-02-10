@@ -36,7 +36,6 @@
   align-items:flex-start;/* optionnel */
 }
 
-
 /* Quand l’editor est ouvert, la liste se rétrécit */
 .adminRegShell.isEditorOpen .adminRegLeft{
   width: calc(100% - (var(--editor-w) + var(--editor-gap)));
@@ -91,34 +90,5 @@
   to{
     opacity:0;
     transform: translateX(8px) scale(0.98);
-  }
-}
-
-/* Mobile: panel en dessous, pas de shrink, pas de sticky */
-@media (max-width: 1050px){
-  .adminRegLeft{
-    width:100%;
-    transform:none;
-  }
-
-  .adminRegShell.isEditorOpen .adminRegLeft{
-    width:100%;
-    transform:none;
-  }
-
-  .adminRegRight{
-    position:static;
-    width:100%;
-    margin-top:14px;
-  }
-
-  .regEditorPanel{
-    position: static;
-    top:auto;
-    max-height: none;
-    overflow: visible;
-    padding-right: 0;
-    z-index:auto;
-    transform-origin: top center;
   }
 }
