@@ -22,4 +22,9 @@
 
 /* page header */
 @import "../mobile/public/partials/public.header.pages.mobile.css";
+@import "../mobile/public/partials/public.header.checkout.mobile.css";
+@import "../mobile/public/partials/public.org.events.mobile.css";
+@import "../mobile//public/orderReturnPage.mobile.css";
+@import "../mobile/public/partials/public.banner.mobile.css";
+
 

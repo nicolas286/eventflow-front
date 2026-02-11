@@ -86,6 +86,14 @@
   align-items: end;
 }
 
+.publicMobileFiltersToggle {
+  display: none;
+}
+
+.publicDesktopOnly {
+  display: flex;
+}
+
 .publicField {
   display: flex;
   flex-direction: column;

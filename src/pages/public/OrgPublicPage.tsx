@@ -13,13 +13,13 @@ import PublicFooter from "../../ui/components/publicFooter/PublicFooter";
 
 import "../../styles/desktop/publicPages.desktop.css";
 
+
 import type { PublicEventOverview } from "../../domain/models/public/public.orgEventsOverview.schema";
 
 type SortKey = "date" | "name";
 type SortDir = "asc" | "desc";
 
 function toDayStartISO(d: string) {
-  // d = "YYYY-MM-DD"
   return `${d}T00:00:00.000Z`;
 }
 function toDayEndISO(d: string) {
@@ -41,6 +41,9 @@ export function OrgPublicPage() {
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
+  // ✅ Mobile: toggle affichage filtres
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
   const filteredSortedEvents = useMemo(() => {
     const q = query.trim().toLowerCase();
 
@@ -48,13 +51,11 @@ export function OrgPublicPage() {
     const toTs = dateTo ? Date.parse(toDayEndISO(dateTo)) : null;
 
     const base = (events ?? []).filter((e) => {
-      // Recherche simple (titre + lieu)
       if (q) {
         const hay = `${e.title ?? ""} ${e.location ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
 
-      // Filtre date : on utilise startsAt (si absent -> on laisse passer)
       if (fromTs || toTs) {
         if (!e.startsAt) return true;
 
@@ -75,7 +76,6 @@ export function OrgPublicPage() {
         return A.localeCompare(B) * dir;
       }
 
-      // sortKey === "date"
       const aTs = a.startsAt ? Date.parse(a.startsAt) : Number.POSITIVE_INFINITY;
       const bTs = b.startsAt ? Date.parse(b.startsAt) : Number.POSITIVE_INFINITY;
       return (aTs - bTs) * dir;
@@ -85,6 +85,14 @@ export function OrgPublicPage() {
   }, [events, query, dateFrom, dateTo, sortKey, sortDir]);
 
   const hasActiveFilters = !!query.trim() || !!dateFrom || !!dateTo;
+
+  const resetFilters = () => {
+    setQuery("");
+    setDateFrom("");
+    setDateTo("");
+    setSortKey("date");
+    setSortDir("asc");
+  };
 
   if (loading) {
     return (
@@ -158,8 +166,22 @@ export function OrgPublicPage() {
             <div className="publicEmpty">Cette organisation n’a pas encore de description.</div>
           )}
         </div>
+
         {/* Filtres + tri */}
-        <div className="publicEventsToolbar">
+        <div className={`publicEventsToolbar ${mobileFiltersOpen ? "isMobileOpen" : ""}`}>
+          {/* ✅ Bouton uniquement mobile */}
+          <div className="publicMobileFiltersToggle">
+            <Button
+              variant="secondary"
+              label={mobileFiltersOpen ? "Masquer les filtres" : "Afficher les filtres"}
+              onClick={() => setMobileFiltersOpen((v) => !v)}
+            />
+
+            {hasActiveFilters ? (
+              <Button variant="secondary" label="Réinitialiser" onClick={resetFilters} />
+            ) : null}
+          </div>
+
           <div className="publicEventsToolbarRow">
             <div className="publicField">
               <div className="publicFieldLabel">Rechercher</div>
@@ -220,19 +242,10 @@ export function OrgPublicPage() {
               </select>
             </div>
 
+            {/* Desktop: reset à droite (visible en desktop uniquement via CSS) */}
             {hasActiveFilters ? (
-              <div className="publicToolbarActions">
-                <Button
-                  variant="secondary"
-                  label="Réinitialiser"
-                  onClick={() => {
-                    setQuery("");
-                    setDateFrom("");
-                    setDateTo("");
-                    setSortKey("date");
-                    setSortDir("asc");
-                  }}
-                />
+              <div className="publicToolbarActions publicDesktopOnly">
+                <Button variant="secondary" label="Réinitialiser" onClick={resetFilters} />
               </div>
             ) : null}
           </div>
@@ -273,11 +286,9 @@ export function OrgPublicPage() {
                       {e.startsAt ? <Badge tone="info" label="À venir" /> : null}
                     </div>
 
-                    <div className="publicOrgEventLocation">
-                      {e.location ?? "Lieu à venir"}
-                    </div>
+                    <div className="publicOrgEventLocation">{e.location ?? "Lieu à venir"}</div>
 
-                    {(startText || endText) ? (
+                    {startText || endText ? (
                       <div className="publicOrgEventDates">
                         {startText ? <span>Début : {startText}</span> : null}
                         {endText ? <span>Fin : {endText}</span> : null}
@@ -298,7 +309,4 @@ export function OrgPublicPage() {
       </Container>
     </div>
   );
-
-<PublicFooter />
-
 }

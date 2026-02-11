@@ -23,3 +23,42 @@
     justify-content: center;
   }
 }
+
+@media (max-width: 860px) {
+
+  /* Bouton visible uniquement en mobile */
+  .publicMobileFiltersToggle {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  /* Reset desktop-only */
+  .publicDesktopOnly {
+    display: none;
+  }
+
+  /* Toolbar row cachée par défaut */
+  .publicEventsToolbarRow {
+    display: none;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  /* Quand ouverte */
+  .publicEventsToolbar.isMobileOpen .publicEventsToolbarRow {
+    display: grid;
+  }
+
+  /* Inputs full width */
+  .publicField {
+    width: 100%;
+  }
+
+  .publicInput,
+  .publicSelect {
+    width: 100%;
+  }
+}
