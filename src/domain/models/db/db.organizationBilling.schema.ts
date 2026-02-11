@@ -173,7 +173,7 @@ export const organizationBillingUISchema = organizationBillingSchema.omit({
 
 export const organizationBillingEnvelopeSchema = z
   .object({
-    billing: organizationBillingSchema.nullable(),
+    billing: organizationBillingUISchema.nullable(),
   })
   .loose(); // si la RPC renvoie aussi orgId / autre champ, on s'en fout
 

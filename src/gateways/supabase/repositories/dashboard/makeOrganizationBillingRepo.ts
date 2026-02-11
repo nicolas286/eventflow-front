@@ -1,43 +1,49 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
 import { supabaseSafe } from "../../supabaseSafe";
-import { camelToSnake } from "../../../../domain/helpers/camelToSnake";
-import { snakeToCamel } from "../../../../domain/helpers/snakeToCamel";
 import {
   organizationBillingPatchSchema,
   organizationBillingSchema,
-  organizationBillingEnvelopeSchema,
   type OrganizationBilling,
   type OrganizationBillingPatch,
 } from "../../../../domain/models/db/db.organizationBilling.schema";
-import { makeOrganizationBillingArgsSchema,
-  type MakeOrganizationBillingArgs
- } from "../../../../domain/models/admin/admin.makeOrganizationBillingArgs.schema";
+import { camelToSnake } from "../../../../domain/helpers/camelToSnake";
+
+const orgIdSchema = z.string().uuid();
+
+function unwrapRpc(raw: unknown): unknown {
+  if (Array.isArray(raw)) return raw[0] ?? null;
+  if (typeof raw === "string") {
+    try { return JSON.parse(raw); } catch { return raw; }
+  }
+  return raw;
+}
 
 export function makeOrganizationBillingRepo(supabase: SupabaseClient) {
   return {
-    async getOrganizationBilling(args: MakeOrganizationBillingArgs): Promise<OrganizationBilling | null> {
-      const p_org_id = makeOrganizationBillingArgsSchema.parse(args);
+    async getOrganizationBilling(orgId: string): Promise<OrganizationBilling | null> {
+      const p_org_id = orgIdSchema.parse(orgId);
 
       const raw = await supabaseSafe<unknown>(() =>
         supabase.rpc("rpc_get_organization_billing", { p_org_id }),
       );
 
-      const camel = snakeToCamel(raw);
+      const parsed = unwrapRpc(raw);
+      if (parsed == null) return null;
 
-      const env = organizationBillingEnvelopeSchema.parse(camel);
-      return env.billing; 
+      return organizationBillingSchema.parse(parsed);
     },
 
     async upsertOrganizationBilling(input: OrganizationBillingPatch): Promise<OrganizationBilling> {
-      const validatedPatch = organizationBillingPatchSchema.parse(input);
-      const rpcInput = camelToSnake(validatedPatch);
+      const validated = organizationBillingPatchSchema.parse(input);
+      const p_input = camelToSnake(validated);
 
       const raw = await supabaseSafe<unknown>(() =>
-        supabase.rpc("rpc_upsert_organization_billing", { p_input: rpcInput }),
+        supabase.rpc("rpc_upsert_organization_billing", { p_input }),
       );
 
-      const camel = snakeToCamel(raw);
-      return organizationBillingSchema.parse(camel);
+      const parsed = unwrapRpc(raw);
+      return organizationBillingSchema.parse(parsed);
     },
   };
 }
