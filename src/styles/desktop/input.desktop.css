@@ -12,7 +12,7 @@
 }
 
 .ui-input {
-  width: 100%;
+  width: 25%;
   max-width: 100%;
   box-sizing: border-box; /* au cas où */
   border-radius: 12px;
@@ -57,7 +57,6 @@
 .ui-phoneRow__dial {
   flex: 0 0 110px;
   width: 110px;
-  min-width: 110px;
 }
 
 /* number input : prend le reste */

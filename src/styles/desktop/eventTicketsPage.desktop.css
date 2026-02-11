@@ -139,7 +139,7 @@
 }
 
 .publicQtyInput {
-  width: 110px;
+  width: 100%;
   padding: 10px 12px;
 
   border-radius: 12px;
@@ -162,7 +162,7 @@
   font-weight: 900;
   font-size: 14px;
   color: #0f172a;
-
+  justify-content: flex-end;
   padding: 10px 12px;
   border-radius: 999px;
 
