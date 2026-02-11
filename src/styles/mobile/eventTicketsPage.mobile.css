@@ -1,7 +1,6 @@
 @media (max-width: 900px) {
   .publicTicketRight {
     width: 100%;
-    align-items: flex-start;
   }
 
   .publicTicketLayout {
@@ -9,6 +8,9 @@
   }
 
   .publicQtyBlock {
-    justify-content: flex-start;
+    justify-content: flex-end;
+  }
+  .publicTicketTotal {
+    justify-content: flex-end;
   }
 }
