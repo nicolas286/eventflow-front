@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Button, EditorShell } from "../../../../ui/components";
 
@@ -97,6 +97,8 @@ function makeEmptyFormValue(fields: RegistrationFieldLike[], initialValue?: Atte
 
 /* -------------------- COMPONENT -------------------- */
 
+type AnimState = "closed" | "open" | "closing";
+
 export function AttendeeEditorPanel(props: {
   supabase: SupabaseClient;
 
@@ -120,7 +122,10 @@ export function AttendeeEditorPanel(props: {
   editorGap?: number;
 
   error?: string | null;
-  left: React.ReactNode;
+  left?: React.ReactNode;
+
+  /** ✅ nouveau: "shell" (desktop) ou "inline" (mobile sous la card) */
+  layout?: "shell" | "inline";
 
   /** ❌ deprecated: on ne crée plus d'attendee dans ce panel */
   onAdded?: (res: {
@@ -152,6 +157,7 @@ export function AttendeeEditorPanel(props: {
     editorGap = 14,
     error: externalError = null,
     left,
+    layout = "shell",
   } = props;
 
   const normalizedFields = useMemo(() => normalizeFields(fields), [fields]);
@@ -195,12 +201,198 @@ export function AttendeeEditorPanel(props: {
   /* -------------------- SUBMIT -------------------- */
 
   async function handleSubmit() {
-    // ✅ edit flow => parent gère l’update via onSubmit
     await onSubmit(value);
   }
 
-  /* -------------------- RENDER -------------------- */
+  /* -------------------- INLINE ANIMATION -------------------- */
 
+  const [anim, setAnim] = useState<AnimState>("closed");
+  const closeTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (layout !== "inline") return;
+
+    if (isOpen) {
+      if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+      setAnim("open");
+      return;
+    }
+
+    if (anim === "open") {
+      setAnim("closing");
+      if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = window.setTimeout(() => {
+        setAnim("closed");
+        closeTimerRef.current = null;
+      }, 180);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, layout]);
+
+  /* -------------------- RENDER: CONTENT -------------------- */
+
+  const panelContent =
+    mode !== "edit" ? (
+      <div style={{ marginTop: 14 }}>
+        <Button variant="primary" onClick={onRequestClose}>
+          Fermer
+        </Button>
+      </div>
+    ) : (
+      <>
+        <div className="adminEventFormGrid" style={{ marginTop: 12 }}>
+          {normalizedFields.map((f) => {
+            const key = String(f.fieldKey ?? "").trim();
+            if (!key) return null;
+
+            const label = String(f.label ?? key).trim();
+            const type = (f.fieldType ?? "text") as FieldType;
+            const req = isRequired(f);
+            const options = toOptions(f.options);
+
+            if (type === "checkbox") {
+              return (
+                <div key={key} className="adminEventField">
+                  <div className="adminEventLabel">
+                    {label} {req ? "*" : ""}
+                  </div>
+                  <label className="adminEventToggle">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(value[key])}
+                      onChange={(e) => setField(key, e.target.checked)}
+                      disabled={saving}
+                    />
+                    <span>{Boolean(value[key]) ? "Oui" : "Non"}</span>
+                  </label>
+                </div>
+              );
+            }
+
+            if (type === "select" || type === "radio") {
+              return (
+                <div key={key} className="adminEventField adminEventFieldSpan2">
+                  <div className="adminEventLabel">
+                    {label} {req ? "*" : ""}
+                  </div>
+                  <select
+                    className="adminEventInput"
+                    value={String(value[key] ?? "")}
+                    onChange={(e) => setField(key, e.target.value)}
+                    disabled={saving}
+                  >
+                    <option value="">—</option>
+                    {options.map((o) => (
+                      <option key={`${key}:${o.value}`} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            }
+
+            if (type === "textarea") {
+              return (
+                <div key={key} className="adminEventField adminEventFieldSpan2">
+                  <div className="adminEventLabel">
+                    {label} {req ? "*" : ""}
+                  </div>
+                  <textarea
+                    className="adminEventTextarea"
+                    value={String(value[key] ?? "")}
+                    onChange={(e) => setField(key, e.target.value)}
+                    disabled={saving}
+                  />
+                </div>
+              );
+            }
+
+            return (
+              <div key={key} className="adminEventField">
+                <div className="adminEventLabel">
+                  {label} {req ? "*" : ""}
+                </div>
+                <input
+                  className="adminEventInput"
+                  type={inputTypeFor(type)}
+                  value={String(value[key] ?? "")}
+                  onChange={(e) =>
+                    type === "number"
+                      ? setField(key, e.target.value === "" ? "" : clampInt(e.target.value))
+                      : setField(key, e.target.value)
+                  }
+                  disabled={saving}
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        <div
+          className="adminTicketsEditorFooter"
+          style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}
+        >
+          <Button variant="secondary" onClick={onRequestClose} disabled={saving}>
+            Fermer
+          </Button>
+
+          <Button variant="primary" onClick={handleSubmit} disabled={!isValid(value) || saving}>
+            {saving ? "Enregistrement…" : "Mettre à jour"}
+          </Button>
+        </div>
+      </>
+    );
+
+  const card = (
+    <div
+      className={[
+        "adminTicketsEditorCard",
+        layout === "inline" ? "adminInlineEditorPanel" : "",
+        layout === "inline" && anim === "open" ? "isOpen" : "",
+        layout === "inline" && anim === "closing" ? "isClosing" : "",
+      ].join(" ")}
+    >
+      <div className="adminTicketsEditorHeader">
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+          <div>
+            <div className="adminTicketsEditorTitle">
+              {mode === "edit" ? "Modifier participant" : "Création de participant désactivée"}
+            </div>
+            <div className="adminEventHint">
+              {mode === "edit"
+                ? "Le formulaire s’adapte automatiquement aux champs configurés dans “Formulaire d’inscription”."
+                : "Les participants sont générés automatiquement via les tickets de la commande. Crée une commande pour ajouter des participants."}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {error ? (
+        <div className="adminEventHint" style={{ marginTop: 10, color: "#b91c1c" }}>
+          {error}
+        </div>
+      ) : null}
+
+      {panelContent}
+    </div>
+  );
+
+  /* -------------------- RENDER: LAYOUTS -------------------- */
+
+  // ✅ INLINE : juste la card (affichée sous la personne en mobile)
+  if (layout === "inline") {
+    if (anim === "closed") return null;
+    return card;
+  }
+
+  // ✅ DESKTOP : EditorShell
   return (
     <EditorShell
       isOpen={isOpen}
@@ -209,140 +401,7 @@ export function AttendeeEditorPanel(props: {
       editorGap={editorGap}
       stickyTop={stickyTop}
       left={left}
-      right={
-        isOpen ? (
-          <div className="adminTicketsEditorCard">
-            <div className="adminTicketsEditorHeader">
-              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-                <div>
-                  <div className="adminTicketsEditorTitle">
-                    {mode === "edit" ? "Modifier participant" : "Création de participant désactivée"}
-                  </div>
-                  <div className="adminEventHint">
-                    {mode === "edit"
-                      ? "Le formulaire s’adapte automatiquement aux champs configurés dans “Formulaire d’inscription”."
-                      : "Les participants sont générés automatiquement via les tickets de la commande. Crée une commande pour ajouter des participants."}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {error ? (
-              <div className="adminEventHint" style={{ marginTop: 10, color: "#b91c1c" }}>
-                {error}
-              </div>
-            ) : null}
-
-            {mode !== "edit" ? (
-              <div style={{ marginTop: 14 }}>
-                <Button variant="primary" onClick={onRequestClose}>
-                  Fermer
-                </Button>
-              </div>
-            ) : (
-              <>
-                <div className="adminEventFormGrid" style={{ marginTop: 12 }}>
-                  {normalizedFields.map((f) => {
-                    const key = String(f.fieldKey ?? "").trim();
-                    if (!key) return null;
-
-                    const label = String(f.label ?? key).trim();
-                    const type = (f.fieldType ?? "text") as FieldType;
-                    const req = isRequired(f);
-                    const options = toOptions(f.options);
-
-                    if (type === "checkbox") {
-                      return (
-                        <div key={key} className="adminEventField">
-                          <div className="adminEventLabel">
-                            {label} {req ? "*" : ""}
-                          </div>
-                          <label className="adminEventToggle">
-                            <input
-                              type="checkbox"
-                              checked={Boolean(value[key])}
-                              onChange={(e) => setField(key, e.target.checked)}
-                              disabled={saving}
-                            />
-                            <span>{Boolean(value[key]) ? "Oui" : "Non"}</span>
-                          </label>
-                        </div>
-                      );
-                    }
-
-                    if (type === "select" || type === "radio") {
-                      return (
-                        <div key={key} className="adminEventField adminEventFieldSpan2">
-                          <div className="adminEventLabel">
-                            {label} {req ? "*" : ""}
-                          </div>
-                          <select
-                            className="adminEventInput"
-                            value={String(value[key] ?? "")}
-                            onChange={(e) => setField(key, e.target.value)}
-                            disabled={saving}
-                          >
-                            <option value="">—</option>
-                            {options.map((o) => (
-                              <option key={`${key}:${o.value}`} value={o.value}>
-                                {o.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      );
-                    }
-
-                    if (type === "textarea") {
-                      return (
-                        <div key={key} className="adminEventField adminEventFieldSpan2">
-                          <div className="adminEventLabel">
-                            {label} {req ? "*" : ""}
-                          </div>
-                          <textarea
-                            className="adminEventTextarea"
-                            value={String(value[key] ?? "")}
-                            onChange={(e) => setField(key, e.target.value)}
-                            disabled={saving}
-                          />
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div key={key} className="adminEventField">
-                        <div className="adminEventLabel">
-                          {label} {req ? "*" : ""}
-                        </div>
-                        <input
-                          className="adminEventInput"
-                          type={inputTypeFor(type)}
-                          value={String(value[key] ?? "")}
-                          onChange={(e) =>
-                            type === "number"
-                              ? setField(key, e.target.value === "" ? "" : clampInt(e.target.value))
-                              : setField(key, e.target.value)
-                          }
-                          disabled={saving}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div
-                  className="adminTicketsEditorFooter"
-                  style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}
-                >
-                  <Button variant="primary" onClick={handleSubmit} disabled={!isValid(value) || saving}>
-                    {saving ? "Enregistrement…" : "Mettre à jour"}
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-        ) : null
-      }
+      right={isOpen ? card : null}
     />
   );
 }

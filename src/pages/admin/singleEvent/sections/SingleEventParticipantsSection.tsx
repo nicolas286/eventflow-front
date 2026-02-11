@@ -10,6 +10,32 @@ import { useAdminUpdateOrderAttendee } from "../../../../features/admin/hooks/us
 import { AdminOrderCreateWizardPanel } from "../../../../features/admin/createOrder/AdminCreateOrderWizardPanel";
 import { useDeleteOrder } from "../../../../features/admin/hooks/useDeleteOrder";
 
+/* -------------------- SMALL HOOK -------------------- */
+function useIsMobile(maxWidthPx = 720) {
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia(`(max-width: ${maxWidthPx}px)`).matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia(`(max-width: ${maxWidthPx}px)`);
+    const onChange = () => setIsMobile(mq.matches);
+
+    onChange();
+
+    if ("addEventListener" in mq) mq.addEventListener("change", onChange);
+    else (mq as any).addListener(onChange);
+
+    return () => {
+      if ("removeEventListener" in mq) mq.removeEventListener("change", onChange);
+      else (mq as any).removeListener(onChange);
+    };
+  }, [maxWidthPx]);
+
+  return isMobile;
+}
+
 /* -------------------- LOCAL CONFIRM MODAL (simple + robuste) -------------------- */
 function ConfirmModal(props: {
   isOpen: boolean;
@@ -51,7 +77,6 @@ function ConfirmModal(props: {
         padding: 16,
       }}
       onMouseDown={(e) => {
-        // close on backdrop click
         if (e.target === e.currentTarget && !loading) onCancel();
       }}
     >
@@ -88,11 +113,7 @@ function ConfirmModal(props: {
           <Button variant="secondary" onClick={onCancel} disabled={loading}>
             {cancelLabel}
           </Button>
-          <Button
-            variant="danger"
-            onClick={onConfirm as any}
-            disabled={loading}
-          >
+          <Button variant="danger" onClick={onConfirm as any} disabled={loading}>
             {loading ? "Suppression…" : confirmLabel}
           </Button>
         </div>
@@ -184,14 +205,6 @@ function formatDateTime(value: any): string {
   } catch {
     return d.toISOString();
   }
-}
-
-function nextAttendeeIndexForOrder(orderId: string, attendees: Attendee[]) {
-  let max = 0;
-  for (const a of attendees) {
-    if (a.orderId === orderId) max = Math.max(max, a.attendeeIndex ?? 0);
-  }
-  return max + 1;
 }
 
 function makeLocalAnswers(params: {
@@ -286,6 +299,8 @@ function buildUpdateAttendeeFromForm(params: {
 export function SingleEventParticipantsSection(props: { data: AnyRecord; onChanged?: () => Promise<void> }) {
   const { data, onChanged } = props;
 
+  const isMobile = useIsMobile(720);
+
   /* -------------------- FILTER UI STATE -------------------- */
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [query, setQuery] = useState("");
@@ -303,10 +318,8 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
   const deleteOrder = useDeleteOrder({ supabase });
 
   /* -------------------- CONFIRM MODALS STATE -------------------- */
-  const [confirmDeleteAttendeeOpen, setConfirmDeleteAttendeeOpen] = useState(false);
   const [confirmDeleteOrderOpen, setConfirmDeleteOrderOpen] = useState(false);
 
-  const [targetAttendee, setTargetAttendee] = useState<{ attendeeId: string; orderId: string } | null>(null);
   const [targetOrderId, setTargetOrderId] = useState<string | null>(null);
 
   /* -------------------- EDITOR STATE (ORDER) -------------------- */
@@ -513,16 +526,6 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
   }, [filteredAttendees, localOrders, orderMetaById, query, filterMode]);
 
   /* -------------------- EDITOR HELPERS -------------------- */
-  function openCreate(orderId: string) {
-    setEditorError(null);
-    setEditorMode("create");
-    setEditorOrderId(orderId);
-    setEditingAttendeeId(null);
-
-    setOrderEditorOpen(false);
-    setEditorOpen(true);
-  }
-
   function openEdit(attendeeId: string, orderId: string) {
     setEditorError(null);
     setEditorMode("edit");
@@ -541,11 +544,7 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
   }
 
   function openCreateOrder() {
-    setEditorOpen(false);
-    setEditingAttendeeId(null);
-    setEditorOrderId(null);
-    setEditorError(null);
-
+    closeEditor();
     setOrderEditorOpen(true);
   }
 
@@ -600,9 +599,7 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
       if (typeof onChanged === "function") {
         try {
           await onChanged();
-        } catch {
-          // noop
-        }
+        } catch {}
       }
     } catch (e: any) {
       setEditorError(e?.message ? String(e.message) : "Erreur inconnue");
@@ -613,13 +610,11 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
 
   /* -------------------- DELETE ACTIONS -------------------- */
 
-
   function requestDeleteOrder(orderId: string) {
     deleteOrder.reset?.();
     setTargetOrderId(orderId);
     setConfirmDeleteOrderOpen(true);
   }
-
 
   async function confirmDeleteOrder() {
     if (!targetOrderId) return;
@@ -627,20 +622,15 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
     const ok = await deleteOrder.deleteOrder({ orderId: targetOrderId });
     if (!ok) return;
 
-    // collect attendee ids for answers purge
-    const attendeeIds = new Set(
-      localAttendees.filter((a) => a.orderId === targetOrderId).map((a) => a.id)
-    );
+    const attendeeIds = new Set(localAttendees.filter((a) => a.orderId === targetOrderId).map((a) => a.id));
 
-    // local optimistic cleanup
-    setLocalOrders((prev) => prev.filter((o) => String(getFirst(o, ["id", "orderId", "order_id"])) !== String(targetOrderId)));
+    setLocalOrders((prev) =>
+      prev.filter((o) => String(getFirst(o, ["id", "orderId", "order_id"])) !== String(targetOrderId))
+    );
     setLocalAttendees((prev) => prev.filter((a) => a.orderId !== targetOrderId));
     setLocalAnswers((prev) => prev.filter((ans) => !attendeeIds.has(ans.attendeeId)));
 
-    // if editor open on this order, close it to avoid weird UI
-    if (editorOrderId === targetOrderId) {
-      closeEditor();
-    }
+    if (editorOrderId === targetOrderId) closeEditor();
 
     setConfirmDeleteOrderOpen(false);
     setTargetOrderId(null);
@@ -648,13 +638,12 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
     if (typeof onChanged === "function") {
       try {
         await onChanged();
-      } catch {
-        // noop
-      }
+      } catch {}
     }
   }
 
-  /* -------------------- LEFT CONTENT -------------------- */
+  /* -------------------- LEFT CONTENT (orders + people) -------------------- */
+
   const leftContent = (
     <div className="adminOrdersGrid">
       {groups.map(([orderId, people]) => {
@@ -676,12 +665,7 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
                   {people.length} inscrit{people.length > 1 ? "s" : ""}
                 </span>
 
-  
-                <Button
-                  variant="danger"
-                  onClick={() => requestDeleteOrder(orderId)}
-                  disabled={isDeletingThisOrder}
-                >
+                <Button variant="danger" onClick={() => requestDeleteOrder(orderId)} disabled={isDeletingThisOrder}>
                   Supprimer la commande
                 </Button>
               </div>
@@ -691,41 +675,64 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
               {people.map((att) => {
                 const identity = computeIdentity(att.id);
                 const filled = filledFieldsByAttendeeId.get(att.id) ?? [];
+                const showInlineEditor = isMobile && editorOpen && editingAttendeeId === att.id;
 
                 return (
-                  <div key={att.id} className="adminPersonCard">
-                    <div className="adminPersonTop">
-                      <div>
-                        <div className="adminPersonName">
-                          {identity.title} <span className="adminPersonIndex">#{att.attendeeIndex}</span>
-                        </div>
-                        {identity.subtitle ? <div className="adminPersonSub">{identity.subtitle}</div> : null}
-                      </div>
-
-                      <div className="adminPersonBadges">
-                        <span className={`adminStatusBadge is-${att.status}`}>{att.status}</span>
-                        <span className="adminProductBadge">{att.productNameSnapshot}</span>
-                      </div>
-                    </div>
-
-                    <div className="adminFilledGrid">
-                      {filled.length > 0 ? (
-                        filled.map((f) => (
-                          <div key={f.key} className="adminFieldLine">
-                            <span className="adminFieldLabel">{f.label}</span>
-                            <span className="adminFieldValue">{normalizeStr(f.value)}</span>
+                  <div key={att.id}>
+                    <div className="adminPersonCard">
+                      <div className="adminPersonTop">
+                        <div>
+                          <div className="adminPersonName">
+                            {identity.title} <span className="adminPersonIndex">#{att.attendeeIndex}</span>
                           </div>
-                        ))
-                      ) : (
-                        <div className="adminFilledEmpty">Aucun champ rempli.</div>
-                      )}
+                          {identity.subtitle ? <div className="adminPersonSub">{identity.subtitle}</div> : null}
+                        </div>
+
+                        <div className="adminPersonBadges">
+                          <span className={`adminStatusBadge is-${att.status}`}>{att.status}</span>
+                          <span className="adminProductBadge">{att.productNameSnapshot}</span>
+                        </div>
+                      </div>
+
+                      <div className="adminFilledGrid">
+                        {filled.length > 0 ? (
+                          filled.map((f) => (
+                            <div key={f.key} className="adminFieldLine">
+                              <span className="adminFieldLabel">{f.label}</span>
+                              <span className="adminFieldValue">{normalizeStr(f.value)}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="adminFilledEmpty">Aucun champ rempli.</div>
+                        )}
+                      </div>
+
+                      <div className="adminPersonActionsBottom">
+                        <Button variant="secondary" onClick={() => openEdit(att.id, orderId)}>
+                          Modifier
+                        </Button>
+                      </div>
                     </div>
 
-                    <div className="adminPersonActionsBottom">
-                      <Button variant="secondary" onClick={() => openEdit(att.id, orderId)}>
-                        Modifier
-                      </Button>
-                    </div>
+                    {/* ✅ MOBILE: editor inline sous la card cliquée */}
+                    {showInlineEditor ? (
+                      <div className="adminInlineEditorWrap">
+                        <AttendeeEditorPanel
+                          supabase={supabase as any}
+                          isOpen={editorOpen}
+                          mode={editorMode}
+                          fields={regFields}
+                          initialValue={initialEditorValue}
+                          onRequestClose={closeEditor}
+                          onSubmit={handleSubmitParticipant}
+                          isSaving={updateAttendee.loading || saving}
+                          error={updateAttendee.error || editorError}
+                          products={toRows(data.products)}
+                          orderId={editorOrderId}
+                          layout="inline"
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}
@@ -736,16 +743,9 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
     </div>
   );
 
-  // ✅ IMPORTANT: un seul left visible à la fois
-  const emptyLeft = <div style={{ display: "none" }} />;
-
-  const leftForOrderPanel = orderEditorOpen ? leftContent : emptyLeft;
-  const leftForAttendeePanel = orderEditorOpen ? emptyLeft : leftContent;
-
   /* -------------------- RENDER -------------------- */
   return (
     <div className="adminParticipants adminSingleEventParticipants">
-      {/* -------------------- MODALS -------------------- */}
       <ConfirmModal
         isOpen={confirmDeleteOrderOpen}
         title="Supprimer la commande ?"
@@ -778,11 +778,7 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
       </div>
 
       <div className="adminParticipantsSearch">
-        <select
-          className="adminSearchSelect"
-          value={filterMode}
-          onChange={(e) => setFilterMode(e.target.value as FilterMode)}
-        >
+        <select className="adminSearchSelect" value={filterMode} onChange={(e) => setFilterMode(e.target.value as FilterMode)}>
           <option value="all">Tous</option>
           <option value="order">Commande</option>
 
@@ -819,96 +815,101 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
       </div>
 
       {groups.length === 0 ? (
-        <div className="adminEventEmpty">
-          {query.trim() ? "Aucun résultat avec ces filtres." : "Aucune commande pour le moment."}
-        </div>
+        <div className="adminEventEmpty">{query.trim() ? "Aucun résultat avec ces filtres." : "Aucune commande pour le moment."}</div>
       ) : (
         <>
-          <AdminOrderCreateWizardPanel
-            isOpen={orderEditorOpen}
-            onRequestClose={closeOrderEditor}
-            stickyTop={84}
-            editorWidth={420}
-            editorGap={14}
-            left={leftForOrderPanel}
-            eventId={String(getFirst(data?.event, ["id"]) ?? getFirst(data, ["eventId", "event_id"]) ?? "")}
-            products={toRows<any>(data.products)}
-            regFields={regFields}
-            onCreated={async ({ orderId, order }) => {
-              setLocalOrders((prev) => {
-                const exists = prev.some((o) => String(getFirst(o, ["id", "orderId", "order_id"])) === String(orderId));
-                if (exists) return prev;
-                return [order, ...prev];
-              });
+          {/* ✅ MOBILE: wizard AU-DESSUS des commandes */}
+          {isMobile ? (
+            orderEditorOpen ? (
+              <div className="adminInlineOrderWizard">
+                <AdminOrderCreateWizardPanel
+                  isOpen={orderEditorOpen}
+                  onRequestClose={closeOrderEditor}
+                  stickyTop={84}
+                  editorWidth={420}
+                  editorGap={14}
+                  left={<div style={{ display: "none" }} />}
+                  eventId={String(getFirst(data?.event, ["id"]) ?? getFirst(data, ["eventId", "event_id"]) ?? "")}
+                  products={toRows<any>(data.products)}
+                  regFields={regFields}
+                  onCreated={async ({ orderId, order }) => {
+                    setLocalOrders((prev) => {
+                      const exists = prev.some((o) => String(getFirst(o, ["id", "orderId", "order_id"])) === String(orderId));
+                      if (exists) return prev;
+                      return [order, ...prev];
+                    });
 
-              const orderNumber =
-                getFirst<string>(order, ["publicId", "public_id", "number", "ref", "reference"]) ??
-                orderId.slice(0, 8);
+                    const orderNumber =
+                      getFirst<string>(order, ["publicId", "public_id", "number", "ref", "reference"]) ?? orderId.slice(0, 8);
 
-              setFilterMode("order");
-              setQuery(String(orderNumber));
+                    setFilterMode("order");
+                    setQuery(String(orderNumber));
 
-              if (typeof onChanged === "function") {
-                try { await onChanged(); } catch {}
-              }
-            }}
-          />
+                    closeOrderEditor();
 
+                    if (typeof onChanged === "function") {
+                      try { await onChanged(); } catch {}
+                    }
+                  }}
+                />
+              </div>
+            ) : null
+          ) : (
+            /* ✅ DESKTOP: shell à droite comme avant */
+            <AdminOrderCreateWizardPanel
+              isOpen={orderEditorOpen}
+              onRequestClose={closeOrderEditor}
+              stickyTop={84}
+              editorWidth={420}
+              editorGap={14}
+              left={leftContent}
+              eventId={String(getFirst(data?.event, ["id"]) ?? getFirst(data, ["eventId", "event_id"]) ?? "")}
+              products={toRows<any>(data.products)}
+              regFields={regFields}
+              onCreated={async ({ orderId, order }) => {
+                setLocalOrders((prev) => {
+                  const exists = prev.some((o) => String(getFirst(o, ["id", "orderId", "order_id"])) === String(orderId));
+                  if (exists) return prev;
+                  return [order, ...prev];
+                });
 
-          {/* ✅ Panel participant (monté en permanence) */}
-          <AttendeeEditorPanel
-            supabase={supabase}
-            isOpen={editorOpen}
-            mode={editorMode}
-            fields={regFields}
-            initialValue={initialEditorValue}
-            onRequestClose={closeEditor}
-            onSubmit={handleSubmitParticipant}
-            isSaving={editorMode === "edit" ? updateAttendee.loading : saving}
-            error={editorMode === "edit" ? updateAttendee.error : editorError}
-            stickyTop={84}
-            editorWidth={420}
-            editorGap={14}
-            products={toRows(data.products)}
-            orderId={editorOrderId}
-            onAdded={async ({ attendeeId, orderId, eventProductId, value }) => {
-              const now = new Date().toISOString();
+                const orderNumber =
+                  getFirst<string>(order, ["publicId", "public_id", "number", "ref", "reference"]) ?? orderId.slice(0, 8);
 
-              const products = toRows<any>(data?.products);
-              const prod = products.find((p) => String(p.id) === String(eventProductId));
+                setFilterMode("order");
+                setQuery(String(orderNumber));
 
-              const newAttendee: Attendee = {
-                id: attendeeId,
-                orderId,
-                productId: eventProductId,
-                productNameSnapshot: String(prod?.name ?? "Ticket"),
-                attendeeIndex: nextAttendeeIndexForOrder(orderId, localAttendees),
-                createdAt: now,
-                status: "reserved",
-                confirmedAt: null,
-                expiresAt: null,
-                detailsCompletedAt: null,
-                canceledAt: null,
-              };
-
-              const newAnswers = makeLocalAnswers({ attendeeId, regFields, value });
-
-              setLocalAttendees((prev) => [newAttendee, ...prev]);
-              setLocalAnswers((prev) => [...newAnswers, ...prev]);
-
-              setFilterMode("order");
-              setQuery(orderMetaById.get(orderId)?.orderNumber ?? orderId.slice(0, 8));
-
-              if (typeof onChanged === "function") {
-                try {
-                  await onChanged();
-                } catch {
-                  // noop
+                if (typeof onChanged === "function") {
+                  try { await onChanged(); } catch {}
                 }
-              }
-            }}
-            left={leftForAttendeePanel}
-          />
+              }}
+            />
+          )}
+
+          {/* ✅ LISTE (toujours visible) */}
+          {leftContent}
+
+          {/* ✅ DESKTOP: panel participant à droite (mobile = inline dans la liste) */}
+          {!isMobile ? (
+            <AttendeeEditorPanel
+              supabase={supabase}
+              isOpen={editorOpen}
+              mode={editorMode}
+              fields={regFields}
+              initialValue={initialEditorValue}
+              onRequestClose={closeEditor}
+              onSubmit={handleSubmitParticipant}
+              isSaving={updateAttendee.loading || saving}
+              error={updateAttendee.error || editorError}
+              stickyTop={84}
+              editorWidth={420}
+              editorGap={14}
+              products={toRows(data.products)}
+              orderId={editorOrderId}
+              left={leftContent}
+              layout="shell"
+            />
+          ) : null}
         </>
       )}
     </div>

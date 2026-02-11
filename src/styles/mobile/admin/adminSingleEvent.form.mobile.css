@@ -1,29 +1,98 @@
-/* ---------- Registration editor (MOBILE) ---------- */
-/* Mobile: panel en dessous, pas de shrink, pas de sticky */
-@media (max-width: 1050px){
-  .adminRegLeft{
-    width:100%;
-    transform:none;
+/* ============ Mobile inline editor (registration form) + animations ============ */
+
+@media (max-width: 1050px) {
+  .adminRegTitle {
+    margin: 0;
   }
 
-  .adminRegShell.isEditorOpen .adminRegLeft{
-    width:100%;
-    transform:none;
+  .adminRegDirtyDot {
+    margin-left: 10px;
+    font-weight: 900;
+    color: #b45309;
   }
 
-  .adminRegRight{
-    position:static;
-    width:100%;
-    margin-top:14px;
+  .adminRegSaveError {
+    color: crimson;
+    margin-top: 2px;
   }
 
-  .regEditorPanel{
-    position: static;
-    top:auto;
-    max-height: none;
-    overflow: visible;
-    padding-right: 0;
-    z-index:auto;
+  .adminRegInlineShell {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .adminRegBlock {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .adminRegInlineEditor {
+    width: 100%;
+    margin-top: 12px;
+
     transform-origin: top center;
+    animation-duration: 180ms;
+    animation-fill-mode: both;
+  }
+
+  /* Create: editor au-dessus de la liste */
+  .adminRegInlineEditor.isCreate {
+    margin-top: 0;
+    margin-bottom: 14px;
+  }
+
+  .adminRegInlineEditor.isOpen {
+    animation-name: regFormIn;
+    animation-timing-function: ease-out;
+  }
+
+  .adminRegInlineEditor.isClosing {
+    animation-name: regFormOut;
+    animation-timing-function: ease-in;
+  }
+
+  @keyframes regFormIn {
+    from {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes regFormOut {
+    from {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.98);
+    }
+  }
+
+  .adminRegEditorFooterInline {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+
+  .adminRegEditorFormGrid {
+    margin-top: 12px;
+  }
+
+  .adminRegCheckRow {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding-top: 6px;
+  }
+
+  .adminRegCheckRowSpacer {
+    margin-top: 10px;
   }
 }

@@ -2,6 +2,18 @@
 .adminOrdersGrid {
   display: grid;
   gap: 14px;
+
+  /* ✅ anti overflow */
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* ✅ anti overflow global section */
+.adminParticipants,
+.adminSingleEventParticipants {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 /* --- Search bar --- */
@@ -11,26 +23,39 @@
   gap: 10px;
   flex-wrap: wrap;
   align-items: center;
+
+  /* ✅ anti overflow */
+  min-width: 0;
+  max-width: 100%;
 }
 
 .adminSearchSelect {
   padding: 9px 10px;
   border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.15);
+  border: 1px solid rgba(0, 0, 0, 0.15);
   background: #fff;
   font-weight: 900;
   font-size: 12px;
   line-height: 1;
+
+  /* ✅ anti overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .adminSearchInput {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 220px;
   padding: 9px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.15);
+  border: 1px solid rgba(0, 0, 0, 0.15);
   font-weight: 800;
   font-size: 12px;
+
+  /* ✅ CRUCIAL anti overflow en flex */
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .adminSearchInput::placeholder {
@@ -40,10 +65,14 @@
 /* --- Order card --- */
 .adminOrderCard {
   background: #fff;
-  border: 1px solid rgba(0,0,0,0.08);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 18px;
-  box-shadow: 0 10px 26px rgba(0,0,0,0.05);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.05);
   overflow: hidden;
+
+  /* ✅ anti overflow */
+  min-width: 0;
+  max-width: 100%;
 }
 
 .adminOrderHeader {
@@ -52,14 +81,26 @@
   justify-content: space-between;
   gap: 12px;
   padding: 14px 14px 12px;
-  background:
-    linear-gradient(180deg, rgba(0,0,0,0.03), transparent);
-  border-bottom: 1px solid rgba(0,0,0,0.06);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.03), transparent);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+  /* ✅ anti overflow */
+  min-width: 0;
+}
+
+.adminOrderHeader > * {
+  min-width: 0; /* ✅ permet au contenu de shrink */
 }
 
 .adminOrderTitle {
   font-weight: 900;
   letter-spacing: -0.01em;
+
+  /* ✅ évite débordements */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .adminOrderSub {
@@ -70,6 +111,9 @@
   gap: 8px;
   flex-wrap: wrap;
   align-items: center;
+
+  /* ✅ anti overflow */
+  min-width: 0;
 }
 
 .adminOrderSubLabel {
@@ -85,10 +129,14 @@
   font-size: 12px;
   padding: 8px 10px;
   border-radius: 999px;
-  background: rgba(0,0,0,0.06);
-  border: 1px solid rgba(0,0,0,0.08);
+  background: rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   white-space: nowrap;
   font-weight: 800;
+
+  /* ✅ anti overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* --- Right side header actions (pill + button) --- */
@@ -97,6 +145,14 @@
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+
+  /* ✅ anti overflow */
+  min-width: 0;
+  max-width: 100%;
+}
+
+.adminOrderHeaderRight .ui-button {
+  max-width: 100%;
 }
 
 /* --- People list inside order --- */
@@ -104,14 +160,22 @@
   padding: 14px;
   display: grid;
   gap: 12px;
+
+  /* ✅ anti overflow */
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* --- Person card --- */
 .adminPersonCard {
-  border: 1px solid rgba(0,0,0,0.08);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 16px;
   padding: 12px;
-  background: rgba(0,0,0,0.02);
+  background: rgba(0, 0, 0, 0.02);
+
+  /* ✅ anti overflow */
+  min-width: 0;
+  max-width: 100%;
 }
 
 .adminPersonTop {
@@ -119,11 +183,24 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
+
+  /* ✅ anti overflow */
+  min-width: 0;
+}
+
+.adminPersonTop > * {
+  min-width: 0;
 }
 
 .adminPersonName {
   font-weight: 900;
   letter-spacing: -0.01em;
+
+  /* ✅ évite dépassement */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .adminPersonIndex {
@@ -136,6 +213,9 @@
   margin-top: 2px;
   font-size: 12px;
   opacity: 0.75;
+
+  /* ✅ wrap propre */
+  overflow-wrap: anywhere;
 }
 
 .adminPersonBadges {
@@ -143,6 +223,10 @@
   gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
+
+  /* ✅ anti overflow */
+  min-width: 0;
+  max-width: 100%;
 }
 
 .adminStatusBadge,
@@ -150,10 +234,14 @@
   font-size: 12px;
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(0,0,0,0.06);
-  border: 1px solid rgba(0,0,0,0.08);
+  background: rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   white-space: nowrap;
   font-weight: 800;
+
+  /* ✅ anti overflow */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Status nuances */
@@ -169,6 +257,9 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   font-size: 12px;
   opacity: 0.9;
+
+  /* ✅ anti overflow */
+  min-width: 0;
 }
 
 .adminMetaLabel {
@@ -180,7 +271,7 @@
   margin-top: 10px;
   display: grid;
   gap: 8px;
-  border-top: 1px dashed rgba(0,0,0,0.12);
+  border-top: 1px dashed rgba(0, 0, 0, 0.12);
   padding-top: 10px;
 }
 
@@ -189,6 +280,9 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
+
+  /* ✅ anti overflow */
+  min-width: 0;
 }
 
 .adminFieldLabel {
@@ -201,6 +295,13 @@
   font-size: 12px;
   font-weight: 800;
   text-align: right;
+
+  /* ✅ anti overflow */
+  min-width: 0;
+  max-width: 70%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Champs remplis */
@@ -208,8 +309,11 @@
   margin-top: 10px;
   display: grid;
   gap: 8px;
-  border-top: 1px dashed rgba(0,0,0,0.12);
+  border-top: 1px dashed rgba(0, 0, 0, 0.12);
   padding-top: 10px;
+
+  /* ✅ anti overflow */
+  min-width: 0;
 }
 
 .adminFilledEmpty {
@@ -224,8 +328,11 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  border-top: 1px dashed rgba(0,0,0,0.12);
+  border-top: 1px dashed rgba(0, 0, 0, 0.12);
   padding-top: 16px;
+
+  /* ✅ anti overflow */
+  flex-wrap: wrap;
 }
 
 /* Header right action */
@@ -234,6 +341,9 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+
+  /* ✅ anti overflow */
+  min-width: 0;
 }
 
 .adminParticipantsHeaderRight {
@@ -241,15 +351,95 @@
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+
+  /* ✅ anti overflow */
+  min-width: 0;
+  max-width: 100%;
+}
+
+.adminParticipantsHeaderRight .ui-button {
+  max-width: 100%;
 }
 
 /* Order empty state */
 .adminOrderEmptyPeople {
   padding: 10px 12px;
-  border: 1px dashed rgba(0,0,0,0.14);
+  border: 1px dashed rgba(0, 0, 0, 0.14);
   border-radius: 14px;
-  background: rgba(0,0,0,0.02);
+  background: rgba(0, 0, 0, 0.02);
   font-size: 12px;
   font-weight: 800;
   opacity: 0.75;
+}
+
+/* ============================= */
+/* Inline editor (mobile/inline) */
+/* ============================= */
+
+.adminInlineEditorWrap {
+  margin-top: 10px;
+
+  /* ✅ anti overflow */
+  min-width: 0;
+  max-width: 100%;
+}
+
+.adminInlineEditorWrap * {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* animation (ouverture/fermeture) */
+.adminInlineEditorPanel {
+  transform-origin: top center;
+  animation-duration: 180ms;
+  animation-fill-mode: both;
+}
+
+.adminInlineEditorPanel.isOpen {
+  animation-name: adminInlineEditorIn;
+  animation-timing-function: ease-out;
+}
+
+.adminInlineEditorPanel.isClosing {
+  animation-name: adminInlineEditorOut;
+  animation-timing-function: ease-in;
+}
+
+@keyframes adminInlineEditorIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes adminInlineEditorOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.99);
+  }
+}
+
+/* Wizard create order when inline */
+.adminInlineOrderWizard {
+  margin-bottom: 14px;
+
+  /* ✅ anti overflow */
+  min-width: 0;
+  max-width: 100%;
+}
+
+.adminInlineOrderWizard * {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
 }
