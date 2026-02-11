@@ -14,10 +14,8 @@ import { updateEventFormFieldPatchSchema, type UpdateEventFormFieldPatch } from 
 function normalizePatch(patch: UpdateEventFormFieldPatch): UpdateEventFormFieldPatch {
   const out: UpdateEventFormFieldPatch = { ...patch };
 
-  // exemples utiles (tu peux enlever si tu veux strict):
   if ("options" in out) out.options = out.options ?? null;
 
-  // garde-fous fréquents
   if ("label" in out) out.label = out.label?.trim() ?? out.label;
   if ("fieldKey" in out) out.fieldKey = out.fieldKey?.trim() ?? out.fieldKey;
 
@@ -38,6 +36,7 @@ export function updateEventFormFieldRepo(supabase: SupabaseClient) {
         ...input.patch,
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { id: _ignored, ...patchOnly } = validated;
 
       const normalizedPatch = normalizePatch(patchOnly as any);

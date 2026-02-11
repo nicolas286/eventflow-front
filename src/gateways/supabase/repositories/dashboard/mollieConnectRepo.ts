@@ -1,5 +1,4 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-
 import {
   startMollieConnectInputSchema,
   startMollieConnectResultSchema,
@@ -7,42 +6,23 @@ import {
   type StartMollieConnectResult,
 } from "../../../../domain/models/admin/admin.mollieConnect.schema";
 
-/**
- * mollieConnectRepo
- * - Démarre le flow OAuth Mollie Connect
- * - Appelle l'Edge Function (ex: "mollie-connect-start")
- * - Retourne l'URL d'auth Mollie à ouvrir
- */
 export function mollieConnectRepo(supabase: SupabaseClient) {
   return {
     async startMollieConnect(input: StartMollieConnectInput): Promise<StartMollieConnectResult> {
-      const parsed = startMollieConnectInputSchema.parse(input);
+      const payload = startMollieConnectInputSchema.parse(input);
 
-      const res = await supabase.functions.invoke("mollie-connect-start", {
-        body: parsed,
+      const { data, error } = await supabase.functions.invoke("mollie-connect-start", {
+        body: payload,
       });
 
-      if (res.error) {
-        throw new Error(
-          typeof res.error === "object" && res.error && "message" in res.error
-            ? String((res.error as any).message)
-            : "Erreur Edge mollie-connect-start"
-        );
+      if (error) throw error;
+      if (!data) throw new Error("MOLLIE_CONNECT_START_EMPTY_RESPONSE");
+
+      if (data.ok === false) {
+        throw new Error(String(data.error ?? "MOLLIE_CONNECT_START_FAILED"));
       }
 
-      if (!res.data) {
-        throw new Error("Réponse vide de l’Edge Mollie");
-      }
-
-      if (res.data?.ok === false && res.data?.error) {
-        throw new Error(
-          `${res.data.error}${res.data.details ? `: ${res.data.details}` : ""}`
-        );
-      }
-
-      return startMollieConnectResultSchema.parse(res.data);
+      return startMollieConnectResultSchema.parse(data);
     },
   };
 }
-
-
