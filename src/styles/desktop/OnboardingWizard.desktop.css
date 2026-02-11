@@ -77,16 +77,6 @@
   gap: 12px;
 }
 
-@media (max-width: 520px) {
-  .onboardingCard {
-    max-width: 92vw;
-  }
-
-  .onboardingGrid2 {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* row label + pills */
 .onboardingRow {
   display: flex;
@@ -174,12 +164,6 @@
 
 .onboardingPage .profilePanel__phoneInput {
   flex: 1;
-}
-
-@media (max-width: 420px) {
-  .onboardingPage .profilePanel__select {
-    min-width: 84px;
-  }
 }
 
 /* --- PhoneInput inline layout (onboarding) --- */

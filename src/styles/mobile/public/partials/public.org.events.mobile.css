@@ -1,0 +1,25 @@
+/* Mobile / Responsive — extraits déplacés depuis public.org.events.css */
+
+@media (max-width: 920px) {
+  .publicEventsToolbarRow {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .publicToolbarActions {
+    justify-content: stretch;
+  }
+}
+
+@media (max-width: 860px) {
+  .publicOrgEventsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .publicOrgEventBanner {
+    height: 180px;
+  }
+
+  .publicOrgEventFooter {
+    justify-content: center;
+  }
+}

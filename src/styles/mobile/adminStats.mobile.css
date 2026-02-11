@@ -1,14 +1,15 @@
-/* ============================= */
-/* Mobile (extrait)              */
-/* Source: adminStats.css        */
-/* ============================= */
-
-@media (max-width: 700px) {
-  .adminStatsDesktop {
-    display: none;
+@media (max-width: 700px){
+  /* ✅ au lieu de cacher/montrer 2 versions, on rend la grille 1 colonne */
+  .adminStats{
+    grid-template-columns: 1fr;
   }
 
-  .adminStatsMobile {
-    display: block;
+  /* petit ajustement typographique sur mobile */
+  .adminStats__label{
+    font-size: 14px;
+  }
+
+  .adminStats__value{
+    font-size: 22px;
   }
 }

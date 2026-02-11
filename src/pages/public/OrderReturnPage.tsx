@@ -133,7 +133,6 @@ export function OrderReturnPage() {
     return search.get("token") ?? search.get("bookingToken") ?? null;
   }, [search]);
 
-  // ✅ on permet aussi de passer org/event dans l’URL si besoin
   const orgSlugFromQuery = search.get("org") ?? search.get("orgSlug") ?? null;
   const eventSlugFromQuery = search.get("event") ?? search.get("eventSlug") ?? null;
 
@@ -172,7 +171,12 @@ export function OrderReturnPage() {
     return getBrandStyle(org);
   }, [eventData]);
 
-  const backUrl = useMemo(() => (orgSlug ? `/o/${orgSlug}` : "/"), [orgSlug]);
+  const backUrl = useMemo(() => {
+  if (orgSlug && eventSlug) return `/o/${orgSlug}/e/${eventSlug}`;
+  if (orgSlug) return `/o/${orgSlug}`;
+  return "/"; // dernier recours
+}, [orgSlug, eventSlug]);
+
 
   useEffect(() => {
     if (!orderId) return;

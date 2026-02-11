@@ -9,8 +9,3 @@
   align-items:end;
 }
 
-@media (max-width: 900px){
-  .ticketRow{
-    grid-template-columns: 1fr;
-  }
-}

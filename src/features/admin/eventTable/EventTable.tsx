@@ -18,6 +18,8 @@ type EventTableProps = {
   editingId?: string;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
+
+  renderInlineEditor?: (row: EventOverviewRow) => React.ReactNode;
 };
 
 function safeStr(v: unknown) {
@@ -30,14 +32,15 @@ export default function EventTable({
   editingId,
   onSelect,
   onDelete,
+  renderInlineEditor,
 }: EventTableProps) {
   return (
     <Card>
       <CardHeader title="Aperçu de mes événements" />
 
       <CardBody>
-        {/* -------- Mobile cards -------- */}
-        <div className="eventTable__mobileList">
+        {/* ✅ SINGLE RENDER: cards list (desktop + mobile via CSS) */}
+        <div className="eventTable__list">
           {events.length === 0 && (
             <div className="eventTable-empty">Aucun événement pour le moment</div>
           )}
@@ -49,33 +52,31 @@ export default function EventTable({
             const canView = !!ev.slug;
 
             return (
-              <div
-                key={ev.id}
-                className={`eventCard ${isSelected ? "isSelected" : ""}`}
-              >
-                <div className="eventCard__top">
-                  <div className="eventCard__title">{safeStr(ev.title)}</div>
-                  <Badge tone={s.tone} label={s.label} />
-                </div>
-
-                <div className="eventCard__meta">
-                  <div className="eventCard__row">
-                    <span className="eventCard__label">Date</span>
-                    <span className="eventCard__value">
-                      {formatDateTimeHuman(ev.startsAt)}
-                    </span>
+              <div key={ev.id} className="eventCardWrap">
+                <div className={`eventCard ${isSelected ? "isSelected" : ""}`}>
+                  <div className="eventCard__top">
+                    <div className="eventCard__title">{safeStr(ev.title)}</div>
+                    <Badge tone={s.tone} label={s.label} />
                   </div>
-                  <div className="eventCard__row">
-                    <span className="eventCard__label">Lieu</span>
-                    <span className="eventCard__value">
-                      {safeStr(ev.location)}
-                    </span>
-                  </div>
-                </div>
 
-                <div className="eventCard__actions">
-                  {canView && (
-                    <Link
+                  <div className="eventCard__meta">
+                    <div className="eventCard__row">
+                      <span className="eventCard__label">Date</span>
+                      <span className="eventCard__value">
+                        {formatDateTimeHuman(ev.startsAt)}
+                      </span>
+                    </div>
+                    <div className="eventCard__row">
+                      <span className="eventCard__label">Lieu</span>
+                      <span className="eventCard__value">
+                        {safeStr(ev.location)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="eventCard__actions">
+                    {canView && (
+                      <Link
                         className="eventCard__actionLink"
                         to={`/admin/events/${ev.slug}`}
                         onClick={(e) => e.stopPropagation()}
@@ -84,94 +85,23 @@ export default function EventTable({
                           <EyeIcon />
                         </Button>
                       </Link>
+                    )}
 
+                    <Button variant="secondary" onClick={() => onSelect(ev.id)}>
+                      {isSelected ? <CloseIcon /> : <EditIcon />}
+                    </Button>
 
-                  )}
-
-                  <Button variant="secondary" onClick={() => onSelect(ev.id)}>
-                    {isSelected ? <CloseIcon /> : <EditIcon />}
-                  </Button>
-
-                  <Button variant="danger" onClick={() => onDelete(ev.id)}>
-                    <TrashIcon />
-                  </Button>
+                    <Button variant="danger" onClick={() => onDelete(ev.id)}>
+                      <TrashIcon />
+                    </Button>
+                  </div>
                 </div>
+
+                {/* ✅ inline editor (mobile) */}
+                {renderInlineEditor?.(row)}
               </div>
             );
           })}
-        </div>
-
-        {/* -------- Desktop table -------- */}
-        <div className="eventTable__wrap">
-          <table className="eventTable__table">
-            <thead>
-              <tr>
-                <th>Titre</th>
-                <th>Statut</th>
-                <th>Date</th>
-                <th>Lieu</th>
-                <th className="eventTable__actionsHead" />
-              </tr>
-            </thead>
-
-            <tbody>
-              {events.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="eventTable-empty">
-                    Aucun événement pour le moment
-                  </td>
-                </tr>
-              )}
-
-              {events.map((row) => {
-                const ev = row.event as EventOverviewRow["event"];
-                const s = getStatusInfo(ev.isPublished ? "open" : "draft");
-                const isSelected = ev.id === editingId;
-                const canView = !!ev.slug;
-
-                return (
-                  <tr
-                    key={ev.id}
-                    className={isSelected ? "isSelected" : undefined}
-                  >
-                    <td className="title">{safeStr(ev.title)}</td>
-                    <td>
-                      <Badge tone={s.tone} label={s.label} />
-                    </td>
-                    <td>{formatDateTimeHuman(ev.startsAt)}</td>
-                    <td>{safeStr(ev.location)}</td>
-
-                    <td className="eventTable__actions">
-                      {canView && (
-                       <Link
-                          className="eventCard__actionLink"
-                          to={`/admin/events/${ev.slug}`}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Button variant="secondary" className="eventCard__actionBtn">
-                            <EyeIcon />
-                          </Button>
-                        </Link>
-
-
-                      )}
-
-                      <Button variant="secondary" onClick={() => onSelect(ev.id)}>
-                        {isSelected ? <CloseIcon /> : <EditIcon />}
-                      </Button>
-
-                      <Button
-                        variant="danger"
-                        onClick={() => onDelete(ev.id)}
-                      >
-                        <TrashIcon />
-                      </Button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
         </div>
       </CardBody>
     </Card>

@@ -1,0 +1,7 @@
+/* Mobile — extrait déplacé depuis public.banner.css */
+
+@media (max-width: 900px) {
+  .publicBannerClip {
+    height: clamp(180px, 44vw, 320px);
+  }
+}

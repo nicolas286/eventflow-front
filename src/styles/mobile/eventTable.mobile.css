@@ -1,41 +1,80 @@
-/* ============================= */
-/* Mobile (extrait)              */
-/* Source: eventTable.css        */
-/* ============================= */
+/* =========================
+   MOBILE ONLY
+   ========================= */
 
-@media (max-width: 700px) {
-  .eventTable__headerRight {
-    width: 100%;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
+@media (max-width:700px){
+
+  .eventTable__headerRight{
+    width:100%;
+    flex-direction:column;
+    align-items:stretch;
+    gap:8px;
   }
 
-  .eventTable__newInput {
-    width: 100%;
+  .eventTable__newInput{
+    width:100%;
   }
 
-  /* Table → cards */
-  .eventTable__wrap {
-    display: none;
+  /* Meta en une colonne */
+  .eventCard__meta{
+    grid-template-columns:1fr;
   }
 
-  .eventTable__mobileList {
-    display: grid;
+  /* =========================
+     Actions : 3 boutons STRICTEMENT identiques
+     ========================= */
+
+  .eventCard__actions{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:8px;
   }
 
-  /* Actions full width */
-  .eventCard__actions > * {
-    flex: 1;
+  /* Chaque slot (Link ou Button) */
+  .eventCard__actions > *{
+    width:100%;
   }
 
-  .eventCard__actionLink {
-    display: flex;
-    flex: 1;
+  /* ✅ Le Link doit occuper la même case que les boutons
+        + reset des styles de <a> pour qu'il se comporte comme un bouton */
+  .eventCard__actionLink{
+    display:block;
+    width:100%;
+    height:48px;
+
+    text-decoration:none;
+    color:inherit;
+    line-height:0; /* évite des écarts verticaux liés au inline */
   }
 
-  .eventCard__actionBtn {
-    width: 100%;
-    justify-content: center;
+  /* ✅ Le Button dans le Link remplit exactement la case */
+  .eventCard__actionLink .eventCard__actionBtn{
+    width:100%;
+    height:100%;
+    padding:0;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  /* Tous les boutons remplissent leur case */
+  .eventCard__actionBtn,
+  .eventCard__actions > button{
+    width:100%;
+    height:100%;
+    padding:0;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  /* Icônes lisibles et uniformes */
+  .eventCard__actions svg{
+    width:20px;
+    height:20px;
+    min-width:16px;
+    min-height:16px;
   }
 }

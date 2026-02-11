@@ -1,3 +1,8 @@
+/* =========================
+   DESKTOP (no mobile @media)
+   Single render: cards list
+   ========================= */
+
 .eventTable__headerRight{
   display:flex;
   gap:10px;
@@ -8,187 +13,111 @@
   width:240px;
 }
 
-.eventTable__wrap{
-  overflow-x:auto;
-  margin-left:-6px;
-  margin-right:-6px;
-}
-
-.eventTable__table{
-  width:100%;
-  border-collapse:collapse;
-  font-size:16px;
-}
-
-.eventTable__table thead th{
-  text-align:left;
-  font-size:14px;
-  color:#6b7280;
-  padding:10px 10px;
-  border-bottom:1px solid #f3f4f6;
-}
-
-.eventTable__table thead th:first-child{
-  padding-left:0;
-}
-
-.eventTable__actionsHead{
-  text-align:right !important;
-  padding-right:0 !important;
-}
-
-.eventTable__table tbody td{
-  padding:12px 10px;
-  border-bottom:1px solid #f9fafb;
-}
-
-.eventTable__table tbody td:first-child{
-  padding-left:0;
-}
-
-.eventTable__table tbody tr:hover{
-  background:#f9fafb;
-}
-
-.eventTable__table tbody tr.isSelected{
-  background:#f9fafb;
-}
-
-.eventTable__table .title{
-  font-weight:800;
-  color:#111827;
-}
-
-.eventTable__actions{
-  padding-right:0 !important;
-  text-align:right;
-  white-space:nowrap;
+/* ✅ single list */
+.eventTable__list{
   display:flex;
-  gap:8px;
-  justify-content:flex-end;
-  align-items:center;
+  flex-direction:column;
+  gap:16px;
 }
 
-.eventTable__hint{
-  margin-top:10px;
-  font-size:14px;
-  color:#6b7280;
-}
-
-/* --- Mobile cards (hidden by default) --- */
-.eventTable__mobileList {
-  display: none;
-  gap: 14px;
-}
-
-/* Card style */
-.eventCard {
+/* Card style (desktop base) */
+.eventCard{
   border: 1px solid #f3f4f6;
   border-radius: 14px;
-  padding: 12px;
+  padding: 16px;
   background: #fff;
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
 }
 
-.eventCard.isSelected {
-  background: #f9fafb;
+.eventCard.isSelected{
+  background:#f9fafb;
 }
 
-.eventCard__top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
+/* Desktop: disposition */
+.eventCard__top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
 }
 
-.eventCard__title {
-  font-weight: 800;
-  color: #111827;
-  line-height: 1.2;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+.eventCard__title{
+  font-weight:800;
+  color:#111827;
+  line-height:1.25;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
 }
 
-.eventCard__meta {
-  margin-top: 10px;
-  display: grid;
-  gap: 8px;
+/* =========================
+   Meta : DATE puis LIEU en colonne
+   ========================= */
+
+.eventCard__meta{
+  margin-top:12px;
+  display:flex;
+  flex-direction:column; /* date puis lieu */
+  gap:8px;
 }
 
-.eventCard__row {
-  display: grid;
-  grid-template-columns: 72px 1fr;
-  gap: 10px;
-  align-items: baseline;
+.eventCard__row{
+  display:grid;
+  grid-template-columns: 90px 1fr;
+  gap:12px;
+  align-items:baseline;
 }
 
-.eventCard__label {
-  font-size: 14px;
-  color: #6b7280;
+.eventCard__label{
+  font-size:14px;   /* taille normale */
+  font-weight:600;
+  color:#6b7280;
 }
 
-.eventCard__value {
-  font-size: 14px;
-  color: #111827;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
+.eventCard__value{
+  font-size:14px;   /* taille normale */
+  color:#111827;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  min-width:0;
 }
 
-.eventCard__actions {
-  margin-top: 12px;
-  display: flex;
-  gap: 8px;
+/* =========================
+   Actions desktop
+   ========================= */
+
+.eventCard__actions{
+  margin-top:14px;
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  align-items:center;
 }
 
-/* --- Header on mobile: stack input + button --- */
-@media (max-width: 700px) {
-  .eventTable__headerRight {
-    width: 100%;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-  }
-
-  .eventTable__newInput {
-    width: 100%;
-  }
-
-  /* Hide table, show cards */
-  .eventTable__wrap {
-    display: none;
-  }
-
-  .eventTable__mobileList {
-    display: grid;
-  }
-
-  /* Buttons full width for thumb UX */
-  .eventCard__actions > * {
-    flex: 1;
-  }
+/* Link button */
+.eventCard__actionLink{
+  display:flex;
 }
 
-@media (max-width: 700px) {
-  .eventCard__actions > * {
-    flex: 1;
-  }
+/* Boutons desktop (comme avant) */
+.eventCard__actions > button,
+.eventCard__actionLink .eventCard__actionBtn{
+  width:40px;
+  height:40px;
+  padding:0;
 
-  /* ✅ le Link doit être un vrai “bloc bouton” */
-  .eventCard__actionLink {
-    display: flex;
-    flex: 1;
-  }
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
 
-  /* ✅ le Button doit remplir le Link */
-  .eventCard__actionBtn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  
+/* Icônes : taille lisible */
+.eventCard__actions svg{
+  width:20px;
+  height:20px;
+  min-width:16px;
+  min-height:16px;
 }

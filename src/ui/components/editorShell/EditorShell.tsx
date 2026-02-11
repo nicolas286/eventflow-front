@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Button from "../../components/button/Button";
-import "../../../styles/desktop/editorShell.css";
+import "../../../styles/desktop/editorShell.desktop.css";
+import "../../../styles/mobile/editorShell.mobile.css";
 
 type AnimState = "closed" | "open" | "closing";
 

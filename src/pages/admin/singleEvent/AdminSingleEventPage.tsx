@@ -30,6 +30,7 @@ import "../../../styles/desktop/admin/adminSingleEvent.participants.desktop.css"
 
 import "../../../styles/mobile/admin/adminSingleEvent.tickets.mobile.css";
 import "../../../styles/mobile/admin/adminSingleEvent.participants.mobile.css";
+import "../../../styles/mobile/admin/adminSingleEvent.form.mobile.css"
 
 
 type TabKey = "details" | "tickets" | "form" | "participants";

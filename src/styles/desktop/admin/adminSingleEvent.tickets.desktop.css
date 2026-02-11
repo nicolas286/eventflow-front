@@ -82,27 +82,3 @@
   }
 }
 
-@media (max-width: 1050px) {
-  .adminTicketsLeft{
-    width:100%;
-    transform:none;
-  }
-
-  .adminTicketsShell.isEditorOpen .adminTicketsLeft{
-    width:100%;
-    transform:none;
-  }
-
-  .adminTicketsRight{
-    position:static;
-    width:100%;
-    margin-top:14px;
-  }
-
-  .adminTicketsEditorCard {
-    transform-origin: top center;
-  }
-  .ticketEditorPanel {
-    transform-origin: top center;
-  }
-}

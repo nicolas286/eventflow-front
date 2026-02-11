@@ -7,8 +7,7 @@ import {
   type RegistrationFieldLike,
 } from "../../../../features/admin/events/singleEvent/AttendeeEditorPanel";
 import { useAdminUpdateOrderAttendee } from "../../../../features/admin/hooks/useUpdateOrderAttendeeAnswers";
-import { OrderEditorPanel } from "../../../../features/admin/events/singleEvent/OrderEditorPanel";
-
+import { AdminOrderCreateWizardPanel } from "../../../../features/admin/createOrder/AdminCreateOrderWizardPanel";
 import { useDeleteOrder } from "../../../../features/admin/hooks/useDeleteOrder";
 
 /* -------------------- LOCAL CONFIRM MODAL (simple + robuste) -------------------- */
@@ -825,19 +824,19 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
         </div>
       ) : (
         <>
-          {/* ✅ Panel commande (monté en permanence => animation OK) */}
-          <OrderEditorPanel
+          <AdminOrderCreateWizardPanel
             isOpen={orderEditorOpen}
             onRequestClose={closeOrderEditor}
             stickyTop={84}
             editorWidth={420}
             editorGap={14}
             left={leftForOrderPanel}
+            eventId={String(getFirst(data?.event, ["id"]) ?? getFirst(data, ["eventId", "event_id"]) ?? "")}
+            products={toRows<any>(data.products)}
+            regFields={regFields}
             onCreated={async ({ orderId, order }) => {
               setLocalOrders((prev) => {
-                const exists = prev.some(
-                  (o) => String(getFirst(o, ["id", "orderId", "order_id"])) === String(orderId)
-                );
+                const exists = prev.some((o) => String(getFirst(o, ["id", "orderId", "order_id"])) === String(orderId));
                 if (exists) return prev;
                 return [order, ...prev];
               });
@@ -850,14 +849,11 @@ export function SingleEventParticipantsSection(props: { data: AnyRecord; onChang
               setQuery(String(orderNumber));
 
               if (typeof onChanged === "function") {
-                try {
-                  await onChanged();
-                } catch {
-                  // noop
-                }
+                try { await onChanged(); } catch {}
               }
             }}
           />
+
 
           {/* ✅ Panel participant (monté en permanence) */}
           <AttendeeEditorPanel

@@ -34,8 +34,6 @@ type ConfirmState = {
   title: string | null;
 };
 
-
-
 export default function AdminEventsPage() {
   const { events, orgId, bootstrap, refetch } = useOutletContext<AdminOutletContext>();
 
@@ -127,30 +125,28 @@ export default function AdminEventsPage() {
 
   const navigate = useNavigate();
 
-
   const addEvent = async () => {
-  if (creating) return;
+    if (creating) return;
 
-  resetCreate();
+    resetCreate();
 
-  const created = await createEvent({
-    orgId,
-    title: "Nouvel événement",
-    description: null,
-    location: null,
-    bannerUrl: null,
-    depositCents: null,
-    startsAt: null,
-    endsAt: null,
-  });
+    const created = await createEvent({
+      orgId,
+      title: "Nouvel événement",
+      description: null,
+      location: null,
+      bannerUrl: null,
+      depositCents: null,
+      startsAt: null,
+      endsAt: null,
+    });
 
-  if (!created) return;
+    if (!created) return;
 
-  await refetch();
+    await refetch();
 
-  navigate(`/admin/events/${created.slug}`);
-};
-
+    navigate(`/admin/events/${created.slug}`);
+  };
 
   const isEditorVisible = !!selectedRow;
 
@@ -185,6 +181,32 @@ export default function AdminEventsPage() {
             editingId={editingId}
             onSelect={select}
             onDelete={deleteEvent}
+
+            /* ✅ NEW: editor inline en mobile, sous la card cliquée */
+            renderInlineEditor={(row) => {
+              if (!selectedRow) return null;
+              if (selectedRow.event.id !== row.event.id) return null;
+
+              return (
+                <div className="adminEventsInlineEditor">
+                  <div
+                    className={`adminEventsEditorPanel adminEventsEditorPanel--inline ${panelClassName}`}
+                    key={selectedRow.event.id}
+                    onAnimationEnd={onAnimEnd}
+                  >
+                    <EventEditor
+                      event={selectedRow}
+                      onUpdateEvent={(patch) =>
+                        void updateEvent(selectedRow.event.id, patch)
+                      }
+                    />
+                    {saving && (
+                      <div className="adminEventsSavingHint">Enregistrement…</div>
+                    )}
+                  </div>
+                </div>
+              );
+            }}
           />
         </div>
 

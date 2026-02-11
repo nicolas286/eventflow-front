@@ -1,10 +1,5 @@
-/* ============================= */
-/* Mobile (extrait)              */
-/* Source: brandingPanel.css     */
-/* ============================= */
-
-@media (max-width: 900px) {
-  .brandingPanel__grid2 {
+@media (max-width: 900px){
+  .brandingPanel__grid2{
     grid-template-columns: 1fr;
   }
 }

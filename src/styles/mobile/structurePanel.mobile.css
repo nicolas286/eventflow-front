@@ -2,15 +2,15 @@
 /* Mobile (extrait)              */
 /* Source: structurePanel.css    */
 /* ============================= */
-
-@media (max-width: 900px) {
-  .structurePanel__grid2 {
-    grid-template-columns: 1fr;
-  }
+@media (max-width: 900px){
+  .structurePanel__grid2{ grid-template-columns: 1fr; }
 }
 
-@media (max-width: 700px) {
-  .structurePanel__grid2Inner {
-    grid-template-columns: 1fr;
-  }
+.structurePanel__grid2Inner{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:12px;
+}
+@media (max-width: 700px){
+  .structurePanel__grid2Inner{ grid-template-columns: 1fr; }
 }
