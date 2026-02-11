@@ -66,7 +66,7 @@ async signIn(
 
    async requestPasswordReset(email: string, opts?: { redirectTo?: string }): Promise<void> {
     try {
-      const redirectTo = opts?.redirectTo ?? `${window.location.origin}/auth/reset-password`;
+      const redirectTo = opts?.redirectTo ?? `${window.location.origin}/admin/reset-password`;
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo,

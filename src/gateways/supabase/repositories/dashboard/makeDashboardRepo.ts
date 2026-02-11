@@ -8,13 +8,15 @@ import {
 
 export function makeDashboardRepo(supabase: SupabaseClient) {
   return {
-    async getDashboardBootstrap(): Promise<DashboardBootstrap> {
-      const raw = await supabaseSafe(() =>
-        supabase.rpc("get_dashboard_bootstrap")
-      );
+    async getDashboardBootstrap(): Promise<DashboardBootstrap | null> {
+    const raw = await supabaseSafe<unknown | null>(() =>
+      supabase.rpc("get_dashboard_bootstrap")
+    );
 
-      const camel = snakeToCamel(raw);
-      return dashboardBootstrapSchema.parse(camel);
-    },
+    if (!raw) return null;
+
+    const camel = snakeToCamel(raw);
+    return dashboardBootstrapSchema.parse(camel);
+  }
   };
 }

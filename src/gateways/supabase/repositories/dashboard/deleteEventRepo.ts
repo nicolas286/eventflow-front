@@ -1,29 +1,25 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseSafe } from "../../supabaseSafe";
-
-type DeleteEventInput = {
-  eventId: string;
-  orgId?: string;
-};
+import { deleteEventInputSchema, 
+  type DeleteEventInput } from "../../../../domain/models/admin/admin.deleteEventInput.schema";
 
 export function deleteEventRepo(supabase: SupabaseClient) {
   return {
     async deleteEvent(input: DeleteEventInput): Promise<void> {
-      const { eventId, orgId } = input;
+      const { eventId, orgId } = deleteEventInputSchema.parse(input);
 
-      if (!eventId) throw new Error("deleteEvent: eventId is required");
+      const rows = await supabaseSafe<{ id: string }[]>(
+        () => {
+          let q = supabase.from("events").delete().eq("id", eventId);
+          if (orgId) q = q.eq("org_id", orgId);
+          return q.select("id");
+        },
+      );
 
-      const raw = await supabaseSafe(() => {
-        let q = supabase.from("events").delete().eq("id", eventId);
-        if (orgId) q = q.eq("org_id", orgId);
-        return q.select("id");
-      });
-
-      const deletedCount = Array.isArray(raw) ? raw.length : 0;
-
-      if (deletedCount === 0) {
-        throw new Error("deleteEvent: nothing deleted (not found or forbidden)");
+      if (rows.length === 0) {
+        throw new Error("NOT_FOUND");
       }
     },
   };
 }
+

@@ -24,7 +24,7 @@ export function AdminForgotPasswordPage() {
     try {
       setLoading(true);
       await authRepo.requestPasswordReset(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+        redirectTo: `${window.location.origin}/admin/reset-password`,
       });
 
       setOkMsg("Si un compte existe pour cette adresse, un email de réinitialisation vient d’être envoyé.");

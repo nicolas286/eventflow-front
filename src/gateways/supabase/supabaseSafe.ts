@@ -1,13 +1,11 @@
-import type { PostgrestSingleResponse, PostgrestError } from "@supabase/supabase-js";
-import { normalizeError } from "../../domain/errors/errors";
+import type { PostgrestSingleResponse } from "@supabase/supabase-js";
 
-export async function supabaseSafe(
-  fn: () => PromiseLike<PostgrestSingleResponse<unknown>>
-): Promise<unknown> {
+export async function supabaseSafe<T>(
+  fn: () => PromiseLike<PostgrestSingleResponse<T>>,
+): Promise<T> {
   const { data, error } = await fn();
 
-  if (error) throw normalizeError(error as PostgrestError, "Erreur serveur");
-  if (data == null) throw new Error("Réponse invalide (data null).");
+  if (error) throw error;
 
-  return data;
+  return data as T;
 }

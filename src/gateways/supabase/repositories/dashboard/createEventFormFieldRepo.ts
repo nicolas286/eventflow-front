@@ -18,9 +18,9 @@ export function createEventFormFieldRepo(supabase: SupabaseClient) {
       const validated = createEventFormFieldInputSchema.parse(input);
       const payload = camelToSnake(validated);
 
-      const raw = await supabaseSafe(() =>
-        supabase.rpc("create_event_form_field", { p_input: payload })
-      );
+      const raw = await supabaseSafe<unknown>(() =>
+  supabase.rpc("create_event_form_field", { p_input: payload }),
+);
 
       const camel = snakeToCamel(raw);
       return eventFormFieldSchema.parse(camel);

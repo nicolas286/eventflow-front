@@ -1,23 +1,17 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseSafe } from "../../supabaseSafe";
+import { deleteOrderInputSchema, 
+  type DeleteOrderInput } from "../../../../domain/models/admin/admin.deleteOrderInput.schema";
+import type { AdminDeleteOrderResult } from "../../../../domain/models/admin/admin.deleteOrderResult.schema";
 
-type DeleteOrderInput = {
-  id: string;
-};
 
 export function deleteOrderRepo(supabase: SupabaseClient) {
   return {
     async deleteOrder(input: DeleteOrderInput): Promise<void> {
-      const { id } = input;
+      const { id } = deleteOrderInputSchema.parse(input);
 
-      if (!id) {
-        throw new Error("deleteOrder: order ID is required");
-      }
-
-      const raw = await supabaseSafe(() =>
-        supabase.rpc("admin_delete_order", {
-          p_order_id: id,
-        })
+       const raw = await supabaseSafe<AdminDeleteOrderResult>(() =>
+        supabase.rpc("admin_delete_order", { p_order_id: id }),
       );
 
       /*

@@ -1,34 +1,27 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseSafe } from "../../supabaseSafe";
+import { deleteEventFormFieldInputSchema, 
+  type DeleteEventFormFieldInput } from "../../../../domain/models/admin/admin.deleteEventFormFieldInput.schema";
 
-type DeleteEventFormFieldInput = {
-  id: string;
-};
 
 export function deleteEventFormFieldRepo(supabase: SupabaseClient) {
   return {
     async deleteEventFormField(input: DeleteEventFormFieldInput): Promise<void> {
-      const { id } = input;
+      const { id } = deleteEventFormFieldInputSchema.parse(input);
 
-      if (!id) {
-        throw new Error("deleteEventFormField: field ID is required");
-      }
-
-      const raw = await supabaseSafe(() =>
-        supabase
-          .from("event_form_fields")
-          .delete()
-          .eq("id", id)
-          .select("id")
+      const raw = await supabaseSafe<{ id: string }[]>(
+        () =>
+          supabase
+            .from("event_form_fields")
+            .delete()
+            .eq("id", id)
+            .select("id"),
       );
 
-      const deletedCount = Array.isArray(raw) ? raw.length : 0;
-
-      if (deletedCount === 0) {
-        throw new Error(
-          "deleteEventFormField: nothing deleted (not found or forbidden)"
-        );
-      }
-    },
+      if (raw.length === 0) {
+        // ici on veut une erreur métier propre
+        throw new Error("NOT_FOUND");
+    }
+  },
   };
 }

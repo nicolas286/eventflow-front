@@ -6,29 +6,23 @@ import {
   type EventDetailAdmin,
 } from "../../../../domain/models/admin/admin.eventDetail.schema";
 
-type GetEventDetailAdminParams =
-  | {
-      // ✅ nouveau flow : orgId + slug (plus de PostgREST lookup)
-      orgId: string;
-      eventSlug: string;
+import { getEventDetailAdminRpcArgsSchema, 
+  type GetEventDetailAdminRpcArgs
+ } from "../../../../domain/models/admin/admin.getEventDetailInput.schema";
 
-      ordersLimit?: number;
-      ordersOffset?: number;
-      attendeesLimit?: number;
-      attendeesOffset?: number;
-    }
-  | {
-      // ✅ compat : ancien flow (si tu l'utilises encore ailleurs)
-      eventId: string;
+type Paging = {
+  ordersLimit?: number;
+  ordersOffset?: number;
+  attendeesLimit?: number;
+  attendeesOffset?: number;
+};
 
-      ordersLimit?: number;
-      ordersOffset?: number;
-      attendeesLimit?: number;
-      attendeesOffset?: number;
-    };
+export type GetEventDetailAdminParams =
+  | ({ orgId: string; eventSlug: string } & Paging)
+  | ({ eventId: string } & Paging);
 
 function isBySlug(
-  p: GetEventDetailAdminParams
+  p: GetEventDetailAdminParams,
 ): p is Extract<GetEventDetailAdminParams, { orgId: string; eventSlug: string }> {
   return "orgId" in p && "eventSlug" in p;
 }
@@ -36,22 +30,33 @@ function isBySlug(
 export function makeEventDetailAdminRepo(supabase: SupabaseClient) {
   return {
     async getEventDetailAdmin(params: GetEventDetailAdminParams): Promise<EventDetailAdmin> {
-      const payload: Record<string, any> = {
+      const base = {
         p_orders_limit: params.ordersLimit ?? 50,
         p_orders_offset: params.ordersOffset ?? 0,
         p_attendees_limit: params.attendeesLimit ?? 50,
         p_attendees_offset: params.attendeesOffset ?? 0,
       };
 
-      if (isBySlug(params)) {
-        payload.p_org_id = params.orgId;
-        payload.p_event_slug = params.eventSlug;
-        // p_event_id volontairement omis (default null côté SQL)
-      } else {
-        payload.p_event_id = params.eventId;
-      }
+      const candidate: GetEventDetailAdminRpcArgs = isBySlug(params)
+        ? {
+            ...base,
+            p_org_id: params.orgId,
+            p_event_slug: params.eventSlug,
+          }
+        : {
+            ...base,
+            p_event_id: params.eventId,
+          };
 
-      const raw = await supabaseSafe(() => supabase.rpc("get_event_detail_admin", payload));
+      const payload = getEventDetailAdminRpcArgsSchema.parse(candidate);
+
+      const raw = await supabaseSafe<unknown | null>(() =>
+        supabase.rpc("get_event_detail_admin", payload),
+      );
+
+      if (!raw) {
+        throw new Error("NOT_FOUND");
+      }
 
       const camel = snakeToCamel(raw);
       return eventDetailAdminSchema.parse(camel);

@@ -13,6 +13,8 @@ import {
   type EventProduct,
 } from "../../../../domain/models/db/db.eventProducts.schema";
 
+type CreateEventProductRpcResult = string; 
+
 export function createEventProductRepo(supabase: SupabaseClient) {
   return {
     async createEventProduct(input: CreateEventProductInput): Promise<EventProduct> {
@@ -32,19 +34,21 @@ export function createEventProductRepo(supabase: SupabaseClient) {
       };
 
       const payload = camelToSnake(normalized);
-      const rawId = await supabaseSafe(() =>
-        supabase.rpc("create_event_product", { p_input: payload })
+      const rawId = await supabaseSafe<CreateEventProductRpcResult>(
+        () => supabase.rpc("create_event_product", { p_input: payload })
       );
 
       const productId = String(rawId);
 
-      const row = await supabaseSafe(() =>
-        supabase
-          .from("event_products")
-          .select("*")
-          .eq("id", productId)
-          .single()
+     const row = await supabaseSafe<EventProduct>(
+        () =>
+          supabase
+            .from("event_products")
+            .select("*")
+            .eq("id", productId)
+            .single(),
       );
+
 
       const camel = snakeToCamel(row);
       return eventProductSchema.parse(camel);

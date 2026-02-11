@@ -6,11 +6,15 @@ import {
   type EventsOverview,
 } from "../../../../domain/models/admin/admin.eventsOverview.schema";
 
+import { getEventsOverviewRpcArgsSchema } from "../../../../domain/models/admin/admin.getEventsOverviewRpcArgs.schema";
+
 export function makeEventsRepo(supabase: SupabaseClient) {
   return {
     async getEventsOverview(orgId: string): Promise<EventsOverview> {
-      const raw = await supabaseSafe(() =>
-        supabase.rpc("get_events_overview", { p_org_id: orgId })
+      const payload = getEventsOverviewRpcArgsSchema.parse({ p_org_id: orgId });
+
+      const raw = await supabaseSafe<unknown>(() =>
+        supabase.rpc("get_events_overview", payload),
       );
 
       const camel = snakeToCamel(raw);

@@ -6,6 +6,7 @@ import { supabase } from "../../gateways/supabase/supabaseClient";
 import { normalizeError } from "../../domain/errors/errors";
 import "../../styles/desktop/auth.desktop.css";
 import "../../styles/mobile/auth.mobile.css";
+import { Link } from "react-router-dom";
 
 import { z } from "zod";
 import { signupSchema } from "../../domain/models/admin/admin.auth.schema";
@@ -90,7 +91,7 @@ export function AdminResetPasswordPage() {
     try {
       setLoading(true);
       await authRepo.updatePassword(parsed.data.password);
-      setOkMsg("Mot de passe mis à jour. Tu peux te reconnecter.");
+      setOkMsg("Mot de passe mis à jour. Vous pouvez vous reconnecter.");
     } catch (e) {
       const err = normalizeError(e, "Erreur inconnue.");
       setErrorMsg(err.message);
@@ -158,6 +159,12 @@ export function AdminResetPasswordPage() {
 
           {errorMsg && <MessageBox variant="error">{errorMsg}</MessageBox>}
           {okMsg && <MessageBox variant="success">{okMsg}</MessageBox>}
+
+        <div className="auth-links">
+          <Link to="/admin/login" className="auth-link">
+            Se connecter
+          </Link>
+        </div>
 
           <Button type="submit" variant="primary" disabled={loading}>
             {loading ? "Mise à jour..." : "Mettre à jour"}

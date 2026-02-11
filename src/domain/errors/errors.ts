@@ -258,6 +258,61 @@ function mapIdbToAppCode(name: string): AppErrorCode {
   return "UNKNOWN";
 }
 
+type FunctionsErrorLike = {
+  name?: unknown;
+  message?: unknown;
+  context?: unknown; // { status, body }
+};
+
+function isFunctionsErrorLike(e: unknown): e is FunctionsErrorLike {
+  return typeof e === "object" && e !== null && ("context" in e || "name" in e || "message" in e);
+}
+
+function getFnStatus(e: FunctionsErrorLike): number | null {
+  const ctx = (e as Record<string, unknown>).context as Record<string, unknown> | undefined;
+  const status = ctx?.status;
+  return typeof status === "number" ? status : null;
+}
+
+function getFnBodyText(e: FunctionsErrorLike): string | null {
+  const ctx = (e as Record<string, unknown>).context as Record<string, unknown> | undefined;
+  const body = ctx?.body;
+
+  if (typeof body === "string") return body;
+
+  // parfois body est un objet déjà parsé
+  if (typeof body === "object" && body !== null) {
+    // tente message / error / code
+    const anyBody = body as Record<string, unknown>;
+    const msg =
+      (typeof anyBody.message === "string" && anyBody.message) ||
+      (typeof anyBody.error === "string" && anyBody.error) ||
+      null;
+
+    if (msg) return msg;
+
+    try {
+      return JSON.stringify(body);
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
+function mapHttpStatusToAppCode(status: number | null): AppErrorCode {
+  if (!status) return "UNKNOWN";
+  if (status === 401) return "UNAUTHENTICATED";
+  if (status === 403) return "FORBIDDEN";
+  if (status === 404) return "NOT_FOUND";
+  if (status === 409) return "CONFLICT";
+  if (status === 400 || status === 422) return "VALIDATION";
+  if (status >= 500) return "NETWORK"; // serveur / gateway down → côté UX c’est “réessaie”
+  return "UNKNOWN";
+}
+
+
 export function normalizeError(e: unknown, fallbackMessage: string): AppError {
   if (isAppError(e)) return e;
 
@@ -295,6 +350,32 @@ export function normalizeError(e: unknown, fallbackMessage: string): AppError {
         meta: { kind: "auth", rawCode: (e as any).code ?? null, rawMessage: e.message },
       });
     }
+  }
+
+    if (isFunctionsErrorLike(e)) {
+    const status = getFnStatus(e);
+    const raw = getFnBodyText(e) ?? (typeof (e as any).message === "string" ? (e as any).message : "");
+
+    const rpcCode = raw ? mapRpcMessageToAppCode(raw) : null;
+    const code = rpcCode ?? mapHttpStatusToAppCode(status);
+
+    const business = raw ? humanBusinessMessage(raw) : null;
+    const validationMsg = raw ? raw.replace(/^VALIDATION_ERROR:\s*/i, "") : "";
+
+    const message =
+      business ??
+      (rpcCode ? validationMsg : (raw || fallbackMessage));
+
+    return new AppError({
+      code,
+      message,
+      cause: e,
+      meta: {
+        kind: "functions",
+        status,
+        rawMessage: raw || null,
+      },
+    });
   }
 
 

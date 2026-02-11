@@ -171,6 +171,12 @@ export const organizationBillingUISchema = organizationBillingSchema.omit({
   vatValidationSource: true,
 });
 
+export const organizationBillingEnvelopeSchema = z
+  .object({
+    billing: organizationBillingSchema.nullable(),
+  })
+  .loose(); // si la RPC renvoie aussi orgId / autre champ, on s'en fout
+
 export type OrganizationBilling = z.infer<typeof organizationBillingSchema>;
 export type OrganizationBillingUI = z.infer<typeof organizationBillingUISchema>;
 export type OrganizationBillingPatch = z.infer<typeof organizationBillingPatchSchema>;

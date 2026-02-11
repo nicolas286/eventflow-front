@@ -23,20 +23,7 @@ export function createCancelSubscriptionRepo(supabase: SupabaseClient) {
         body: payload,
       });
 
-      if (error) {
-        const raw =
-          (error as any)?.context?.body ??
-          (error as any)?.message ??
-          String(error);
-
-        try {
-          const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-          const msg = parsed?.error ?? parsed?.message ?? parsed?.details ?? raw;
-          throw new Error(String(msg));
-        } catch {
-          throw new Error(String(raw));
-        }
-      }
+      if (error) throw error;
 
       if (!data) {
         throw new Error("CANCEL_SUBSCRIPTION_EMPTY_RESPONSE");
