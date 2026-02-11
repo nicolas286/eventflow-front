@@ -1,11 +1,22 @@
-import { Outlet, Navigate } from "react-router-dom";
+import { Outlet, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../providers/AuthProvider/useAuth";
+import { MessageBox } from "../components/message/MessageBox"; // adapte
 
 export function AdminAuthLayout() {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
-  if (loading) return null;
-  if (user) return <Navigate to="/admin" replace />;
+  const isResetRoute = location.pathname === "/admin/reset-password";
+
+  if (loading) {
+    return (
+      <div className="auth-shell" style={{ padding: 24 }}>
+        <MessageBox variant="info">Chargement…</MessageBox>
+      </div>
+    );
+  }
+
+  if (user && !isResetRoute) return <Navigate to="/admin" replace />;
 
   return <Outlet />;
 }

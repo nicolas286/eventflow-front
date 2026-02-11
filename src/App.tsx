@@ -3,6 +3,8 @@ import { Routes, Route, Navigate } from "react-router-dom";
 /* Admin pages */
 import { AdminLoginPage } from "./pages/admin/AdminLoginPage";
 import { AdminSignUpPage } from "./pages/admin/AdminSignUpPage";
+import { AdminForgotPasswordPage } from "./pages/admin/AdminForgotPasswordPage";
+import { AdminResetPasswordPage } from "./pages/admin/AdminResetPasswordPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminEventsPage from "./pages/admin/AdminEventsPage";
 import AdminBrandingPage from "./pages/admin/AdminBrandingPage";
@@ -35,6 +37,8 @@ function App() {
       <Route element={<AdminAuthLayout />}>
         <Route path="/admin/login" element={<AdminLoginPage />} />
         <Route path="/admin/signup" element={<AdminSignUpPage />} />
+        <Route path="/admin/forgot-password" element={<AdminForgotPasswordPage />} />
+        <Route path="/admin/reset-password" element={<AdminResetPasswordPage />} />
       </Route>
 
       {/* ADMIN – PROTÉGÉ */}

@@ -30,7 +30,7 @@ async signIn(
 
     const { data, error } = await client.auth.signInWithPassword(parsed);
     if (error) throw error;
-    
+
     if (!opts?.rememberMe && data.session) {
       await supabase.auth.setSession(data.session);
     }
@@ -61,6 +61,29 @@ async signIn(
       if (error) throw error;
     } catch (e) {
       throw normalizeError(e, "Déconnexion impossible.");
+    }
+  },
+
+   async requestPasswordReset(email: string, opts?: { redirectTo?: string }): Promise<void> {
+    try {
+      const redirectTo = opts?.redirectTo ?? `${window.location.origin}/auth/reset-password`;
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo,
+      });
+
+      if (error) throw error;
+    } catch (e) {
+      throw normalizeError(e, "Impossible d’envoyer l’email de réinitialisation.");
+    }
+  },
+
+  async updatePassword(newPassword: string): Promise<void> {
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+    } catch (e) {
+      throw normalizeError(e, "Impossible de mettre à jour le mot de passe.");
     }
   },
 };
