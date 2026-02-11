@@ -1,5 +1,5 @@
 import type { Session } from "@supabase/supabase-js";
-import { supabase } from "../../supabaseClient";
+import { supabase, supabaseSession } from "../../supabaseClient";
 import { normalizeError } from "../../../../domain/errors/errors";
 import { loginSchema, signupSchema } from "../../../../domain/models/admin/admin.auth.schema";
 import type { LoginInput, SignupInput } from "../../../../domain/models/admin/admin.auth.schema";
@@ -19,15 +19,26 @@ export const authRepo = {
     }
   },
 
-  async signIn(input: LoginInput): Promise<void> {
-    try {
-      const parsed = loginSchema.parse(input); 
-      const { error } = await supabase.auth.signInWithPassword(parsed);
-      if (error) throw error;
-    } catch (e) {
-      throw normalizeError(e, "Connexion impossible.");
+async signIn(
+  input: LoginInput,
+  opts?: { rememberMe?: boolean }
+): Promise<void> {
+  try {
+    const parsed = loginSchema.parse(input);
+
+    const client = opts?.rememberMe ? supabase : supabaseSession;
+
+    const { data, error } = await client.auth.signInWithPassword(parsed);
+    if (error) throw error;
+    
+    if (!opts?.rememberMe && data.session) {
+      await supabase.auth.setSession(data.session);
     }
-  },
+
+  } catch (e) {
+    throw normalizeError(e, "Connexion impossible.");
+  }
+},
 
   async signUp(input: SignupInput): Promise<SignUpResult> {
     try {
