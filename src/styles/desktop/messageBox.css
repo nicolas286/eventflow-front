@@ -1,0 +1,20 @@
+/* message box */
+.message {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.85rem;        /* plus petit */
+  line-height: 1.4;
+  font-style: italic;        /* léger côté “info” */
+  font-weight: 400;          /* pas de gras */
+}
+
+.message--error {
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.message--success {
+  border: 1px solid rgba(22, 163, 74, 0.35);
+  background: rgba(22, 163, 74, 0.08);
+}
