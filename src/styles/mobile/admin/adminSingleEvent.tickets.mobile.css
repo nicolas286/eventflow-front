@@ -26,6 +26,152 @@
   .ticketEditorPanel {
     transform-origin: top center;
   }
+  .adminTicketsInlineShell {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .adminTicketBlock {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .adminTicketsInlineEditor {
+    width: 100%;
+    margin-top: 12px;
+  }
+
+  /* Quand on crée: au-dessus de tout */
+  .adminTicketsInlineEditor.isCreate {
+    margin-top: 0;
+    margin-bottom: 14px;
+  }
+
+  /* Editor footer: 2 boutons alignés */
+  .adminTicketsEditorFooterInline {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+
+  .adminTicketsEditorHeaderInline {
+    position: relative;
+  }
+
+  .adminTicketsEditorFormGrid {
+    margin-top: 12px;
+  }
+
+  .adminTicketsTitle {
+    margin: 0;
+  }
+
+  .adminTicketsDirtyDot {
+    margin-left: 10px;
+    font-weight: 900;
+    color: #b45309;
+  }
+
+  .adminTicketsSaveError {
+    color: crimson;
+    margin-top: 2px;
+  }
+
+  /* ============ Mobile inline editor (tickets) + animations ============ */
+
+@media (max-width: 1050px) {
+  .adminTicketsInlineShell {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .adminTicketBlock {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .adminTicketsTitle {
+    margin: 0;
+  }
+
+  .adminTicketsDirtyDot {
+    margin-left: 10px;
+    font-weight: 900;
+    color: #b45309;
+  }
+
+  .adminTicketsSaveError {
+    color: crimson;
+    margin-top: 2px;
+  }
+
+  .adminTicketsInlineEditor {
+    width: 100%;
+    margin-top: 12px;
+
+    transform-origin: top center;
+    animation-duration: 180ms;
+    animation-fill-mode: both;
+  }
+
+  /* Quand on crée: au-dessus de tout */
+  .adminTicketsInlineEditor.isCreate {
+    margin-top: 0;
+    margin-bottom: 14px;
+  }
+
+  .adminTicketsInlineEditor.isOpen {
+    animation-name: ticketFormIn;
+    animation-timing-function: ease-out;
+  }
+
+  .adminTicketsInlineEditor.isClosing {
+    animation-name: ticketFormOut;
+    animation-timing-function: ease-in;
+  }
+
+  @keyframes ticketFormIn {
+    from {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes ticketFormOut {
+    from {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.98);
+    }
+  }
+
+  /* Editor footer: 2 boutons alignés */
+  .adminTicketsEditorFooterInline {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+
+  .adminTicketsEditorHeaderInline {
+    position: relative;
+  }
+
+  .adminTicketsEditorFormGrid {
+    margin-top: 12px;
+  }
+}
+
 }
 
 

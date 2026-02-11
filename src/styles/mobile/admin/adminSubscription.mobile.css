@@ -1,0 +1,15 @@
+@media (max-width: 860px) {
+  .adminSub__plan2Col {
+    grid-template-columns: 1fr;
+  }
+
+  .adminSub__cancelCol {
+    justify-content: stretch;
+  }
+
+  /* Les deux blocs prennent toute la largeur */
+  .adminSub__plansWrap,
+  .adminSub__dangerBox {
+    max-width: 100%;
+  }
+}

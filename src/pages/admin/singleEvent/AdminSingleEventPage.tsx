@@ -10,19 +10,18 @@ import { useUpdateEvent } from "../../../features/admin/hooks/useUpdateEvent";
 import type { UpdateEventFullPatch } from "../../../domain/models/admin/admin.updateEventFullPatch.schema";
 
 import { uploadOrgAssetsRepo } from "../../../gateways/supabase/repositories/dashboard/uploadOrgAssets.repo";
-import Button from "../../../ui/components/button/Button"
+import Button from "../../../ui/components/button/Button";
 
 import { SingleEventDetailsSection } from "../../../pages/admin/singleEvent/sections/SingleEventDetailsSection";
 import { SingleEventTicketsSection } from "../../../pages/admin/singleEvent/sections/SingleEventTicketsSection";
 import { SingleEventFormSection } from "../../../pages/admin/singleEvent/sections/SingleEventFormSection";
 import { SingleEventParticipantsSection } from "../../../pages/admin/singleEvent/sections/SingleEventParticipantsSection";
 
-// ✅ Garde ton CSS global existant (tu peux le déplacer ensuite dans /styles/admin/)
+// ✅ Garde ton CSS global existant
 import "../../../styles/desktop/admin/adminEventsPage.desktop.css";
 import "../../../styles/mobile/admin/adminEventsPage.mobile.css";
 
-
-// ✅ Imports CSS par section (tout dans /styles/admin/)
+// ✅ Imports CSS par section
 import "../../../styles/desktop/admin/adminSingleEvent.details.desktop.css";
 import "../../../styles/desktop/admin/adminSingleEvent.tickets.desktop.css";
 import "../../../styles/desktop/admin/adminSingleEvent.form.desktop.css";
@@ -30,8 +29,7 @@ import "../../../styles/desktop/admin/adminSingleEvent.participants.desktop.css"
 
 import "../../../styles/mobile/admin/adminSingleEvent.tickets.mobile.css";
 import "../../../styles/mobile/admin/adminSingleEvent.participants.mobile.css";
-import "../../../styles/mobile/admin/adminSingleEvent.form.mobile.css"
-
+import "../../../styles/mobile/admin/adminSingleEvent.form.mobile.css";
 
 type TabKey = "details" | "tickets" | "form" | "participants";
 
@@ -90,6 +88,13 @@ export function AdminSingleEventPage() {
 
   const event = data?.event ?? null;
 
+  // ✅ Nouveau titre : nom d’événement (fallback)
+  const headerTitle = event?.title?.trim()
+    ? event.title
+    : loading
+      ? "Chargement…"
+      : "Événement";
+
   async function refreshAll() {
     if (typeof refetchSingle === "function") await refetchSingle();
     if (typeof refetchDashboard === "function") await refetchDashboard();
@@ -115,16 +120,11 @@ export function AdminSingleEventPage() {
 
   return (
     <div className="adminCard">
-      <h2>Événement</h2>
+      {/* ✅ Titre = nom de l’événement */}
+      <h2>{headerTitle}</h2>
 
-      <div style={{ fontSize: 12, opacity: 0.8 }}>
-        slug: <code>{eventSlug}</code>{" "}
-        {eventId ? (
-          <>
-            • id: <code>{eventId}</code>
-          </>
-        ) : null}
-      </div>
+      {/* ✅ Suppression de la ligne slug/id */}
+      {/* (si tu veux garder l’id pour debug, dis-moi et je te le mets dans un <details> caché) */}
 
       <div className="adminEventTabs">
         <TabButton active={tab === "details"} onClick={() => setTabAndUrl("details")}>
@@ -165,7 +165,6 @@ export function AdminSingleEventPage() {
             {tab === "participants" && (
               <SingleEventParticipantsSection data={data as any} onChanged={refreshAll} />
             )}
-
           </>
         )}
       </div>
@@ -173,21 +172,12 @@ export function AdminSingleEventPage() {
   );
 }
 
-function TabButton(props: {
-  active?: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
+function TabButton(props: { active?: boolean; onClick: () => void; children: React.ReactNode }) {
   const { active = false, onClick, children } = props;
 
   return (
-    <Button
-      type="button"
-      onClick={onClick}
-      className={`adminEventTab${active ? " isActive" : ""}`}
-    >
+    <Button type="button" onClick={onClick} className={`adminEventTab${active ? " isActive" : ""}`}>
       {children}
     </Button>
   );
 }
-

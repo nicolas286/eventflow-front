@@ -58,6 +58,22 @@ type DraftField = {
 
 type MoveDir = "up" | "down";
 
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia(query).matches : false
+  );
+
+  useEffect(() => {
+    const m = window.matchMedia(query);
+    const onChange = () => setMatches(m.matches);
+    onChange();
+    m.addEventListener?.("change", onChange);
+    return () => m.removeEventListener?.("change", onChange);
+  }, [query]);
+
+  return matches;
+}
+
 function slugKey(value: string) {
   return value
     .trim()
@@ -129,6 +145,8 @@ function sortFromDB(fields: EventFormField[]) {
 export function EventRegistrationFormPanel(props: Props) {
   const { supabase, event, fields, onChanged } = props;
 
+  const isMobile = useMediaQuery("(max-width: 1050px)");
+
   const create = useCreateEventFormField({ supabase });
   const update = useUpdateEventFormField({ supabase });
   const del = useDeleteEventFormField({ supabase });
@@ -145,9 +163,14 @@ export function EventRegistrationFormPanel(props: Props) {
 
   const lastLoadedSigRef = useRef<string>("");
 
-  // ✅ Anim move (cartes + flèches) : on garde une trace courte des items concernés
+  // move anim (cartes)
   const [moveAnim, setMoveAnim] = useState<Record<string, MoveDir>>({});
   const moveTimerRef = useRef<number | null>(null);
+
+  // fermeture animée inline (mobile)
+  const closeTimerRef = useRef<number | null>(null);
+  const [closingKey, setClosingKey] = useState<string | null>(null); // "create" ou clientId
+  const [isClosing, setIsClosing] = useState(false);
 
   const isSaving = isSavingAll || create.loading || update.loading || del.loading;
 
@@ -186,6 +209,7 @@ export function EventRegistrationFormPanel(props: Props) {
   useEffect(() => {
     return () => {
       if (moveTimerRef.current) window.clearTimeout(moveTimerRef.current);
+      if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
     };
   }, []);
 
@@ -203,19 +227,24 @@ export function EventRegistrationFormPanel(props: Props) {
     setSaveAllError(null);
   }
 
-  function buildKeyFromLabel(label: string, forCreate: boolean) {
+  function buildKeyFromLabel(label: string) {
     const base = slugKey(label);
-    return forCreate ? uniqueKey(base, existingKeys) : uniqueKey(base, existingKeys);
+    return uniqueKey(base, existingKeys);
   }
 
   function buildOptions(fieldType: FieldType, optionsText: string) {
-    if (fieldType === "select" || fieldType === "radio") {
-      return parseOptionsLines(optionsText);
-    }
+    if (fieldType === "select" || fieldType === "radio") return parseOptionsLines(optionsText);
     return null;
   }
 
+  function cancelClosingIfAny() {
+    setIsClosing(false);
+    setClosingKey(null);
+    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+  }
+
   function openCreate() {
+    cancelClosingIfAny();
     setSaveAllError(null);
     create.reset();
     update.reset();
@@ -233,6 +262,7 @@ export function EventRegistrationFormPanel(props: Props) {
   }
 
   function openEdit(f: DraftField) {
+    cancelClosingIfAny();
     setSaveAllError(null);
     create.reset();
     update.reset();
@@ -250,11 +280,31 @@ export function EventRegistrationFormPanel(props: Props) {
   }
 
   function closeEditor() {
-    setEditing(null);
-    setCreating(false);
-    create.reset();
-    update.reset();
-    del.reset();
+    if (!editing) {
+      setCreating(false);
+      return;
+    }
+
+    const key = creating ? "create" : (editing.id ?? null);
+    if (!key) {
+      setEditing(null);
+      setCreating(false);
+      return;
+    }
+
+    setIsClosing(true);
+    setClosingKey(key);
+
+    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = window.setTimeout(() => {
+      setEditing(null);
+      setCreating(false);
+      setIsClosing(false);
+      setClosingKey(null);
+      create.reset();
+      update.reset();
+      del.reset();
+    }, 180);
   }
 
   function toggleLocal(clientId: string, patch: Partial<Pick<DraftField, "isRequired" | "isActive">>) {
@@ -292,7 +342,6 @@ export function EventRegistrationFormPanel(props: Props) {
       copy[idx] = b;
       copy[nextIdx] = a;
 
-      // ✅ anim: a bouge dans dir, b bouge dans l'inverse
       const aDir: MoveDir = dir === -1 ? "up" : "down";
       const bDir: MoveDir = dir === -1 ? "down" : "up";
       triggerMoveAnim(a.clientId, aDir, b.clientId, bDir);
@@ -332,10 +381,11 @@ export function EventRegistrationFormPanel(props: Props) {
 
     const isCreate = creating;
     const options = buildOptions(editing.fieldType, editing.optionsText);
-    const key = buildKeyFromLabel(label, isCreate);
 
     if (isCreate) {
       const clientId = makeClientId();
+      const key = buildKeyFromLabel(label);
+
       const nextField: DraftField = {
         id: null,
         clientId,
@@ -358,13 +408,14 @@ export function EventRegistrationFormPanel(props: Props) {
     const clientId = editing.id;
     if (!clientId) return;
 
+    // ⚠️ Sur update, on ne change pas le fieldKey si tu ne veux pas casser l’existant.
+    // Si tu veux le recalculer, dis-moi (là on le conserve).
     setDraft((prev) =>
       prev.map((f) =>
         f.clientId === clientId
           ? {
               ...f,
               label,
-              fieldKey: key,
               fieldType: editing.fieldType,
               isRequired: editing.isRequired,
               isActive: editing.isActive,
@@ -445,19 +496,104 @@ export function EventRegistrationFormPanel(props: Props) {
   }
 
   const isOpen = Boolean(editing);
+  const editingId = editing?.id ?? null;
+
+  const editorNode = editing ? (
+    <div className="adminTicketsEditorCard">
+      <div className="adminTicketsEditorHeader adminRegEditorHeaderInline">
+        <div>
+          <div className="adminTicketsEditorTitle">{creating ? "Nouveau champ" : "Modifier champ"}</div>
+          <div className="adminEventHint">
+            Pour <code>select</code>/<code>radio</code> : une option par ligne (ex: Oui, Non).
+          </div>
+        </div>
+      </div>
+
+      <div className="adminEventFormGrid adminRegEditorFormGrid">
+        <div className="adminEventField">
+          <div className="adminEventLabel">Label</div>
+          <input
+            className="adminEventInput"
+            value={editing.label}
+            onChange={(e) => setEditing({ ...editing, label: e.target.value })}
+            placeholder="Ex: Allergies"
+            disabled={isSaving}
+          />
+        </div>
+
+        <div className="adminEventField">
+          <div className="adminEventLabel">Type</div>
+          <select
+            className="adminEventInput"
+            value={editing.fieldType}
+            onChange={(e) => setEditing({ ...editing, fieldType: e.target.value as FieldType })}
+            disabled={isSaving}
+          >
+            {FIELD_TYPES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="adminEventField">
+          <label className="adminRegCheckRow">
+            <input
+              type="checkbox"
+              checked={editing.isRequired}
+              onChange={(e) => setEditing({ ...editing, isRequired: e.target.checked })}
+              disabled={isSaving}
+            />
+            <span>Requis</span>
+          </label>
+
+          <label className="adminRegCheckRow adminRegCheckRowSpacer">
+            <input
+              type="checkbox"
+              checked={editing.isActive}
+              onChange={(e) => setEditing({ ...editing, isActive: e.target.checked })}
+              disabled={isSaving}
+            />
+            <span>Actif</span>
+          </label>
+        </div>
+
+        {(editing.fieldType === "select" || editing.fieldType === "radio") && (
+          <div className="adminEventField adminEventFieldSpan2">
+            <div className="adminEventLabel">Options</div>
+            <textarea
+              className="adminEventTextarea"
+              value={editing.optionsText}
+              onChange={(e) => setEditing({ ...editing, optionsText: e.target.value })}
+              placeholder={`Une option par ligne :\nOui\nNon\nPeut-être`}
+              disabled={isSaving}
+            />
+          </div>
+        )}
+      </div>
+
+      <div className="adminTicketsEditorFooter adminRegEditorFooterInline">
+        <Button onClick={upsertLocalFromEditor} disabled={!editing.label.trim() || isSaving} variant="primary">
+          {creating ? "Ajouter (local)" : "Appliquer (local)"}
+        </Button>
+        <Button onClick={closeEditor} disabled={isSaving} variant="secondary">
+          Fermer
+        </Button>
+      </div>
+    </div>
+  ) : null;
+
+  const showCreateInline = (isOpen && creating) || (isClosing && closingKey === "create");
 
   return (
     <div className="adminRegForm">
       <div className="adminEventHeaderRow">
         <div>
-          <h3 style={{ margin: 0 }}>Formulaire d’inscription</h3>
+          <h3 className="adminRegTitle">Formulaire d’inscription</h3>
           <div className="adminEventHint">
-            Gère les champs demandés aux participants. Tu peux activer/désactiver et rendre requis.
-            {isDirty ? (
-              <span style={{ marginLeft: 10, fontWeight: 900, color: "#b45309" }}>
-                • Modifications non sauvegardées
-              </span>
-            ) : null}
+            Gère les champs demandés aux participants.
+            {isDirty ? <span className="adminRegDirtyDot">• Modifications non sauvegardées</span> : null}
           </div>
         </div>
 
@@ -478,19 +614,24 @@ export function EventRegistrationFormPanel(props: Props) {
         </div>
       </div>
 
-      {saveAllError ? (
-        <div className="adminEventHint" style={{ color: "crimson", marginTop: 2 }}>
-          {saveAllError}
-        </div>
-      ) : null}
+      {saveAllError ? <div className="adminRegSaveError">{saveAllError}</div> : null}
 
-      <EditorShell
-        isOpen={isOpen}
-        onRequestClose={closeEditor}
-        editorWidth={420}
-        editorGap={14}
-        stickyTop={84}
-        left={
+      {/* ---------------- Mobile : editor inline ---------------- */}
+      {isMobile ? (
+        <div className={isOpen || isClosing ? "adminRegInlineShell isEditorOpen" : "adminRegInlineShell"}>
+          {/* Create: editor au-dessus de tout */}
+          {showCreateInline ? (
+            <div
+              className={[
+                "adminRegInlineEditor",
+                "isCreate",
+                isClosing && closingKey === "create" ? "isClosing" : "isOpen",
+              ].join(" ")}
+            >
+              {editorNode}
+            </div>
+          ) : null}
+
           <div className="adminRegList">
             {draft.length === 0 ? (
               <div className="adminEventEmpty">Aucun champ. Clique “Ajouter un champ”.</div>
@@ -498,187 +639,198 @@ export function EventRegistrationFormPanel(props: Props) {
               draft.map((f, idx) => {
                 const active = Boolean(f.isActive ?? true);
                 const required = Boolean(f.isRequired ?? false);
-                const type = String(f.fieldType ?? "text");
 
-                const animDir = moveAnim[f.clientId]; // "up" | "down" | undefined
-                const cardAnimClass =
-                  animDir === "up" ? "isMoveUp" : animDir === "down" ? "isMoveDown" : "";
+                const animDir = moveAnim[f.clientId];
+                const cardAnimClass = animDir === "up" ? "isMoveUp" : animDir === "down" ? "isMoveDown" : "";
+
+                const showEditInline =
+                  ((isOpen && !creating && editingId === f.clientId) || (isClosing && closingKey === f.clientId));
 
                 return (
-                  <div
-                    key={f.clientId}
-                    className={[
-                      active ? "adminRegCard" : "adminRegCard isInactive",
-                      cardAnimClass,
-                    ].join(" ")}
-                  >
-                    <div className="adminRegTop">
-                      <div className="adminRegTitle">{f.label}</div>
+                  <div key={f.clientId} className="adminRegBlock">
+                    <div className={[active ? "adminRegCard" : "adminRegCard isInactive", cardAnimClass].join(" ")}>
+                      <div className="adminRegTop">
+                        <div className="adminRegTitleLine">{f.label}</div>
 
-                      <div className="adminRegPills">
-                        <span className={active ? "adminRegPill" : "adminRegPill isOff"}>
-                          {active ? "Actif" : "Inactif"}
-                        </span>
-                        <span className={required ? "adminRegPill isReq" : "adminRegPill isOpt"}>
-                          {required ? "Requis" : "Optionnel"}
-                        </span>
+                        <div className="adminRegPills">
+                          <span className={active ? "adminRegPill" : "adminRegPill isOff"}>
+                            {active ? "Actif" : "Inactif"}
+                          </span>
+                          <span className={required ? "adminRegPill isReq" : "adminRegPill isOpt"}>
+                            {required ? "Requis" : "Optionnel"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="adminRegMeta">
+                        <span>Type : {String(f.fieldType ?? "text")}</span>
+                      </div>
+
+                      <div className="adminRegActions">
+                        <Button variant="secondary" onClick={() => openEdit(f)} disabled={isSaving}>
+                          Modifier
+                        </Button>
+
+                        <Button
+                          onClick={() => toggleLocal(f.clientId, { isRequired: !required })}
+                          disabled={isSaving}
+                          variant="secondary"
+                        >
+                          {required ? "Rendre optionnel" : "Rendre requis"}
+                        </Button>
+
+                        <Button
+                          onClick={() => toggleLocal(f.clientId, { isActive: !active })}
+                          disabled={isSaving}
+                          variant="secondary"
+                        >
+                          {active ? "Désactiver" : "Activer"}
+                        </Button>
+
+                        <Button
+                          onClick={() => moveLocal(f.clientId, -1)}
+                          disabled={isSaving || idx === 0}
+                          className="adminMoveBtn"
+                          aria-label="Monter"
+                          variant="secondary"
+                        >
+                          ↑
+                        </Button>
+
+                        <Button
+                          onClick={() => moveLocal(f.clientId, 1)}
+                          disabled={isSaving || idx === draft.length - 1}
+                          className="adminMoveBtn"
+                          aria-label="Descendre"
+                          variant="secondary"
+                        >
+                          ↓
+                        </Button>
+
+                        <Button variant="danger" onClick={() => removeLocal(f.clientId)} disabled={isSaving}>
+                          Supprimer
+                        </Button>
                       </div>
                     </div>
 
-                    <div className="adminRegMeta">
-                      <span>Type : {type}</span>
-                    </div>
-
-                    <div className="adminRegActions">
-                      <Button variant="secondary" onClick={() => openEdit(f)} disabled={isSaving}>
-                        Modifier
-                      </Button>
-
-                      <Button
-                        onClick={() => toggleLocal(f.clientId, { isRequired: !required })}
-                        disabled={isSaving}
-                        variant="secondary"
-                      >
-                        {required ? "Rendre optionnel" : "Rendre requis"}
-                      </Button>
-
-                      <Button
-                        onClick={() => toggleLocal(f.clientId, { isActive: !active })}
-                        disabled={isSaving}
-                        variant="secondary"
-                      >
-                        {active ? "Désactiver" : "Activer"}
-                      </Button>
-
-                      <Button
-                        onClick={() => moveLocal(f.clientId, -1)}
-                        disabled={isSaving || idx === 0}
+                    {/* Edit: editor sous le champ cliqué */}
+                    {showEditInline ? (
+                      <div
                         className={[
-                          "adminMoveBtn",
-                          animDir === "up" ? "isBumpUp" : "",
+                          "adminRegInlineEditor",
+                          "isEdit",
+                          isClosing && closingKey === f.clientId ? "isClosing" : "isOpen",
                         ].join(" ")}
-                        aria-label="Monter"
-                        variant="secondary"
                       >
-                        ↑
-                      </Button>
-
-                      <Button
-                        onClick={() => moveLocal(f.clientId, 1)}
-                        disabled={isSaving || idx === draft.length - 1}
-                        className={[
-                          "adminMoveBtn",
-                          animDir === "down" ? "isBumpDown" : "",
-                        ].join(" ")}
-                        aria-label="Descendre"
-                        variant="secondary"
-                      >
-                        ↓
-                      </Button>
-
-                      <Button
-                        variant="danger"
-                        onClick={() => removeLocal(f.clientId)}
-                        disabled={isSaving}
-                      >
-                        Supprimer
-                      </Button>
-                    </div>
+                        {editorNode}
+                      </div>
+                    ) : null}
                   </div>
                 );
               })
             )}
           </div>
-        }
-        right={
-          editing ? (
-            <div className="adminTicketsEditorCard">
-              <div className="adminTicketsEditorHeader">
-                <div>
-                  <div className="adminTicketsEditorTitle">{creating ? "Nouveau champ" : "Modifier champ"}</div>
-                  <div className="adminEventHint">
-                    Pour <code>select</code>/<code>radio</code> : une option par ligne (ex: Oui, Non).
-                  </div>
-                </div>
-              </div>
+        </div>
+      ) : (
+        /* ---------------- Desktop : EditorShell à droite ---------------- */
+        <EditorShell
+          isOpen={isOpen}
+          onRequestClose={closeEditor}
+          editorWidth={420}
+          editorGap={14}
+          stickyTop={84}
+          left={
+            <div className="adminRegList">
+              {draft.length === 0 ? (
+                <div className="adminEventEmpty">Aucun champ. Clique “Ajouter un champ”.</div>
+              ) : (
+                draft.map((f, idx) => {
+                  const active = Boolean(f.isActive ?? true);
+                  const required = Boolean(f.isRequired ?? false);
+                  const type = String(f.fieldType ?? "text");
 
-              <div className="adminEventFormGrid" style={{ marginTop: 12 }}>
-                <div className="adminEventField">
-                  <div className="adminEventLabel">Label</div>
-                  <input
-                    className="adminEventInput"
-                    value={editing.label}
-                    onChange={(e) => setEditing({ ...editing, label: e.target.value })}
-                    placeholder="Ex: Allergies"
-                    disabled={isSaving}
-                  />
-                </div>
+                  const animDir = moveAnim[f.clientId];
+                  const cardAnimClass = animDir === "up" ? "isMoveUp" : animDir === "down" ? "isMoveDown" : "";
 
-                <div className="adminEventField">
-                  <div className="adminEventLabel">Type</div>
-                  <select
-                    className="adminEventInput"
-                    value={editing.fieldType}
-                    onChange={(e) => setEditing({ ...editing, fieldType: e.target.value as FieldType })}
-                    disabled={isSaving}
-                  >
-                    {FIELD_TYPES.map((t) => (
-                      <option key={t.value} value={t.value}>
-                        {t.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  return (
+                    <div
+                      key={f.clientId}
+                      className={[
+                        active ? "adminRegCard" : "adminRegCard isInactive",
+                        cardAnimClass,
+                      ].join(" ")}
+                    >
+                      <div className="adminRegTop">
+                        <div className="adminRegTitleLine">{f.label}</div>
 
-                <div className="adminEventField">
-                  <label style={{ display: "flex", gap: 10, alignItems: "center", paddingTop: 6 }}>
-                    <input
-                      type="checkbox"
-                      checked={editing.isRequired}
-                      onChange={(e) => setEditing({ ...editing, isRequired: e.target.checked })}
-                      disabled={isSaving}
-                    />
-                    <span>Requis</span>
-                  </label>
+                        <div className="adminRegPills">
+                          <span className={active ? "adminRegPill" : "adminRegPill isOff"}>
+                            {active ? "Actif" : "Inactif"}
+                          </span>
+                          <span className={required ? "adminRegPill isReq" : "adminRegPill isOpt"}>
+                            {required ? "Requis" : "Optionnel"}
+                          </span>
+                        </div>
+                      </div>
 
-                  <label style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 10 }}>
-                    <input
-                      type="checkbox"
-                      checked={editing.isActive}
-                      onChange={(e) => setEditing({ ...editing, isActive: e.target.checked })}
-                      disabled={isSaving}
-                    />
-                    <span>Actif</span>
-                  </label>
-                </div>
+                      <div className="adminRegMeta">
+                        <span>Type : {type}</span>
+                      </div>
 
-                {(editing.fieldType === "select" || editing.fieldType === "radio") && (
-                  <div className="adminEventField adminEventFieldSpan2">
-                    <div className="adminEventLabel">Options</div>
-                    <textarea
-                      className="adminEventTextarea"
-                      value={editing.optionsText}
-                      onChange={(e) => setEditing({ ...editing, optionsText: e.target.value })}
-                      placeholder={`Une option par ligne :\nOui\nNon\nPeut-être`}
-                      disabled={isSaving}
-                    />
-                  </div>
-                )}
-              </div>
+                      <div className="adminRegActions">
+                        <Button variant="secondary" onClick={() => openEdit(f)} disabled={isSaving}>
+                          Modifier
+                        </Button>
 
-              <div className="adminTicketsEditorFooter">
-                <Button
-                  onClick={upsertLocalFromEditor}
-                  disabled={!editing.label.trim() || isSaving}
-                  variant="primary"
-                >
-                  {creating ? "Ajouter (local)" : "Appliquer (local)"}
-                </Button>
-              </div>
+                        <Button
+                          onClick={() => toggleLocal(f.clientId, { isRequired: !required })}
+                          disabled={isSaving}
+                          variant="secondary"
+                        >
+                          {required ? "Rendre optionnel" : "Rendre requis"}
+                        </Button>
+
+                        <Button
+                          onClick={() => toggleLocal(f.clientId, { isActive: !active })}
+                          disabled={isSaving}
+                          variant="secondary"
+                        >
+                          {active ? "Désactiver" : "Activer"}
+                        </Button>
+
+                        <Button
+                          onClick={() => moveLocal(f.clientId, -1)}
+                          disabled={isSaving || idx === 0}
+                          className="adminMoveBtn"
+                          aria-label="Monter"
+                          variant="secondary"
+                        >
+                          ↑
+                        </Button>
+
+                        <Button
+                          onClick={() => moveLocal(f.clientId, 1)}
+                          disabled={isSaving || idx === draft.length - 1}
+                          className="adminMoveBtn"
+                          aria-label="Descendre"
+                          variant="secondary"
+                        >
+                          ↓
+                        </Button>
+
+                        <Button variant="danger" onClick={() => removeLocal(f.clientId)} disabled={isSaving}>
+                          Supprimer
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
-          ) : null
-        }
-      />
+          }
+          right={isOpen ? <div className="regEditorPanel isOpen">{editorNode}</div> : null}
+        />
+      )}
     </div>
   );
 }

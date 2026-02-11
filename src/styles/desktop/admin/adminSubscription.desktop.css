@@ -1,0 +1,252 @@
+/* src/styles/desktop/adminAbonnementPage.desktop.css */
+
+/* ---- Loading note ---- */
+.adminSub__loadingNote {
+  padding: 8px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* ---- Summary grid ---- */
+.adminSub__summaryGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+
+.adminSub__summaryCol {
+  min-width: 0;
+}
+
+.adminSub__label {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+.adminSub__badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.adminSub__line {
+  margin-top: 10px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.adminSub__valueStrong {
+  font-weight: 600;
+}
+
+.adminSub__text {
+  font-size: 14px;
+  color: #374151;
+}
+
+.adminSub__mutedLine {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* ---- Actions row ---- */
+.adminSub__actionsRow {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ---- Feedback ---- */
+.adminSub__feedbackWrap {
+  margin-top: 14px;
+}
+
+.adminSub__alert {
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.adminSub__alert--error {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.adminSub__alert--success {
+  border: 1px solid #d1fae5;
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+/* ---- Spacers ---- */
+.adminSub__spacer {
+  height: 16px;
+}
+
+/* ---- Limits grid ---- */
+.adminSub__limitsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  max-width: 760px;
+}
+
+/* ---- Limit row ---- */
+.adminSub__limitRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.adminSub__limitLabel {
+  font-size: 14px;
+  color: #374151;
+}
+
+.adminSub__limitValue {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* ---- Plans wrap ---- */
+.adminSub__plansWrap {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  max-width: 520px;
+}
+
+/* ---- Plan tile ---- */
+.adminSub__planTile {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.adminSub__planTile.isHighlight {
+  border: 2px solid var(--primary);
+}
+
+.adminSub__planTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.adminSub__planLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.adminSub__planTitle {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.adminSub__planShort {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.adminSub__planRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.adminSub__planPrice {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.adminSub__planPoints {
+  margin-top: 10px;
+  padding-left: 18px;
+  color: #374151;
+}
+
+.adminSub__planPoint {
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.adminSub__planHelper {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.adminSub__planAction {
+  margin-top: 12px;
+}
+
+.adminSub__fullWidthBtn {
+  width: 100%;
+}
+
+.adminSub__planCurrent {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* ---- Danger box ---- */
+.adminSub__dangerBox {
+  border: 1px solid #fee2e2;
+  background: #fff1f2;
+  border-radius: 12px;
+  padding: 14px;
+  max-width: 520px;
+}
+
+.adminSub__dangerTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #991b1b;
+}
+
+.adminSub__dangerText {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #7f1d1d;
+}
+
+.adminSub__dangerAction {
+  margin-top: 12px;
+}
+
+/* Layout 2 colonnes */
+.adminSub__plan2Col {
+  display: grid;
+  grid-template-columns: minmax(0, 520px) minmax(0, 520px);
+  gap: 24px;
+  align-items: start;
+}
+
+/* Colonne résiliation */
+.adminSub__cancelCol {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+
+  /* 🔥 Décalage vertical */
+ /* ajuste si tu veux plus ou moins */
+}
+
+/* ---- Footer note ---- */
+.adminSub__footNote {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #6b7280;
+}
