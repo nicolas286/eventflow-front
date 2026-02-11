@@ -13,6 +13,7 @@ export function createAdminRegisterRepo(supabase: SupabaseClient) {
       if (error) throw error; 
       if (!data) throw new Error("ADMIN_REGISTER_EMPTY_RESPONSE");
 
+
       return adminRegisterResponseSchema.parse(data);
     },
   };

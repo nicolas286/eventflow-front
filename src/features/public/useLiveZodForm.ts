@@ -13,6 +13,17 @@ export function useLiveForm<T extends Record<string, unknown>>(
   const [fieldErrors, setFieldErrors] = useState<FieldErrors<T>>({});
   const [touched, setTouched] = useState<Touched<T>>({});
 
+    const reset = useCallback((nextValues: T) => {
+    setForm(nextValues);
+    setFieldErrors({});
+    setTouched({});
+  }, []);
+
+  const clearErrors = useCallback(() => {
+    setFieldErrors({});
+  }, []);
+
+
   const validateField = useCallback(
     <K extends keyof T>(key: K, value: T[K]) => {
       const shape = schema.shape[key as string];
@@ -87,5 +98,7 @@ export function useLiveForm<T extends Record<string, unknown>>(
     handleBlur,
     touchAll,
     validateAll,
+    reset,
+    clearErrors
   };
 }

@@ -2,7 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "../../../ui/components";
 import { supabase } from "../../../gateways/supabase/supabaseClient";
 import { useAdminRegister } from "../hooks/useAdminRegister";
-
+import { MessageBox } from "../../../ui/components/message/MessageBox";
+import { useLiveForm } from "../../public/useLiveZodForm";
+import {
+  adminOrderStep2Schema,
+  type AdminOrderStep2Input,
+} from "../../../domain/models/admin/admin.orderCreateWizard.schema";
+import { z } from "zod";
 import type { RegistrationFieldLike } from "../events/singleEvent/AttendeeEditorPanel";
 
 // ---- helpers UI ----
@@ -28,6 +34,45 @@ function isPhoneField(f: any) {
   const k = norm(f.fieldKey);
   const l = norm(f.label);
   return k === "phone" || k === "telephone" || k === "tel" || l.includes("telephone");
+}
+
+function validateFieldValue(f: any, value: unknown): string | null {
+  if (!f?.isRequired) return null;
+
+  if (f.fieldType === "checkbox") return value === true ? null : "Ce champ est requis.";
+
+  if (value == null) return "Ce champ est requis.";
+
+  if (isBirthDateField(f) || f.fieldType === "date") {
+    if (typeof value !== "string" || value.trim() === "") return "Date requise.";
+    return /^\d{4}-\d{2}-\d{2}$/.test(value) ? null : "Date invalide.";
+  }
+
+  if (f.fieldType === "number") {
+    if (typeof value !== "number" || !Number.isFinite(value)) return "Nombre invalide.";
+    return null;
+  }
+
+  if (f.fieldType === "email") {
+    if (typeof value !== "string" || value.trim() === "") return "Email requis.";
+    return z.string().email().safeParse(value.trim()).success ? null : "Email invalide.";
+  }
+
+  if (typeof value === "string") return value.trim() ? null : "Ce champ est requis.";
+  if (typeof value === "boolean") return null;
+
+  return "Ce champ est requis.";
+}
+
+function computeAttendeeErrors(fields: any[], values: Record<string, unknown>) {
+  const errs: Record<string, string> = {};
+  for (const f of fields) {
+    const key = String(f.fieldKey ?? "").trim();
+    if (!key) continue;
+    const msg = validateFieldValue(f, values[key]);
+    if (msg) errs[key] = msg;
+  }
+  return errs;
 }
 
 type Product = {
@@ -74,10 +119,7 @@ function clampQty(next: number, stockQty: number | null | undefined) {
 
 function computeRemaining(p: Product) {
   if (p.stockQty == null) return null;
-  const remaining = Math.max(
-    0,
-    (p.stockQty ?? 0) - (p.soldQty ?? 0) - (p.reservedQty ?? 0),
-  );
+  const remaining = Math.max(0, (p.stockQty ?? 0) - (p.soldQty ?? 0) - (p.reservedQty ?? 0));
   return remaining;
 }
 
@@ -112,29 +154,48 @@ export function AdminOrderCreateWizardPanel(props: Props) {
   // step 1: quantities
   const [quantities, setQuantities] = useState<Record<string, number>>({});
 
-  // step 2: payment + buyer
-  const [buyerEmail, setBuyerEmail] = useState("");
-  const [markPaid, setMarkPaid] = useState(false);
-  const [payMode, setPayMode] = useState<"deposit" | "full" | "custom">("deposit");
-  const [customAmountCents, setCustomAmountCents] = useState<number | "">("");
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank" | "card" | "other">("cash");
-  const [note, setNote] = useState("");
+  // step 2: live zod
+  const step2 = useLiveForm<AdminOrderStep2Input>(adminOrderStep2Schema, {
+    buyerEmail: "",
+    markPaid: false,
+    payMode: "deposit",
+    customAmountCents: "",
+    paymentMethod: "cash",
+    note: "",
+  });
+
+  const {
+    form: s2,
+    fieldErrors: s2Errors,
+    handleChange: s2Change,
+    handleBlur: s2Blur,
+    shouldShowFieldError: s2ShowErr,
+  } = step2;
 
   // step 3: attendee slots
   const [attendees, setAttendees] = useState<AttendeeSlot[]>([]);
 
+  // for showing attendee errors only after a submit attempt
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+
   // reset when opening
   useEffect(() => {
     if (!isOpen) return;
+
     setStep(1);
     setQuantities({});
-    setBuyerEmail("");
-    setMarkPaid(false);
-    setPayMode("deposit");
-    setCustomAmountCents("");
-    setPaymentMethod("cash");
-    setNote("");
     setAttendees([]);
+    setAttemptedSubmit(false);
+
+    step2.reset({
+      buyerEmail: "",
+      markPaid: false,
+      payMode: "deposit",
+      customAmountCents: "",
+      paymentMethod: "cash",
+      note: "",
+    });
+
     adminRegister.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
@@ -176,7 +237,6 @@ export function AdminOrderCreateWizardPanel(props: Props) {
     setAttendees((prev) => {
       const next = expectedSlots.map((slot, idx) => {
         const old = prev[idx];
-        // preserve existing values if same productId at that index
         if (old && old.eventProductId === slot.eventProductId) return old;
         return { eventProductId: slot.eventProductId, values: {} };
       });
@@ -227,12 +287,39 @@ export function AdminOrderCreateWizardPanel(props: Props) {
   }
 
   function canGoStep3() {
-    // buyer email: je le force, sinon ton edge va probablement refuser
-    // (vu que côté admin on ne “devine” pas buyer depuis answers)
-    return buyerEmail.trim().length > 0;
+    return adminOrderStep2Schema.safeParse(s2).success;
+  }
+
+  function gotoNext() {
+    if (step === 1) {
+      setStep(2);
+      return;
+    }
+
+    // step === 2
+    step2.touchAll(["buyerEmail", "markPaid", "payMode", "customAmountCents", "paymentMethod", "note"]);
+    const parsed = step2.validateAll();
+    if (!parsed.ok) return;
+
+    setStep(3);
   }
 
   async function submit() {
+    setAttemptedSubmit(true);
+
+    // step2 hard validation
+    step2.touchAll(["buyerEmail", "markPaid", "payMode", "customAmountCents", "paymentMethod", "note"]);
+    const parsed2 = step2.validateAll();
+    if (!parsed2.ok) return;
+    const s2data = parsed2.data;
+
+    // attendees validation
+    const hasAttErrors = attendees.some((a) => {
+      const errs = computeAttendeeErrors(sortedFields as any[], a.values ?? {});
+      return Object.keys(errs).length > 0;
+    });
+    if (hasAttErrors) return;
+
     // map fieldKey -> fieldId pour construire answers
     const fieldIdByKey = new Map<string, string>();
     for (const f of sortedFields as any[]) {
@@ -247,39 +334,40 @@ export function AdminOrderCreateWizardPanel(props: Props) {
 
       attendees: attendees.map((a) => ({
         eventProductId: a.eventProductId,
-        answers: Object.entries(a.values ?? {}).map(([fieldKey, value]) => {
-          const eventFormFieldId = fieldIdByKey.get(fieldKey);
-          // si un champ n'a pas d'id (config chelou), on le skip proprement
-          if (!eventFormFieldId) return null;
-          return { eventFormFieldId, value: value ?? null };
-        }).filter(Boolean) as any[],
+        answers: Object.entries(a.values ?? {})
+          .map(([fieldKey, value]) => {
+            const eventFormFieldId = fieldIdByKey.get(fieldKey);
+            if (!eventFormFieldId) return null;
+            return { eventFormFieldId, value: value ?? null };
+          })
+          .filter(Boolean) as any[],
       })),
 
-      buyerEmail: buyerEmail.trim(),
+      buyerEmail: s2data.buyerEmail.trim(),
 
-      // offline payment option
-      markPaid,
-      payMode,
-      customAmountCents: payMode === "custom" ? (typeof customAmountCents === "number" ? customAmountCents : undefined) : undefined,
-      paymentMethod,
-      note: note.trim() ? note.trim() : undefined,
+      markPaid: s2data.markPaid,
+      payMode: s2data.payMode,
+      customAmountCents:
+        s2data.markPaid && s2data.payMode === "custom" && typeof s2data.customAmountCents === "number"
+          ? s2data.customAmountCents
+          : undefined,
+      paymentMethod: s2data.paymentMethod,
+      note: s2data.note.trim() ? s2data.note.trim() : undefined,
     };
 
     const res = await adminRegister.register(payload as any);
-
-    if (res && typeof res === "object" && "error" in (res as any)) return;
+    if (res && typeof res === "object" && (res as any).ok === false) return;
 
     const orderId = (res as any)?.orderId ?? (res as any)?.order_id;
     if (!orderId) throw new Error("ADMIN_REGISTER_NO_ORDER_ID");
 
-    // onCreated attend { orderId, order }
     await onCreated({
       orderId,
       order: {
         id: orderId,
         publicId: orderId.slice(0, 8),
         createdAt: new Date().toISOString(),
-        status: (res as any)?.status ?? (markPaid ? "paid" : "awaiting_payment"),
+        status: (res as any)?.status ?? (s2data.markPaid ? "paid" : "awaiting_payment"),
         totalCents,
         currency,
       },
@@ -288,9 +376,7 @@ export function AdminOrderCreateWizardPanel(props: Props) {
     onRequestClose();
   }
 
-  if (!isOpen) {
-    return null;
-  }
+  if (!isOpen) return null;
 
   return (
     <div
@@ -318,26 +404,14 @@ export function AdminOrderCreateWizardPanel(props: Props) {
         <div style={{ padding: 14, borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
           <div style={{ fontWeight: 900, fontSize: 16 }}>Ajouter une commande</div>
           <div style={{ opacity: 0.75, fontSize: 13, marginTop: 4 }}>
-            {step}/3 —{" "}
-            {step === 1 ? "Billets" : step === 2 ? "Paiement" : "Participants"}
+            {step}/3 — {step === 1 ? "Billets" : step === 2 ? "Paiement" : "Participants"}
           </div>
         </div>
 
         {/* body */}
         <div style={{ padding: 14, display: "grid", gap: 12 }}>
           {adminRegister.error ? (
-            <div
-              style={{
-                background: "rgba(255,0,0,0.06)",
-                border: "1px solid rgba(255,0,0,0.12)",
-                color: "#b00020",
-                borderRadius: 12,
-                padding: "10px 12px",
-                fontSize: 13,
-              }}
-            >
-              {adminRegister.error}
-            </div>
+            <MessageBox variant="error">{adminRegister.error}</MessageBox>
           ) : null}
 
           {/* STEP 1 */}
@@ -376,11 +450,7 @@ export function AdminOrderCreateWizardPanel(props: Props) {
                         </div>
 
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <Button
-                            variant="secondary"
-                            onClick={() => updateQty(p.id, qty - 1)}
-                            disabled={soldOut || qty <= 0}
-                          >
+                          <Button variant="secondary" onClick={() => updateQty(p.id, qty - 1)} disabled={soldOut || qty <= 0}>
                             −
                           </Button>
 
@@ -401,11 +471,7 @@ export function AdminOrderCreateWizardPanel(props: Props) {
                             disabled={soldOut}
                           />
 
-                          <Button
-                            variant="secondary"
-                            onClick={() => updateQty(p.id, qty + 1)}
-                            disabled={soldOut || qty >= maxQty}
-                          >
+                          <Button variant="secondary" onClick={() => updateQty(p.id, qty + 1)} disabled={soldOut || qty >= maxQty}>
                             +
                           </Button>
                         </div>
@@ -416,7 +482,8 @@ export function AdminOrderCreateWizardPanel(props: Props) {
               )}
 
               <div style={{ borderTop: "1px solid rgba(0,0,0,0.08)", paddingTop: 10, opacity: 0.85, fontSize: 13 }}>
-                Récap : {totalTickets} billet(s) · {expectedSlots.length} participant(s) à renseigner · {totalCents/100} {currency}
+                Récap : {totalTickets} billet(s) · {expectedSlots.length} participant(s) à renseigner ·{" "}
+                {totalCents / 100} {currency}
               </div>
             </div>
           ) : null}
@@ -428,8 +495,12 @@ export function AdminOrderCreateWizardPanel(props: Props) {
                 <div style={{ fontWeight: 900, marginBottom: 6 }}>Email acheteur</div>
                 <input
                   type="email"
-                  value={buyerEmail}
-                  onChange={(e) => setBuyerEmail(e.target.value)}
+                  value={s2.buyerEmail}
+                  onChange={(e) => {
+                    adminRegister.reset();
+                    s2Change("buyerEmail", e.target.value);
+                  }}
+                  onBlur={() => s2Blur("buyerEmail")}
                   placeholder="ex: client@gmail.com"
                   style={{
                     width: "100%",
@@ -439,6 +510,10 @@ export function AdminOrderCreateWizardPanel(props: Props) {
                     outline: "none",
                   }}
                 />
+                {s2ShowErr("buyerEmail") && s2Errors.buyerEmail ? (
+                  <MessageBox variant="error">{s2Errors.buyerEmail}</MessageBox>
+                ) : null}
+
                 <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>
                   On en a besoin pour que la commande soit valide (et pour les mails si tu les actives).
                 </div>
@@ -447,20 +522,22 @@ export function AdminOrderCreateWizardPanel(props: Props) {
               <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <input
                   type="checkbox"
-                  checked={markPaid}
-                  onChange={(e) => setMarkPaid(e.target.checked)}
+                  checked={s2.markPaid}
+                  onChange={(e) => s2Change("markPaid", e.target.checked)}
+                  onBlur={() => s2Blur("markPaid")}
                   style={{ width: 18, height: 18 }}
                 />
                 <div style={{ fontWeight: 900 }}>Marquer payé (offline)</div>
               </label>
 
-              {markPaid ? (
+              {s2.markPaid ? (
                 <div style={{ display: "grid", gap: 10 }}>
                   <div>
                     <div style={{ fontWeight: 900, marginBottom: 6 }}>Mode</div>
                     <select
-                      value={payMode}
-                      onChange={(e) => setPayMode(e.target.value as any)}
+                      value={s2.payMode}
+                      onChange={(e) => s2Change("payMode", e.target.value as any)}
+                      onBlur={() => s2Blur("payMode")}
                       style={{
                         width: "100%",
                         padding: "10px 12px",
@@ -475,14 +552,17 @@ export function AdminOrderCreateWizardPanel(props: Props) {
                     </select>
                   </div>
 
-                  {payMode === "custom" ? (
+                  {s2.payMode === "custom" ? (
                     <div>
                       <div style={{ fontWeight: 900, marginBottom: 6 }}>Montant (cents)</div>
                       <input
                         type="number"
                         min={1}
-                        value={customAmountCents}
-                        onChange={(e) => setCustomAmountCents(e.target.value === "" ? "" : Number(e.target.value))}
+                        value={s2.customAmountCents}
+                        onChange={(e) =>
+                          s2Change("customAmountCents", e.target.value === "" ? "" : Number(e.target.value))
+                        }
+                        onBlur={() => s2Blur("customAmountCents")}
                         style={{
                           width: "100%",
                           padding: "10px 12px",
@@ -491,6 +571,10 @@ export function AdminOrderCreateWizardPanel(props: Props) {
                           outline: "none",
                         }}
                       />
+                      {s2ShowErr("customAmountCents") && s2Errors.customAmountCents ? (
+                        <MessageBox variant="error">{s2Errors.customAmountCents}</MessageBox>
+                      ) : null}
+
                       <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>
                         Exemple: 3500 = 35,00 {currency}
                       </div>
@@ -500,8 +584,9 @@ export function AdminOrderCreateWizardPanel(props: Props) {
                   <div>
                     <div style={{ fontWeight: 900, marginBottom: 6 }}>Méthode</div>
                     <select
-                      value={paymentMethod}
-                      onChange={(e) => setPaymentMethod(e.target.value as any)}
+                      value={s2.paymentMethod}
+                      onChange={(e) => s2Change("paymentMethod", e.target.value as any)}
+                      onBlur={() => s2Blur("paymentMethod")}
                       style={{
                         width: "100%",
                         padding: "10px 12px",
@@ -520,8 +605,9 @@ export function AdminOrderCreateWizardPanel(props: Props) {
                   <div>
                     <div style={{ fontWeight: 900, marginBottom: 6 }}>Note</div>
                     <textarea
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
+                      value={s2.note}
+                      onChange={(e) => s2Change("note", e.target.value)}
+                      onBlur={() => s2Blur("note")}
                       placeholder="ex: payé sur place"
                       style={{
                         width: "100%",
@@ -533,6 +619,9 @@ export function AdminOrderCreateWizardPanel(props: Props) {
                         resize: "vertical",
                       }}
                     />
+                    {s2ShowErr("note") && s2Errors.note ? (
+                      <MessageBox variant="error">{s2Errors.note}</MessageBox>
+                    ) : null}
                   </div>
                 </div>
               ) : null}
@@ -543,16 +632,14 @@ export function AdminOrderCreateWizardPanel(props: Props) {
           {step === 3 ? (
             <div style={{ display: "grid", gap: 12 }}>
               {expectedSlots.length === 0 ? (
-                <div style={{ opacity: 0.8 }}>
-                  Aucun participant à renseigner pour ces billets.
-                </div>
+                <div style={{ opacity: 0.8 }}>Aucun participant à renseigner pour ces billets.</div>
               ) : sortedFields.length === 0 ? (
-                <div style={{ opacity: 0.8 }}>
-                  Aucun champ configuré sur le formulaire.
-                </div>
+                <div style={{ opacity: 0.8 }}>Aucun champ configuré sur le formulaire.</div>
               ) : (
                 attendees.map((att, idx) => {
                   const p = sortedProducts.find((x) => x.id === att.eventProductId);
+                  const attErrors = attemptedSubmit ? computeAttendeeErrors(sortedFields as any[], att.values ?? {}) : {};
+
                   return (
                     <div
                       key={idx}
@@ -564,9 +651,7 @@ export function AdminOrderCreateWizardPanel(props: Props) {
                     >
                       <div style={{ fontWeight: 900, marginBottom: 8 }}>
                         Participant {idx + 1}{" "}
-                        <span style={{ fontWeight: 700, opacity: 0.7 }}>
-                          · {p?.name ?? "Ticket"}
-                        </span>
+                        <span style={{ fontWeight: 700, opacity: 0.7 }}>· {p?.name ?? "Ticket"}</span>
                       </div>
 
                       <div style={{ display: "grid", gap: 10 }}>
@@ -587,6 +672,8 @@ export function AdminOrderCreateWizardPanel(props: Props) {
                             </div>
                           );
 
+                          const errMsg = attErrors[String(f.fieldKey ?? "")];
+
                           if (isBirthDateField(f) || f.fieldType === "date") {
                             return (
                               <div key={String(f.id)}>
@@ -597,12 +684,12 @@ export function AdminOrderCreateWizardPanel(props: Props) {
                                   onChange={(e) => setAnswer(idx, f.fieldKey, e.target.value)}
                                   style={commonStyle}
                                 />
+                                {errMsg ? <MessageBox variant="error">{errMsg}</MessageBox> : null}
                               </div>
                             );
                           }
 
                           if (isCountryField(f)) {
-                            // simple fallback select
                             return (
                               <div key={String(f.id)}>
                                 {label}
@@ -613,6 +700,7 @@ export function AdminOrderCreateWizardPanel(props: Props) {
                                   style={commonStyle}
                                   placeholder="Pays"
                                 />
+                                {errMsg ? <MessageBox variant="error">{errMsg}</MessageBox> : null}
                               </div>
                             );
                           }
@@ -628,6 +716,7 @@ export function AdminOrderCreateWizardPanel(props: Props) {
                                   style={commonStyle}
                                   placeholder="Téléphone"
                                 />
+                                {errMsg ? <MessageBox variant="error">{errMsg}</MessageBox> : null}
                               </div>
                             );
                           }
@@ -641,6 +730,7 @@ export function AdminOrderCreateWizardPanel(props: Props) {
                                   onChange={(e) => setAnswer(idx, f.fieldKey, e.target.value)}
                                   style={{ ...commonStyle, minHeight: 90, resize: "vertical" }}
                                 />
+                                {errMsg ? <MessageBox variant="error">{errMsg}</MessageBox> : null}
                               </div>
                             );
                           }
@@ -662,33 +752,33 @@ export function AdminOrderCreateWizardPanel(props: Props) {
                                     </option>
                                   ))}
                                 </select>
+                                {errMsg ? <MessageBox variant="error">{errMsg}</MessageBox> : null}
                               </div>
                             );
                           }
 
                           if (f.fieldType === "checkbox") {
                             return (
-                              <label key={String(f.id)} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                <input
-                                  type="checkbox"
-                                  checked={value === true}
-                                  onChange={(e) => setAnswer(idx, f.fieldKey, e.target.checked)}
-                                  style={{ width: 18, height: 18 }}
-                                />
-                                <div style={{ fontWeight: 900 }}>
-                                  {String(f.label ?? f.fieldKey)}{" "}
-                                  {f.isRequired ? <span style={{ opacity: 0.7 }}>(requis)</span> : null}
-                                </div>
-                              </label>
+                              <div key={String(f.id)}>
+                                <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={value === true}
+                                    onChange={(e) => setAnswer(idx, f.fieldKey, e.target.checked)}
+                                    style={{ width: 18, height: 18 }}
+                                  />
+                                  <div style={{ fontWeight: 900 }}>
+                                    {String(f.label ?? f.fieldKey)}{" "}
+                                    {f.isRequired ? <span style={{ opacity: 0.7 }}>(requis)</span> : null}
+                                  </div>
+                                </label>
+                                {errMsg ? <MessageBox variant="error">{errMsg}</MessageBox> : null}
+                              </div>
                             );
                           }
 
                           const inputType =
-                            f.fieldType === "email"
-                              ? "email"
-                              : f.fieldType === "number"
-                              ? "number"
-                              : "text";
+                            f.fieldType === "email" ? "email" : f.fieldType === "number" ? "number" : "text";
 
                           return (
                             <div key={String(f.id)}>
@@ -710,13 +800,14 @@ export function AdminOrderCreateWizardPanel(props: Props) {
                                     f.fieldKey,
                                     inputType === "number"
                                       ? e.target.value === ""
-                                        ? ""
+                                        ? null
                                         : Number(e.target.value)
                                       : e.target.value,
                                   )
                                 }
                                 style={commonStyle}
                               />
+                              {errMsg ? <MessageBox variant="error">{errMsg}</MessageBox> : null}
                             </div>
                           );
                         })}
@@ -727,7 +818,7 @@ export function AdminOrderCreateWizardPanel(props: Props) {
               )}
 
               <div style={{ opacity: 0.8, fontSize: 13 }}>
-                {expectedSlots.length} participant(s) · Total: {totalCents/100} {currency}
+                {expectedSlots.length} participant(s) · Total: {totalCents / 100} {currency}
               </div>
             </div>
           ) : null}
@@ -761,20 +852,13 @@ export function AdminOrderCreateWizardPanel(props: Props) {
             {step < 3 ? (
               <Button
                 variant="primary"
-                onClick={() => setStep((s) => (s === 1 ? 2 : 3))}
-                disabled={
-                  adminRegister.loading ||
-                  (step === 1 ? !canGoStep2() : !canGoStep3())
-                }
+                onClick={gotoNext}
+                disabled={adminRegister.loading || (step === 1 ? !canGoStep2() : !canGoStep3())}
               >
                 Continuer
               </Button>
             ) : (
-              <Button
-                variant="primary"
-                onClick={submit}
-                disabled={adminRegister.loading || !allAttendeesValid}
-              >
+              <Button variant="primary" onClick={submit} disabled={adminRegister.loading || !allAttendeesValid}>
                 {adminRegister.loading ? "Création…" : "Créer la commande"}
               </Button>
             )}

@@ -69,7 +69,6 @@ export const offlinePaymentSchema = z
     customAmountCents: z.number().int().min(1).max(50_000_000).optional(),
     paymentMethod: z.enum(["cash", "bank", "card", "other"]).optional(),
     note: z.string().trim().max(2000).optional(),
-    // optionnel: pour que ton offlineRef soit stable lors d'un retry UI
     idempotencyKey: z.string().trim().min(1).max(200).optional(),
   })
   .strict()
@@ -95,7 +94,6 @@ export const adminRegisterPayloadSchema = z
     buyerEmail: buyerEmailSchema.optional(),
     buyer: adminRegisterBuyerSchema.optional(),
 
-    // ✅ admin : pas de turnstileToken
     ...offlinePaymentSchema.shape,
   })
   .strict()
@@ -121,7 +119,6 @@ export const adminRegisterPayloadSchema = z
       }
     });
 
-    // (optionnel mais recommandé) 1 ticket = 1 attendee
     const expected = body.items.reduce((acc, it) => acc + it.quantity, 0);
     if (body.attendees.length !== expected) {
       ctx.addIssue({
@@ -132,31 +129,51 @@ export const adminRegisterPayloadSchema = z
     }
   });
 
-/* ------------------------- Success ------------------------- */
+/* ------------------------- Response (aligned with Edge) ------------------------- */
 
+// ✅ accepte "cancelled" et normalise en "canceled" si tu veux
+const orderStatusSchema = z
+  .enum(["paid", "awaiting_payment", "partially_paid", "expired", "pending", "canceled", "cancelled"])
+  .transform((s) => (s === "cancelled" ? "canceled" : s));
+
+export type AdminOrderStatus = z.infer<typeof orderStatusSchema>;
+
+// payRes (RPC apply_order_payment) : tant que tu ne veux pas le typer finement, laisse unknown.
+// Tu peux ensuite le remplacer par un vrai schema basé sur ton RPC.
+const paymentAnySchema = z.unknown().nullable();
+
+// Success : champs toujours présents, mais certains peuvent être null (online vs offline)
 export const adminRegisterSuccessSchema = z
   .object({
     ok: z.literal(true),
+
     orderId: uuidSchema,
-    status: z.enum(["paid", "awaiting_payment", "partially_paid"]),
+    currency: z.string().length(3),
+
     totalCents: z.number().int().min(0),
-    amountAppliedCents: z.number().int().min(0).optional(),
-    currency: z.string().min(3).max(3),
+    status: orderStatusSchema,
+
+    // online-only => null en offline
+    dueNowCents: z.number().int().min(0).nullable(),
+    bookingToken: z.string().trim().min(1).nullable(),
+    expiresAt: z.string().nullable(), // si tu veux: .datetime().nullable() (mais only si ISO garanti)
+
+    // offline-only (ou null si pas applicable)
+    amountAppliedCents: z.number().int().min(0).nullable().optional(),
+    payment: paymentAnySchema.optional(),
   })
   .strict();
 
-/* ------------------------- Error ------------------------- */
-
+// Error : discriminant => beaucoup plus solide que union
 export const adminRegisterErrorSchema = z
   .object({
+    ok: z.literal(false),
     error: z.string(),
     details: z.any().optional(),
   })
   .strict();
 
-/* ------------------------- Union ------------------------- */
-
-export const adminRegisterResponseSchema = z.union([
+export const adminRegisterResponseSchema = z.discriminatedUnion("ok", [
   adminRegisterSuccessSchema,
   adminRegisterErrorSchema,
 ]);
