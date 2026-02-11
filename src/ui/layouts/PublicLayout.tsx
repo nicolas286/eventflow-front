@@ -13,7 +13,7 @@ export function PublicLayout() {
     orgSlug,
   });
 
-  const primaryHex = profile?.primaryColor ?? "#2563eb";
+  const primaryHex = profile?.primaryColor ?? "#eb9225";
 
   return (
     <div className="publicLayoutRoot">

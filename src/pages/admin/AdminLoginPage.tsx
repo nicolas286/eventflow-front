@@ -3,11 +3,16 @@ import "../../styles/mobile/auth.mobile.css";
 
 import { Link } from "react-router-dom";
 import { SignInForm } from "../../ui/components/forms/SignInForm";
+import PublicFooter from "../../ui/components/publicFooter/PublicFooter";
+import { EventFlowLogo } from "../../ui/components/branding/EventFlowLogo";
 
 export function AdminLoginPage() {
   return (
     <div className="auth-page">
       <div className="auth-card">
+        
+        <EventFlowLogo/>
+
         <div className="auth-header">
           <h1 className="auth-title">Bienvenue sur Eventflow</h1>
           <p className="auth-subtitle">
@@ -26,6 +31,8 @@ export function AdminLoginPage() {
           </Link>
         </div>
       </div>
+        <PublicFooter />
     </div>
+    
   );
 }

@@ -5,6 +5,14 @@
   --radius: 16px;
   overflow-x: hidden;
 
+  --primary-strong: 228 156 33;
+  --primary-strong-contrast: 255 255 255;
+
+  --secondary-derived: 173 59 173;
+  --secondary-derived-contrast: 255 255 255;
+
+  --ghost-fg: 255 255 255;
+  --ghost-border: 173 59 173;
 }
 
 html, body, #root {
