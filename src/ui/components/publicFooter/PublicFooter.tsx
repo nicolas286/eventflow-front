@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import "../../../styles/desktop/public/publicFooter.desktop.css";
+import "../../../styles/mobile/public/publicFooter.mobile.css";
 
 export default function PublicFooter() {
   const year = new Date().getFullYear();

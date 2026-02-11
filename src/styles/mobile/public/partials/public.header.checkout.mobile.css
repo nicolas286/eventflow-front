@@ -8,19 +8,30 @@
   .publicHeaderRow {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
-    margin-top: 20px;
+    padding-top: 2px;
+    gap: 10px;
   }
 
   .publicDateChip {
-    position: static;
-    transform: none;
-    margin: 10px 0;
+    position:relative;
+    white-space: normal;     /* ✅ autorise retour ligne */
+    flex-direction: column;  /* ✅ Début / Fin en 2 lignes */
+    align-items: center;
+    gap: 6px;
+    top:5px;
+    max-width: 100%;
+  }
+
+  .publicDateChip > span {
+    white-space: nowrap;     /* ✅ chaque ligne reste propre */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
 
   .publicActions {
     width: 100%;
-    justify-content: flex-start;
+    justify-content: center;
   }
 
   .publicOrgPage .publicActions {
