@@ -77,8 +77,6 @@ export default function BrandingPanel({ orgId, org, setOrg, onSaved }: BrandingP
 
   async function handleSave() {
     setAssetError(null);
-
-    // ✅ force l'affichage des erreurs si invalid
     live.touchAll(["displayName", "primaryColor"]);
 
     const parsed = live.validateAll();

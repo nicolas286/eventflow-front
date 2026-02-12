@@ -1,4 +1,3 @@
-// AdminBrandingPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
@@ -25,7 +24,6 @@ export default function AdminBrandingPage() {
 
   const [branding, setBranding] = useState<OrgBrandingUI>(initial);
 
-  // 🔁 resync si le bootstrap arrive après le premier render
   useEffect(() => {
     setBranding(initial);
   }, [initial]);

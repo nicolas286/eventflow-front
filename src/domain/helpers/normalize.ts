@@ -5,3 +5,11 @@ export function emptyToNull(v: unknown): string | null | undefined {
   const t = v.trim();
   return t === "" ? null : t;
 }
+
+export function normalizeText(s: unknown) {
+  return String(s ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "");
+}

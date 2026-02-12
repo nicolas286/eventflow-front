@@ -3,6 +3,8 @@ import type { z } from "zod";
 
 type FieldErrors<T> = Partial<Record<keyof T, string>>;
 type Touched<T> = Partial<Record<keyof T, boolean>>;
+export type LiveFormApi<T extends Record<string, unknown>> = ReturnType<typeof useLiveForm<T>>;
+
 
 export function useLiveForm<T extends Record<string, unknown>>(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

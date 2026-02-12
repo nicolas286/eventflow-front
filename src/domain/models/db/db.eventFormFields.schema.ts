@@ -32,4 +32,11 @@ export const eventFormFieldSchema = z.object({
   updatedAt: z.string(),
 });
 
+export const eventFormFieldUISchema = eventFormFieldSchema.omit({
+  eventId: true,
+  createdAt: true,
+  updatedAt: true,
+})
+
 export type EventFormField = z.infer<typeof eventFormFieldSchema>;
+export type EventFormFieldUI = z.infer<typeof eventFormFieldUISchema>;
