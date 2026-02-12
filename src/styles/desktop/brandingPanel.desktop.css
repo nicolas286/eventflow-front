@@ -34,13 +34,14 @@
   display:flex;
   gap: 10px;
   align-items: center;
+  justify-content: center;
 }
 
 .brandingPanel__color{
-  width: 44px;
+  min-width: 32px;
+  max-width: 44px;
   height: 38px;
   border-radius: 10px;
-  border: 1px solid rgba(0,0,0,0.12);
   background: transparent;
   padding: 0;
   cursor: pointer;

@@ -7,21 +7,15 @@ import Card, { CardBody, CardHeader } from "../../ui/components/card/Card";
 
 import BrandingPanel from "../../features/admin/brandingPanel/BrandingPanel";
 import type { AdminOutletContext } from "../../pages/admin/AdminDashboard";
-
-type OrgBranding = {
-  name: string;
-  primaryColor: string;
-  logoUrl?: string;
-  defaultEventBannerUrl?: string;
-};
+import { type OrgBrandingUI } from "../../domain/models/admin/admin.orgBranding.schema";
 
 export default function AdminBrandingPage() {
   const { bootstrap, orgId, refetch } = useOutletContext<AdminOutletContext>();
   const orgProfile = bootstrap?.organizationProfile;
 
-  const initial = useMemo<OrgBranding>(
+  const initial = useMemo<OrgBrandingUI>(
     () => ({
-      name: orgProfile?.displayName ?? "Mon organisation",
+      displayName: orgProfile?.displayName ?? "Mon organisation",
       primaryColor: orgProfile?.primaryColor ?? "#2563eb",
       logoUrl: orgProfile?.logoUrl ?? "",
       defaultEventBannerUrl: orgProfile?.defaultEventBannerUrl ?? "",
@@ -29,7 +23,7 @@ export default function AdminBrandingPage() {
     [orgProfile]
   );
 
-  const [branding, setBranding] = useState<OrgBranding>(initial);
+  const [branding, setBranding] = useState<OrgBrandingUI>(initial);
 
   // 🔁 resync si le bootstrap arrive après le premier render
   useEffect(() => {

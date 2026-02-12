@@ -9,7 +9,13 @@ export const organizationProfileSchema = z.object({
   phone: z.string().min(3, "Le numéro de téléphone est trop court").max(32, "Le numéro de téléphone est trop long").nullable(),
   website: z.string().min(5, "L'URL est trop courte").max(2048, "L'URL est trop longue").nullable(),
   logoUrl: z.string().min(5, "L'URL du logo est trop courte").max(2048, "L'URL du logo est trop longue").nullable(),
-  primaryColor: z.string().min(4, "La couleur primaire est trop courte").max(20, "La couleur primaire est trop longue").nullable(),
+  primaryColor: z
+    .string()
+    .regex(
+      /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/,
+      "Couleur hexadécimale invalide (ex: #2563eb)"
+    )
+    .nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
   defaultEventBannerUrl: z.string().min(5, "L'URL de la bannière est trop courte").max(2048, "L'URL de la bannière est trop longue").nullable(),

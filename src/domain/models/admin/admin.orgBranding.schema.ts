@@ -9,6 +9,8 @@ export const orgBrandingSchema = organizationProfileSchema.pick({
   defaultEventBannerUrl: true,
 });
 
+export const orgBrandingUISchema = orgBrandingSchema.omit({ orgId: true }); 
+
 export const orgBrandingFormSchema = orgBrandingSchema.omit({
   orgId: true,
 });
@@ -27,7 +29,10 @@ export const updateOrgBrandingInputSchema = z.object({
   patch: orgBrandingPatchSchema,
 });
 
+
+
 export type UpdateOrgBrandingInput = z.infer<typeof updateOrgBrandingInputSchema>;
 export type OrgBrandingPatch = z.infer<typeof orgBrandingPatchSchema>;
 export type OrgBrandingForm = z.infer<typeof orgBrandingFormSchema>;
 export type OrgBranding = z.infer<typeof orgBrandingSchema>;
+export type OrgBrandingUI = z.infer<typeof orgBrandingUISchema>;

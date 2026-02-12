@@ -16,13 +16,27 @@ import {
 const updateEventProductPatchSchema = createEventProductSchema.partial();
 export type UpdateEventProductPatch = Partial<CreateEventProductInput>;
 
-function normalizePatch(patch: UpdateEventProductPatch): UpdateEventProductPatch {
+function compactUndefined<T extends Record<string, any>>(obj: T) {
+  const out: any = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== undefined) out[k] = v;
+  }
+  return out as Partial<T>;
+}
 
+function normalizePatch(patch: UpdateEventProductPatch): UpdateEventProductPatch {
   const out: UpdateEventProductPatch = { ...patch };
 
-  if ("currency" in out) out.currency = out.currency ?? "EUR"; // optionnel : garde si tu veux
-  if ("description" in out) out.description = out.description ?? null;
-  if ("stockQty" in out) out.stockQty = out.stockQty === 0 ? null : (out.stockQty ?? null);
+  // on ne touche que si la clé est réellement présente dans le patch
+  if (Object.prototype.hasOwnProperty.call(out, "currency")) {
+    out.currency = out.currency ?? "EUR";
+  }
+  if (Object.prototype.hasOwnProperty.call(out, "description")) {
+    out.description = out.description ?? null;
+  }
+  if (Object.prototype.hasOwnProperty.call(out, "stockQty")) {
+    out.stockQty = out.stockQty === 0 ? null : (out.stockQty ?? null);
+  }
 
   return out;
 }
@@ -37,17 +51,18 @@ export function updateEventProductRepo(supabase: SupabaseClient) {
       if (!productId) throw new Error("VALIDATION_ERROR: productId is required");
 
       const validatedPatch = updateEventProductPatchSchema.parse(input.patch);
-
       const normalizedPatch = normalizePatch(validatedPatch);
+      const patchClean = compactUndefined(normalizedPatch);
 
-      if (Object.keys(normalizedPatch).length === 0) {
+      if (Object.keys(patchClean).length === 0) {
         const row = await supabaseSafe(() =>
           supabase.from("event_products").select("*").eq("id", productId).single()
         );
         return eventProductSchema.parse(snakeToCamel(row));
       }
 
-      const payload = camelToSnake(normalizedPatch);
+      const payload = camelToSnake(patchClean);
+
 
       const row = await supabaseSafe(() =>
         supabase

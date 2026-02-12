@@ -12,7 +12,7 @@ import type {
 
 import { normalizeError } from "../../../domain/errors/errors";
 
-type SaveInput = {
+export type SaveBrandingInput = {
   orgId: string;
   form: OrgBrandingForm;
 
@@ -46,7 +46,7 @@ export function useSaveOrgBranding(params: { supabase: SupabaseClient }) {
     previewBannerUrl: null,
   });
 
-  async function saveOrgBranding(input: SaveInput): Promise<OrgBranding | null> {
+  async function saveOrgBranding(input: SaveBrandingInput): Promise<OrgBranding | null> {
     try {
       setState((s) => ({
         ...s,
