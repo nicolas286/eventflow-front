@@ -38,5 +38,6 @@ export const eventFormFieldUISchema = eventFormFieldSchema.omit({
   updatedAt: true,
 })
 
+export type EventFormFieldOptions = z.infer<typeof formFieldOptionsSchema>;
 export type EventFormField = z.infer<typeof eventFormFieldSchema>;
 export type EventFormFieldUI = z.infer<typeof eventFormFieldUISchema>;

@@ -68,7 +68,7 @@ type Props = {
   products: EventProduct[];
   regFields: EventFormField[];
 
-  onCreated: (p: { orderId: string; order: OrderUI }) => void | Promise<void>;
+  onCreated: (p: { orderId: string; order: Partial<OrderUI> }) => void | Promise<void>;
 };
 
 export function AdminOrderCreateWizardPanel(props: Props) {
@@ -118,8 +118,21 @@ export function AdminOrderCreateWizardPanel(props: Props) {
   const [attendees, setAttendees] = useState<AttendeeSlot[]>([]);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
+  const cart = useMemo(() => {
+  const items = quantitiesToItems(quantities);
+  const totalTickets = sumItemQuantities(items);
+  const totalCents = computeTotalCents(items, sortedProducts);
+  const currency = resolveCurrency(sortedProducts);
+  const expectedSlots = computeExpectedAttendeeSlots(sortedProducts, quantities);
+
+    return { items, totalTickets, totalCents, currency, expectedSlots };
+  }, [quantities, sortedProducts]);
+
+  const isFree = cart.totalCents <= 0;
+
   useEffect(() => {
     if (!isOpen) return;
+    if (!isFree) return;
 
     setStep(1);
     setQuantities({});
@@ -137,17 +150,9 @@ export function AdminOrderCreateWizardPanel(props: Props) {
 
     adminRegister.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+  }, [isOpen, isFree]);
 
-  const cart = useMemo(() => {
-  const items = quantitiesToItems(quantities);
-  const totalTickets = sumItemQuantities(items);
-  const totalCents = computeTotalCents(items, sortedProducts);
-  const currency = resolveCurrency(sortedProducts);
-  const expectedSlots = computeExpectedAttendeeSlots(sortedProducts, quantities);
 
-    return { items, totalTickets, totalCents, currency, expectedSlots };
-  }, [quantities, sortedProducts]);
 
 
   useEffect(() => {
@@ -206,6 +211,9 @@ export function AdminOrderCreateWizardPanel(props: Props) {
     const parsed2 = step2.validateAll();
     if (!parsed2.ok) return;
     const s2data = parsed2.data;
+    const isFree = cart.totalCents <= 0;
+    const markPaid = isFree ? false : s2data.markPaid;
+    const payMode = isFree ? "deposit" : s2data.payMode;
 
     const hasAttErrors = attendees.some((a) => {
       const errs = computeAttendeeErrors(sortedFields as EventFormField[], a.values ?? {});
@@ -242,8 +250,8 @@ export function AdminOrderCreateWizardPanel(props: Props) {
 
       buyerEmail: s2data.buyerEmail.trim(),
 
-      markPaid: s2data.markPaid,
-      payMode: s2data.payMode,
+      markPaid,
+      payMode,
       customAmountCents:
         s2data.markPaid && s2data.payMode === "custom" && typeof s2data.customAmountCents === "number"
           ? s2data.customAmountCents
@@ -340,6 +348,7 @@ export function AdminOrderCreateWizardPanel(props: Props) {
               handleBlur={s2Blur}
               shouldShowFieldError={s2ShowErr}
               currency={cart.currency}
+              isFree={isFree}
               onResetRegisterError={() => adminRegister.reset()}
             />
           ) : null}

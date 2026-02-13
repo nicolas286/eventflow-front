@@ -20,6 +20,7 @@ type Props = {
   ) => boolean;
 
   currency: string;
+  isFree: boolean;
   onResetRegisterError?: () => void;
 };
 
@@ -30,6 +31,7 @@ export function AdminCreateOrderStep2({
   handleBlur,
   shouldShowFieldError,
   currency,
+  isFree,
   onResetRegisterError,
 }: Props) {
   return (
@@ -61,13 +63,21 @@ export function AdminCreateOrderStep2({
         <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>
           On en a besoin pour que la commande soit valide (et pour les mails si tu les actives).
         </div>
+
+        {isFree ? (
+          <MessageBox variant="info">
+            Commande gratuite : aucune info de paiement n’est nécessaire.
+          </MessageBox>
+        ) : null}
+
       </div>
 
       {/* markPaid */}
       <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <input
           type="checkbox"
-          checked={form.markPaid}
+          checked={isFree ? false : form.markPaid}
+          disabled={!!isFree}
           onChange={(e) => handleChange("markPaid", e.target.checked)}
           onBlur={() => handleBlur("markPaid")}
           style={{ width: 18, height: 18 }}
@@ -75,7 +85,7 @@ export function AdminCreateOrderStep2({
         <div style={{ fontWeight: 900 }}>Marquer payé (offline)</div>
       </label>
 
-      {form.markPaid ? (
+      {!isFree && form.markPaid ? (
         <div style={{ display: "grid", gap: 10 }}>
           {/* payMode */}
           <div>

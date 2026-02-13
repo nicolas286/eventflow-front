@@ -1,6 +1,8 @@
 import type { EventFormFieldUI } from "../../../domain/models/db/db.eventFormFields.schema";
 import { MessageBox } from "../../../ui/components/message/MessageBox";
 import { isBirthDateField, isCountryField, isPhoneField } from "../../../domain/helpers/fields";
+import { useMemo } from "react";
+import { toSelectOptions } from "../../../domain/helpers/fields";
 
 type Props = {
   field: EventFormFieldUI;
@@ -24,6 +26,8 @@ export function AttendeeFieldInput({ field, value, errorMsg, onChange }: Props) 
       {field.isRequired ? <span style={{ opacity: 0.7 }}>(requis)</span> : null}
     </div>
   );
+
+  const selectOptions = useMemo(() => toSelectOptions(field.options), [field.options]);
 
   // date
   if (isBirthDateField(field) || field.fieldType === "date") {
@@ -92,7 +96,6 @@ export function AttendeeFieldInput({ field, value, errorMsg, onChange }: Props) 
 
   // select
   if (field.fieldType === "select") {
-    const opts = Array.isArray(field.options) ? field.options : [];
     return (
       <div>
         {label}
@@ -102,11 +105,12 @@ export function AttendeeFieldInput({ field, value, errorMsg, onChange }: Props) 
           style={commonStyle}
         >
           <option value="">—</option>
-          {opts.map((o: any, i: number) => (
-            <option key={i} value={String(o.value ?? o)}>
-              {String(o.label ?? o)}
+          {selectOptions.map((o, i) => (
+            <option key={o.value ?? i} value={o.value}>
+              {o.label}
             </option>
           ))}
+
         </select>
         {errorMsg ? <MessageBox variant="error">{errorMsg}</MessageBox> : null}
       </div>

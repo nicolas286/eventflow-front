@@ -1,5 +1,5 @@
 import { normalizeText } from "./normalize";
-import { type EventFormFieldUI } from "../models/db/db.eventFormFields.schema";
+import { type EventFormFieldUI, type EventFormFieldOptions } from "../models/db/db.eventFormFields.schema";
 import { z } from "zod";
 
 export function isBlank(v: unknown): boolean {
@@ -84,3 +84,43 @@ export function areAllAttendeesValid(
     fields.every((f: any) => (!f.isRequired ? true : isFieldFilled(f, a.values ?? {})))
   );
 }
+
+type SelectOption = { label: string; value: string };
+
+export function toSelectOptions(options: EventFormFieldOptions | undefined): SelectOption[] {
+  if (!options) return [];
+
+  if (Array.isArray(options)) {
+    // [{label,value}]
+    if (options.length > 0 && typeof options[0] === "object" && options[0] !== null) {
+      return (options as any[])
+        .map((o) => ({
+          label: String((o as any).label ?? (o as any).value ?? ""),
+          value: String((o as any).value ?? ""),
+        }))
+        .filter((o) => o.value.trim().length > 0);
+    }
+
+    // ["a","b"]
+    return (options as string[])
+      .map((s) => String(s))
+      .map((s) => ({ label: s, value: s }))
+      .filter((o) => o.value.trim().length > 0);
+  }
+
+  return Object.entries(options as Record<string, any>)
+    .map(([k, v]) => {
+      if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
+        const s = String(v);
+        return { label: s, value: k };
+      }
+      if (v && typeof v === "object") {
+        const label = String(v.label ?? v.value ?? k);
+        const value = String(v.value ?? k);
+        return { label, value };
+      }
+      return null;
+    })
+    .filter((x): x is SelectOption => !!x && x.value.trim().length > 0);
+}
+
