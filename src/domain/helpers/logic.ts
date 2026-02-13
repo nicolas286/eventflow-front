@@ -1,4 +1,4 @@
-import type { EventProductUI } from "../models/admin/ui/eventDetail/admin.eventDetailProduct.ui.schema";
+import type { EventProduct } from "../models/db/db.eventProducts.schema";
 
 export function clampQty(nextQty: number, maxQty: number) {
   const n = Number(nextQty);
@@ -9,13 +9,13 @@ export function clampQty(nextQty: number, maxQty: number) {
   return q;
 }
 
-export function computeRemaining(p: EventProductUI) {
+export function computeRemaining(p: EventProduct) {
   if (p.stockQty == null) return null;
   const remaining = Math.max(0, (p.stockQty ?? 0) - (p.soldQty ?? 0) - (p.reservedQty ?? 0));
   return remaining;
 }
 
-export function sortProducts(products: EventProductUI[]) {
+export function sortProducts(products: EventProduct[]) {
   return [...(products ?? [])].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 }
 

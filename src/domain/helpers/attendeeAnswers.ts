@@ -1,4 +1,3 @@
-import type { RegistrationFieldLike } from "../../features/admin/events/singleEvent/AttendeeEditorPanel";
 import type { AttendeeAnswers as AttendeeAnswer } from "../models/db/db.attendeeAnswers.schema";
 import type { EventFormFieldUI } from "../models/db/db.eventFormFields.schema";
 

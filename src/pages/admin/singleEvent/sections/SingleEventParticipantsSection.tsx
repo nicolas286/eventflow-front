@@ -26,7 +26,7 @@ import { makeLocalAnswers, buildUpdateAttendeeFromForm } from "../../../../domai
 import { OrdersPeopleList } from "../../../../features/admin/ordersComponents/OrdersPeopleList";
 
 import type { EventDetailAdmin } from "../../../../domain/models/admin/admin.eventDetail.schema";
-import type { EventFormFieldUI } from "../../../../domain/models/db/db.eventFormFields.schema";
+import type { EventFormField } from "../../../../domain/models/db/db.eventFormFields.schema";
 import type { EventProduct } from "../../../../domain/models/db/db.eventProducts.schema";
 import type { OrderUI } from "../../../../domain/models/admin/admin.ordersSchema";
 
@@ -79,7 +79,7 @@ export function SingleEventParticipantsSection(props: { data: EventDetailAdmin; 
   useEffect(() => setLocalOrders(initialOrders), [initialOrders]);
 
   const regFields = useMemo(
-    () => toRows<EventFormFieldUI>(data.formFields),
+    () => toRows<EventFormField>(data.formFields),
     [data.formFields]
   );
 

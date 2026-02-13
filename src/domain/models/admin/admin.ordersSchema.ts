@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { orderSchema } from "../db/db.order.schema";
 
-export const orderUISchema = orderSchema.omit({bookingToken: true});
+export const orderUISchema = orderSchema.omit({bookingToken: true}).extend({publicId: z.string().optional()});
 
 export const ordersUISchema = z.object({
     limit: z.number(),

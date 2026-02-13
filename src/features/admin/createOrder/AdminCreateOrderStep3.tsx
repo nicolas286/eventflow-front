@@ -1,5 +1,5 @@
-import type { EventFormFieldUI } from "../../../domain/models/db/db.eventFormFields.schema";
-import type { EventProductUI } from "../../../domain/models/admin/ui/eventDetail/admin.eventDetailProduct.ui.schema";
+import type { EventFormField } from "../../../domain/models/db/db.eventFormFields.schema";
+import type { EventProduct } from "../../../domain/models/db/db.eventProducts.schema";
 import { AttendeeCard } from "./AttendeeCard";
 
 export type AttendeeSlot = {
@@ -17,12 +17,12 @@ type Props = {
   cart: CartSummary;
 
   attendees: AttendeeSlot[];
-  fields: EventFormFieldUI[];
-  products: EventProductUI[];
+  fields: EventFormField[];
+  products: EventProduct[];
 
   attemptedSubmit: boolean;
 
-  computeAttendeeErrors: (fields: EventFormFieldUI[], values: Record<string, unknown>) => Record<string, string>;
+  computeAttendeeErrors: (fields: EventFormField[], values: Record<string, unknown>) => Record<string, string>;
   setAnswer: (attIndex: number, fieldKey: string, value: unknown) => void;
 };
 

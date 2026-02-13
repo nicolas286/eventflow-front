@@ -11,14 +11,14 @@ import {
   adminOrderStep2Schema,
   type AdminOrderStep2Input,
 } from "../../../domain/models/admin/admin.orderCreateWizard.schema";
-import type { EventFormFieldUI } from "../../../domain/models/db/db.eventFormFields.schema";
+import type { EventFormField } from "../../../domain/models/db/db.eventFormFields.schema";
 import { 
   validateFieldValue, 
   sortFields, 
   isFieldFilled, 
   areAllAttendeesValid
 } from "../../../domain/helpers/fields";
-import type { EventProductUI } from "../../../domain/models/admin/ui/eventDetail/admin.eventDetailProduct.ui.schema";
+import type { EventProduct } from "../../../domain/models/db/db.eventProducts.schema";
 import { 
   computeNextQty, 
   computeRemaining, 
@@ -29,8 +29,9 @@ import {
   resolveCurrency,
   computeExpectedAttendeeSlots, 
   reconcileAttendeesByIndex } from "../../../domain/helpers/logic";
+import type { OrderUI } from "../../../domain/models/admin/admin.ordersSchema";
 
-function computeAttendeeErrors(fields: EventFormFieldUI[], values: Record<string, unknown>) {
+function computeAttendeeErrors(fields: EventFormField[], values: Record<string, unknown>) {
   const errs: Record<string, string> = {};
   for (const f of fields) {
     const key = String(f.fieldKey ?? "").trim();
@@ -64,10 +65,10 @@ type Props = {
   editorGap?: number;
 
   eventId: string;
-  products: EventProductUI[];
-  regFields: EventFormFieldUI[];
+  products: EventProduct[];
+  regFields: EventFormField[];
 
-  onCreated: (p: { orderId: string; order: Record<string, any> }) => void | Promise<void>;
+  onCreated: (p: { orderId: string; order: OrderUI }) => void | Promise<void>;
 };
 
 export function AdminOrderCreateWizardPanel(props: Props) {
@@ -207,14 +208,14 @@ export function AdminOrderCreateWizardPanel(props: Props) {
     const s2data = parsed2.data;
 
     const hasAttErrors = attendees.some((a) => {
-      const errs = computeAttendeeErrors(sortedFields as EventFormFieldUI[], a.values ?? {});
+      const errs = computeAttendeeErrors(sortedFields as EventFormField[], a.values ?? {});
       return Object.keys(errs).length > 0;
     });
     if (hasAttErrors) return;
 
     // map fieldKey -> fieldId pour construire answers
     const fieldIdByKey = new Map<string, string>();
-    for (const f of sortedFields as EventFormFieldUI[]) {
+    for (const f of sortedFields as EventFormField[]) {
       const k = String(f.fieldKey ?? "").trim();
       const id = String(f.id ?? "").trim();
       if (k && id) fieldIdByKey.set(k, id);
@@ -347,7 +348,7 @@ export function AdminOrderCreateWizardPanel(props: Props) {
           <AdminCreateOrderStep3
             cart={cart}
             attendees={attendees}
-            fields={sortedFields as EventFormFieldUI[]}     // normalement EventFormFieldUI[] donc pas besoin de any
+            fields={sortedFields as EventFormField[]}    
             products={sortedProducts}
             attemptedSubmit={attemptedSubmit}
             computeAttendeeErrors={computeAttendeeErrors}

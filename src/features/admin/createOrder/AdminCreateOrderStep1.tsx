@@ -1,5 +1,5 @@
 import { Button } from "../../../ui/components";
-import type { EventProductUI } from "../../../domain/models/admin/ui/eventDetail/admin.eventDetailProduct.ui.schema";
+import type { EventProduct } from "../../../domain/models/db/db.eventProducts.schema";
 
 type CartSummary = {
   totalTickets: number;
@@ -9,10 +9,10 @@ type CartSummary = {
 };
 
 type Props = {
-  products: EventProductUI[];
+  products: EventProduct[];
   quantities: Record<string, number>;
   updateQty: (productId: string, nextQty: number) => void;
-  computeRemaining: (p: EventProductUI) => number | null;
+  computeRemaining: (p: EventProduct) => number | null;
   cart: CartSummary;
 };
 
