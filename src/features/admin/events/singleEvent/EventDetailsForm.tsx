@@ -8,6 +8,8 @@ import {
 
 import Button from "../../../../ui/components/button/Button"
 
+import type { AdminEventDetailEvent } from "../../../../domain/models/admin/admin.eventDetail.schema";
+
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
 /* ------------------------------------------------------------------ */
@@ -16,23 +18,6 @@ type UploadResult = {
   path: string;
   publicUrl: string; // valeur DB (raw)
   publicUrlWithBust: string; // valeur UI (cache-bust)
-};
-
-export type AdminEventDetailEvent = {
-  id: string;
-  slug: string;
-  title: string;
-  description: string | null;
-  location: string | null;
-  startsAt: string | null;
-  endsAt: string | null;
-  isPublished: boolean;
-
-  bannerUrlRaw: string | null;          // e.banner_url
-  bannerUrlEffective: string;           // coalesce(raw, orgDefault, globalDefault) => NON NULL
-  depositCents?: number | null;
-
-  updatedAt?: string | null;            // string timestamp
 };
 
 type Props = {

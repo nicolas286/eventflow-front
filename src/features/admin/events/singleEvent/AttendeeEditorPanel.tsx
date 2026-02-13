@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Button, EditorShell } from "../../../../ui/components";
+import type { EventFormFieldUI } from "../../../../domain/models/db/db.eventFormFields.schema";
 
 /* -------------------- TYPES -------------------- */
 
@@ -110,7 +111,7 @@ export function AttendeeEditorPanel(props: {
   /** ✅ encore présent pour compat, mais plus utilisé pour create */
   products: TicketProductLike[];
 
-  fields: RegistrationFieldLike[];
+  fields: EventFormFieldUI[];
   initialValue: AttendeeEditorValue;
 
   onRequestClose: () => void;

@@ -1,13 +1,14 @@
 import { z } from "zod";
 
 import { eventSchema } from "../db/db.event.schema";
+
 import { eventProductsSchema } from "../db/db.eventProducts.schema";
 import { eventFormFieldSchema } from "../db/db.eventFormFields.schema";
-import { orderUISchema } from "../db/db.order.schema";
 import { orderItemsSchema } from "../db/db.orderItems.schema";
 import { paymentsUISchema } from "../db/db.payment.schema";
 import { attendeesSchema } from "../db/db.attendee.schema";
 import { attendeesAnswersSchema } from "../db/db.attendeeAnswers.schema";
+import { ordersUISchema } from "./admin.ordersSchema";
 
 /**
  * RPC: get_event_detail_admin
@@ -29,7 +30,6 @@ export const adminEventDetailEventSchema = eventSchema
   .omit({
     bannerUrl: true, 
     createdAt: true,
-    updatedAt: true,
     orgId: true, 
   })
   .extend({
@@ -44,11 +44,6 @@ export const adminEventDetailOrgBrandingSchema = z.object({
 
 export const eventFormFieldsSchema = z.array(eventFormFieldSchema);
 
-export const ordersPageSchema = z.object({
-  limit: z.number().int().min(1).max(200),
-  offset: z.number().int().min(0),
-  rows: z.array(orderUISchema),
-});
 
 export const attendeesPageSchema = z.object({
   limit: z.number().int().min(1).max(1000),
@@ -63,7 +58,7 @@ export const eventDetailAdminSchema = z.object({
   products: eventProductsSchema,
   formFields: eventFormFieldsSchema,
 
-  orders: ordersPageSchema,
+  orders: ordersUISchema,
   orderItems: orderItemsSchema,
   payments: paymentsUISchema,
 
@@ -71,4 +66,6 @@ export const eventDetailAdminSchema = z.object({
   attendeeAnswers: attendeesAnswersSchema,
 });
 
+export type AttendeesPage = z.infer<typeof attendeesPageSchema>;
+export type AdminEventDetailEvent = z.infer<typeof adminEventDetailEventSchema>;
 export type EventDetailAdmin = z.infer<typeof eventDetailAdminSchema>;

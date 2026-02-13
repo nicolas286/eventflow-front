@@ -18,7 +18,7 @@ import {
   isFieldFilled, 
   areAllAttendeesValid
 } from "../../../domain/helpers/fields";
-import type { EventProductUI } from "../../../domain/models/admin/admin.eventProductUI.schema";
+import type { EventProductUI } from "../../../domain/models/admin/ui/eventDetail/admin.eventDetailProduct.ui.schema";
 import { 
   computeNextQty, 
   computeRemaining, 
@@ -29,7 +29,6 @@ import {
   resolveCurrency,
   computeExpectedAttendeeSlots, 
   reconcileAttendeesByIndex } from "../../../domain/helpers/logic";
-import type { AdminRegisterResponse } from "../../../domain/models/admin/admin.registerPayload.schema";
 
 function computeAttendeeErrors(fields: EventFormFieldUI[], values: Record<string, unknown>) {
   const errs: Record<string, string> = {};
@@ -267,7 +266,7 @@ export function AdminOrderCreateWizardPanel(props: Props) {
         id: orderId,
         publicId: orderId.slice(0, 8),
         createdAt: new Date().toISOString(),
-        status: (res as AdminRegisterResponse)?.status ?? (s2data.markPaid ? "paid" : "awaiting_payment"),
+        status: res?.status ?? (s2data.markPaid ? "paid" : "awaiting_payment"),
         totalCents: cart.totalCents,
         currency: cart.currency,
       },

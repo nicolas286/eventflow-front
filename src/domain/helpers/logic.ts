@@ -1,4 +1,4 @@
-import type { EventProductUI } from "../models/admin/admin.eventProductUI.schema";
+import type { EventProductUI } from "../models/admin/ui/eventDetail/admin.eventDetailProduct.ui.schema";
 
 export function clampQty(nextQty: number, maxQty: number) {
   const n = Number(nextQty);
@@ -111,4 +111,15 @@ export function resolveMaxQty(remaining: number | null | undefined) {
 export function computeNextQty(nextQty: number, remaining: number | null | undefined) {
   const maxQty = resolveMaxQty(remaining);
   return clampQty(nextQty, maxQty);
+}
+
+type AnyRecord = Record<string, any>;
+
+export function getFirst<T = any>(obj: AnyRecord | null | undefined, keys: string[]): T | undefined {
+  if (!obj) return undefined;
+  for (const k of keys) {
+    const v = obj[k];
+    if (v !== undefined && v !== null) return v as T;
+  }
+  return undefined;
 }

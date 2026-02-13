@@ -1,5 +1,5 @@
 import { Button } from "../../../ui/components";
-import type { EventProductUI } from "../../../domain/models/admin/admin.eventProductUI.schema";
+import type { EventProductUI } from "../../../domain/models/admin/ui/eventDetail/admin.eventDetailProduct.ui.schema";
 
 type CartSummary = {
   totalTickets: number;

@@ -1,5 +1,5 @@
 import type { EventFormFieldUI } from "../../../domain/models/db/db.eventFormFields.schema";
-import type { EventProductUI } from "../../../domain/models/admin/admin.eventProductUI.schema";
+import type { EventProductUI } from "../../../domain/models/admin/ui/eventDetail/admin.eventDetailProduct.ui.schema";
 import { AttendeeCard } from "./AttendeeCard";
 
 export type AttendeeSlot = {

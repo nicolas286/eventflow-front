@@ -16,6 +16,7 @@ import { SingleEventDetailsSection } from "../../../pages/admin/singleEvent/sect
 import { SingleEventTicketsSection } from "../../../pages/admin/singleEvent/sections/SingleEventTicketsSection";
 import { SingleEventFormSection } from "../../../pages/admin/singleEvent/sections/SingleEventFormSection";
 import { SingleEventParticipantsSection } from "../../../pages/admin/singleEvent/sections/SingleEventParticipantsSection";
+import type { UploadResult } from "../../../gateways/supabase/repositories/dashboard/uploadOrgAssets.repo";
 
 // ✅ Garde ton CSS global existant
 import "../../../styles/desktop/admin/adminEventsPage.desktop.css";
@@ -65,7 +66,7 @@ export function AdminSingleEventPage() {
     );
   }
 
-  const { loading, error, data, eventId, refetch: refetchSingle } = useAdminSingleEventData({
+  const { loading, error, data, refetch: refetchSingle } = useAdminSingleEventData({
     supabase,
     orgId,
     eventSlug,
@@ -88,7 +89,6 @@ export function AdminSingleEventPage() {
 
   const event = data?.event ?? null;
 
-  // ✅ Nouveau titre : nom d’événement (fallback)
   const headerTitle = event?.title?.trim()
     ? event.title
     : loading
@@ -107,16 +107,17 @@ export function AdminSingleEventPage() {
     await refreshAll();
   }
 
-  async function uploadEventBanner(file: File) {
-    if (!orgId) throw new Error("ORG_ID_MISSING");
-    if (!event?.id) throw new Error("EVENT_ID_MISSING");
+  async function uploadEventBanner(file: File): Promise<UploadResult> {
+  if (!orgId) throw new Error("ORG_ID_MISSING");
+  if (!event?.id) throw new Error("EVENT_ID_MISSING");
 
-    return storageRepo.uploadEventBanner({
-      orgId,
-      eventId: event.id,
-      file,
-    });
-  }
+  return storageRepo.uploadEventBanner({
+    orgId,
+    eventId: event.id,
+    file,
+  });
+}
+
 
   return (
     <div className="adminCard">
@@ -157,13 +158,13 @@ export function AdminSingleEventPage() {
             )}
 
             {tab === "tickets" && (
-              <SingleEventTicketsSection orgId={orgId} event={event} data={data as any} onChanged={refreshAll} />
+              <SingleEventTicketsSection orgId={orgId} event={event} data={data} onChanged={refreshAll} />
             )}
 
-            {tab === "form" && <SingleEventFormSection event={event} data={data as any} onChanged={refreshAll} />}
+            {tab === "form" && <SingleEventFormSection event={event} data={data} onChanged={refreshAll} />}
 
             {tab === "participants" && (
-              <SingleEventParticipantsSection data={data as any} onChanged={refreshAll} />
+              <SingleEventParticipantsSection data={data} onChanged={refreshAll} />
             )}
           </>
         )}

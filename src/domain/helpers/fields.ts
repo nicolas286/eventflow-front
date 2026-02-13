@@ -2,9 +2,14 @@ import { normalizeText } from "./normalize";
 import { type EventFormFieldUI } from "../models/db/db.eventFormFields.schema";
 import { z } from "zod";
 
-export function isBlank(v: unknown) {
-  return v === null || v === undefined || (typeof v === "string" && v.trim() === "");
+export function isBlank(v: unknown): boolean {
+  return v == null || (typeof v === "string" && v.trim() === "");
 }
+
+export function isFilled(v: unknown): boolean {
+  return !isBlank(v);
+}
+
 
 export function isBirthDateField(f: EventFormFieldUI) {
   const k = normalizeText(f.fieldKey);

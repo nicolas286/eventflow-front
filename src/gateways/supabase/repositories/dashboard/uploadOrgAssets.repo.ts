@@ -2,7 +2,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseStorageSafe } from "../../supabaseStorageSafe";
 
-type UploadResult = {
+export type UploadResult = {
   path: string;
   publicUrl: string;
   publicUrlWithBust: string;

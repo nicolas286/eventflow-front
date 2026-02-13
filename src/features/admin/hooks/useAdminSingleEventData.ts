@@ -99,7 +99,7 @@ export function useAdminSingleEventData(params: {
       attendeesOffset,
     });
 
-    const eventId = (data as any)?.event?.id ?? null;
+    const eventId = data?.event?.id ?? null;
 
     return { eventId, data };
   }, [
