@@ -4,6 +4,7 @@ import { Badge, Card, CardBody, CardHeader } from "../../../ui/components";
 import { getStatusInfo } from "../../../domain/helpers/status";
 import type { EventOverviewRow } from "../../../domain/models/admin/admin.eventsOverview.schema";
 import EventEditorForm from "./EventEditorForm";
+import type { AdminEventDetailEvent } from "../../../domain/models/admin/admin.eventDetail.schema";
 
 type EditableEventFields = Partial<
   Pick<EventOverviewRow["event"], "title" | "isPublished" | "startsAt" | "endsAt">
@@ -20,7 +21,7 @@ export default function EventEditor({ event, onUpdateEvent }: Props) {
       <Card>
         <CardHeader
           title="Modifier un événement"
-          subtitle="Sélectionne un événement"
+          subtitle="Sélectionnez un événement"
         />
         <CardBody>
           <div className="eventEditor__empty">Aucun événement sélectionné.</div>
@@ -29,7 +30,7 @@ export default function EventEditor({ event, onUpdateEvent }: Props) {
     );
   }
 
-  const ev = event.event as any;
+  const ev = event.event as Partial<AdminEventDetailEvent>;
   const status = getStatusInfo(ev.isPublished ? "open" : "draft");
 
   return (
@@ -39,7 +40,6 @@ export default function EventEditor({ event, onUpdateEvent }: Props) {
         right={<Badge tone={status.tone} label={status.label} />}
       />
       <CardBody>
-        {/* ✅ reset form state on event change */}
         <EventEditorForm key={ev.id} event={ev} onConfirm={onUpdateEvent} />
       </CardBody>
     </Card>

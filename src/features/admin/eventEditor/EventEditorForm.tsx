@@ -5,15 +5,11 @@ import {
   type UpdateEventPatch,
 } from "../../../domain/models/admin/admin.updateEventPatch.schema";
 import { Button, Input } from "../../../ui/components";
+import type { AdminEventDetailEvent } from "../../../domain/models/admin/admin.eventDetail.schema";
+import { isoToLocalInput, localInputToIso } from "../../../domain/helpers/dateTime";
 
 type Props = {
-  event: {
-    id: string;
-    title: string;
-    location?: string | null;
-    startsAt?: string | null; // ISO
-    isPublished: boolean;
-  };
+  event: Partial<AdminEventDetailEvent>
   onConfirm: (patch: UpdateEventPatch) => void;
 };
 
@@ -26,26 +22,6 @@ function zodErrorsToFieldErrors(err: z.ZodError): FieldErrors {
     if (key && !out[key]) out[key] = issue.message;
   }
   return out;
-}
-
-// ISO -> "YYYY-MM-DDTHH:mm" (local) pour datetime-local
-function isoToLocalInputValue(iso?: string | null) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (!Number.isFinite(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return (
-    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
-    `T${pad(d.getHours())}:${pad(d.getMinutes())}`
-  );
-}
-
-// "YYYY-MM-DDTHH:mm" (local) -> ISO (UTC instant)
-function localInputValueToIso(v: string) {
-  if (!v) return null;
-  const d = new Date(v); // interprété comme local
-  if (!Number.isFinite(d.getTime())) return null;
-  return d.toISOString();
 }
 
 export default function EventEditorForm({ event, onConfirm }: Props) {
@@ -129,11 +105,11 @@ export default function EventEditorForm({ event, onConfirm }: Props) {
 
       <Input
         type="datetime-local"
-        value={isoToLocalInputValue(draft.startsAt ?? null)}
+        value={isoToLocalInput(draft.startsAt ?? null)}
         onChange={(e) =>
           setDraft((d) => ({
             ...d,
-            startsAt: localInputValueToIso(e.target.value),
+            startsAt: localInputToIso(e.target.value),
           }))
         }
         label="Date et heure de début"
