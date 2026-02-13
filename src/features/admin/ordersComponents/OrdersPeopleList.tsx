@@ -1,7 +1,7 @@
 import { Button } from "../../../ui/components";
 import { AttendeeEditorPanel } from "../events/singleEvent/AttendeeEditorPanel";
 import { toDisplayText, formatDateTime } from "../../../domain/helpers/normalize";
-import type { AttendeeUI } from "../../../domain/models/admin/admin.attendeeUI.schema";
+import type { Attendee } from "../../../domain/models/db/db.attendee.schema";
 import type { ComponentProps } from "react";
 
 type FilledField = { key: string; label: string; value: string };
@@ -10,7 +10,7 @@ type Identity = { title: string; subtitle: string };
 type AttendeeEditorProps = ComponentProps<typeof AttendeeEditorPanel>;
 
 type OrdersPeopleListProps = {
-  groups: Array<[orderId: string, people: AttendeeUI[]]>;
+  groups: Array<[orderId: string, people: Attendee[]]>;
   orderMetaById: Map<string, { orderNumber: string; createdAt?: string }>;
   filledFieldsByAttendeeId: Map<string, FilledField[]>;
   computeIdentity: (attendeeId: string) => Identity;
