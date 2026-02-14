@@ -18,7 +18,7 @@ import { normalizeError } from "../../../domain/errors/errors";
 export type OrgInfoForm = {
   type: "association" | "person";
   name: string;
-  status: "active" | "suspended";
+  status: "active" | "suspended" | "trial";
 
   description: string | null;
   publicEmail: string | null;

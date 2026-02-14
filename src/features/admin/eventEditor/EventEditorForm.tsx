@@ -11,7 +11,7 @@ import { useLiveForm } from "../../public/useLiveZodForm";
 
 type Props = {
   event: Partial<AdminEventDetailEvent>;
-  onConfirm: (patch: UpdateEventPatch) => void | Promise<void>;
+  onConfirm: (patch: UpdateEventPatch) => Promise<Event | null>;
 };
 
 const FORM_KEYS: Array<keyof UpdateEventPatch> = [
@@ -99,12 +99,9 @@ export default function EventEditorForm({ event, onConfirm }: Props) {
       return;
     }
 
-    try {
-      await onConfirm(patch);
-      setSuccessMsg("Modifications enregistrées avec succès.");
-    } catch (err) {
-      setSubmitError("Une erreur est survenue lors de l'enregistrement.");
-    }
+    const updated = await onConfirm(patch);
+      if (updated) setSuccessMsg("Modifications enregistrées avec succès.");
+      else setSubmitError("Impossible d’enregistrer l’événement.");
   }
 
   const showErr = <K extends keyof UpdateEventPatch>(key: K) =>

@@ -3,16 +3,15 @@ import "../../../styles/desktop/input.desktop.css";
 import "../../../styles/mobile/input.mobile.css";
 import "../../../styles/desktop/select.desktop.css";
 
-type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, "onChange"> & {
+type SelectProps = SelectHTMLAttributes<HTMLSelectElement> & {
   label?: ReactNode;
   required?: boolean;
 
   error?: boolean;
   fullWidth?: boolean;
 
-  /** classes */
-  className?: string;        // wrapper
-  selectClassName?: string;  // select
+  className?: string;
+  selectClassName?: string;
 };
 
 export default function Select({

@@ -8,58 +8,51 @@ import { Button, Input, TextArea, Select, Badge } from "../../../ui/components";
 import { supabase } from "../../../gateways/supabase/supabaseClient";
 import { useSaveOrgInfo } from "../hooks/useSaveOrgInfo";
 import { useStartMollieConnect } from "../hooks/useStartMollieConnect";
-
-export type OrgStructure = {
-  // editable
-  type: "association" | "person";
-  name: string;
-  status: "active" | "suspended";
-
-  description: string | null;
-  publicEmail: string | null;
-  phone: string | null;
-  website: string | null;
-
-  // read-only display
-  slug: string;
-  paymentsStatus: "not_connected" | "pending" | "connected" | "revoked";
-  paymentsLiveReady: boolean;
-};
+import type { Organization } from "../../../domain/models/db/db.organization.schema";
+import type { OrganizationProfile } from "../../../domain/models/db/db.organizationProfile.schema";
 
 type Props = {
   orgId: string;
-  org: OrgStructure;
+  orgInfo: Organization | null;
+  orgProfile: OrganizationProfile | null; 
   onSaved: () => Promise<void>;
 };
 
 type Form = {
-  type: OrgStructure["type"];
-  name: string;
-  status: OrgStructure["status"];
-  description: string | null;
-  publicEmail: string | null;
-  phone: string | null;
-  website: string | null;
+  type: NonNullable<Organization["type"]>;
+  name: string; 
+  status: NonNullable<Organization["status"]>;
+  description: string;
+  publicEmail: string;
+  phone: string;
+  website: string;
 };
 
-function toForm(o: OrgStructure): Form {
+const emptyForm: Form = {
+  type: "association",
+  name: "",
+  status: "active",
+  description: "",
+  publicEmail: "",
+  phone: "",
+  website: "",
+};
+
+function toForm(o: Organization | null, profile: OrganizationProfile | null): Form {
+  if (!o || !profile) return emptyForm;
+
   return {
-    type: o.type,
-    name: o.name,
-    status: o.status,
-    description: o.description ?? null,
-    publicEmail: o.publicEmail ?? null,
-    phone: o.phone ?? null,
-    website: o.website ?? null,
+    type: o.type ?? emptyForm.type,
+    name: o.name ?? "",
+    status: o.status ?? emptyForm.status,
+    description: profile.description ?? "",
+    publicEmail: profile.publicEmail ?? "",
+    phone: profile.phone ?? "",
+    website: profile.website ?? "",
   };
 }
 
-function toNullable(v: string): string | null {
-  const t = v.trim();
-  return t === "" ? null : t;
-}
-
-function prettyPaymentLabel(s: OrgStructure["paymentsStatus"]) {
+function prettyPaymentLabel(s: Organization["paymentsStatus"]) {
   if (s === "not_connected") return "Non connecté";
   if (s === "pending") return "En attente";
   if (s === "connected") return "Connecté";
@@ -67,7 +60,7 @@ function prettyPaymentLabel(s: OrgStructure["paymentsStatus"]) {
   return s;
 }
 
-export default function StructurePanel({ orgId, org, onSaved }: Props) {
+export default function StructurePanel({ orgId, orgInfo, orgProfile, onSaved }: Props) {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -81,7 +74,7 @@ export default function StructurePanel({ orgId, org, onSaved }: Props) {
   } = useStartMollieConnect({ supabase });
 
   // ✅ initial dépend de org (pas juste orgId)
-  const initial = useMemo<Form>(() => toForm(org), [orgId, org]);
+  const initial = useMemo<Form>(() => toForm(orgInfo, orgProfile), [orgInfo, orgProfile]);
 
   // form local (on n’édite pas org directement tant que pas save)
   const [form, setForm] = useState<Form>(initial);
@@ -94,9 +87,8 @@ export default function StructurePanel({ orgId, org, onSaved }: Props) {
   const dirty = hasChanges(initial, form);
 
   const effectiveSlug = useMemo(() => {
-    // priorité à la réponse RPC si elle existe (immédiat), sinon org (bootstrap)
-    return updated?.profile?.slug ?? org.slug ?? "";
-  }, [updated?.profile?.slug, org.slug]);
+    return updated?.profile?.slug ?? orgProfile?.slug ?? "";
+  }, [updated?.profile?.slug, orgProfile?.slug]);
 
   /* -------- Mollie return flash -------- */
 
@@ -166,14 +158,15 @@ export default function StructurePanel({ orgId, org, onSaved }: Props) {
 
     // ✅ Et on resync immédiatement le form avec la réponse RPC (UX instant)
     setForm({
-      type: res.type as Form["type"],
-      name: res.name,
-      status: res.status as Form["status"],
-      description: res.profile.description ?? null,
-      publicEmail: res.profile.publicEmail ?? null,
-      phone: res.profile.phone ?? null,
-      website: res.profile.website ?? null,
-    });
+        type: res.type as Form["type"],
+        name: res.name ?? "",
+        status: res.status as Form["status"],
+        description: res.profile.description ?? "",
+        publicEmail: res.profile.publicEmail ?? "",
+        phone: res.profile.phone ?? "",
+        website: res.profile.website ?? "",
+      });
+
   }
 
 async function handleConnect(mode: "test" | "live") {
@@ -208,7 +201,7 @@ async function handleConnect(mode: "test" | "live") {
             <div className="structurePanel__fieldLabel">Type</div>
             <Select
               value={form.type}
-              onChange={(e: any) =>
+              onChange={(e) =>
                 setForm((s) => ({ ...s, type: e.target.value as Form["type"] }))
               }
             >
@@ -233,7 +226,7 @@ async function handleConnect(mode: "test" | "live") {
             <div className="structurePanel__fieldLabel">Statut</div>
             <Select
               value={form.status}
-              onChange={(e: any) =>
+              onChange={(e) =>
                 setForm((s) => ({ ...s, status: e.target.value as Form["status"] }))
               }
             >
@@ -257,7 +250,7 @@ async function handleConnect(mode: "test" | "live") {
           <div className="structurePanel__field">
             <TextArea
               label="Description"
-              value={form.description ?? ""}
+              value={form.description}
               onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))}
               rows={5}
               placeholder="Décrivez votre organisation…"
@@ -266,27 +259,34 @@ async function handleConnect(mode: "test" | "live") {
 
           <div className="structurePanel__grid2Inner">
             <Input
-              label="Email public"
-              value={form.publicEmail ?? ""}
-              onChange={(e) => setForm((s) => ({ ...s, publicEmail: toNullable(e.target.value) }))}
-              placeholder="contact@..."
-            />
+                label="Email public"
+                value={form.publicEmail}
+                onChange={(e) => setForm((s) => ({ ...s, publicEmail: e.target.value }))}
+                placeholder="contact@..."
+              />
+
 
             <Input
               label="Téléphone"
-              value={form.phone ?? ""}
-              onChange={(e) => setForm((s) => ({ ...s, phone: toNullable(e.target.value) }))}
+              value={form.phone}
+              onChange={(e) =>
+                setForm((s) => ({ ...s, phone: e.target.value }))
+              }
               placeholder="+32 ..."
             />
+
           </div>
 
           <div className="structurePanel__field">
-            <Input
-              label="Site web"
-              value={form.website ?? ""}
-              onChange={(e) => setForm((s) => ({ ...s, website: toNullable(e.target.value) }))}
-              placeholder="https://..."
-            />
+          <Input
+            label="Site web"
+            value={form.website}
+            onChange={(e) =>
+              setForm((s) => ({ ...s, website: e.target.value }))
+            }
+            placeholder="https://..."
+          />
+
           </div>
         </div>
       </div>
@@ -303,8 +303,11 @@ async function handleConnect(mode: "test" | "live") {
 
           <div className="structurePanel__chip">
             <span className="structurePanel__chipLabel">Statut</span>
-            <span className="structurePanel__chipValue">{prettyPaymentLabel(org.paymentsStatus)}</span>
-            {org.paymentsLiveReady ? (
+            <span className="structurePanel__chipValue">
+            {orgInfo ? prettyPaymentLabel(orgInfo.paymentsStatus) : "—"}
+          </span>
+
+            {orgInfo?.paymentsLiveReady ? (
               <span className="structurePanel__chipOk">live prêt</span>
             ) : (
               <span className="structurePanel__chipWarn">live non prêt</span>
