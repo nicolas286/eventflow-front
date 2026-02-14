@@ -12,8 +12,8 @@ import {
   type AdminOrderStep2Input,
 } from "../../../domain/models/admin/admin.orderCreateWizard.schema";
 import type { EventFormField } from "../../../domain/models/db/db.eventFormFields.schema";
+import { validateFieldValue } from "../../../domain/helpers/validateFieldValue";
 import { 
-  validateFieldValue, 
   sortFields, 
   isFieldFilled, 
   areAllAttendeesValid
@@ -30,12 +30,14 @@ import {
   computeExpectedAttendeeSlots, 
   reconcileAttendeesByIndex } from "../../../domain/helpers/logic";
 import type { OrderUI } from "../../../domain/models/admin/admin.ordersSchema";
+import { getFieldKey } from "../../../domain/helpers/fields";
 
 function computeAttendeeErrors(fields: EventFormField[], values: Record<string, unknown>) {
   const errs: Record<string, string> = {};
   for (const f of fields) {
-    const key = String(f.fieldKey ?? "").trim();
+    const key = getFieldKey(f);
     if (!key) continue;
+
     const msg = validateFieldValue(f, values[key]);
     if (msg) errs[key] = msg;
   }
@@ -97,6 +99,7 @@ export function AdminOrderCreateWizardPanel(props: Props) {
 
   const [step, setStep] = useState<Step>(1);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [attTouched, setAttTouched] = useState<Record<number, Record<string, true>>>({});
 
   const step2 = useLiveForm<AdminOrderStep2Input>(adminOrderStep2Schema, {
     buyerEmail: "",
@@ -171,12 +174,18 @@ export function AdminOrderCreateWizardPanel(props: Props) {
     setQuantities((prev) => ({ ...prev, [productId]: q }));
   }
 
-  function setAnswer(attIndex: number, fieldKey: string, value: unknown) 
-  {
-    setAttendees((prev) =>
-      prev.map((a, i) => (i === attIndex ? { ...a, values: { ...a.values, [fieldKey]: value } } : a)),
-    );
-  }
+  function setAnswer(attIndex: number, fieldKey: string, value: unknown) {
+  setAttendees((prev) =>
+    prev.map((a, i) => (i === attIndex ? { ...a, values: { ...a.values, [fieldKey]: value } } : a)),
+  );
+
+  setAttTouched((prev) => {
+    const row = prev[attIndex] ?? {};
+    if (row[fieldKey]) return prev;
+    return { ...prev, [attIndex]: { ...row, [fieldKey]: true } };
+  });
+}
+
 
   const allAttendeesValid = useMemo(
   () => areAllAttendeesValid(attendees, sortedFields, isFieldFilled),
@@ -362,6 +371,7 @@ export function AdminOrderCreateWizardPanel(props: Props) {
             attemptedSubmit={attemptedSubmit}
             computeAttendeeErrors={computeAttendeeErrors}
             setAnswer={setAnswer}
+            attTouched={attTouched}
           />
         ) : null}
 

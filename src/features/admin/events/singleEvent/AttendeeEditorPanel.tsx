@@ -1,19 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Button, EditorShell } from "../../../../ui/components";
 import type { EventFormFieldUI } from "../../../../domain/models/db/db.eventFormFields.schema";
 import { AttendeeFieldsForm } from "./AttendeeFieldForm";
+import type { EventProduct } from "../../../../domain/models/db/db.eventProducts.schema";
+import { validateFieldValue } from "../../../../domain/helpers/validateFieldValue";
 
 export type AttendeeEditorMode = "create" | "edit";
-export type AttendeeEditorValue = Record<string, any>;
-
-export type TicketProductLike = {
-  id: string;
-  name?: string | null;
-  createsAttendees?: boolean | null;
-  attendeesPerUnit?: number | null;
-  isActive?: boolean | null;
-};
+export type AttendeeEditorValue = Record<string, unknown>;
+type AnimState = "closed" | "open" | "closing";
 
 function makeEmptyFormValue(fields: EventFormFieldUI[], initialValue?: AttendeeEditorValue) {
   const next = { ...(initialValue ?? {}) };
@@ -24,18 +19,25 @@ function makeEmptyFormValue(fields: EventFormFieldUI[], initialValue?: AttendeeE
   return next;
 }
 
-type AnimState = "closed" | "open" | "closing";
+function computeErrors(fields: EventFormFieldUI[], values: AttendeeEditorValue) {
+  const errs: Record<string, string> = {};
+  for (const f of fields) {
+    const key = String(f.fieldKey ?? "").trim();
+    if (!key) continue;
+
+    const msg = validateFieldValue(f as any, values[key]); 
+    if (msg) errs[key] = msg;
+  }
+  return errs;
+}
 
 export function AttendeeEditorPanel(props: {
   supabase: SupabaseClient;
-
   isOpen: boolean;
   mode: AttendeeEditorMode;
 
-  /** ✅ encore présent pour compat, mais plus utilisé pour create */
   orderId?: string | null;
-  /** ✅ encore présent pour compat, mais plus utilisé pour create */
-  products: TicketProductLike[];
+  products: EventProduct[];
 
   fields: EventFormFieldUI[];
   initialValue: AttendeeEditorValue;
@@ -51,24 +53,7 @@ export function AttendeeEditorPanel(props: {
   error?: string | null;
   left?: React.ReactNode;
 
-  /** ✅ nouveau: "shell" (desktop) ou "inline" (mobile sous la card) */
   layout?: "shell" | "inline";
-
-  /** ❌ deprecated: on ne crée plus d'attendee dans ce panel */
-  onAdded?: (res: {
-    attendeeId: string;
-    orderId: string;
-    eventProductId: string;
-    value: AttendeeEditorValue;
-  }) => void;
-
-  /** ❌ deprecated: on ne crée plus d'attendee dans ce panel */
-  onAddedBulk?: (res: {
-    attendeeIds: string[];
-    orderId: string;
-    eventProductId: string;
-    values: AttendeeEditorValue[];
-  }) => void;
 }) {
   const {
     isOpen,
@@ -86,47 +71,40 @@ export function AttendeeEditorPanel(props: {
     layout = "shell",
   } = props;
 
-
-  /* -------------------- STATE -------------------- */
-
   const [value, setValue] = useState<AttendeeEditorValue>({ ...(initialValue ?? {}) });
+
+  const [touched, setTouched] = useState<Record<string, true>>({});
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
-    setValue(makeEmptyFormValue(fields, initialValue));
+    const next = makeEmptyFormValue(fields, initialValue);
+    setValue(next);
+    setTouched({});
+    setAttemptedSubmit(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, fields.map((f) => String(f.fieldKey ?? "")).join("|")]);
 
-  function setField(key: string, v: any) {
+  const errors = useMemo(() => computeErrors(fields, value), [fields, value]);
+  const isAllValid = useMemo(() => Object.keys(errors).length === 0, [errors]);
+
+  function shouldShowErr(fieldKey: string) {
+    return Boolean(attemptedSubmit || touched[fieldKey]);
+  }
+
+  function setField(key: string, v: unknown) {
     setValue((prev) => ({ ...prev, [key]: v }));
+    setTouched((prev) => (prev[key] ? prev : { ...prev, [key]: true })); // live => considère "touché"
   }
 
-  function isRequired(f: EventFormFieldUI) {
-    return Boolean(f.isRequired ?? false);
-  }
-
-  function isValid(v: AttendeeEditorValue) {
-    for (const f of fields) {
-      const key = String(f.fieldKey ?? "").trim();
-      if (!key || !isRequired(f)) continue;
-
-      const vv = v[key];
-      if (f.fieldType === "checkbox") {
-        if (!Boolean(vv)) return false;
-      } else if (String(vv ?? "").trim().length === 0) {
-        return false;
-      }
-    }
-    return true;
+  async function handleSubmit() {
+    setAttemptedSubmit(true);
+    if (!isAllValid) return;
+    await onSubmit(value);
   }
 
   const saving = Boolean(isSaving);
   const error = externalError;
-
-
-  async function handleSubmit() {
-    await onSubmit(value);
-  }
 
   const [anim, setAnim] = useState<AnimState>("closed");
   const closeTimerRef = useRef<number | null>(null);
@@ -170,8 +148,11 @@ export function AttendeeEditorPanel(props: {
           <AttendeeFieldsForm
             fields={fields}
             values={value}
-            errors={{}} // ou plus tard si tu fais une validation live
+            errors={Object.fromEntries(
+              Object.entries(errors).filter(([k]) => shouldShowErr(k))
+            )}
             onChange={(fieldKey, val) => setField(fieldKey, val)}
+
           />
         </div>
 
@@ -183,7 +164,7 @@ export function AttendeeEditorPanel(props: {
             Fermer
           </Button>
 
-          <Button variant="primary" onClick={handleSubmit} disabled={!isValid(value) || saving}>
+          <Button variant="primary" onClick={handleSubmit} disabled={!isAllValid || saving}>
             {saving ? "Enregistrement…" : "Mettre à jour"}
           </Button>
         </div>

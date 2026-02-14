@@ -24,6 +24,8 @@ type Props = {
 
   computeAttendeeErrors: (fields: EventFormField[], values: Record<string, unknown>) => Record<string, string>;
   setAnswer: (attIndex: number, fieldKey: string, value: unknown) => void;
+  attTouched: Record<number, Record<string, true>>;
+
 };
 
 export function AdminCreateOrderStep3({
@@ -34,6 +36,7 @@ export function AdminCreateOrderStep3({
   attemptedSubmit,
   computeAttendeeErrors,
   setAnswer,
+  attTouched,
 }: Props) {
   return (
     <div style={{ display: "grid", gap: 12 }}>
@@ -46,8 +49,13 @@ export function AdminCreateOrderStep3({
       ) : (
         attendees.map((att, idx) => {
           const product = products.find((x) => x.id === att.eventProductId);
-          const errors =
-            attemptedSubmit ? computeAttendeeErrors(fields, att.values ?? {}) : {};
+          const allErrors = computeAttendeeErrors(fields, att.values ?? {});
+          const touched = attTouched[idx] ?? {};
+
+          const errors = Object.fromEntries(
+            Object.entries(allErrors).filter(([k]) => attemptedSubmit || touched[k])
+          );
+
 
           return (
             <AttendeeCard

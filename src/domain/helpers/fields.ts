@@ -1,6 +1,5 @@
 import { normalizeText } from "./normalize";
 import { type EventFormFieldUI, type EventFormFieldOptions } from "../models/db/db.eventFormFields.schema";
-import { z } from "zod";
 
 export function isBlank(v: unknown): boolean {
   return v == null || (typeof v === "string" && v.trim() === "");
@@ -9,7 +8,6 @@ export function isBlank(v: unknown): boolean {
 export function isFilled(v: unknown): boolean {
   return !isBlank(v);
 }
-
 
 export function isBirthDateField(f: EventFormFieldUI) {
   const k = normalizeText(f.fieldKey);
@@ -27,34 +25,6 @@ export function isPhoneField(f: EventFormFieldUI) {
   const k = normalizeText(f.fieldKey);
   const l = normalizeText(f.label);
   return k === "phone" || k === "telephone" || k === "tel" || l.includes("telephone");
-}
-
-export function validateFieldValue(f: EventFormFieldUI, value: unknown): string | null {
-  if (!f?.isRequired) return null;
-
-  if (f.fieldType === "checkbox") return value === true ? null : "Ce champ est requis.";
-
-  if (value == null) return "Ce champ est requis.";
-
-  if (isBirthDateField(f) || f.fieldType === "date") {
-    if (typeof value !== "string" || value.trim() === "") return "Date requise.";
-    return /^\d{4}-\d{2}-\d{2}$/.test(value) ? null : "Date invalide.";
-  }
-
-  if (f.fieldType === "number") {
-    if (typeof value !== "number" || !Number.isFinite(value)) return "Nombre invalide.";
-    return null;
-  }
-
-  if (f.fieldType === "email") {
-    if (typeof value !== "string" || value.trim() === "") return "Email requis.";
-    return z.email().safeParse(value.trim()).success ? null : "Email invalide.";
-  }
-
-  if (typeof value === "string") return value.trim() ? null : "Ce champ est requis.";
-  if (typeof value === "boolean") return null;
-
-  return "Ce champ est requis.";
 }
 
 export function sortFields(fields: EventFormFieldUI[]) {
@@ -123,4 +93,9 @@ export function toSelectOptions(options: EventFormFieldOptions | undefined): Sel
     })
     .filter((x): x is SelectOption => !!x && x.value.trim().length > 0);
 }
+
+export function getFieldKey(f: { fieldKey?: unknown }) {
+  return String(f.fieldKey ?? "").trim();
+}
+
 
