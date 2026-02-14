@@ -1,5 +1,7 @@
 import { normalizeText } from "./normalize";
-import { type EventFormFieldUI, type EventFormFieldOptions } from "../models/db/db.eventFormFields.schema";
+import type { EventFormFieldUI, EventFormFieldOptions, EventFormField } from "../models/db/db.eventFormFields.schema";
+import { clampInt } from "./logic";
+import { slugKey } from "./normalize";
 
 export function isBlank(v: unknown): boolean {
   return v == null || (typeof v === "string" && v.trim() === "");
@@ -93,6 +95,62 @@ export function toSelectOptions(options: EventFormFieldOptions | undefined): Sel
     })
     .filter((x): x is SelectOption => !!x && x.value.trim().length > 0);
 }
+
+export function optionsToText(options: EventFormFieldOptions | undefined): string {
+  return toSelectOptions(options)
+    .map((o) => o.label.trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
+function textToLines(text: string | null | undefined): string[] {
+  return String(text ?? "")
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+export function textToOptions(
+  text: string | null | undefined,
+  makeValue: (label: string) => string = (label) => label
+): SelectOption[] {
+  return textToLines(text)
+    .map((label) => ({ label, value: makeValue(label) }))
+    .filter((o) => o.value.trim().length > 0);
+}
+
+export function textToSelectOptions(text: string): SelectOption[] {
+  return textToOptions(text);
+}
+
+export function parseOptionsLines(text: string): EventFormFieldOptions {
+  const opts = textToOptions(text, (label) => slugKey(label));
+  return opts.length ? opts : null;
+}
+
+
+
+export function sortFromDB(fields: EventFormField[]) {
+  const arr = Array.isArray(fields) ? [...fields] : [];
+arr.sort(
+  (a, b) =>
+    clampInt(a.sortOrder, { fallback: 0 }) -
+    clampInt(b.sortOrder, { fallback: 0 })
+);
+  return arr;
+}
+
+export function buildFieldsSignature(fields: EventFormField[]) {
+  return sortFromDB(fields)
+    .map((f) => {
+      const id = String(f.id);
+      const updatedAt = f.updatedAt ?? "";
+      const order = clampInt(f.sortOrder, { fallback: 0 });
+      return `${id}:${updatedAt}:${order}`;
+    })
+    .join("|");
+}
+
 
 export function getFieldKey(f: { fieldKey?: unknown }) {
   return String(f.fieldKey ?? "").trim();

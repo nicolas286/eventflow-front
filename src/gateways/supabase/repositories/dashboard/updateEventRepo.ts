@@ -5,10 +5,11 @@ import { snakeToCamel } from "../../../../domain/helpers/snakeToCamel";
 import type { Event } from "../../../../domain/models/db/db.event.schema";
 import { eventSchema } from "../../../../domain/models/db/db.event.schema";
 import type { UpdateEventInput } from "../../../../features/admin/hooks/useUpdateEvent";
+import type { UpdateEventPatch } from "../../../../domain/models/admin/admin.updateEventPatch.schema";
 
 export function makeUpdateEventRepo(supabase: SupabaseClient) {
   return {
-    async updateEvent(input: UpdateEventInput): Promise<Event> {
+    async updateEvent(input: UpdateEventInput<UpdateEventPatch>): Promise<Event> {
       const flat = { eventId: input.eventId, ...input.patch };
       const payload = camelToSnake(flat);
 

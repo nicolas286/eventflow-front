@@ -1,3 +1,5 @@
+import { type DraftField } from "../../features/admin/events/singleEvent/EventRegistrationFormPanel";
+
 export function emptyToNull(v: unknown): string | null | undefined {
   if (v === undefined) return undefined;
   if (v === null) return null;
@@ -12,6 +14,17 @@ export function normalizeText(s: unknown) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "");
+}
+
+export function slugKey(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .replace(/__+/g, "_");
 }
 
 export function toDisplayText(value: unknown, fallback = "—"): string {
@@ -48,3 +61,6 @@ export function toRows<T>(value: RowsLike<T>): T[] {
   return [];
 }
 
+export function normalizeContiguousSortOrder(list: DraftField[]) {
+  return list.map((f, idx) => ({ ...f, sortOrder: idx + 1 }));
+}

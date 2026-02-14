@@ -25,7 +25,7 @@ function computeErrors(fields: EventFormFieldUI[], values: AttendeeEditorValue) 
     const key = String(f.fieldKey ?? "").trim();
     if (!key) continue;
 
-    const msg = validateFieldValue(f as any, values[key]); 
+    const msg = validateFieldValue(f as EventFormFieldUI, values[key]); 
     if (msg) errs[key] = msg;
   }
   return errs;

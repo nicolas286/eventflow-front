@@ -28,11 +28,9 @@ export function useAdminRegister(params: { supabase: SupabaseClient }) {
     try {
       setState({ loading: true, error: null, result: null });
 
-      console.log("[admin-register] sending", input);
 
       const result = await adminRegisterRepo.register(input);
 
-      console.log("[admin-register] received", result);
 
       // si l’edge renvoie { error: ... }
       if (result && typeof result === "object" && "error" in result) {
@@ -47,7 +45,6 @@ export function useAdminRegister(params: { supabase: SupabaseClient }) {
       setState({ loading: false, error: null, result });
       return result;
     } catch (e: unknown) {
-      console.error("[admin-register] failed", e);
 
       const ne = normalizeError(e, "Impossible de créer la commande");
       setState({ loading: false, error: ne.message, result: null });

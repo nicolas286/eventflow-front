@@ -14,7 +14,6 @@ export function adminUpdateOrderAttendeeRepo(supabase: SupabaseClient) {
     async updateOrderAttendee(input: AdminUpdateOrderAttendeeInput): Promise<AdminUpdateOrderAttendeeResult> {
       const validated = adminUpdateOrderAttendeeInputSchema.parse(input);
       const attendeeSnake = camelToSnake(validated.attendee);
-      console.log("UPDATE attendee payload", attendeeSnake);
 
 
       const raw = await supabaseSafe(() =>

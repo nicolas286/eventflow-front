@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { EventFormField } from "../../../../domain/models/db/db.eventFormFields.schema";
+import type { EventFormField, EventFormFieldOptions } from "../../../../domain/models/db/db.eventFormFields.schema";
 import type { CreateEventFormFieldInput } from "../../../../domain/models/admin/admin.createFormField.schema";
 import type { UpdateEventFormFieldPatch } from "../../../../domain/models/admin/admin.updateEventFormFieldPatch.schema";
 
@@ -9,6 +9,12 @@ import { useCreateEventFormField } from "../../hooks/useCreateEventFormField";
 import { useUpdateEventFormField } from "../../hooks/useUpdateEventFormField";
 import { useDeleteEventFormField } from "../../hooks/useDeleteEventFormField";
 import { Button, EditorShell } from "../../../../ui/components";
+import { FIELD_TYPES, type FieldType } from "../../../../domain/constants/fieldTypes";
+import { useMediaQuery } from "../../../../domain/helpers/ui";
+import { slugKey, normalizeContiguousSortOrder } from "../../../../domain/helpers/normalize";
+import { clampInt, uniqueKey, makeClientId } from "../../../../domain/helpers/logic";
+import { optionsToText } from "../../../../domain/helpers/fields";
+import { sortFromDB, parseOptionsLines } from "../../../../domain/helpers/fields";
 
 type Props = {
   supabase: SupabaseClient;
@@ -17,23 +23,8 @@ type Props = {
   onChanged?: () => void;
 };
 
-const FIELD_TYPES = [
-  { value: "text", label: "Texte" },
-  { value: "email", label: "Email" },
-  { value: "date", label: "Date" },
-  { value: "phone", label: "Téléphone" },
-  { value: "country", label: "Pays" },
-  { value: "textarea", label: "Texte long" },
-  { value: "number", label: "Nombre" },
-  { value: "checkbox", label: "Case à cocher" },
-  { value: "select", label: "Liste (select)" },
-  { value: "radio", label: "Radio" },
-] as const;
-
-type FieldType = (typeof FIELD_TYPES)[number]["value"];
-
 type EditState = {
-  id: string | null; // clientId (pas l'id DB)
+  id: string | null;
   label: string;
   fieldType: FieldType;
   isRequired: boolean;
@@ -41,106 +32,22 @@ type EditState = {
   optionsText: string;
 };
 
-type DraftField = {
-  id: string | null; // id DB
-  clientId: string; // id UI stable
+export type DraftField = {
+  id: string | null; 
+  clientId: string; 
 
   label: string;
   fieldKey: string;
   fieldType: FieldType;
   isRequired: boolean;
   isActive: boolean;
-  sortOrder: number; // contigu (1..n)
-  options: EventFormField["options"];
+  sortOrder: number;
+  options: EventFormFieldOptions;
 
   isNew?: boolean;
 };
 
 type MoveDir = "up" | "down";
-
-function useMediaQuery(query: string) {
-  const [matches, setMatches] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia(query).matches : false
-  );
-
-  useEffect(() => {
-    const m = window.matchMedia(query);
-    const onChange = () => setMatches(m.matches);
-    onChange();
-    m.addEventListener?.("change", onChange);
-    return () => m.removeEventListener?.("change", onChange);
-  }, [query]);
-
-  return matches;
-}
-
-function slugKey(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .replace(/__+/g, "_");
-}
-
-function clampInt(v: unknown, fallback = 0) {
-  const n = typeof v === "number" ? v : Number(String(v ?? ""));
-  if (!Number.isFinite(n)) return fallback;
-  return Math.trunc(n);
-}
-
-function normalizeOptionsToText(options: EventFormField["options"]): string {
-  if (!options) return "";
-  if (typeof options === "string") return options;
-
-  if (Array.isArray(options)) {
-    return options
-      .map((o: any) => String(o?.label ?? o?.value ?? "").trim())
-      .filter(Boolean)
-      .join("\n");
-  }
-  return "";
-}
-
-function parseOptionsLines(text: string): EventFormField["options"] {
-  const t = (text ?? "").trim();
-  if (!t) return null;
-
-  const lines = t
-    .split("\n")
-    .map((x) => x.trim())
-    .filter(Boolean);
-
-  if (!lines.length) return null;
-
-  return lines.map((label) => ({ label, value: slugKey(label) }));
-}
-
-function uniqueKey(base: string, existing: Set<string>) {
-  let k = base;
-  let i = 2;
-  while (existing.has(k) || !k) {
-    k = `${base}_${i}`;
-    i += 1;
-  }
-  return k;
-}
-
-function makeClientId() {
-  return `tmp_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-}
-
-function normalizeContiguousSortOrder(list: DraftField[]) {
-  return list.map((f, idx) => ({ ...f, sortOrder: idx + 1 }));
-}
-
-function sortFromDB(fields: EventFormField[]) {
-  const arr = Array.isArray(fields) ? [...fields] : [];
-  arr.sort((a, b) => clampInt(a.sortOrder ?? 0, 0) - clampInt(b.sortOrder ?? 0, 0));
-  return arr;
-}
 
 export function EventRegistrationFormPanel(props: Props) {
   const { supabase, event, fields, onChanged } = props;
@@ -163,11 +70,9 @@ export function EventRegistrationFormPanel(props: Props) {
 
   const lastLoadedSigRef = useRef<string>("");
 
-  // move anim (cartes)
   const [moveAnim, setMoveAnim] = useState<Record<string, MoveDir>>({});
   const moveTimerRef = useRef<number | null>(null);
 
-  // fermeture animée inline (mobile)
   const closeTimerRef = useRef<number | null>(null);
   const [closingKey, setClosingKey] = useState<string | null>(null); // "create" ou clientId
   const [isClosing, setIsClosing] = useState(false);
@@ -175,11 +80,17 @@ export function EventRegistrationFormPanel(props: Props) {
   const isSaving = isSavingAll || create.loading || update.loading || del.loading;
 
   const incomingSig = useMemo(() => {
-    const sorted = sortFromDB(fields);
-    return sorted
-      .map((f) => `${String(f.id)}:${String((f as any).updatedAt ?? "")}:${clampInt(f.sortOrder ?? 0, 0)}`)
-      .join("|");
-  }, [fields]);
+  return sortFromDB(fields)
+    .map((f) => {
+      const id = String(f.id);
+      const updatedAt = f.updatedAt ?? "";
+      const order = clampInt(f.sortOrder, { fallback: 0 });
+
+      return `${id}:${updatedAt}:${order}`;
+    })
+    .join("|");
+}, [fields]);
+
 
   useEffect(() => {
     if (isDirty) return;
@@ -188,15 +99,15 @@ export function EventRegistrationFormPanel(props: Props) {
     const sorted = sortFromDB(fields);
     const next: DraftField[] = normalizeContiguousSortOrder(
       sorted.map((f) => ({
-        id: String(f.id),
-        clientId: String(f.id),
+        id: f.id,
+        clientId: f.id,
         label: f.label ?? "",
-        fieldKey: String((f as any).fieldKey ?? ""),
-        fieldType: ((f as any).fieldType ?? "text") as FieldType,
-        isRequired: Boolean((f as any).isRequired),
-        isActive: Boolean((f as any).isActive ?? true),
-        sortOrder: clampInt((f as any).sortOrder ?? 0, 0),
-        options: ((f as any).options ?? null) as any,
+        fieldKey: String(f.fieldKey ?? ""),
+        fieldType: (f.fieldType ?? "text") as FieldType,
+        isRequired: f.isRequired,
+        isActive: f.isActive ?? true,
+        sortOrder: clampInt(f.sortOrder ?? 0),
+        options: f.options ?? null as any,
       }))
     );
 
@@ -275,7 +186,7 @@ export function EventRegistrationFormPanel(props: Props) {
       fieldType: (f.fieldType ?? "text") as FieldType,
       isRequired: Boolean(f.isRequired),
       isActive: Boolean(f.isActive ?? true),
-      optionsText: normalizeOptionsToText(f.options ?? null),
+      optionsText: optionsToText(f.options ?? null),
     });
   }
 
@@ -459,7 +370,7 @@ export function EventRegistrationFormPanel(props: Props) {
             eventId: event.id,
             label: f.label,
             fieldKey: f.fieldKey,
-            fieldType: f.fieldType as any,
+            fieldType: f.fieldType,
             isRequired: f.isRequired,
             isActive: f.isActive,
             sortOrder: f.sortOrder,
@@ -474,7 +385,7 @@ export function EventRegistrationFormPanel(props: Props) {
         const patch: Omit<UpdateEventFormFieldPatch, "id"> = {
           label: f.label,
           fieldKey: f.fieldKey,
-          fieldType: f.fieldType as any,
+          fieldType: f.fieldType,
           isRequired: f.isRequired,
           isActive: f.isActive,
           sortOrder: f.sortOrder,

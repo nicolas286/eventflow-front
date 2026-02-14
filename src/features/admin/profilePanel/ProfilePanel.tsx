@@ -178,7 +178,7 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
       <div className="profilePanel__section">
         <div className="profilePanel__sectionHead">
           <div className="profilePanel__sectionTitle">Compte</div>
-          <Badge tone="warning" label="Bientôt" />
+          <Badge tone="warn" label="Bientôt" />
         </div>
 
         <div className="profilePanel__grid2">

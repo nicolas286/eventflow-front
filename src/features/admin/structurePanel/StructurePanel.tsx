@@ -181,7 +181,6 @@ async function handleConnect(mode: "test" | "live") {
   setConnectFlash(null);
 
   const url = await startMollieConnect({ orgId, mode });
-  console.log("[mollie] start url =", url);
 
   if (url) window.location.href = url;
 }
@@ -202,7 +201,7 @@ async function handleConnect(mode: "test" | "live") {
               </div>
             </div>
 
-            <Badge tone={dirty ? "warning" : "info"} label={dirty ? "Modifs" : "OK"} />
+            <Badge tone={dirty ? "warn" : "info"} label={dirty ? "Modifs" : "OK"} />
           </div>
 
           <div className="structurePanel__field">

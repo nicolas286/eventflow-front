@@ -1,17 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { EventOverviewRow } from "../../../domain/models/admin/admin.eventsOverview.schema";
 
 export function useEventEditorPanel(events: EventOverviewRow[]) {
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [editorEventId, setEditorEventId] = useState<string | null>(null);
   const [isClosing, setIsClosing] = useState(false);
 
-  useEffect(() => {
-    if (selectedEventId) {
-      setEditorEventId(selectedEventId);
-      setIsClosing(false);
-    }
-  }, [selectedEventId]);
+  const pendingOpenIdRef = useRef<string | null>(null);
 
   const selectedRow: EventOverviewRow | null = useMemo(() => {
     if (!editorEventId) return null;
@@ -20,19 +14,26 @@ export function useEventEditorPanel(events: EventOverviewRow[]) {
 
   const editingId = editorEventId ?? undefined;
 
-  const select = (id: string) => {
-    if (editorEventId === id) {
-      setIsClosing(true);
-      setSelectedEventId(null);
+  const open = (id: string) => {
+    if (isClosing) {
+      pendingOpenIdRef.current = id;
       return;
     }
-    setSelectedEventId(id);
+    setEditorEventId(id);
+    setIsClosing(false);
   };
 
   const close = () => {
     if (!editorEventId) return;
     setIsClosing(true);
-    setSelectedEventId(null);
+  };
+
+  const select = (id: string) => {
+    if (editorEventId === id && !isClosing) {
+      close();
+      return;
+    }
+    open(id);
   };
 
   const closeIf = (id: string) => {
@@ -41,11 +42,22 @@ export function useEventEditorPanel(events: EventOverviewRow[]) {
 
   const onAnimEnd = () => {
     if (!isClosing) return;
+
     setIsClosing(false);
+
+    const pending = pendingOpenIdRef.current;
+    pendingOpenIdRef.current = null;
+
+    if (pending) {
+      setEditorEventId(pending);
+      return;
+    }
+
     setEditorEventId(null);
   };
 
-  const panelClassName = isClosing ? "isClosing" : "isOpen";
+  const panelClassName =
+    editorEventId === null ? "isClosed" : isClosing ? "isClosing" : "isOpen";
 
   return {
     selectedRow,

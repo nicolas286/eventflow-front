@@ -151,7 +151,7 @@ export default function BillingModal(props: Props) {
           <div style={{ display: "grid", gap: 6 }}>
             <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
               <div style={{ fontSize: 16, fontWeight: 800 }}>{title}</div>
-              {mode === "required" ? <Badge tone="warning" label="Obligatoire" /> : <Badge tone="info" label="Profil" />}
+              {mode === "required" ? <Badge tone="warn" label="Obligatoire" /> : <Badge tone="info" label="Profil" />}
             </div>
 
             <div style={{ fontSize: 13, color: "#6b7280" }}>{subtitle}</div>

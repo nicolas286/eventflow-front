@@ -84,7 +84,7 @@ export function useAdminDashboardData(params: { supabase: SupabaseClient }) {
   const loadFn = useCallback(async (): Promise<State> => {
     // 1) bootstrap
     const bootstrap = await dashboardRepo.getDashboardBootstrap();
-    const orgId = bootstrap.organization?.id ? String(bootstrap.organization.id) : null;
+    const orgId = bootstrap?.organization?.id ? String(bootstrap.organization.id) : null;
 
     // onboarding: pas d’orga
     if (!orgId) {

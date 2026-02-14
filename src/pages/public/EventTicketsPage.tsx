@@ -10,6 +10,7 @@ import Badge from "../../ui/components/badge/Badge";
 
 import { PublicEventHeader } from "./checkout/PublicEventHeader";
 import { loadDraft, saveDraft, formatMoney } from "./checkout/checkoutStore";
+import { clampInt } from "../../domain/helpers/logic";
 
 /* ✅ CSS */
 import "../../styles/desktop/publicCheckoutBase.desktop.css";
@@ -111,18 +112,13 @@ export function EventTicketsPage() {
     return acc + qty * (p.attendeesPerUnit ?? 0);
   }, 0);
 
-  function clampQty(next: number, stockQty: number | null) {
-    const min = 0;
-    const max = stockQty == null ? 99 : Math.max(0, stockQty);
-    return Math.max(min, Math.min(max, next));
-  }
 
   function updateQty(productId: string, nextQty: number) {
     if (!draft) return;
     const p = sortedProducts.find((x) => x.id === productId);
     if (!p) return;
 
-    const q = clampQty(nextQty, p.stockQty);
+    const q = clampInt(nextQty, { min: 0, max: 99 })
 
     const next = {
       ...draft,

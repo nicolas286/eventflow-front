@@ -24,11 +24,7 @@ export function useRegister(params: { supabase: SupabaseClient }) {
     try {
       setState({ loading: true, error: null, result: null });
 
-      console.log("[register] sending", input);
-
       const result = await registerRepo.register(input);
-
-      console.log("[register] received", result);
 
       // si l’edge renvoie { error: ... }
       if (result && typeof result === "object" && "error" in result) {
@@ -40,8 +36,6 @@ export function useRegister(params: { supabase: SupabaseClient }) {
       setState({ loading: false, error: null, result });
       return result;
     } catch (e: unknown) {
-      // IMPORTANT: on LOG le vrai problème, sinon tu vois juste "null"
-      console.error("[register] failed", e);
 
       const ne = normalizeError(e, "Impossible de finaliser la réservation");
       setState({ loading: false, error: ne.message, result: null });
