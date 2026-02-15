@@ -6,7 +6,7 @@ import {
   type UpdateEventFullPatch,
 } from "../../../../domain/models/admin/admin.updateEventFullPatch.schema";
 
-import Button from "../../../../ui/components/button/Button"
+import Button from "../../../../ui/components/button/Button";
 
 import type { AdminEventDetailEvent } from "../../../../domain/models/admin/admin.eventDetail.schema";
 
@@ -94,7 +94,6 @@ function withBust(url: string, seed?: string | null) {
   const u = (url ?? "").trim();
   if (!u) return u;
 
-  // seed stable (updatedAt) si dispo, sinon Date.now (dernier recours)
   const v = seed ? Date.parse(seed) || Date.now() : Date.now();
   const sep = u.includes("?") ? "&" : "?";
   return `${u}${sep}v=${v}`;
@@ -125,7 +124,6 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
   useEffect(() => {
     setDraft(eventToDraft(event));
 
-    // reset états “transitoires”
     setBannerFile(null);
     setUploadedBannerPreview(null);
     setForceDefaultPreview(false);
@@ -151,19 +149,14 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
 
   // ✅ Aperçu bannière (UX instant)
   const bannerPreviewUrl = useMemo(() => {
-    // 1) fichier local choisi => preview immédiate
     if (localBannerPreview) return localBannerPreview;
-
-    // 2) juste uploadé => bust immédiat (contourne cache)
     if (uploadedBannerPreview) return uploadedBannerPreview;
 
-    // 3) retirer => on force l’effective (default) (bust avec updatedAt)
     if (forceDefaultPreview) {
       const eff = (event.bannerUrlEffective ?? "").trim();
       return eff ? withBust(eff, event.updatedAt ?? null) : null;
     }
 
-    // 4) sinon, l’effective (bust avec updatedAt pour éviter Ctrl+F5)
     const eff = (event.bannerUrlEffective ?? "").trim();
     return eff ? withBust(eff, event.updatedAt ?? null) : null;
   }, [
@@ -190,7 +183,6 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
     const nextDesc = draft.description.trim() || null;
     if ((nextDesc ?? null) !== (event.description ?? null)) patch.description = nextDesc;
 
-    // banner raw (DB)
     const nextBannerRaw = draft.bannerUrlRaw.trim() || null;
     const curBannerRaw = (event.bannerUrlRaw ?? "").trim() || null;
     if (nextBannerRaw !== curBannerRaw) patch.bannerUrl = nextBannerRaw;
@@ -216,31 +208,25 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
   /* ------------------------------------------------------------------ */
 
   function openBannerPicker() {
-    // ne pas toucher aux previews si cancel
     if (fileInputRef.current) fileInputRef.current.value = "";
     fileInputRef.current?.click();
   }
 
   function onBannerPicked(file: File) {
-    setForceDefaultPreview(false); // on sort du mode “retirer”
+    setForceDefaultPreview(false);
     setBannerFile(file);
 
-    // preview locale immédiate
     if (localBannerPreview) URL.revokeObjectURL(localBannerPreview);
     setLocalBannerPreview(URL.createObjectURL(file));
 
-    // on masque l’upload précédent
     setUploadedBannerPreview(null);
 
-    // re-choisir le même fichier possible
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   function clearBanner() {
-    // ✅ visuellement: default immédiat
     setForceDefaultPreview(true);
 
-    // état upload/local reset
     setBannerFile(null);
     setUploadedBannerPreview(null);
 
@@ -249,7 +235,6 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
       setLocalBannerPreview(null);
     }
 
-    // ✅ raw vide => patch builder enverra bannerUrl = null
     setDraft((d) => ({ ...d, bannerUrlRaw: "" }));
   }
 
@@ -268,7 +253,6 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
     try {
       let forcedBannerUrl: string | null | undefined = undefined;
 
-      // 1) upload éventuel
       if (bannerFile) {
         const max = 4 * 1024 * 1024;
         if (bannerFile.size > max) {
@@ -280,22 +264,18 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
         forcedBannerUrl = up.publicUrl;
         setUploadedBannerPreview(up.publicUrlWithBust);
 
-        // consume + cleanup local preview
         setBannerFile(null);
         if (localBannerPreview) {
           URL.revokeObjectURL(localBannerPreview);
           setLocalBannerPreview(null);
         }
 
-        // sync draft raw
         setDraft((d) => ({ ...d, bannerUrlRaw: up.publicUrl }));
         setForceDefaultPreview(false);
       }
 
-      // 2) patch
       const patch = buildPatch(nextIsPublished);
 
-      // 3) upload => forcer bannerUrl (même si même path)
       if (forcedBannerUrl !== undefined) {
         patch.bannerUrl = forcedBannerUrl;
       }
@@ -383,7 +363,8 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
           {fieldErrors.description && <div className="formError">{fieldErrors.description}</div>}
         </div>
 
-        <div className="adminEventField">
+        {/* Sous Description : gauche = début/fin/acompte | droite = aperçu + boutons */}
+        <div className="adminEventField adminEventLeftCol">
           <div className="adminEventLabel">Début</div>
           <input
             type="datetime-local"
@@ -394,7 +375,44 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
           {fieldErrors.startsAt && <div className="formError">{fieldErrors.startsAt}</div>}
         </div>
 
-        <div className="adminEventField">
+        <div className="adminEventField adminEventBannerSide">
+          <div className="adminEventLabel">Bannière</div>
+
+          {bannerPreviewUrl ? (
+            <img className="adminEventBannerPreviewMini" src={bannerPreviewUrl} alt="Bannière" />
+          ) : (
+            <div className="adminEventEmpty">Aucune bannière</div>
+          )}
+
+          {/* ✅ boutons juste sous l'image */}
+          <div className="adminEventBannerActionsBelow">
+            <Button onClick={openBannerPicker}>
+              {hasCustomBannerNow || bannerFile ? "Remplacer" : "Choisir un fichier"}
+            </Button>
+
+            {hasCustomBannerNow || bannerFile ? <Button onClick={clearBanner}>Retirer</Button> : null}
+          </div>
+
+          {bannerFile ? (
+            <div className="adminEventHint" style={{ margin: 0 }}>
+              Fichier prêt : <strong>{bannerFile.name}</strong>
+            </div>
+          ) : null}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              onBannerPicked(file);
+            }}
+          />
+        </div>
+
+        <div className="adminEventField adminEventLeftCol">
           <div className="adminEventLabel">Fin (optionnel)</div>
           <input
             type="datetime-local"
@@ -405,7 +423,7 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
           {fieldErrors.endsAt && <div className="formError">{fieldErrors.endsAt}</div>}
         </div>
 
-        <div className="adminEventField">
+        <div className="adminEventField adminEventLeftCol">
           <div className="adminEventLabel">Acompte (centimes)</div>
           <input
             type="number"
@@ -419,70 +437,13 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
           <div className="adminEventHint">0 = pas d’acompte.</div>
         </div>
 
-        {/* Bannière */}
-        <div className="adminEventField adminEventFieldSpan2">
-          <div className="adminEventLabel">Bannière</div>
-
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <Button  onClick={openBannerPicker}>
-              {hasCustomBannerNow || bannerFile ? "Remplacer" : "Choisir un fichier"}
-            </Button>
-
-            {(hasCustomBannerNow || bannerFile) ? (
-              <Button onClick={clearBanner}>
-                Retirer
-              </Button>
-            ) : null}
-
-            {bannerFile ? (
-              <div className="adminEventHint" style={{ margin: 0 }}>
-                Fichier prêt : <strong>{bannerFile.name}</strong>
-              </div>
-            ) : null}
-          </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            style={{ display: "none" }}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              onBannerPicked(file);
-            }}
-          />
-
-          <div className="adminEventHint">
-            Recommandé: large (ex: 1600×600) · max 4MB · l’upload se fait au moment de “Enregistrer”.
-          </div>
-        </div>
-
-        <div className="adminEventField adminEventFieldSpan2">
-          <div className="adminEventLabel">Aperçu bannière</div>
-          {bannerPreviewUrl ? (
-            <img className="adminEventBannerPreview" src={bannerPreviewUrl} alt="Bannière" />
-          ) : (
-            <div className="adminEventEmpty">Aucune bannière</div>
-          )}
-        </div>
-
         {/* Actions */}
-        <div
-          className="adminEventField adminEventFieldSpan2"
-          style={{ marginTop: 12, display: "flex", gap: 8 }}
-        >
-          <Button
-            disabled={!canSave || saving}
-            onClick={() => void save(false)}
-          >
+        <div className="adminEventActionsBar">
+          <Button disabled={!canSave || saving} onClick={() => void save(false)}>
             {secondaryLabel}
           </Button>
 
-          <Button
-            disabled={isPrimaryDisabled}
-            onClick={() => void save(true)}
-          >
+          <Button disabled={isPrimaryDisabled} onClick={() => void save(true)}>
             {saving ? "Enregistrement…" : primaryLabel}
           </Button>
         </div>

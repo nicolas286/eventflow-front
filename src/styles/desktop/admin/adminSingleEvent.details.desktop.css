@@ -1,0 +1,150 @@
+/* =========================
+   Admin Single Event - Details (Rework)
+   (Style-only)
+   ========================= */
+
+/* Tabs: segmented control */
+.adminEventTabs{
+  padding: 6px;
+  border-radius: 14px;
+  background: rgba(0,0,0,0.03);
+  border: 1px solid rgba(0,0,0,0.06);
+
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-bottom: 12px;
+}
+
+.adminEventTab{
+  padding:8px 10px;
+
+  border-radius: 12px;
+  border: 1px solid transparent;
+
+  background: transparent;
+  color: rgba(0,0,0,0.70);
+
+  font-size:13px;
+  font-weight:800;
+  cursor:pointer;
+
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.adminEventTab:hover{
+  background: rgba(0,0,0,0.05);
+}
+
+.adminEventTab.isActive{
+  background: rgb(var(--primary));
+  border-color: rgb(var(--primary));
+  color: rgb(var(--primary-contrast));
+  box-shadow: 0 10px 22px rgba(0,0,0,0.08);
+}
+
+/* Card wrapper */
+.adminSingleEventDetails .adminEventDetails{
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(0,0,0,0.06);
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 14px 32px rgba(0,0,0,0.06);
+}
+
+/* Header typography */
+.adminSingleEventDetails .adminEventHeaderRow h3{
+  font-size: 18px;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+}
+
+/* Form grid spacing */
+.adminSingleEventDetails .adminEventFormGrid{
+  gap: 14px;
+}
+
+/* Fields as tiles */
+.adminSingleEventDetails .adminEventField{
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(0,0,0,0.06);
+  background: #fff;
+  box-shadow: 0 10px 22px rgba(0,0,0,0.04);
+}
+
+/* Inputs focus */
+.adminSingleEventDetails .adminEventInput:focus,
+.adminSingleEventDetails .adminEventTextarea:focus{
+  border-color: rgba(0,0,0,0.18);
+  box-shadow: 0 0 0 4px rgba(0,0,0,0.06);
+}
+
+/* -------------------------------------------------------
+   Banner (right column: preview + buttons underneath)
+   ------------------------------------------------------- */
+
+/* Force these fields to stay in left column (stacked) */
+.adminEventLeftCol{
+  grid-column: 1;
+}
+
+/* Right side block (preview + buttons) spans 3 rows */
+.adminEventBannerSide{
+  grid-column: 2;
+  grid-row: span 3;   /* Début / Fin / Acompte */
+  align-self: start;
+}
+
+/* Preview image: keep natural ratio (no max-height) */
+.adminEventBannerPreviewMini{
+  width: 100%;
+  height: auto;          /* ratio natif */
+  object-fit: contain;   /* pas de découpe */
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: rgba(0,0,0,0.03);
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+/* Buttons under the banner preview (small gap so not glued) */
+.adminEventBannerActionsBelow{
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* (optional) legacy helper if still used elsewhere */
+.adminEventBannerActions{
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* -------------------------------------------------------
+   Actions bar (end of card, far right)
+   ------------------------------------------------------- */
+
+.adminEventActionsBar{
+  grid-column: span 1;     /* full width of the form grid */
+  margin-top: 14px;
+
+  display: flex;
+  justify-content: flex-start;
+  gap: 10px;
+
+  width: 100%;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}

@@ -146,3 +146,53 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================
+   🔥 GLOBAL HARD FIX
+   Horizontal overflow killer
+   ========================= */
+
+@media (max-width: 1050px){
+
+  /* 1️⃣ Force border-box partout */
+  *,
+  *::before,
+  *::after{
+    box-sizing: border-box;
+  }
+
+  /* 2️⃣ Empêche tout container principal de dépasser */
+  .adminEventsShell,
+  .adminEventsLeft,
+  .adminSingleEventDetails,
+  .adminEventDetails,
+  .adminEventFormGrid{
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* 3️⃣ Empêche grid/flex enfants de forcer un dépassement */
+  .adminEventFormGrid > *,
+  .adminEventDetails > *{
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* 4️⃣ Corrige les animations scale qui créent 1-2px de scroll */
+  .adminEventsEditorPanel--inline,
+  .adminRegInlineEditor,
+  .adminTicketsInlineEditor{
+    will-change: transform;
+    transform-origin: top center;
+  }
+
+  /* 5️⃣ Supprime définitivement le scroll horizontal */
+  html{
+    overflow-x: clip; /* mieux que hidden */
+  }
+
+  body{
+    overflow-x: clip;
+  }
+}
