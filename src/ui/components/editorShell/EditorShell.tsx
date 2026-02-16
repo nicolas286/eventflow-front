@@ -117,7 +117,7 @@ export function EditorShell({
       ({
         ["--editor-w" as any]: `${editorWidth}px`,
         ["--editor-gap" as any]: `${editorGap}px`,
-        ["--sticky-top" as any]: `${stickyTop}px`, // ✅ fix: même variable que le CSS
+        ["--sticky-top" as any]: `${stickyTop}px`,
       }) as React.CSSProperties,
     [editorWidth, editorGap, stickyTop]
   );
@@ -145,19 +145,22 @@ export function EditorShell({
               anim === "closing" ? "isClosing" : "",
             ].join(" ")}
           >
-            {onRequestClose ? (
-              <Button
-                type="button"
-                className="uiEditorCloseBtn"
-                variant="ghost"
-                onClick={onRequestClose}
-                aria-label="Fermer"
-              >
-                <CloseIcon />
-              </Button>
-            ) : null}
+            {/* ✅ wrapper relatif : la croix se positionne au-dessus du contenu */}
+            <div className="uiEditorPanelInner">
+              {onRequestClose ? (
+                <Button
+                  type="button"
+                  className="uiEditorCloseBtn"
+                  variant="ghost"
+                  onClick={onRequestClose}
+                  aria-label="Fermer"
+                >
+                  <CloseIcon />
+                </Button>
+              ) : null}
 
-            {right}
+              {right}
+            </div>
           </div>
         ) : null}
       </div>

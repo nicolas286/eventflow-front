@@ -42,9 +42,14 @@
   position:absolute;
   right:0;
   top:0;
+  bottom:0;                 /* ✅ IMPORTANT */
   width:var(--editor-w);
   box-sizing:border-box;
+
+  display:flex;             /* ✅ permet au panel sticky de fonctionner */
+  align-items:flex-start;
 }
+
 
 /* Quand ouvert => la liste shrink à gauche */
 .uiEditorShell.isEditorOpen .uiEditorLeft{

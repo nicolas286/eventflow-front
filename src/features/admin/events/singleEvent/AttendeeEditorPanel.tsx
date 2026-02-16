@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { Button, EditorShell } from "../../../../ui/components";
+import { Button } from "../../../../ui/components";
+
 import type { EventFormFieldUI } from "../../../../domain/models/db/db.eventFormFields.schema";
-import { AttendeeFieldsForm } from "./AttendeeFieldForm";
 import type { EventProduct } from "../../../../domain/models/db/db.eventProducts.schema";
+import { AttendeeFieldsForm } from "./AttendeeFieldForm";
 import { validateFieldValue } from "../../../../domain/helpers/validateFieldValue";
 
 export type AttendeeEditorMode = "create" | "edit";
@@ -24,8 +25,7 @@ function computeErrors(fields: EventFormFieldUI[], values: AttendeeEditorValue) 
   for (const f of fields) {
     const key = String(f.fieldKey ?? "").trim();
     if (!key) continue;
-
-    const msg = validateFieldValue(f as EventFormFieldUI, values[key]); 
+    const msg = validateFieldValue(f as EventFormFieldUI, values[key]);
     if (msg) errs[key] = msg;
   }
   return errs;
@@ -46,12 +46,7 @@ export function AttendeeEditorPanel(props: {
   onSubmit: (value: AttendeeEditorValue) => Promise<void> | void;
 
   isSaving?: boolean;
-  stickyTop?: number;
-  editorWidth?: number;
-  editorGap?: number;
-
   error?: string | null;
-  left?: React.ReactNode;
 
   layout?: "shell" | "inline";
 }) {
@@ -63,27 +58,29 @@ export function AttendeeEditorPanel(props: {
     onRequestClose,
     onSubmit,
     isSaving = false,
-    stickyTop = 84,
-    editorWidth = 420,
-    editorGap = 14,
     error: externalError = null,
-    left,
     layout = "shell",
   } = props;
 
   const [value, setValue] = useState<AttendeeEditorValue>({ ...(initialValue ?? {}) });
-
   const [touched, setTouched] = useState<Record<string, true>>({});
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const next = makeEmptyFormValue(fields, initialValue);
-    setValue(next);
-    setTouched({});
-    setAttemptedSubmit(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, fields.map((f) => String(f.fieldKey ?? "")).join("|")]);
+useEffect(() => {
+  if (!isOpen) return;
+
+  const next = makeEmptyFormValue(fields, initialValue);
+  setValue(next);
+  setTouched({});
+  setAttemptedSubmit(false);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [
+  isOpen,
+  JSON.stringify(initialValue), // 🔥 déclenche si on change de participant
+  fields.map((f) => String(f.fieldKey ?? "")).join("|"),
+]);
+
 
   const errors = useMemo(() => computeErrors(fields, value), [fields, value]);
   const isAllValid = useMemo(() => Object.keys(errors).length === 0, [errors]);
@@ -94,7 +91,7 @@ export function AttendeeEditorPanel(props: {
 
   function setField(key: string, v: unknown) {
     setValue((prev) => ({ ...prev, [key]: v }));
-    setTouched((prev) => (prev[key] ? prev : { ...prev, [key]: true })); // live => considère "touché"
+    setTouched((prev) => (prev[key] ? prev : { ...prev, [key]: true }));
   }
 
   async function handleSubmit() {
@@ -106,6 +103,7 @@ export function AttendeeEditorPanel(props: {
   const saving = Boolean(isSaving);
   const error = externalError;
 
+  /* inline anim */
   const [anim, setAnim] = useState<AnimState>("closed");
   const closeTimerRef = useRef<number | null>(null);
 
@@ -144,22 +142,16 @@ export function AttendeeEditorPanel(props: {
       </div>
     ) : (
       <>
-        <div className="adminEventFormGrid" style={{ marginTop: 12 }}>
+        <div style={{ marginTop: 12 }}>
           <AttendeeFieldsForm
             fields={fields}
             values={value}
-            errors={Object.fromEntries(
-              Object.entries(errors).filter(([k]) => shouldShowErr(k))
-            )}
+            errors={Object.fromEntries(Object.entries(errors).filter(([k]) => shouldShowErr(k)))}
             onChange={(fieldKey, val) => setField(fieldKey, val)}
-
           />
         </div>
 
-        <div
-          className="adminTicketsEditorFooter"
-          style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}
-        >
+        <div className="adminTicketsEditorFooter" style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <Button variant="secondary" onClick={onRequestClose} disabled={saving}>
             Fermer
           </Button>
@@ -210,15 +202,6 @@ export function AttendeeEditorPanel(props: {
     return card;
   }
 
-  return (
-    <EditorShell
-      isOpen={isOpen}
-      onRequestClose={onRequestClose}
-      editorWidth={editorWidth}
-      editorGap={editorGap}
-      stickyTop={stickyTop}
-      left={left}
-      right={isOpen ? card : null}
-    />
-  );
+  // layout shell: on laisse le parent (EditorShell) gérer sticky / anim
+  return isOpen ? card : null;
 }

@@ -196,3 +196,31 @@
     overflow-x: clip;
   }
 }
+
+@media (max-width: 900px){
+  .adminEventTitle{
+    font-size: 20px;
+    margin: 14px 0 18px;
+  }
+}
+
+@media (max-width: 768px) {
+
+  .adminEventTabsInner {
+    flex-wrap: wrap;
+  }
+
+  .adminEventTab {
+    flex: 1 1 calc(50% - 4px); /* 2 boutons par ligne */
+    min-width: 0;
+    font-size: 13px;
+    padding: 9px 10px;
+  }
+
+}
+
+@media (max-width: 1050px) {
+  .adminRegActions .deleteFormFieldButton {
+    width: 100%;
+  }
+}

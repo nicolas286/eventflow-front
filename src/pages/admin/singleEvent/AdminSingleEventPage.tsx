@@ -123,24 +123,26 @@ export function AdminSingleEventPage() {
   return (
     <div className="adminCard">
       {/* ✅ Titre = nom de l’événement */}
-      <h2>{headerTitle}</h2>
+      <h2 className="adminEventTitle">{headerTitle}</h2>
 
       {/* ✅ Suppression de la ligne slug/id */}
       {/* (si tu veux garder l’id pour debug, dis-moi et je te le mets dans un <details> caché) */}
 
       <div className="adminEventTabs">
-        <TabButton active={tab === "details"} onClick={() => setTabAndUrl("details")}>
-          Détails
-        </TabButton>
-        <TabButton active={tab === "tickets"} onClick={() => setTabAndUrl("tickets")}>
-          Tickets
-        </TabButton>
-        <TabButton active={tab === "form"} onClick={() => setTabAndUrl("form")}>
-          Formulaire d&apos;inscription
-        </TabButton>
-        <TabButton active={tab === "participants"} onClick={() => setTabAndUrl("participants")}>
-          Participants
-        </TabButton>
+        <div className="adminEventTabsInner">
+          <TabButton active={tab === "details"} onClick={() => setTabAndUrl("details")}>
+            Détails
+          </TabButton>
+          <TabButton active={tab === "tickets"} onClick={() => setTabAndUrl("tickets")}>
+            Tickets
+          </TabButton>
+          <TabButton active={tab === "form"} onClick={() => setTabAndUrl("form")}>
+            Formulaire d&apos;inscription
+          </TabButton>
+          <TabButton active={tab === "participants"} onClick={() => setTabAndUrl("participants")}>
+            Participants
+          </TabButton>
+        </div>
       </div>
 
       <div style={{ marginTop: 16 }}>

@@ -720,6 +720,7 @@ export function EventTicketsPanel(props: Props) {
             variant="danger"
             onClick={() => removeLocal(t.clientId)}
             disabled={isSaving || (!onRemove && Boolean(t.id))}
+            className="deleteFormFieldButton"
           >
             Supprimer
           </Button>
@@ -813,7 +814,7 @@ export function EventTicketsPanel(props: Props) {
           onRequestClose={closeEditor}
           editorWidth={420}
           editorGap={14}
-          stickyTop={84}
+          stickyTop={120}
           left={
             <div className="adminTicketsList">
               {sorted.length === 0 ? (

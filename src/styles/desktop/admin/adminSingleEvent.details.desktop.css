@@ -3,49 +3,6 @@
    (Style-only)
    ========================= */
 
-/* Tabs: segmented control */
-.adminEventTabs{
-  padding: 6px;
-  border-radius: 14px;
-  background: rgba(0,0,0,0.03);
-  border: 1px solid rgba(0,0,0,0.06);
-
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  margin-bottom: 12px;
-}
-
-.adminEventTab{
-  padding:8px 10px;
-
-  border-radius: 12px;
-  border: 1px solid transparent;
-
-  background: transparent;
-  color: rgba(0,0,0,0.70);
-
-  font-size:13px;
-  font-weight:800;
-  cursor:pointer;
-
-  transition:
-    background 120ms ease,
-    color 120ms ease,
-    border-color 120ms ease;
-}
-
-.adminEventTab:hover{
-  background: rgba(0,0,0,0.05);
-}
-
-.adminEventTab.isActive{
-  background: rgb(var(--primary));
-  border-color: rgb(var(--primary));
-  color: rgb(var(--primary-contrast));
-  box-shadow: 0 10px 22px rgba(0,0,0,0.08);
-}
-
 /* Card wrapper */
 .adminSingleEventDetails .adminEventDetails{
   max-width: 1100px;

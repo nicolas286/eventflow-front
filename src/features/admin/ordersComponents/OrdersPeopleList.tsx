@@ -25,7 +25,7 @@ type OrdersPeopleListProps = {
   editorOpen: boolean;
   editingAttendeeId: string | null;
 
-  inlineEditorProps: Omit<AttendeeEditorProps, "layout" | "stickyTop" | "editorWidth" | "editorGap" | "left">;
+  inlineEditorProps: Omit<AttendeeEditorProps, "layout" | "stickyTop" | "editorWidth" | "editorGap" | "left" >;
   onOpenEdit: (attendeeId: string, orderId: string) => void;
 
 };
