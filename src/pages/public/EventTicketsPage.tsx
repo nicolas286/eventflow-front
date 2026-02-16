@@ -19,35 +19,6 @@ import "../../styles/desktop/eventTicketsPage.desktop.css";
 import "../../styles/mobile/eventTicketsPage.mobile.css";
 
 
-function hexToRgbTriplet(hex: string | null | undefined): string | null {
-  if (!hex) return null;
-  const h = hex.trim().replace("#", "");
-  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
-  if (full.length !== 6) return null;
-  const r = parseInt(full.slice(0, 2), 16);
-  const g = parseInt(full.slice(2, 4), 16);
-  const b = parseInt(full.slice(4, 6), 16);
-  if ([r, g, b].some((n) => Number.isNaN(n))) return null;
-  return `${r} ${g} ${b}`;
-}
-
-function getBrandStyle(org: any): Record<string, string> | undefined {
-  const hex =
-    org?.primaryColor ??
-    org?.primary_color ??
-    org?.brandingPrimaryColor ??
-    org?.organizationProfile?.primaryColor ??
-    null;
-
-  const rgb = hexToRgbTriplet(typeof hex === "string" ? hex : null);
-  if (!rgb) return undefined;
-
-  return {
-    ["--primary" as any]: rgb,
-    ["--primary-bg" as any]: rgb,
-  } as Record<string, string>;
-}
-
 export function EventTicketsPage() {
   const navigate = useNavigate();
   const { orgSlug, eventSlug } = useParams<{ orgSlug: string; eventSlug: string }>();
@@ -58,7 +29,6 @@ export function EventTicketsPage() {
     eventSlug,
   });
 
-  const brandStyle = getBrandStyle((data as any)?.org ?? (data as any)?.organizationProfile);
 
   const [tick, setTick] = useState(0);
 
@@ -70,7 +40,7 @@ export function EventTicketsPage() {
 
   if (loading || !orgSlug || !eventSlug) {
     return (
-      <div className="publicPage" style={brandStyle}>
+      <div className="publicPage">
         <Container>Chargement…</Container>
       </div>
     );
@@ -78,7 +48,7 @@ export function EventTicketsPage() {
 
   if (error) {
     return (
-      <div className="publicPage" style={brandStyle}>
+      <div className="publicPage">
         <Container>Erreur : {error}</Container>
       </div>
     );
@@ -86,7 +56,7 @@ export function EventTicketsPage() {
 
   if (!data?.event) {
     return (
-      <div className="publicPage" style={brandStyle}>
+      <div className="publicPage">
         <Container>Événement introuvable.</Container>
       </div>
     );
@@ -136,7 +106,7 @@ export function EventTicketsPage() {
   }
 
   return (
-    <div className="publicPage" style={brandStyle}>
+    <div className="publicPage">
       <Container>
         <div className="publicSurface">
           <PublicEventHeader orgSlug={orgSlug} org={org} event={event} />

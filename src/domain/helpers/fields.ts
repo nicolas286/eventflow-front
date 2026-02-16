@@ -29,11 +29,18 @@ export function isPhoneField(f: EventFormFieldUI) {
   return k === "phone" || k === "telephone" || k === "tel" || l.includes("telephone");
 }
 
-export function sortFields(fields: EventFormFieldUI[]) {
+type SortableField = {
+  sortOrder?: number | null;
+};
+
+export function sortFields<T extends SortableField>(fields: T[] | null | undefined): T[] {
   const arr = [...(fields ?? [])];
-    arr.sort((a: EventFormFieldUI, b: EventFormFieldUI) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-    return arr;
+
+  arr.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+  return arr;
 }
+
 
 export function isFieldFilled(field: EventFormFieldUI, attendeeValues: Record<string, unknown>) {
     const v = attendeeValues[field.fieldKey];

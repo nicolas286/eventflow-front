@@ -9,7 +9,7 @@ import Button from "../../ui/components/button/Button";
 import Badge from "../../ui/components/badge/Badge";
 
 import { formatDateTimeHuman } from "../../domain/helpers/dateTime";
-import PublicFooter from "../../ui/components/publicFooter/PublicFooter";
+import { toDayEndISO, toDayStartISO } from "../../domain/helpers/dateTime";
 
 import "../../styles/desktop/publicPages.desktop.css";
 
@@ -19,13 +19,6 @@ import type { PublicEventOverview } from "../../domain/models/public/public.orgE
 type SortKey = "date" | "name";
 type SortDir = "asc" | "desc";
 
-function toDayStartISO(d: string) {
-  return `${d}T00:00:00.000Z`;
-}
-function toDayEndISO(d: string) {
-  return `${d}T23:59:59.999Z`;
-}
-
 export function OrgPublicPage() {
   const { orgSlug } = useParams<{ orgSlug: string }>();
 
@@ -34,14 +27,12 @@ export function OrgPublicPage() {
     orgSlug,
   });
 
-  // UI state
   const [query, setQuery] = useState("");
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
-  // ✅ Mobile: toggle affichage filtres
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const filteredSortedEvents = useMemo(() => {

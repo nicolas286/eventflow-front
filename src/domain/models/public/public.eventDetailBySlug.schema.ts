@@ -56,4 +56,5 @@ export const publicEventDetailSchema =
   formFields: z.array(publicFormFieldSchema),
 });
 
+export type PublicFormField = z.infer<typeof publicFormFieldSchema>;
 export type PublicEventDetail = z.infer<typeof publicEventDetailSchema>;

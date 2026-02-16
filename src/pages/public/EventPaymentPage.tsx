@@ -17,42 +17,12 @@ import {
   type CheckoutDraft,
 } from "./checkout/checkoutStore";
 
-/* ✅ CSS */
 import "../../styles/desktop/publicCheckoutBase.desktop.css";
-
 import "../../styles/desktop/eventPaymentPage.desktop.css";
 
 
 import { useRegister } from "../../features/public/register/useRegister";
 
-function hexToRgbTriplet(hex: string | null | undefined): string | null {
-  if (!hex) return null;
-  const h = hex.trim().replace("#", "");
-  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
-  if (full.length !== 6) return null;
-  const r = parseInt(full.slice(0, 2), 16);
-  const g = parseInt(full.slice(2, 4), 16);
-  const b = parseInt(full.slice(4, 6), 16);
-  if ([r, g, b].some((n) => Number.isNaN(n))) return null;
-  return `${r} ${g} ${b}`;
-}
-
-function getBrandStyle(org: any): Record<string, string> | undefined {
-  const hex =
-    org?.primaryColor ??
-    org?.primary_color ??
-    org?.brandingPrimaryColor ??
-    org?.organizationProfile?.primaryColor ??
-    null;
-
-  const rgb = hexToRgbTriplet(typeof hex === "string" ? hex : null);
-  if (!rgb) return undefined;
-
-  return {
-    ["--primary" as any]: rgb,
-    ["--primary-bg" as any]: rgb,
-  } as Record<string, string>;
-}
 
 function ensureDraft(orgSlug: string, eventSlug: string): CheckoutDraft {
   const d = loadDraft(orgSlug, eventSlug) as CheckoutDraft;
@@ -81,8 +51,6 @@ export function EventPaymentPage() {
     eventSlug,
   });
 
-  const brandStyle = getBrandStyle((data as any)?.org ?? (data as any)?.organizationProfile);
-
   const [tick, setTick] = useState(0);
 
   const draft = useMemo(() => {
@@ -103,7 +71,7 @@ export function EventPaymentPage() {
 
   if (loading || !orgSlug || !eventSlug) {
     return (
-      <div className="publicPage" style={brandStyle}>
+      <div className="publicPage">
         <Container>Chargement…</Container>
       </div>
     );
@@ -111,7 +79,7 @@ export function EventPaymentPage() {
 
   if (error) {
     return (
-      <div className="publicPage" style={brandStyle}>
+      <div className="publicPage">
         <Container>Erreur : {error}</Container>
       </div>
     );
@@ -119,7 +87,7 @@ export function EventPaymentPage() {
 
   if (!data?.event) {
     return (
-      <div className="publicPage" style={brandStyle}>
+      <div className="publicPage">
         <Container>Événement introuvable.</Container>
       </div>
     );
@@ -127,7 +95,7 @@ export function EventPaymentPage() {
 
   if (!draft) {
     return (
-      <div className="publicPage" style={brandStyle}>
+      <div className="publicPage">
         <Container>Draft introuvable.</Container>
       </div>
     );
@@ -298,7 +266,7 @@ if (orderId) {
   }
 
   return (
-    <div className="publicPage" style={brandStyle}>
+    <div className="publicPage">
       <Container>
         <div className="publicSurface">
           <PublicEventHeader orgSlug={orgSlug} org={org} event={event} />

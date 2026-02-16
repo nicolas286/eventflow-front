@@ -7,98 +7,83 @@ import Container from "../../ui/components/container/Container";
 import Card, { CardBody, CardHeader } from "../../ui/components/card/Card";
 import Button from "../../ui/components/button/Button";
 import Badge from "../../ui/components/badge/Badge";
-
+import CountrySelect from "../../ui/components/forms/CountrySelect";
+import PhoneInput from "../../ui/components/forms/PhoneInput";
 import { PublicEventHeader } from "./checkout/PublicEventHeader";
 import { loadDraft, saveDraft } from "./checkout/checkoutStore";
 
-/* ✅ CSS */
-import "../../styles/desktop/publicCheckoutBase.desktop.css";
+import type { PublicFormField as Field } from "../../domain/models/public/public.eventDetailBySlug.schema";
 
+import {
+  isBirthDateField,
+  isCountryField,
+  isPhoneField,
+  sortFields,
+  isFieldFilled,
+  areAllAttendeesValid,
+} from "../../domain/helpers/fields";
+
+import {
+  sortProducts,
+  computeExpectedAttendeeSlots,
+  reconcileAttendeesByIndex,
+} from "../../domain/helpers/logic";
+
+import type { EventProduct } from "../../domain/models/db/db.eventProducts.schema";
+import { validateFieldValue } from "../../domain/helpers/validateFieldValue";
+import { getFieldKey } from "../../domain/helpers/fields";
+
+import "../../styles/desktop/publicCheckoutBase.desktop.css";
 import "../../styles/desktop/eventAttendeesPage.desktop.css";
 import "../../styles/mobile/eventAttendeesPage.mobile.css";
+import type { EventFormFieldUI } from "../../domain/models/db/db.eventFormFields.schema";
+import type { Event } from "../../domain/models/db/db.event.schema";
 
-
-/* ✅ factorisé */
-import CountrySelect from "../../ui/components/forms/CountrySelect";
-import PhoneInput from "../../ui/components/forms/PhoneInput";
-
-type Field = {
-  id: string;
-  label: string;
-  fieldKey: string;
-  fieldType: string;
-  isRequired: boolean;
-  options: any;
-  sortOrder: number;
-};
+/* ---------------- Types ---------------- */
 
 type Draft = ReturnType<typeof loadDraft>;
 
-type AttendeeSlot = Record<string, unknown> & {
+type PublicAttendeeDraft = Record<string, unknown> & { eventProductId: string };
+
+type AttendeeSlot = {
   eventProductId: string;
+  values: Record<string, unknown>;
 };
 
-function hexToRgbTriplet(hex: string | null | undefined): string | null {
-  if (!hex) return null;
-  const h = hex.trim().replace("#", "");
-  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
-  if (full.length !== 6) return null;
-  const r = parseInt(full.slice(0, 2), 16);
-  const g = parseInt(full.slice(2, 4), 16);
-  const b = parseInt(full.slice(4, 6), 16);
-  if ([r, g, b].some((n) => Number.isNaN(n))) return null;
-  return `${r} ${g} ${b}`;
+type TouchedMap = Record<number, Record<string, true>>;
+
+/* ---------------- Helpers ---------------- */
+
+function computeAttendeeErrors(fields: Field[], values: Record<string, unknown>) {
+  const errs: Record<string, string> = {};
+  for (const f of fields) {
+    const key = getFieldKey(f) || String(f?.fieldKey ?? "").trim();
+    if (!key) continue;
+
+    const msg = validateFieldValue(f as EventFormFieldUI, values[key]);
+    if (msg) errs[key] = msg;
+  }
+  return errs;
 }
 
-function getBrandStyle(org: any): Record<string, string> | undefined {
-  const hex =
-    org?.primaryColor ??
-    org?.primary_color ??
-    org?.brandingPrimaryColor ??
-    org?.organizationProfile?.primaryColor ??
-    null;
-
-  const rgb = hexToRgbTriplet(typeof hex === "string" ? hex : null);
-  if (!rgb) return undefined;
-
-  return {
-    ["--primary" as any]: rgb,
-    ["--primary-bg" as any]: rgb,
-  } as Record<string, string>;
+function draftToSlots(draftAtts: PublicAttendeeDraft[] | null | undefined): AttendeeSlot[] {
+  return [...(draftAtts ?? [])].map((a) => {
+    const { eventProductId, ...rest } = a;
+    return { eventProductId, values: { ...rest } };
+  });
 }
 
-function norm(s: unknown) {
-  return String(s ?? "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+function slotsToDraft(slots: AttendeeSlot[]): PublicAttendeeDraft[] {
+  return slots.map((s) => ({ eventProductId: s.eventProductId, ...(s.values ?? {}) }));
 }
 
-function isBirthDateField(f: Field) {
-  const k = norm(f.fieldKey);
-  const l = norm(f.label);
-  return (
-    k === "birthdate" ||
-    k === "date_naissance" ||
-    k === "date-de-naissance" ||
-    k === "datenaissance" ||
-    k === "dob" ||
-    l.includes("date de naissance")
-  );
+function markTouched(prev: TouchedMap, attIndex: number, fieldKey: string): TouchedMap {
+  const row = prev[attIndex] ?? {};
+  if (row[fieldKey]) return prev;
+  return { ...prev, [attIndex]: { ...row, [fieldKey]: true } };
 }
 
-function isCountryField(f: Field) {
-  const k = norm(f.fieldKey);
-  const l = norm(f.label);
-  return k === "country" || k === "pays" || l === "pays";
-}
-
-function isPhoneField(f: Field) {
-  const k = norm(f.fieldKey);
-  const l = norm(f.label);
-  return k === "phone" || k === "telephone" || k === "tel" || l.includes("telephone");
-}
+/* ---------------- Page ---------------- */
 
 export function EventAttendeesPage() {
   const navigate = useNavigate();
@@ -110,9 +95,9 @@ export function EventAttendeesPage() {
     eventSlug,
   });
 
-  const brandStyle = getBrandStyle((data as any)?.org ?? (data as any)?.organizationProfile);
-
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [attTouched, setAttTouched] = useState<TouchedMap>({});
+  const [attemptedNext, setAttemptedNext] = useState(false);
 
   useEffect(() => {
     if (!orgSlug || !eventSlug) return;
@@ -124,102 +109,111 @@ export function EventAttendeesPage() {
     saveDraft(next);
   }
 
-  const quantities = draft?.quantities ?? {};
+  const quantities = useMemo(() => {
+    return draft?.quantities ?? {};
+  }, [draft?.quantities]);
 
   const totalSelected = useMemo(() => {
     return Object.values(quantities).reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
   }, [quantities]);
 
-  const fields: Field[] = useMemo(() => {
-    const ff = data?.formFields ?? [];
-    return [...ff].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  const sortedProducts = useMemo(() => {
+    return sortProducts((data?.products ?? []) as EventProduct[]);
+  }, [data?.products]);
+
+  const sortedFields = useMemo(() => {
+    return sortFields(data?.formFields ?? []);
   }, [data?.formFields]);
 
-  const expectedSlots: AttendeeSlot[] = useMemo(() => {
-    const products = [...(data?.products ?? [])].sort(
-      (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
-    );
-
-    const slots: AttendeeSlot[] = [];
-
-    for (const p of products) {
-      const qty = Number(quantities[p.id] ?? 0) || 0;
-      if (!p.createsAttendees) continue;
-
-      const perUnit = p.attendeesPerUnit ?? 0;
-      const count = qty * perUnit;
-
-      for (let i = 0; i < count; i++) {
-        slots.push({ eventProductId: p.id });
-      }
-    }
-
-    return slots;
-  }, [data?.products, quantities]);
+  const expectedSlots = useMemo(() => {
+    return computeExpectedAttendeeSlots(sortedProducts, quantities);
+  }, [sortedProducts, quantities]);
 
   const attendeesCount = expectedSlots.length;
 
+  const draftAttendees = useMemo(() => {
+    return (draft?.attendees ?? []) as PublicAttendeeDraft[];
+  }, [draft?.attendees]);
+
+  const slots = useMemo(() => {
+    return draftToSlots(draftAttendees);
+  }, [draftAttendees]);
+
+  // reconcile slots vs expectedSlots (truth), persist dans draft (flat)
   useEffect(() => {
     if (!orgSlug || !eventSlug) return;
     if (!data) return;
     if (!draft) return;
 
-    const current = (draft.attendees ?? []) as Array<Record<string, unknown>>;
+    const reconciled = reconcileAttendeesByIndex(slots, expectedSlots);
 
-    const next = expectedSlots.map((slot, idx) => {
-      const prev = current[idx] ?? {};
-      return { ...prev, eventProductId: slot.eventProductId } as AttendeeSlot;
-    });
+    const same =
+      reconciled.length === slots.length &&
+      reconciled.every((a, i) => a.eventProductId === slots[i]?.eventProductId);
 
-    const sameLength = next.length === current.length;
-    const sameIds =
-      sameLength &&
-      next.every((a, i) => a.eventProductId === (current[i] as any)?.eventProductId);
+    if (same) return;
 
-    if (sameIds) return;
+    // si le nombre de participants change, reset un peu le touched (sinon erreurs fantômes)
+    setAttTouched({});
+    setAttemptedNext(false);
 
     persist({
       ...draft,
-      attendees: next as any,
+      attendees: slotsToDraft(reconciled),
       acceptedTerms: false,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expectedSlots, data, orgSlug, eventSlug, draft]);
+  }, [expectedSlots, data, orgSlug, eventSlug, draft, slots]);
 
-  const attendees = (draft?.attendees ?? []) as AttendeeSlot[];
-
-  function setAnswer(attendeeIndex: number, fieldKey: string, value: unknown) {
+  function setAnswer(attIndex: number, fieldKey: string, value: unknown, opts?: { touch?: boolean }) {
     if (!draft) return;
 
-    const nextAttendees = attendees.map((a, idx) =>
-      idx === attendeeIndex ? { ...a, [fieldKey]: value } : a
+    const nextSlots = slots.map((a, i) =>
+      i === attIndex ? { ...a, values: { ...a.values, [fieldKey]: value } } : a
     );
+
+    if (opts?.touch) {
+      setAttTouched((prev) => markTouched(prev, attIndex, fieldKey));
+    }
 
     persist({
       ...draft,
-      attendees: nextAttendees as any,
+      attendees: slotsToDraft(nextSlots),
       acceptedTerms: false,
     });
   }
 
-  function isFieldFilled(field: Field, attendee: Record<string, unknown>) {
-    const v = attendee[field.fieldKey];
-
-    if (field.fieldType === "checkbox") return v === true;
-    if (typeof v === "string") return v.trim().length > 0;
-    if (typeof v === "number") return Number.isFinite(v);
-    if (typeof v === "boolean") return true;
-    return v != null;
+  function touchAllFields() {
+    const next: TouchedMap = {};
+    for (let i = 0; i < slots.length; i++) {
+      const row: Record<string, true> = {};
+      for (const f of sortedFields) {
+        const key = String(f.fieldKey ?? "").trim();
+        if (key) row[key] = true;
+      }
+      next[i] = row;
+    }
+    setAttTouched(next);
   }
+
+  const attendeeErrors = useMemo(() => {
+    const errsByIndex: Array<Record<string, string>> = [];
+    for (let i = 0; i < slots.length; i++) {
+      errsByIndex[i] = computeAttendeeErrors(sortedFields, slots[i]?.values ?? {});
+    }
+    return errsByIndex;
+  }, [slots, sortedFields]);
 
   const allValid = useMemo(() => {
     if (attendeesCount === 0) return true;
-    if (fields.length === 0) return true;
+    if (sortedFields.length === 0) return true;
 
-    return attendees.every((a) =>
-      fields.every((f) => (!f.isRequired ? true : isFieldFilled(f, a)))
+    return areAllAttendeesValid(
+      slots,
+      sortedFields,
+      (field: EventFormFieldUI, values: Record<string, unknown>) => isFieldFilled(field, values)
     );
-  }, [attendees, attendeesCount, fields]);
+  }, [slots, attendeesCount, sortedFields]);
 
   function goBack() {
     if (!orgSlug || !eventSlug) return;
@@ -228,12 +222,18 @@ export function EventAttendeesPage() {
 
   function goNext() {
     if (!orgSlug || !eventSlug) return;
+
+    setAttemptedNext(true);
+    touchAllFields();
+
+    if (!allValid) return;
+
     navigate(`/o/${orgSlug}/e/${eventSlug}/paiement`);
   }
 
   if (loading || !orgSlug || !eventSlug) {
     return (
-      <div className="publicPage" style={brandStyle}>
+      <div className="publicPage">
         <Container>Chargement…</Container>
       </div>
     );
@@ -241,7 +241,7 @@ export function EventAttendeesPage() {
 
   if (error) {
     return (
-      <div className="publicPage" style={brandStyle}>
+      <div className="publicPage">
         <Container>Erreur : {error}</Container>
       </div>
     );
@@ -249,7 +249,7 @@ export function EventAttendeesPage() {
 
   if (!data?.event) {
     return (
-      <div className="publicPage" style={brandStyle}>
+      <div className="publicPage">
         <Container>Événement introuvable.</Container>
       </div>
     );
@@ -258,7 +258,7 @@ export function EventAttendeesPage() {
   const { org, event } = data;
 
   return (
-    <div className="publicPage" style={brandStyle}>
+    <div className="publicPage">
       <Container>
         <div className="publicSurface">
           <PublicEventHeader orgSlug={orgSlug} org={org} event={event} />
@@ -271,178 +271,207 @@ export function EventAttendeesPage() {
             <div className="publicEmpty">Aucun billet sélectionné. Reviens à l’étape “Billets”.</div>
           ) : attendeesCount === 0 ? (
             <div className="publicEmpty">Aucun formulaire participant n’est requis pour ces billets.</div>
-          ) : fields.length === 0 ? (
+          ) : sortedFields.length === 0 ? (
             <div className="publicEmpty">Aucun champ configuré pour le formulaire.</div>
           ) : (
             <div className="publicGutter">
               <div className="publicList">
-                {attendees.map((att, idx) => (
-                  <Card key={idx}>
-                    <CardHeader
-                      title={<div className="publicCardTitle">Participant {idx + 1}</div>}
-                      right={
-                        <Badge
-                          tone="neutral"
-                          label={fields.some((f) => f.isRequired ? true : false) ? "Champs requis" : "Optionnel"}
-                        />
-                      }
-                    />
-                    <CardBody>
-                      <div className="publicGrid2">
-                        {fields.map((f) => {
-                          const value = (att as any)?.[f.fieldKey];
+                {slots.map((att, idx) => {
+                  const rowErrs = attendeeErrors[idx] ?? {};
+                  const rowTouched = attTouched[idx] ?? {};
 
-                          const commonStyle: React.CSSProperties = {
-                            width: "100%",
-                            padding: "10px 12px",
-                            borderRadius: 12,
-                            border: "1px solid rgba(0,0,0,0.10)",
-                            outline: "none",
-                          };
+                  return (
+                    <Card key={idx}>
+                      <CardHeader
+                        title={<div className="publicCardTitle">Participant {idx + 1}</div>}
+                        right={
+                          <Badge
+                            tone="neutral"
+                            label={sortedFields.some((f) => (f.isRequired ? true : false)) ? "Champs requis" : "Optionnel"}
+                          />
+                        }
+                      />
+                      <CardBody>
+                        <div className="publicGrid2">
+                          {sortedFields.map((f) => {
+                            const fieldKey = String(f.fieldKey ?? "").trim();
+                            const value = fieldKey ? att.values?.[fieldKey] : undefined;
 
-                          const label = (
-                            <div style={{ fontWeight: 800, marginBottom: 6 }}>
-                              {f.label}{" "}
-                              {f.isRequired ? <span style={{ opacity: 0.7 }}>(requis)</span> : null}
-                            </div>
-                          );
+                            const errMsg = fieldKey ? rowErrs[fieldKey] : undefined;
+                            const showErr = !!errMsg && (attemptedNext || !!rowTouched[fieldKey]);
 
-                          if (isBirthDateField(f)) {
-                            return (
-                              <div key={f.id}>
-                                {label}
-                                <input
-                                  type="date"
-                                  value={typeof value === "string" ? value : ""}
-                                  onChange={(e) => setAnswer(idx, f.fieldKey, e.target.value)}
-                                  style={commonStyle}
-                                />
+                            const commonStyle: React.CSSProperties = {
+                              width: "100%",
+                              padding: "10px 12px",
+                              borderRadius: 12,
+                              border: showErr ? "1px solid rgba(220, 38, 38, 0.55)" : "1px solid rgba(0,0,0,0.10)",
+                              outline: "none",
+                            };
+
+                            const label = (
+                              <div style={{ fontWeight: 800, marginBottom: 6 }}>
+                                {f.label}{" "}
+                                {f.isRequired ? <span style={{ opacity: 0.7 }}>(requis)</span> : null}
                               </div>
                             );
-                          }
 
-                          if (isCountryField(f)) {
-                            return (
-                              <div key={f.id}>
-                                {label}
-                                <CountrySelect
-                                  value={typeof value === "string" ? value : ""}
-                                  onChange={(v) => setAnswer(idx, f.fieldKey, v)}
-                                  style={commonStyle}
-                                  placeholder="Sélectionner un pays"
-                                />
+                            const errorLine = showErr ? (
+                              <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: "rgba(220, 38, 38, 0.95)" }}>
+                                {errMsg}
                               </div>
-                            );
-                          }
+                            ) : null;
 
-                          if (isPhoneField(f)) {
-                            return (
-                              <div key={f.id}>
-                                {label}
-                                <PhoneInput
-                                  value={typeof value === "string" ? value : ""}
-                                  onChange={(v) => setAnswer(idx, f.fieldKey, v)}
-                                  groupClassName="publicPhoneGroup"
-                                  selectStyle={commonStyle}
-                                  inputStyle={commonStyle}
-                                  defaultDial="+33"
-                                />
-                              </div>
-                            );
-                          }
-
-                          if (f.fieldType === "textarea") {
-                            return (
-                              <div key={f.id}>
-                                {label}
-                                <textarea
-                                  value={typeof value === "string" ? value : ""}
-                                  onChange={(e) => setAnswer(idx, f.fieldKey, e.target.value)}
-                                  style={{ ...commonStyle, minHeight: 90, resize: "vertical" }}
-                                />
-                              </div>
-                            );
-                          }
-
-                          if (f.fieldType === "select") {
-                            const opts = Array.isArray(f.options) ? f.options : [];
-                            return (
-                              <div key={f.id}>
-                                {label}
-                                <select
-                                  value={typeof value === "string" ? value : ""}
-                                  onChange={(e) => setAnswer(idx, f.fieldKey, e.target.value)}
-                                  style={commonStyle}
-                                >
-                                  <option value="">—</option>
-                                  {opts.map((o: any, i: number) => (
-                                    <option key={i} value={String(o.value ?? o)}>
-                                      {String(o.label ?? o)}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            );
-                          }
-
-                          if (f.fieldType === "checkbox") {
-                            return (
-                              <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                <input
-                                  type="checkbox"
-                                  checked={value === true}
-                                  onChange={(e) => setAnswer(idx, f.fieldKey, e.target.checked)}
-                                  style={{ width: 18, height: 18 }}
-                                />
-                                <div style={{ fontWeight: 800 }}>
-                                  {f.label}{" "}
-                                  {f.isRequired ? <span style={{ opacity: 0.7 }}>(requis)</span> : null}
+                            if (isBirthDateField(f)) {
+                              return (
+                                <div key={f.id}>
+                                  {label}
+                                  <input
+                                    type="date"
+                                    value={typeof value === "string" ? value : ""}
+                                    onChange={(e) => setAnswer(idx, fieldKey, e.target.value)}
+                                    onBlur={() => setAttTouched((prev) => markTouched(prev, idx, fieldKey))}
+                                    style={commonStyle}
+                                  />
+                                  {errorLine}
                                 </div>
+                              );
+                            }
+
+                            if (isCountryField(f)) {
+                              return (
+                                <div key={f.id}>
+                                  {label}
+                                  <CountrySelect
+                                    value={typeof value === "string" ? value : ""}
+                                    onChange={(v) => setAnswer(idx, fieldKey, v, { touch: true })}
+                                    style={commonStyle}
+                                    placeholder="Sélectionner un pays"
+                                  />
+                                  {errorLine}
+                                </div>
+                              );
+                            }
+
+                            if (isPhoneField(f)) {
+                              return (
+                                <div key={f.id}>
+                                  {label}
+                                  <PhoneInput
+                                    value={typeof value === "string" ? value : ""}
+                                    onChange={(v) => setAnswer(idx, fieldKey, v)}
+                                    groupClassName="publicPhoneGroup"
+                                    selectStyle={commonStyle}
+                                    inputStyle={commonStyle}
+                                    defaultDial="+33"
+                                  />
+                                  {/* PhoneInput n'a pas forcément de onBlur : on touche dès qu'on tente next ou si champ modifié */}
+                                  {errorLine}
+                                </div>
+                              );
+                            }
+
+                            if (f.fieldType === "textarea") {
+                              return (
+                                <div key={f.id}>
+                                  {label}
+                                  <textarea
+                                    value={typeof value === "string" ? value : ""}
+                                    onChange={(e) => setAnswer(idx, fieldKey, e.target.value)}
+                                    onBlur={() => setAttTouched((prev) => markTouched(prev, idx, fieldKey))}
+                                    style={{ ...commonStyle, minHeight: 90, resize: "vertical" }}
+                                  />
+                                  {errorLine}
+                                </div>
+                              );
+                            }
+
+                            if (f.fieldType === "select") {
+                              const opts = Array.isArray(f.options) ? f.options : [];
+                              return (
+                                <div key={f.id}>
+                                  {label}
+                                  <select
+                                    value={typeof value === "string" ? value : ""}
+                                    onChange={(e) => setAnswer(idx, fieldKey, e.target.value, { touch: true })}
+                                    onBlur={() => setAttTouched((prev) => markTouched(prev, idx, fieldKey))}
+                                    style={commonStyle}
+                                  >
+                                    <option value="">—</option>
+                                    {opts.map((o: any, i: number) => (
+                                      <option key={i} value={String(o.value ?? o)}>
+                                        {String(o.label ?? o)}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  {errorLine}
+                                </div>
+                              );
+                            }
+
+                            if (f.fieldType === "checkbox") {
+                              return (
+                                <div key={f.id}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={value === true}
+                                      onChange={(e) => setAnswer(idx, fieldKey, e.target.checked, { touch: true })}
+                                      style={{ width: 18, height: 18 }}
+                                    />
+                                    <div style={{ fontWeight: 800 }}>
+                                      {f.label}{" "}
+                                      {f.isRequired ? <span style={{ opacity: 0.7 }}>(requis)</span> : null}
+                                    </div>
+                                  </div>
+                                  {errorLine}
+                                </div>
+                              );
+                            }
+
+                            const inputType =
+                              f.fieldType === "email"
+                                ? "email"
+                                : f.fieldType === "number"
+                                  ? "number"
+                                  : "text";
+
+                            return (
+                              <div key={f.id}>
+                                {label}
+                                <input
+                                  type={inputType}
+                                  value={
+                                    inputType === "number"
+                                      ? typeof value === "number"
+                                        ? value
+                                        : ""
+                                      : typeof value === "string"
+                                        ? value
+                                        : ""
+                                  }
+                                  onChange={(e) =>
+                                    setAnswer(
+                                      idx,
+                                      fieldKey,
+                                      inputType === "number"
+                                        ? e.target.value === ""
+                                          ? ""
+                                          : Number(e.target.value)
+                                        : e.target.value
+                                    )
+                                  }
+                                  onBlur={() => setAttTouched((prev) => markTouched(prev, idx, fieldKey))}
+                                  style={commonStyle}
+                                />
+                                {errorLine}
                               </div>
                             );
-                          }
-
-                          const inputType =
-                            f.fieldType === "email"
-                              ? "email"
-                              : f.fieldType === "number"
-                              ? "number"
-                              : "text";
-
-                          return (
-                            <div key={f.id}>
-                              {label}
-                              <input
-                                type={inputType}
-                                value={
-                                  inputType === "number"
-                                    ? typeof value === "number"
-                                      ? value
-                                      : ""
-                                    : typeof value === "string"
-                                      ? value
-                                      : ""
-                                }
-                                onChange={(e) =>
-                                  setAnswer(
-                                    idx,
-                                    f.fieldKey,
-                                    inputType === "number"
-                                      ? e.target.value === ""
-                                        ? ""
-                                        : Number(e.target.value)
-                                      : e.target.value
-                                  )
-                                }
-                                style={commonStyle}
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardBody>
-                  </Card>
-                ))}
+                          })}
+                        </div>
+                      </CardBody>
+                    </Card>
+                  );
+                })}
               </div>
             </div>
           )}

@@ -2,8 +2,8 @@ import { z } from "zod";
 import type { EventFormFieldUI } from "../models/db/db.eventFormFields.schema";
 import { isBirthDateField } from "./fields";
 
-const MAX_TEXT_LEN = 2000;         
-const MAX_EMAIL_LEN = 254;         
+const MAX_TEXT_LEN = 100;         
+const MAX_EMAIL_LEN = 100;         
 const MAX_SELECT_LEN = 120;        
 const MAX_PHONE_LEN = 32;           
 

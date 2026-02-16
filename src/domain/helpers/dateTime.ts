@@ -30,3 +30,11 @@ export function localInputToIso(value: string): string {
   if (Number.isNaN(d.getTime())) return "";
   return d.toISOString();
 }
+
+export function toDayStartISO(d: string) {
+  return `${d}T00:00:00.000Z`;
+}
+
+export function toDayEndISO(d: string) {
+  return `${d}T23:59:59.999Z`;
+}

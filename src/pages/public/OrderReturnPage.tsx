@@ -52,35 +52,6 @@ function formatMoney(cents?: number, currency?: string) {
   }
 }
 
-function hexToRgbTriplet(hex: string | null | undefined): string | null {
-  if (!hex) return null;
-  const h = hex.trim().replace("#", "");
-  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
-  if (full.length !== 6) return null;
-  const r = parseInt(full.slice(0, 2), 16);
-  const g = parseInt(full.slice(2, 4), 16);
-  const b = parseInt(full.slice(4, 6), 16);
-  if ([r, g, b].some((n) => Number.isNaN(n))) return null;
-  return `${r} ${g} ${b}`;
-}
-
-function getBrandStyle(org: any): Record<string, string> | undefined {
-  const hex =
-    org?.primaryColor ??
-    org?.primary_color ??
-    org?.brandingPrimaryColor ??
-    org?.organizationProfile?.primaryColor ??
-    null;
-
-  const rgb = hexToRgbTriplet(typeof hex === "string" ? hex : null);
-  if (!rgb) return undefined;
-
-  return {
-    ["--primary" as any]: rgb,
-    ["--primary-bg" as any]: rgb,
-  } as Record<string, string>;
-}
-
 async function fetchOrder(orderId: string, token: string): Promise<OrderPublic> {
   const res = await fetch(
     `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/order-public?orderId=${encodeURIComponent(
@@ -165,11 +136,6 @@ export function OrderReturnPage() {
     orgSlug,
     eventSlug,
   });
-
-  const brandStyle = useMemo(() => {
-    const org = (eventData as any)?.org ?? (eventData as any)?.organizationProfile;
-    return getBrandStyle(org);
-  }, [eventData]);
 
   const backUrl = useMemo(() => {
   if (orgSlug && eventSlug) return `/o/${orgSlug}/e/${eventSlug}`;
@@ -266,7 +232,7 @@ export function OrderReturnPage() {
 
   if (!bookingToken) {
     return (
-      <div className="publicPage" style={brandStyle}>
+      <div className="publicPage">
         <Container>
           <div className="orderReturnCenter">
             <Card className="orderReturnCard">
@@ -286,7 +252,7 @@ export function OrderReturnPage() {
   // 🌀 Loading : spinner flèche
   if (loading) {
     return (
-      <div className="publicPage" style={brandStyle}>
+      <div className="publicPage">
         <Container>
           <div className="orderReturnCenter">
             <div className="orderReturnLoading">
@@ -304,7 +270,7 @@ export function OrderReturnPage() {
 
   if (error) {
     return (
-      <div className="publicPage" style={brandStyle}>
+      <div className="publicPage">
         <Container>
           <div className="orderReturnCenter">
             <Card className="orderReturnCard">
@@ -321,7 +287,7 @@ export function OrderReturnPage() {
 
   if (!order) {
     return (
-      <div className="publicPage" style={brandStyle}>
+      <div className="publicPage">
         <Container>
           <div className="orderReturnCenter">
             <Card className="orderReturnCard">
@@ -340,7 +306,7 @@ export function OrderReturnPage() {
   const eventForHeader = (eventData as any)?.event ?? null;
 
   return (
-    <div className="publicPage" style={brandStyle}>
+    <div className="publicPage">
       <Container>
         {/* Header event : on l’affiche quand on a les infos */}
         {orgSlug && eventForHeader ? <PublicEventHeader orgSlug={orgSlug} org={orgForHeader} event={eventForHeader} /> : null}
