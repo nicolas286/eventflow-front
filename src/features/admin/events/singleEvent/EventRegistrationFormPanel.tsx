@@ -8,7 +8,7 @@ import type { UpdateEventFormFieldPatch } from "../../../../domain/models/admin/
 import { useCreateEventFormField } from "../../hooks/useCreateEventFormField";
 import { useUpdateEventFormField } from "../../hooks/useUpdateEventFormField";
 import { useDeleteEventFormField } from "../../hooks/useDeleteEventFormField";
-import { Button, EditorShell } from "../../../../ui/components";
+import { Button, EditorShell, StickySaveBar, FilterBar } from "../../../../ui/components";
 import { FIELD_TYPES, type FieldType } from "../../../../domain/constants/fieldTypes";
 import { useMediaQuery } from "../../../../domain/helpers/ui";
 import { slugKey, normalizeContiguousSortOrder } from "../../../../domain/helpers/normalize";
@@ -33,8 +33,8 @@ type EditState = {
 };
 
 export type DraftField = {
-  id: string | null; 
-  clientId: string; 
+  id: string | null;
+  clientId: string;
 
   label: string;
   fieldKey: string;
@@ -77,20 +77,23 @@ export function EventRegistrationFormPanel(props: Props) {
   const [closingKey, setClosingKey] = useState<string | null>(null); // "create" ou clientId
   const [isClosing, setIsClosing] = useState(false);
 
+  // ✅ Search / filter
+  const [query, setQuery] = useState("");
+  const isFiltering = query.trim().length > 0;
+
   const isSaving = isSavingAll || create.loading || update.loading || del.loading;
 
   const incomingSig = useMemo(() => {
-  return sortFromDB(fields)
-    .map((f) => {
-      const id = String(f.id);
-      const updatedAt = f.updatedAt ?? "";
-      const order = clampInt(f.sortOrder, { fallback: 0 });
+    return sortFromDB(fields)
+      .map((f) => {
+        const id = String(f.id);
+        const updatedAt = f.updatedAt ?? "";
+        const order = clampInt(f.sortOrder, { fallback: 0 });
 
-      return `${id}:${updatedAt}:${order}`;
-    })
-    .join("|");
-}, [fields]);
-
+        return `${id}:${updatedAt}:${order}`;
+      })
+      .join("|");
+  }, [fields]);
 
   useEffect(() => {
     if (isDirty) return;
@@ -107,7 +110,7 @@ export function EventRegistrationFormPanel(props: Props) {
         isRequired: f.isRequired,
         isActive: f.isActive ?? true,
         sortOrder: clampInt(f.sortOrder ?? 0),
-        options: f.options ?? null as any,
+        options: (f.options ?? null) as any,
       }))
     );
 
@@ -319,8 +322,6 @@ export function EventRegistrationFormPanel(props: Props) {
     const clientId = editing.id;
     if (!clientId) return;
 
-    // ⚠️ Sur update, on ne change pas le fieldKey si tu ne veux pas casser l’existant.
-    // Si tu veux le recalculer, dis-moi (là on le conserve).
     setDraft((prev) =>
       prev.map((f) =>
         f.clientId === clientId
@@ -409,25 +410,32 @@ export function EventRegistrationFormPanel(props: Props) {
   const isOpen = Boolean(editing);
   const editingId = editing?.id ?? null;
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return draft;
+
+    return draft.filter((f) => {
+      const label = String(f.label ?? "").toLowerCase();
+      const key = String(f.fieldKey ?? "").toLowerCase();
+      const type = String(f.fieldType ?? "").toLowerCase();
+      return label.includes(q) || key.includes(q) || type.includes(q);
+    });
+  }, [draft, query]);
+
+  const reorderDisabledTitle = isFiltering ? "Le réordonnancement est désactivé pendant une recherche." : undefined;
+
   const editorNode = editing ? (
     <div className="adminRegEditorCard">
       {/* Header avec croix */}
       <div className="adminRegEditorHeader">
         <div>
-          <div className="adminRegEditorTitle">
-            {creating ? "Nouveau champ" : "Modifier champ"}
-          </div>
+          <div className="adminRegEditorTitle">{creating ? "Nouveau champ" : "Modifier champ"}</div>
           <div className="adminEventHint">
             Pour <code>select</code>/<code>radio</code> : une option par ligne.
           </div>
         </div>
 
-        <Button
-          variant="ghost"
-          className="adminRegEditorClose"
-          onClick={closeEditor}
-          aria-label="Fermer"
-        >
+        <Button variant="ghost" className="adminRegEditorClose" onClick={closeEditor} aria-label="Fermer">
           ✕
         </Button>
       </div>
@@ -497,25 +505,16 @@ export function EventRegistrationFormPanel(props: Props) {
 
       {/* Footer clean */}
       <div className="adminRegEditorFooter">
-        <Button
-          variant="secondary"
-          onClick={closeEditor}
-          disabled={isSaving}
-        >
+        <Button variant="secondary" onClick={closeEditor} disabled={isSaving}>
           Annuler
         </Button>
 
-        <Button
-          variant="primary"
-          onClick={upsertLocalFromEditor}
-          disabled={!editing.label.trim() || isSaving}
-        >
+        <Button variant="primary" onClick={upsertLocalFromEditor} disabled={!editing.label.trim() || isSaving}>
           {creating ? "Ajouter" : "Enregistrer"}
         </Button>
       </div>
     </div>
   ) : null;
-
 
   const showCreateInline = (isOpen && creating) || (isClosing && closingKey === "create");
 
@@ -547,6 +546,8 @@ export function EventRegistrationFormPanel(props: Props) {
         </div>
       </div>
 
+      <FilterBar query={query} onQueryChange={setQuery} placeholder="Rechercher un champ…" />
+
       {saveAllError ? <div className="adminRegSaveError">{saveAllError}</div> : null}
 
       {/* ---------------- Mobile : editor inline ---------------- */}
@@ -568,8 +569,12 @@ export function EventRegistrationFormPanel(props: Props) {
           <div className="adminRegList">
             {draft.length === 0 ? (
               <div className="adminEventEmpty">Aucun champ. Clique “Ajouter un champ”.</div>
+            ) : filtered.length === 0 ? (
+              <div className="adminEventEmpty">Aucun champ ne correspond à “{query.trim()}”.</div>
             ) : (
-              draft.map((f, idx) => {
+              filtered.map((f) => {
+                const idx = draft.findIndex((x) => x.clientId === f.clientId);
+
                 const active = Boolean(f.isActive ?? true);
                 const required = Boolean(f.isRequired ?? false);
 
@@ -586,9 +591,7 @@ export function EventRegistrationFormPanel(props: Props) {
                         <div className="adminRegTitleLine">{f.label}</div>
 
                         <div className="adminRegPills">
-                          <span className={active ? "adminRegPill" : "adminRegPill isOff"}>
-                            {active ? "Actif" : "Inactif"}
-                          </span>
+                          <span className={active ? "adminRegPill" : "adminRegPill isOff"}>{active ? "Actif" : "Inactif"}</span>
                           <span className={required ? "adminRegPill isReq" : "adminRegPill isOpt"}>
                             {required ? "Requis" : "Optionnel"}
                           </span>
@@ -604,25 +607,18 @@ export function EventRegistrationFormPanel(props: Props) {
                           Modifier
                         </Button>
 
-                        <Button
-                          onClick={() => toggleLocal(f.clientId, { isRequired: !required })}
-                          disabled={isSaving}
-                          variant="secondary"
-                        >
+                        <Button onClick={() => toggleLocal(f.clientId, { isRequired: !required })} disabled={isSaving} variant="secondary">
                           {required ? "Rendre optionnel" : "Rendre requis"}
                         </Button>
 
-                        <Button
-                          onClick={() => toggleLocal(f.clientId, { isActive: !active })}
-                          disabled={isSaving}
-                          variant="secondary"
-                        >
+                        <Button onClick={() => toggleLocal(f.clientId, { isActive: !active })} disabled={isSaving} variant="secondary">
                           {active ? "Désactiver" : "Activer"}
                         </Button>
 
                         <Button
                           onClick={() => moveLocal(f.clientId, -1)}
-                          disabled={isSaving || idx === 0}
+                          disabled={isSaving || isFiltering || idx === 0}
+                          title={isFiltering ? reorderDisabledTitle : undefined}
                           className="adminMoveBtn"
                           aria-label="Monter"
                           variant="primary"
@@ -632,7 +628,8 @@ export function EventRegistrationFormPanel(props: Props) {
 
                         <Button
                           onClick={() => moveLocal(f.clientId, 1)}
-                          disabled={isSaving || idx === draft.length - 1}
+                          disabled={isSaving || isFiltering || idx === draft.length - 1}
+                          title={isFiltering ? reorderDisabledTitle : undefined}
                           className="adminMoveBtn"
                           aria-label="Descendre"
                           variant="primary"
@@ -640,7 +637,12 @@ export function EventRegistrationFormPanel(props: Props) {
                           ↓
                         </Button>
 
-                        <Button variant="danger" className="deleteFormFieldButton" onClick={() => removeLocal(f.clientId)} disabled={isSaving}>
+                        <Button
+                          variant="danger"
+                          className="deleteFormFieldButton"
+                          onClick={() => removeLocal(f.clientId)}
+                          disabled={isSaving}
+                        >
                           Supprimer
                         </Button>
                       </div>
@@ -676,8 +678,12 @@ export function EventRegistrationFormPanel(props: Props) {
             <div className="adminRegList">
               {draft.length === 0 ? (
                 <div className="adminEventEmpty">Aucun champ. Clique “Ajouter un champ”.</div>
+              ) : filtered.length === 0 ? (
+                <div className="adminEventEmpty">Aucun champ ne correspond à “{query.trim()}”.</div>
               ) : (
-                draft.map((f, idx) => {
+                filtered.map((f) => {
+                  const idx = draft.findIndex((x) => x.clientId === f.clientId);
+
                   const active = Boolean(f.isActive ?? true);
                   const required = Boolean(f.isRequired ?? false);
                   const type = String(f.fieldType ?? "text");
@@ -686,20 +692,12 @@ export function EventRegistrationFormPanel(props: Props) {
                   const cardAnimClass = animDir === "up" ? "isMoveUp" : animDir === "down" ? "isMoveDown" : "";
 
                   return (
-                    <div
-                      key={f.clientId}
-                      className={[
-                        active ? "adminRegCard" : "adminRegCard isInactive",
-                        cardAnimClass,
-                      ].join(" ")}
-                    >
+                    <div key={f.clientId} className={[active ? "adminRegCard" : "adminRegCard isInactive", cardAnimClass].join(" ")}>
                       <div className="adminRegTop">
                         <div className="adminRegTitleLine">{f.label}</div>
 
                         <div className="adminRegPills">
-                          <span className={active ? "adminRegPill" : "adminRegPill isOff"}>
-                            {active ? "Actif" : "Inactif"}
-                          </span>
+                          <span className={active ? "adminRegPill" : "adminRegPill isOff"}>{active ? "Actif" : "Inactif"}</span>
                           <span className={required ? "adminRegPill isReq" : "adminRegPill isOpt"}>
                             {required ? "Requis" : "Optionnel"}
                           </span>
@@ -715,25 +713,18 @@ export function EventRegistrationFormPanel(props: Props) {
                           Modifier
                         </Button>
 
-                        <Button
-                          onClick={() => toggleLocal(f.clientId, { isRequired: !required })}
-                          disabled={isSaving}
-                          variant="secondary"
-                        >
+                        <Button onClick={() => toggleLocal(f.clientId, { isRequired: !required })} disabled={isSaving} variant="secondary">
                           {required ? "Rendre optionnel" : "Rendre requis"}
                         </Button>
 
-                        <Button
-                          onClick={() => toggleLocal(f.clientId, { isActive: !active })}
-                          disabled={isSaving}
-                          variant="secondary"
-                        >
+                        <Button onClick={() => toggleLocal(f.clientId, { isActive: !active })} disabled={isSaving} variant="secondary">
                           {active ? "Désactiver" : "Activer"}
                         </Button>
 
                         <Button
                           onClick={() => moveLocal(f.clientId, -1)}
-                          disabled={isSaving || idx === 0}
+                          disabled={isSaving || isFiltering || idx === 0}
+                          title={isFiltering ? reorderDisabledTitle : undefined}
                           className="adminMoveBtn"
                           aria-label="Monter"
                           variant="primary"
@@ -743,7 +734,8 @@ export function EventRegistrationFormPanel(props: Props) {
 
                         <Button
                           onClick={() => moveLocal(f.clientId, 1)}
-                          disabled={isSaving || idx === draft.length - 1}
+                          disabled={isSaving || isFiltering || idx === draft.length - 1}
+                          title={isFiltering ? reorderDisabledTitle : undefined}
                           className="adminMoveBtn"
                           aria-label="Descendre"
                           variant="primary"
@@ -751,7 +743,12 @@ export function EventRegistrationFormPanel(props: Props) {
                           ↓
                         </Button>
 
-                        <Button variant="danger" className="deleteFormFieldButton" onClick={() => removeLocal(f.clientId)} disabled={isSaving}>
+                        <Button
+                          variant="danger"
+                          className="deleteFormFieldButton"
+                          onClick={() => removeLocal(f.clientId)}
+                          disabled={isSaving}
+                        >
                           Supprimer
                         </Button>
                       </div>
@@ -764,6 +761,8 @@ export function EventRegistrationFormPanel(props: Props) {
           right={isOpen ? <div className="regEditorPanel isOpen">{editorNode}</div> : null}
         />
       )}
+
+      <StickySaveBar show={isDirty} saving={isSaving} disableSave={!event?.id} onSave={saveAll} onCancel={resetLocalChanges} />
     </div>
   );
 }
