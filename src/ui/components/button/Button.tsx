@@ -1,14 +1,11 @@
-import "../../../styles/desktop/button.desktop.css"
+import "../../../styles/desktop/button.desktop.css";
+import type { ButtonHTMLAttributes, ReactNode, MouseEventHandler } from "react";
 
-type Props = {
-    label?: string;
-    children?: React.ReactNode;
-    variant?: "primary" | "secondary" | "ghost" | "danger";
-    type?: "button" | "submit" | "reset";
-    disabled?: boolean;
-    className?: string;
-    onClick?: () => void;
-}
+type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
+  label?: string;
+  children?: ReactNode;
+  variant?: "primary" | "secondary" | "ghost" | "danger";
+};
 
 export default function Button({
   label,
@@ -34,7 +31,7 @@ export default function Button({
       type={type}
       className={classes}
       disabled={disabled}
-      onClick={onClick}
+      onClick={onClick as MouseEventHandler<HTMLButtonElement> | undefined}
       {...rest}
     >
       {children ?? label}

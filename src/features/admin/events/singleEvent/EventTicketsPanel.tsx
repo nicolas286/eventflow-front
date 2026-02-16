@@ -4,7 +4,7 @@ import type { EventProducts } from "../../../../domain/models/db/db.eventProduct
 import type { CreateEventProductInput } from "../../../../domain/models/admin/admin.createEventProduct.schema";
 import type { UpdateEventProductPatch } from "../../../../gateways/supabase/repositories/dashboard/updateEventProductRepo";
 
-import { Button, EditorShell } from "../../../../ui/components";
+import { Button, EditorShell, StickySaveBar, FilterBar } from "../../../../ui/components";
 
 type OrderItemLike = {
   eventProductId?: string | null;
@@ -150,7 +150,9 @@ export function EventTicketsPanel(props: Props) {
   const moveFxTimerRef = useRef<number | null>(null);
   const closeTimerRef = useRef<number | null>(null);
   const [moveFx, setMoveFx] = useState<MoveFx>(null);
+  const [query, setQuery] = useState("");
 
+  const isFiltering = query.trim().length > 0;
   // fermeture animée inline
   const [closingKey, setClosingKey] = useState<string | null>(null); // "create" ou clientId
   const [isClosing, setIsClosing] = useState(false);
@@ -484,6 +486,17 @@ export function EventTicketsPanel(props: Props) {
     return `${stock - sold} / ${stock}`;
   }
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return sorted;
+
+    return sorted.filter((t) => {
+      const name = String(t.name ?? "").toLowerCase();
+      const desc = String(t.description ?? "").toLowerCase();
+      return name.includes(q) || desc.includes(q);
+    });
+  }, [sorted, query]);
+
   const editorNode = editing ? (
     <div className="adminTicketsEditorCard">
       <div className="adminTicketsEditorHeader adminTicketsEditorHeaderInline">
@@ -700,7 +713,8 @@ export function EventTicketsPanel(props: Props) {
               isFxA && moveFx?.dir === -1 ? "isBumpUp" : "",
             ].join(" ")}
             onClick={() => moveLocal(t.clientId, -1)}
-            disabled={isSaving || idx === 0}
+            disabled={isSaving || isFiltering || idx === 0}
+            aria-label={isFiltering ? "Réordonnancement désactivé pendant une recherche" : "Monter"}
           >
             ↑
           </Button>
@@ -711,7 +725,9 @@ export function EventTicketsPanel(props: Props) {
               isFxA && moveFx?.dir === 1 ? "isBumpDown" : "",
             ].join(" ")}
             onClick={() => moveLocal(t.clientId, 1)}
-            disabled={isSaving || idx === sorted.length - 1}
+            disabled={isSaving || isFiltering || idx === sorted.length - 1}
+            title={isFiltering ? "Réordonnancement désactivé pendant une recherche. Efface le filtre pour changer l’ordre." : undefined}
+            aria-label={isFiltering ? "Réordonnancement désactivé pendant une recherche" : "Descendre"}
           >
             ↓
           </Button>
@@ -759,6 +775,8 @@ export function EventTicketsPanel(props: Props) {
         </div>
       </div>
 
+      <FilterBar query={query} onQueryChange={setQuery} placeholder="Rechercher un ticket…" />
+
       {saveAllError ? <div className="adminTicketsSaveError">{saveAllError}</div> : null}
 
       {/* ---------------- Mobile : editor inline ---------------- */}
@@ -780,10 +798,15 @@ export function EventTicketsPanel(props: Props) {
           <div className="adminTicketsList">
             {sorted.length === 0 ? (
               <div className="adminEventEmpty">Aucun ticket. Clique sur “Nouveau ticket”.</div>
+            ) : filtered.length === 0 ? (
+              <div className="adminEventEmpty">Aucun ticket ne correspond à “{query.trim()}”.</div>
             ) : (
-              sorted.map((t, idx) => {
+              filtered.map((t) => {
+                const idx = sorted.findIndex((x) => x.clientId === t.clientId);
+
                 const showEditInline =
-                  ((isOpen && !creating && editingId === t.clientId) || (isClosing && closingKey === t.clientId));
+                  ((isOpen && !creating && editingId === t.clientId) ||
+                    (isClosing && closingKey === t.clientId));
 
                 return (
                   <div key={t.clientId} className="adminTicketBlock">
@@ -819,14 +842,27 @@ export function EventTicketsPanel(props: Props) {
             <div className="adminTicketsList">
               {sorted.length === 0 ? (
                 <div className="adminEventEmpty">Aucun ticket. Clique sur “Nouveau ticket”.</div>
+              ) : filtered.length === 0 ? (
+                <div className="adminEventEmpty">Aucun ticket ne correspond à “{query.trim()}”.</div>
               ) : (
-                sorted.map((t, idx) => renderTicketCard(t, idx))
+                filtered.map((t) => {
+                  const idx = sorted.findIndex((x) => x.clientId === t.clientId);
+                  return renderTicketCard(t, idx);
+                })
               )}
             </div>
           }
           right={isOpen ? editorNode : null}
         />
       )}
+
+      <StickySaveBar
+        show={isDirty}
+        saving={isSaving}
+        disableSave={!event?.id}
+        onSave={saveAll}
+        onCancel={resetLocalChanges}
+      />
     </div>
   );
 }

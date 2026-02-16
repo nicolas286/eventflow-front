@@ -8,4 +8,7 @@ export { default as TopNav } from "./navigation/TopNav.tsx";
 export { default as HamburgerMenu } from "./menus/HamburgerMenu.tsx";
 export { CardHeader, CardBody } from "./card/Card.tsx";
 export { default as Select } from "./inputs/Select.tsx";
+export { default as StickySaveBar} from "./stickySaveBar/StickySaveBar.tsx"
 export * from "./editorShell/EditorShell";
+export * from "./filterBar/FilterBar.tsx";
+

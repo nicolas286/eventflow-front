@@ -6,9 +6,10 @@ import {
   type UpdateEventFullPatch,
 } from "../../../../domain/models/admin/admin.updateEventFullPatch.schema";
 
-import Button from "../../../../ui/components/button/Button";
+import {Button, StickySaveBar } from "../../../../ui/components";
 
 import type { AdminEventDetailEvent } from "../../../../domain/models/admin/admin.eventDetail.schema";
+
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -166,6 +167,47 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
     event.bannerUrlEffective,
     event.updatedAt,
   ]);
+
+
+  // ------------------------------------------------------------
+  // Dirty detection (pour StickySaveBar)
+  // ------------------------------------------------------------
+
+  const isDirty = useMemo(() => {
+    // s'il y a un fichier sélectionné, on considère dirty
+    if (bannerFile) return true;
+
+    const base = eventToDraft(event);
+
+    // comparaison simple (trim pour éviter faux positifs)
+    const same =
+      draft.title.trim() === base.title.trim() &&
+      draft.location.trim() === base.location.trim() &&
+      draft.description.trim() === base.description.trim() &&
+      draft.startsAtLocal === base.startsAtLocal &&
+      draft.endsAtLocal === base.endsAtLocal &&
+      draft.bannerUrlRaw.trim() === base.bannerUrlRaw.trim() &&
+      draft.depositCentsRaw.trim() === base.depositCentsRaw.trim();
+
+    return !same;
+  }, [draft, event, bannerFile]);
+
+  function resetLocalChanges() {
+    setDraft(eventToDraft(event));
+
+    setSaveError(null);
+    setSaveOk(false);
+    setFieldErrors({});
+
+    setBannerFile(null);
+    setUploadedBannerPreview(null);
+    setForceDefaultPreview(false);
+
+    if (localBannerPreview) {
+      URL.revokeObjectURL(localBannerPreview);
+      setLocalBannerPreview(null);
+    }
+  }
 
   /* ------------------------------------------------------------------ */
   /* Patch builder                                                      */
@@ -448,6 +490,17 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
           </Button>
         </div>
       </div>
+      <StickySaveBar
+        show={isDirty}
+        saving={saving}
+        disableSave={!canSave || saving}
+        title="Modifications non sauvegardées"
+        hint="Enregistre pour appliquer tes changements."
+        onSave={() => void save(Boolean(event.isPublished))}
+        onCancel={resetLocalChanges}
+        saveLabel={event.isPublished ? "Enregistrer" : "Enregistrer le brouillon"}
+        savingLabel="Enregistrement…"
+      />
     </div>
   );
 }

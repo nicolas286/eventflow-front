@@ -16,52 +16,6 @@
   overflow-x: visible;
 }
 
-/* --- Search bar --- */
-.adminParticipantsSearch {
-  margin: 12px 0 18px;
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: center;
-
-  /* ✅ anti overflow */
-  min-width: 0;
-  max-width: 100%;
-}
-
-.adminSearchSelect {
-  padding: 9px 10px;
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  background: #fff;
-  font-weight: 900;
-  font-size: 12px;
-  line-height: 1;
-
-  /* ✅ anti overflow */
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-.adminSearchInput {
-  flex: 1 1 auto;
-  min-width: 220px;
-  padding: 9px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  font-weight: 800;
-  font-size: 12px;
-
-  /* ✅ CRUCIAL anti overflow en flex */
-  min-width: 0;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-.adminSearchInput::placeholder {
-  opacity: 0.6;
-}
-
 /* --- Order card --- */
 .adminOrderCard {
   background: #fff;
