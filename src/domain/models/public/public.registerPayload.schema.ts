@@ -147,6 +147,9 @@ export const registerSuccessAwaitingPaymentSchema = z
     checkoutUrl: z.string().url(),
     amountDueNowCents: z.number().int().min(1),
     totalCents: z.number().int().min(0),
+
+    reusedPayment: z.boolean().optional(),
+    bookingToken: z.string(), 
   })
   .strict();
 
