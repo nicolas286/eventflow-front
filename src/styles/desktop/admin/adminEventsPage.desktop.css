@@ -374,3 +374,91 @@
 .adminEventsInlineEditor{
   display:none;
 }
+
+.adminEventSection{
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+
+.adminEventTabs{
+  position: relative;
+
+  /* 👉 fond full width */
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  width: 100vw;
+
+  padding: 12px 0;
+  margin-bottom: 20px;
+
+  background: rgba(0,0,0,0.03);
+  border-top: 1px solid rgba(0,0,0,0.06);
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+
+  display: flex;
+  justify-content: center; /* centre le contenu */
+}
+
+/* Tabs buttons */
+.adminEventTab{
+  /* 👇 chaque bouton prend une portion égale */
+  flex: 1 1 0;
+  min-width: 0;
+
+  padding: 10px 12px;
+
+  border-radius: 12px;
+  border: 1px solid transparent;
+
+  background: transparent;
+  color: rgba(0,0,0,0.70);
+
+  font-size: 14px;
+  font-weight: 800;
+  text-align: center;
+
+  cursor: pointer;
+
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.adminEventTabsInner{
+  width: 100%;
+  max-width: 1100px; /* même largeur que ta card */
+  padding: 0 16px;
+
+  display: flex;
+  gap: 8px;
+}
+
+
+/* Hover */
+.adminEventTab:hover{
+  background: rgba(0,0,0,0.05);
+}
+
+/* Active */
+.adminEventTab.isActive{
+  background: rgb(var(--primary));
+  border-color: rgb(var(--primary));
+  color: rgb(var(--primary-contrast));
+  box-shadow: 0 10px 22px rgba(0,0,0,0.08);
+}
+
+.adminEventTitle {
+  text-align: center;
+  font-size: 40px;
+  font-weight: 1000;
+  letter-spacing: -0.02em;
+  margin-top: -5px;
+}
+
+.deleteFormFieldButton{
+  margin-left: auto;
+}
