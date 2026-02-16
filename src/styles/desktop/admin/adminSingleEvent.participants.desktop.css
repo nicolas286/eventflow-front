@@ -13,7 +13,7 @@
 .adminSingleEventParticipants {
   min-width: 0;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: visible;
 }
 
 /* --- Search bar --- */
@@ -441,5 +441,338 @@
 .adminInlineOrderWizard * {
   box-sizing: border-box;
   max-width: 100%;
+  min-width: 0;
+}
+
+/* ---------- Participants (Single Event) (moved from AdminEventsPage global file) ---------- */
+
+.adminParticipants{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.adminParticipantsTitle{
+  margin:0;
+  font-size:16px;
+  font-weight:900;
+  color:#111827;
+}
+
+.adminParticipantsHint{
+  font-size:12px;
+  color:#6b7280;
+  font-weight:800;
+}
+
+.adminParticipantsGrid{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap:12px;
+}
+
+.adminParticipantCard{
+  border-radius:18px;
+  padding:12px;
+  border:1px solid rgba(0,0,0,0.08);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(var(--primary-bg) / 0.16),
+      rgba(255,255,255,0.98) 58%
+    );
+  box-shadow: 0 10px 24px rgba(0,0,0,0.05);
+  min-width:0;
+}
+
+.adminParticipantTop{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.adminParticipantIdentity{
+  min-width:0;
+}
+
+.adminParticipantName{
+  font-weight:1000;
+  color:#111827;
+  font-size:15px;
+  line-height:1.15;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.adminParticipantSub{
+  margin-top:4px;
+  font-size:12px;
+  color:#4b5563;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.adminParticipantPills{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+.adminParticipantPill{
+  font-size:12px;
+  font-weight:900;
+  padding:6px 10px;
+  border-radius:999px;
+  background: rgba(17,24,39,0.05);
+  border:1px solid rgba(17,24,39,0.10);
+  color:#111827;
+  white-space:nowrap;
+}
+
+.adminParticipantPill.isStrong{
+  background: rgba(var(--primary-bg) / 0.16);
+  border-color: rgba(var(--primary-bg) / 0.28);
+}
+
+.adminParticipantStats{
+  margin-top:10px;
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap:10px;
+}
+
+.adminParticipantStat{
+  background: rgba(255,255,255,0.75);
+  border:1px solid rgba(17,24,39,0.08);
+  border-radius:14px;
+  padding:10px 12px;
+}
+
+.adminParticipantStatLabel{
+  font-size:11px;
+  color:#6b7280;
+  font-weight:800;
+}
+
+.adminParticipantStatValue{
+  margin-top:4px;
+  font-size:13px;
+  font-weight:1000;
+  color:#111827;
+}
+
+.adminParticipantOrders{
+  margin-top:12px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.adminParticipantOrder{
+  background:#fff;
+  border:1px solid rgba(0,0,0,0.08);
+  border-radius:16px;
+  padding:10px 12px;
+}
+
+.adminParticipantOrderTop{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.adminParticipantOrderTitle{
+  font-weight:1000;
+  color:#111827;
+  font-size:13px;
+}
+
+.adminParticipantOrderMeta{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+.adminParticipantBadge{
+  font-size:11px;
+  font-weight:900;
+  padding:4px 8px;
+  border-radius:999px;
+  background: rgba(17,24,39,0.06);
+  border:1px solid rgba(17,24,39,0.10);
+  color:#111827;
+  white-space:nowrap;
+}
+
+.adminParticipantBadge.isPaid{
+  background: rgba(16, 185, 129, 0.10);
+  border-color: rgba(16, 185, 129, 0.25);
+  color:#065f46;
+}
+
+.adminParticipantBadge.isPartial{
+  background: rgba(245, 158, 11, 0.10);
+  border-color: rgba(245, 158, 11, 0.28);
+  color:#7c2d12;
+}
+
+.adminParticipantBadge.isUnpaid{
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.22);
+  color:#7f1d1d;
+}
+
+.adminParticipantOrderSub{
+  margin-top:6px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  color:#6b7280;
+  font-size:12px;
+  flex-wrap:wrap;
+}
+
+.adminParticipantOrderAmounts{
+  font-weight:1000;
+  color:#111827;
+}
+
+.adminParticipantOrderItems{
+  margin-top:10px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.adminParticipantOrderItem{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:8px 10px;
+  border-radius:12px;
+  background: rgba(17,24,39,0.04);
+  border:1px solid rgba(17,24,39,0.08);
+}
+
+.adminParticipantOrderItemTitle{
+  font-size:12px;
+  font-weight:900;
+  color:#111827;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.adminParticipantOrderItemRight{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  white-space:nowrap;
+}
+
+.adminParticipantOrderQty{
+  font-size:12px;
+  font-weight:1000;
+  color:#111827;
+}
+
+.adminParticipantOrderPrice{
+  font-size:12px;
+  font-weight:900;
+  color:#374151;
+}
+
+.adminParticipantOrdersEmpty,
+.adminParticipantOrderEmpty{
+  font-size:12px;
+  color:#6b7280;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px dashed rgba(0,0,0,0.18);
+  background: rgba(255,255,255,0.55);
+}
+
+/* ===================================================== */
+/* ✅ Single Event - Participants → centered card layout */
+/* (ajout sans suppression de règles existantes)        */
+/* ===================================================== */
+
+.adminSingleEventParticipants {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px;
+
+  border-radius: 18px;
+  border: 1px solid rgba(0,0,0,0.06);
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 14px 32px rgba(0,0,0,0.06);
+}
+
+/* Cohérence typographique avec les autres sections */
+.adminSingleEventParticipants .adminParticipantsTitle {
+  font-size: 18px;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+}
+
+/* ===================================================== */
+/* ✅ EditorShell sticky fix (si jamais parent interfère) */
+/* ===================================================== */
+
+.adminSingleEventParticipants .uiEditorShell {
+  position: relative;
+}
+
+.adminSingleEventParticipants .uiEditorRight {
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+/* Sécurité : évite qu’un parent casse le sticky */
+.adminSingleEventParticipants .uiEditorPanel {
+  position: sticky;
+  top: var(--sticky-top);
+}
+
+/* ===================================================== */
+/* ✅ Attendee form grid 2 columns (desktop only)      */
+/* ===================================================== */
+
+  .adminAttendeeEditorGrid > * {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    min-width: 0;
+  }
+
+  /* Sécurité: les champs shrink bien dans la grid */
+  .adminAttendeeEditorGrid > * > * {
+    min-width: 0;
+  }
+
+  /* Si tu as des champs "full width" (textarea, etc.) et qu’ils ont déjà une classe span2 */
+  .adminAttendeeEditorGrid > * .adminEventFieldSpan2 {
+    grid-column: 1 / -1;
+  }
+
+  .adminAttendeeFieldsGrid {
+  display: grid;
+  gap: 14px;
+}
+
+.adminAttendeeFieldsGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Chaque champ prend toute la largeur de sa cellule */
+.adminAttendeeFieldItem {
   min-width: 0;
 }

@@ -1,3 +1,29 @@
+/* =========================
+   Admin Single Event - Form (Desktop)
+   + Card centered wrapper (same DA as Details)
+   ========================= */
+
+/* ✅ Card wrapper (same spirit as Details) */
+.adminSingleEventForm .adminRegForm{
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(0,0,0,0.06);
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 14px 32px rgba(0,0,0,0.06);
+
+  /* anti overflow */
+  min-width: 0;
+}
+
+/* Better header typography (consistent with Details) */
+.adminSingleEventForm .adminEventHeaderRow h3{
+  font-size: 18px;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+}
+
 /* ---------- Registration editor: static in section, then sticky under navbar ---------- */
 
 .adminRegShell{
@@ -10,7 +36,11 @@
 
   width:100%;
   position:relative;
+
+  /* anti overflow */
   min-width:0;
+  max-width:100%;
+  box-sizing:border-box;
 }
 
 .adminRegLeft{
@@ -34,6 +64,9 @@
 
   display:flex;          /* optionnel mais propre */
   align-items:flex-start;/* optionnel */
+
+  /* anti overflow */
+  min-width:0;
 }
 
 /* Quand l’editor est ouvert, la liste se rétrécit */
@@ -91,4 +124,171 @@
     opacity:0;
     transform: translateX(8px) scale(0.98);
   }
+}
+
+/* ---------- Registration Form Builder (moved from AdminEventsPage global file) ---------- */
+
+.adminRegForm{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+
+  /* anti overflow */
+  min-width:0;
+}
+
+.adminRegList{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+
+  /* anti overflow */
+  min-width:0;
+}
+
+.adminRegCard{
+  background:#fff;
+  border:1px solid rgba(0,0,0,0.08);
+  border-radius:16px;
+  padding:12px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.05);
+
+  /* anti overflow */
+  min-width:0;
+}
+
+.adminRegCard.isInactive{
+  opacity:0.65;
+}
+
+.adminRegTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+
+  /* anti overflow */
+  min-width:0;
+}
+
+.adminRegTitle{
+  font-weight:900;
+  font-size:15px;
+  color:#111827;
+
+  /* anti overflow */
+  min-width:0;
+}
+
+.adminRegPills{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+
+  /* anti overflow */
+  min-width:0;
+}
+
+.adminRegPill{
+  font-size:12px;
+  font-weight:900;
+  padding:6px 10px;
+  border-radius:999px;
+  background: rgba(16, 185, 129, 0.10);
+  border:1px solid rgba(16, 185, 129, 0.25);
+  color:#065f46;
+  white-space:nowrap;
+
+  max-width:100%;
+  box-sizing:border-box;
+}
+
+.adminRegPill.isOff{
+  background: rgba(239, 68, 68, 0.08);
+  border:1px solid rgba(239, 68, 68, 0.22);
+  color:#7f1d1d;
+}
+
+.adminRegPill.isReq{
+  background: rgba(245, 158, 11, 0.10);
+  border:1px solid rgba(245, 158, 11, 0.25);
+  color:#7c2d12;
+}
+
+.adminRegPill.isOpt{
+  background: rgba(17,24,39,0.04);
+  border:1px solid rgba(17,24,39,0.10);
+  color:#111827;
+}
+
+.adminRegMeta{
+  margin-top:8px;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  color:#374151;
+  font-size:12px;
+
+  /* anti overflow */
+  min-width:0;
+}
+
+.adminRegKey code{
+  font-weight:900;
+}
+
+.adminRegActions{
+  margin-top:12px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+
+  /* anti overflow */
+  min-width:0;
+}
+
+
+/* ===================================== */
+/* Registration Editor (clean version)   */
+/* ===================================== */
+
+.adminRegEditorCard{
+  background: #fff;
+  border-radius: 18px;
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.08);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Header */
+.adminRegEditorHeader{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.adminRegEditorTitle{
+  font-size:16px;
+  font-weight:950;
+  letter-spacing:-0.01em;
+}
+
+.adminRegEditorClose{
+  padding:6px 10px !important;
+  border-radius:999px !important;
+}
+
+/* Footer */
+.adminRegEditorFooter{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding-top:12px;
+  border-top:1px solid rgba(0,0,0,0.06);
 }

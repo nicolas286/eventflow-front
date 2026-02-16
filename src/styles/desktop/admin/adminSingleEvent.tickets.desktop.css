@@ -27,7 +27,7 @@
 }
 
 .adminTicketsRight{
-  position:absolute;
+  position:relative;
   right:0;
   top:0;
   width:var(--editor-w);
@@ -82,3 +82,193 @@
   }
 }
 
+/* ---------- Tickets (moved from AdminEventsPage global file) ---------- */
+
+.adminTickets{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.adminTicketsGrid{
+  display:grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap:14px;
+  align-items:start;
+}
+
+.adminTicketsList{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.adminTicketCard{
+  background:#fff;
+  border:1px solid rgba(0,0,0,0.08);
+  border-radius:16px;
+  padding:12px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.05);
+}
+
+.adminTicketCard.isInactive{
+  opacity:0.65;
+}
+
+.adminTicketTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.adminTicketTitle{
+  font-weight:900;
+  font-size:15px;
+  color:#111827;
+}
+
+.adminTicketPill{
+  font-size:12px;
+  font-weight:900;
+  padding:6px 10px;
+  border-radius:999px;
+  background: rgba(16, 185, 129, 0.10);
+  border:1px solid rgba(16, 185, 129, 0.25);
+  color:#065f46;
+  white-space:nowrap;
+}
+
+.adminTicketPill.isOff{
+  background: rgba(239, 68, 68, 0.08);
+  border:1px solid rgba(239, 68, 68, 0.22);
+  color:#7f1d1d;
+}
+
+.adminTicketMeta{
+  margin-top:8px;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  color:#374151;
+  font-size:12px;
+}
+
+.adminTicketStrong{
+  font-weight:900;
+  color:#111827;
+}
+
+.adminTicketStats{
+  margin-top:10px;
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap:10px;
+}
+
+.adminTicketStat{
+  background: rgba(17,24,39,0.04);
+  border:1px solid rgba(17,24,39,0.08);
+  border-radius:14px;
+  padding:10px 12px;
+}
+
+.adminTicketStatLabel{
+  font-size:11px;
+  color:#6b7280;
+  font-weight:800;
+}
+
+.adminTicketStatValue{
+  margin-top:4px;
+  font-size:14px;
+  font-weight:900;
+  color:#111827;
+}
+
+.adminTicketDesc{
+  margin-top:10px;
+  font-size:12px;
+  color:#4b5563;
+  white-space:pre-wrap;
+}
+
+.adminTicketActions{
+  margin-top:12px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.adminTicketBtn{
+  padding:9px 12px;
+  border-radius:12px;
+  border:1px solid rgba(0,0,0,0.10);
+  background:#fff;
+  font-weight:900;
+  font-size:12px;
+  cursor:pointer;
+}
+
+.adminTicketBtn.danger{
+  border-color: rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.08);
+  color:#7f1d1d;
+}
+
+.adminTicketsEditor{
+  position:sticky;
+  top:12px;
+  align-self:start;
+}
+
+.adminTicketsEditorCard{
+  background:#fff;
+  border:1px solid rgba(0,0,0,0.08);
+  border-radius:16px;
+  padding:12px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.05);
+}
+
+.adminTicketsEditorHeader{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.adminTicketsEditorTitle{
+  font-weight:900;
+  font-size:14px;
+  color:#111827;
+}
+
+.adminTicketsEditorFooter{
+  margin-top:12px;
+  display:flex;
+  justify-content:flex-end;
+}
+
+/* =========================
+   Single Event - Tickets
+   Centered block like Details
+   ========================= */
+
+.adminSingleEventTickets .adminTickets{
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px;
+
+  border-radius: 18px;
+  border: 1px solid rgba(0,0,0,0.06);
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 14px 32px rgba(0,0,0,0.06);
+}
+
+/* Header typography consistency */
+.adminSingleEventTickets .adminEventHeaderRow h3{
+  font-size: 18px;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+}

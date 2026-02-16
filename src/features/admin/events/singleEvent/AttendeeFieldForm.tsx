@@ -9,26 +9,31 @@ type Props = {
   onChange: (fieldKey: string, value: unknown) => void;
 };
 
-export function AttendeeFieldsForm({ fields, values, errors = {}, onChange }: Props) {
+export function AttendeeFieldsForm({
+  fields,
+  values,
+  errors = {},
+  onChange,
+}: Props) {
   return (
-    <div style={{ display: "grid", gap: 10 }}>
+    <div className="adminAttendeeFieldsGrid">
       {fields
-        .filter((f) => (f.isActive ?? true) === true) // ⚠️ si isActive peut être null
+        .filter((f) => (f.isActive ?? true) === true)
         .map((f) => {
           const k = getFieldKey(f);
           if (!k) return null;
 
           return (
-            <AttendeeFieldInput
-              key={String(f.id ?? k)}
-              field={f}
-              value={values?.[k]}
-              errorMsg={errors?.[k]}
-              onChange={(val) => onChange(k, val)}
-            />
+            <div key={String(f.id ?? k)} className="adminAttendeeFieldItem">
+              <AttendeeFieldInput
+                field={f}
+                value={values?.[k]}
+                errorMsg={errors?.[k]}
+                onChange={(val) => onChange(k, val)}
+              />
+            </div>
           );
         })}
     </div>
   );
 }
-

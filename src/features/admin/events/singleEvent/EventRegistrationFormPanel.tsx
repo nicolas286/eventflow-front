@@ -410,16 +410,29 @@ export function EventRegistrationFormPanel(props: Props) {
   const editingId = editing?.id ?? null;
 
   const editorNode = editing ? (
-    <div className="adminTicketsEditorCard">
-      <div className="adminTicketsEditorHeader adminRegEditorHeaderInline">
+    <div className="adminRegEditorCard">
+      {/* Header avec croix */}
+      <div className="adminRegEditorHeader">
         <div>
-          <div className="adminTicketsEditorTitle">{creating ? "Nouveau champ" : "Modifier champ"}</div>
+          <div className="adminRegEditorTitle">
+            {creating ? "Nouveau champ" : "Modifier champ"}
+          </div>
           <div className="adminEventHint">
-            Pour <code>select</code>/<code>radio</code> : une option par ligne (ex: Oui, Non).
+            Pour <code>select</code>/<code>radio</code> : une option par ligne.
           </div>
         </div>
+
+        <Button
+          variant="ghost"
+          className="adminRegEditorClose"
+          onClick={closeEditor}
+          aria-label="Fermer"
+        >
+          ✕
+        </Button>
       </div>
 
+      {/* Form */}
       <div className="adminEventFormGrid adminRegEditorFormGrid">
         <div className="adminEventField">
           <div className="adminEventLabel">Label</div>
@@ -427,7 +440,6 @@ export function EventRegistrationFormPanel(props: Props) {
             className="adminEventInput"
             value={editing.label}
             onChange={(e) => setEditing({ ...editing, label: e.target.value })}
-            placeholder="Ex: Allergies"
             disabled={isSaving}
           />
         </div>
@@ -477,23 +489,33 @@ export function EventRegistrationFormPanel(props: Props) {
               className="adminEventTextarea"
               value={editing.optionsText}
               onChange={(e) => setEditing({ ...editing, optionsText: e.target.value })}
-              placeholder={`Une option par ligne :\nOui\nNon\nPeut-être`}
               disabled={isSaving}
             />
           </div>
         )}
       </div>
 
-      <div className="adminTicketsEditorFooter adminRegEditorFooterInline">
-        <Button onClick={upsertLocalFromEditor} disabled={!editing.label.trim() || isSaving} variant="primary">
-          {creating ? "Ajouter (local)" : "Appliquer (local)"}
+      {/* Footer clean */}
+      <div className="adminRegEditorFooter">
+        <Button
+          variant="secondary"
+          onClick={closeEditor}
+          disabled={isSaving}
+        >
+          Annuler
         </Button>
-        <Button onClick={closeEditor} disabled={isSaving} variant="secondary">
-          Fermer
+
+        <Button
+          variant="primary"
+          onClick={upsertLocalFromEditor}
+          disabled={!editing.label.trim() || isSaving}
+        >
+          {creating ? "Ajouter" : "Enregistrer"}
         </Button>
       </div>
     </div>
   ) : null;
+
 
   const showCreateInline = (isOpen && creating) || (isClosing && closingKey === "create");
 
@@ -603,7 +625,7 @@ export function EventRegistrationFormPanel(props: Props) {
                           disabled={isSaving || idx === 0}
                           className="adminMoveBtn"
                           aria-label="Monter"
-                          variant="secondary"
+                          variant="primary"
                         >
                           ↑
                         </Button>
@@ -613,12 +635,12 @@ export function EventRegistrationFormPanel(props: Props) {
                           disabled={isSaving || idx === draft.length - 1}
                           className="adminMoveBtn"
                           aria-label="Descendre"
-                          variant="secondary"
+                          variant="primary"
                         >
                           ↓
                         </Button>
 
-                        <Button variant="danger" onClick={() => removeLocal(f.clientId)} disabled={isSaving}>
+                        <Button variant="danger" className="deleteFormFieldButton" onClick={() => removeLocal(f.clientId)} disabled={isSaving}>
                           Supprimer
                         </Button>
                       </div>
@@ -649,7 +671,7 @@ export function EventRegistrationFormPanel(props: Props) {
           onRequestClose={closeEditor}
           editorWidth={420}
           editorGap={14}
-          stickyTop={84}
+          stickyTop={120}
           left={
             <div className="adminRegList">
               {draft.length === 0 ? (
@@ -714,7 +736,7 @@ export function EventRegistrationFormPanel(props: Props) {
                           disabled={isSaving || idx === 0}
                           className="adminMoveBtn"
                           aria-label="Monter"
-                          variant="secondary"
+                          variant="primary"
                         >
                           ↑
                         </Button>
@@ -724,12 +746,12 @@ export function EventRegistrationFormPanel(props: Props) {
                           disabled={isSaving || idx === draft.length - 1}
                           className="adminMoveBtn"
                           aria-label="Descendre"
-                          variant="secondary"
+                          variant="primary"
                         >
                           ↓
                         </Button>
 
-                        <Button variant="danger" onClick={() => removeLocal(f.clientId)} disabled={isSaving}>
+                        <Button variant="danger" className="deleteFormFieldButton" onClick={() => removeLocal(f.clientId)} disabled={isSaving}>
                           Supprimer
                         </Button>
                       </div>

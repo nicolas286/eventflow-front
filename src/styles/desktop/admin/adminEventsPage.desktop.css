@@ -305,174 +305,6 @@
   cursor:not-allowed;
 }
 
-/* ---------- Tickets ---------- */
-
-.adminTickets{
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-}
-
-.adminTicketsGrid{
-  display:grid;
-  grid-template-columns: minmax(0, 1fr) 420px;
-  gap:14px;
-  align-items:start;
-}
-
-.adminTicketsList{
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-}
-
-.adminTicketCard{
-  background:#fff;
-  border:1px solid rgba(0,0,0,0.08);
-  border-radius:16px;
-  padding:12px;
-  box-shadow: 0 10px 24px rgba(0,0,0,0.05);
-}
-
-.adminTicketCard.isInactive{
-  opacity:0.65;
-}
-
-.adminTicketTop{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-}
-
-.adminTicketTitle{
-  font-weight:900;
-  font-size:15px;
-  color:#111827;
-}
-
-.adminTicketPill{
-  font-size:12px;
-  font-weight:900;
-  padding:6px 10px;
-  border-radius:999px;
-  background: rgba(16, 185, 129, 0.10);
-  border:1px solid rgba(16, 185, 129, 0.25);
-  color:#065f46;
-  white-space:nowrap;
-}
-
-.adminTicketPill.isOff{
-  background: rgba(239, 68, 68, 0.08);
-  border:1px solid rgba(239, 68, 68, 0.22);
-  color:#7f1d1d;
-}
-
-.adminTicketMeta{
-  margin-top:8px;
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  color:#374151;
-  font-size:12px;
-}
-
-.adminTicketStrong{
-  font-weight:900;
-  color:#111827;
-}
-
-.adminTicketStats{
-  margin-top:10px;
-  display:grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap:10px;
-}
-
-.adminTicketStat{
-  background: rgba(17,24,39,0.04);
-  border:1px solid rgba(17,24,39,0.08);
-  border-radius:14px;
-  padding:10px 12px;
-}
-
-.adminTicketStatLabel{
-  font-size:11px;
-  color:#6b7280;
-  font-weight:800;
-}
-
-.adminTicketStatValue{
-  margin-top:4px;
-  font-size:14px;
-  font-weight:900;
-  color:#111827;
-}
-
-.adminTicketDesc{
-  margin-top:10px;
-  font-size:12px;
-  color:#4b5563;
-  white-space:pre-wrap;
-}
-
-.adminTicketActions{
-  margin-top:12px;
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-}
-
-.adminTicketBtn{
-  padding:9px 12px;
-  border-radius:12px;
-  border:1px solid rgba(0,0,0,0.10);
-  background:#fff;
-  font-weight:900;
-  font-size:12px;
-  cursor:pointer;
-}
-
-.adminTicketBtn.danger{
-  border-color: rgba(239, 68, 68, 0.25);
-  background: rgba(239, 68, 68, 0.08);
-  color:#7f1d1d;
-}
-
-.adminTicketsEditor{
-  position:sticky;
-  top:12px;
-  align-self:start;
-}
-
-.adminTicketsEditorCard{
-  background:#fff;
-  border:1px solid rgba(0,0,0,0.08);
-  border-radius:16px;
-  padding:12px;
-  box-shadow: 0 10px 24px rgba(0,0,0,0.05);
-}
-
-.adminTicketsEditorHeader{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:12px;
-  flex-wrap:wrap;
-}
-
-.adminTicketsEditorTitle{
-  font-weight:900;
-  font-size:14px;
-  color:#111827;
-}
-
-.adminTicketsEditorFooter{
-  margin-top:12px;
-  display:flex;
-  justify-content:flex-end;
-}
-
 /* ---------- Swap Animations (Desktop default) ---------- */
 
 :root{
@@ -532,434 +364,6 @@
   }
 }
 
-/* ---------- Registration Form Builder ---------- */
-
-.adminRegForm{
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-}
-
-.adminRegShell{
-  --editor-w: 420px;
-  --editor-gap: 14px;
-
-  width:100%;
-  position:relative;
-  min-width:0;
-}
-
-.adminRegLeft{
-  width:100%;
-  min-width:0;
-  transition: width 180ms ease, transform 180ms ease;
-}
-
-.adminRegLeft *{
-  min-width:0;
-}
-
-.adminRegRight{
-  position:absolute;
-  right:0;
-  top:0;
-  width:var(--editor-w);
-  box-sizing:border-box;
-}
-
-.adminRegShell.isEditorOpen .adminRegLeft{
-  width: calc(100% - (var(--editor-w) + var(--editor-gap)));
-  transform: translateX(0);
-}
-
-.regEditorPanel{
-  transform-origin: top right;
-  animation-duration: 180ms;
-  animation-fill-mode: both;
-}
-
-.regEditorPanel.isOpen{
-  animation-name: regEditorIn;
-  animation-timing-function: ease-out;
-}
-
-.regEditorPanel.isClosing{
-  animation-name: regEditorOut;
-  animation-timing-function: ease-in;
-}
-
-@keyframes regEditorIn{
-  from{
-    opacity:0;
-    transform: translateX(8px) scale(0.98);
-  }
-  to{
-    opacity:1;
-    transform: translateX(0) scale(1);
-  }
-}
-
-@keyframes regEditorOut{
-  from{
-    opacity:1;
-    transform: translateX(0) scale(1);
-  }
-  to{
-    opacity:0;
-    transform: translateX(8px) scale(0.98);
-  }
-}
-
-.adminRegList{
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-}
-
-.adminRegCard{
-  background:#fff;
-  border:1px solid rgba(0,0,0,0.08);
-  border-radius:16px;
-  padding:12px;
-  box-shadow: 0 10px 24px rgba(0,0,0,0.05);
-}
-
-.adminRegCard.isInactive{
-  opacity:0.65;
-}
-
-.adminRegTop{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-}
-
-.adminRegTitle{
-  font-weight:900;
-  font-size:15px;
-  color:#111827;
-}
-
-.adminRegPills{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
-}
-
-.adminRegPill{
-  font-size:12px;
-  font-weight:900;
-  padding:6px 10px;
-  border-radius:999px;
-  background: rgba(16, 185, 129, 0.10);
-  border:1px solid rgba(16, 185, 129, 0.25);
-  color:#065f46;
-  white-space:nowrap;
-}
-
-.adminRegPill.isOff{
-  background: rgba(239, 68, 68, 0.08);
-  border:1px solid rgba(239, 68, 68, 0.22);
-  color:#7f1d1d;
-}
-
-.adminRegPill.isReq{
-  background: rgba(245, 158, 11, 0.10);
-  border:1px solid rgba(245, 158, 11, 0.25);
-  color:#7c2d12;
-}
-
-.adminRegPill.isOpt{
-  background: rgba(17,24,39,0.04);
-  border:1px solid rgba(17,24,39,0.10);
-  color:#111827;
-}
-
-.adminRegMeta{
-  margin-top:8px;
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  color:#374151;
-  font-size:12px;
-}
-
-.adminRegKey code{
-  font-weight:900;
-}
-
-.adminRegActions{
-  margin-top:12px;
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-}
-
-/* ---------- Participants (Single Event) ---------- */
-
-.adminParticipants{
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-}
-
-.adminParticipantsHeader{
-  display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  gap:12px;
-  flex-wrap:wrap;
-}
-
-.adminParticipantsTitle{
-  margin:0;
-  font-size:16px;
-  font-weight:900;
-  color:#111827;
-}
-
-.adminParticipantsHint{
-  font-size:12px;
-  color:#6b7280;
-  font-weight:800;
-}
-
-.adminParticipantsGrid{
-  display:grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap:12px;
-}
-
-.adminParticipantCard{
-  border-radius:18px;
-  padding:12px;
-  border:1px solid rgba(0,0,0,0.08);
-  background:
-    linear-gradient(
-      180deg,
-      rgba(var(--primary-bg) / 0.16),
-      rgba(255,255,255,0.98) 58%
-    );
-  box-shadow: 0 10px 24px rgba(0,0,0,0.05);
-  min-width:0;
-}
-
-.adminParticipantTop{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:12px;
-}
-
-.adminParticipantIdentity{
-  min-width:0;
-}
-
-.adminParticipantName{
-  font-weight:1000;
-  color:#111827;
-  font-size:15px;
-  line-height:1.15;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-.adminParticipantSub{
-  margin-top:4px;
-  font-size:12px;
-  color:#4b5563;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-.adminParticipantPills{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
-}
-
-.adminParticipantPill{
-  font-size:12px;
-  font-weight:900;
-  padding:6px 10px;
-  border-radius:999px;
-  background: rgba(17,24,39,0.05);
-  border:1px solid rgba(17,24,39,0.10);
-  color:#111827;
-  white-space:nowrap;
-}
-
-.adminParticipantPill.isStrong{
-  background: rgba(var(--primary-bg) / 0.16);
-  border-color: rgba(var(--primary-bg) / 0.28);
-}
-
-.adminParticipantStats{
-  margin-top:10px;
-  display:grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap:10px;
-}
-
-.adminParticipantStat{
-  background: rgba(255,255,255,0.75);
-  border:1px solid rgba(17,24,39,0.08);
-  border-radius:14px;
-  padding:10px 12px;
-}
-
-.adminParticipantStatLabel{
-  font-size:11px;
-  color:#6b7280;
-  font-weight:800;
-}
-
-.adminParticipantStatValue{
-  margin-top:4px;
-  font-size:13px;
-  font-weight:1000;
-  color:#111827;
-}
-
-.adminParticipantOrders{
-  margin-top:12px;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-
-.adminParticipantOrder{
-  background:#fff;
-  border:1px solid rgba(0,0,0,0.08);
-  border-radius:16px;
-  padding:10px 12px;
-}
-
-.adminParticipantOrderTop{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:10px;
-  flex-wrap:wrap;
-}
-
-.adminParticipantOrderTitle{
-  font-weight:1000;
-  color:#111827;
-  font-size:13px;
-}
-
-.adminParticipantOrderMeta{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
-}
-
-.adminParticipantBadge{
-  font-size:11px;
-  font-weight:900;
-  padding:4px 8px;
-  border-radius:999px;
-  background: rgba(17,24,39,0.06);
-  border:1px solid rgba(17,24,39,0.10);
-  color:#111827;
-  white-space:nowrap;
-}
-
-.adminParticipantBadge.isPaid{
-  background: rgba(16, 185, 129, 0.10);
-  border-color: rgba(16, 185, 129, 0.25);
-  color:#065f46;
-}
-
-.adminParticipantBadge.isPartial{
-  background: rgba(245, 158, 11, 0.10);
-  border-color: rgba(245, 158, 11, 0.28);
-  color:#7c2d12;
-}
-
-.adminParticipantBadge.isUnpaid{
-  background: rgba(239, 68, 68, 0.08);
-  border-color: rgba(239, 68, 68, 0.22);
-  color:#7f1d1d;
-}
-
-.adminParticipantOrderSub{
-  margin-top:6px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  color:#6b7280;
-  font-size:12px;
-  flex-wrap:wrap;
-}
-
-.adminParticipantOrderAmounts{
-  font-weight:1000;
-  color:#111827;
-}
-
-.adminParticipantOrderItems{
-  margin-top:10px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-
-.adminParticipantOrderItem{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  padding:8px 10px;
-  border-radius:12px;
-  background: rgba(17,24,39,0.04);
-  border:1px solid rgba(17,24,39,0.08);
-}
-
-.adminParticipantOrderItemTitle{
-  font-size:12px;
-  font-weight:900;
-  color:#111827;
-  min-width:0;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-.adminParticipantOrderItemRight{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  white-space:nowrap;
-}
-
-.adminParticipantOrderQty{
-  font-size:12px;
-  font-weight:1000;
-  color:#111827;
-}
-
-.adminParticipantOrderPrice{
-  font-size:12px;
-  font-weight:900;
-  color:#374151;
-}
-
-.adminParticipantOrdersEmpty,
-.adminParticipantOrderEmpty{
-  font-size:12px;
-  color:#6b7280;
-  padding:10px 12px;
-  border-radius:12px;
-  border:1px dashed rgba(0,0,0,0.18);
-  background: rgba(255,255,255,0.55);
-}
-
 .adminEventsActions {
   display: flex;
   justify-content: flex-start; /* desktop = à droite */
@@ -969,4 +373,92 @@
 /* ✅ Desktop: pas d'éditeur inline (réservé mobile) */
 .adminEventsInlineEditor{
   display:none;
+}
+
+.adminEventSection{
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+
+.adminEventTabs{
+  position: relative;
+
+  /* 👉 fond full width */
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  width: 100vw;
+
+  padding: 12px 0;
+  margin-bottom: 20px;
+
+  background: rgba(0,0,0,0.03);
+  border-top: 1px solid rgba(0,0,0,0.06);
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+
+  display: flex;
+  justify-content: center; /* centre le contenu */
+}
+
+/* Tabs buttons */
+.adminEventTab{
+  /* 👇 chaque bouton prend une portion égale */
+  flex: 1 1 0;
+  min-width: 0;
+
+  padding: 10px 12px;
+
+  border-radius: 12px;
+  border: 1px solid transparent;
+
+  background: transparent;
+  color: rgba(0,0,0,0.70);
+
+  font-size: 14px;
+  font-weight: 800;
+  text-align: center;
+
+  cursor: pointer;
+
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.adminEventTabsInner{
+  width: 100%;
+  max-width: 1100px; /* même largeur que ta card */
+  padding: 0 16px;
+
+  display: flex;
+  gap: 8px;
+}
+
+
+/* Hover */
+.adminEventTab:hover{
+  background: rgba(0,0,0,0.05);
+}
+
+/* Active */
+.adminEventTab.isActive{
+  background: rgb(var(--primary));
+  border-color: rgb(var(--primary));
+  color: rgb(var(--primary-contrast));
+  box-shadow: 0 10px 22px rgba(0,0,0,0.08);
+}
+
+.adminEventTitle {
+  text-align: center;
+  font-size: 40px;
+  font-weight: 1000;
+  letter-spacing: -0.02em;
+  margin-top: -5px;
+}
+
+.deleteFormFieldButton{
+  margin-left: auto;
 }
