@@ -3,7 +3,7 @@ import type { ComponentProps } from "react";
 
 import { supabase } from "../../../../gateways/supabase/supabaseClient";
 
-import { EditorShell, Button } from "../../../../ui/components";
+import { EditorShell, Button, FilterBar } from "../../../../ui/components";
 import { ConfirmModal } from "../../../../ui/components/modals/ConfirmModal";
 import { useIsMobile } from "../../../../ui/useIsMobile";
 
@@ -28,10 +28,7 @@ import { makeLocalAnswers, buildUpdateAttendeeFromForm } from "../../../../domai
 
 type FilterMode = "all" | "order" | `field:${string}`;
 
-type InlineEditorProps = Omit<
-  ComponentProps<typeof AttendeeEditorPanel>,
-  "stickyTop" | "products" | "orderId"
->;
+type InlineEditorProps = Omit<ComponentProps<typeof AttendeeEditorPanel>, "layout">;
 
 export function SingleEventParticipantsSection(props: {
   data: EventDetailAdmin;
@@ -223,32 +220,40 @@ export function SingleEventParticipantsSection(props: {
   }
 
   /* -------------------- INLINE EDITOR PROPS (mobile cards) -------------------- */
-  const inlineEditorProps = useMemo(() => {
-    const p: InlineEditorProps = {
-      supabase,
-      isOpen: attendeeEditorOpen,
-      mode: attendeeEditorMode,
-      fields: regFields,
-      initialValue: initialEditorValue,
-      onRequestClose: closeAttendeeEditor,
-      onSubmit: handleSubmitParticipant,
-      isSaving: updateAttendee.loading || saving,
-      error: updateAttendee.error || editorError,
-      layout: "inline",
-    };
-    return p;
-  }, [
-    attendeeEditorOpen,
-    attendeeEditorMode,
-    regFields,
-    initialEditorValue,
-    closeAttendeeEditor,
-    handleSubmitParticipant,
-    updateAttendee.loading,
-    updateAttendee.error,
-    saving,
-    editorError,
-  ]);
+    const inlineEditorProps = useMemo(() => {
+      const p: InlineEditorProps = {
+        supabase,
+        isOpen: attendeeEditorOpen,
+        mode: attendeeEditorMode,
+        fields: regFields,
+        initialValue: initialEditorValue,
+        onRequestClose: closeAttendeeEditor,
+        onSubmit: handleSubmitParticipant,
+        isSaving: updateAttendee.loading || saving,
+        error: updateAttendee.error || editorError,
+
+        // ✅ AJOUTS
+        products,
+        orderId: editorOrderId,
+      };
+      return p;
+    }, [
+      attendeeEditorOpen,
+      attendeeEditorMode,
+      regFields,
+      initialEditorValue,
+      closeAttendeeEditor,
+      handleSubmitParticipant,
+      updateAttendee.loading,
+      updateAttendee.error,
+      saving,
+      editorError,
+
+      // ✅ deps
+      products,
+      editorOrderId,
+    ]);
+
 
   /* -------------------- LEFT CONTENT -------------------- */
   const leftContent = (
@@ -355,46 +360,29 @@ export function SingleEventParticipantsSection(props: {
           </div>
         </div>
 
-        <div className="adminParticipantsSearch">
-          <select
-            className="adminSearchSelect"
-            value={filterMode}
-            onChange={(e) => setFilterMode(e.target.value as FilterMode)}
-          >
-            <option value="all">Tous</option>
-            <option value="order">Commande</option>
+        <FilterBar
+          query={query}
+          onQueryChange={setQuery}
+          selectValue={filterMode}
+          onSelectChange={(v) => setFilterMode(v as FilterMode)}
+          placeholder={
+            filterMode === "order"
+              ? "Rechercher par numéro de commande…"
+              : filterMode.startsWith("field:")
+              ? "Rechercher dans le champ sélectionné…"
+              : "Recherche globale…"
+          }
+          selectOptions={[
+            { value: "all", label: "Tous" },
+            { value: "order", label: "Commande" },
+            ...fieldOptions.map((f) => ({
+              value: `field:${f.key}`,
+              label: f.label,
+              group: "Champs participant",
+            })),
+          ]}
+        />
 
-            {fieldOptions.length > 0 ? (
-              <optgroup label="Champs participant">
-                {fieldOptions.map((f) => (
-                  <option key={f.key} value={`field:${f.key}`}>
-                    {f.label}
-                  </option>
-                ))}
-              </optgroup>
-            ) : null}
-          </select>
-
-          <input
-            className="adminSearchInput"
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={
-              filterMode === "order"
-                ? "Rechercher par numéro de commande…"
-                : filterMode.startsWith("field:")
-                ? "Rechercher dans le champ sélectionné…"
-                : "Recherche globale…"
-            }
-          />
-
-          {query.trim() ? (
-            <Button variant="ghost" onClick={() => setQuery("")}>
-              Réinitialiser
-            </Button>
-          ) : null}
-        </div>
 
         {groups.length === 0 ? (
           <div className="adminEventEmpty">
