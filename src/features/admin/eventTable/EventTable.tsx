@@ -6,12 +6,7 @@ import { Badge, Button, Card, CardBody, CardHeader } from "../../../ui/component
 import { getStatusInfo } from "../../../domain/helpers/status";
 import { formatDateTimeHuman } from "../../../domain/helpers/dateTime";
 import type { EventOverviewRow } from "../../../domain/models/admin/admin.eventsOverview.schema";
-import {
-  CloseIcon,
-  EditIcon,
-  TrashIcon,
-  EyeIcon,
-} from "../../../ui/components/icon/Icons";
+import { CloseIcon, EditIcon, TrashIcon, EyeIcon } from "../../../ui/components/icon/Icons";
 
 type EventTableProps = {
   events: EventOverviewRow[];
@@ -39,7 +34,6 @@ export default function EventTable({
       <CardHeader title="Aperçu de mes événements" />
 
       <CardBody>
-        {/* ✅ SINGLE RENDER: cards list (desktop + mobile via CSS) */}
         <div className="eventTable__list">
           {events.length === 0 && (
             <div className="eventTable-empty">Aucun événement pour le moment</div>
@@ -62,15 +56,11 @@ export default function EventTable({
                   <div className="eventCard__meta">
                     <div className="eventCard__row">
                       <span className="eventCard__label">Date</span>
-                      <span className="eventCard__value">
-                        {formatDateTimeHuman(ev.startsAt)}
-                      </span>
+                      <span className="eventCard__value">{formatDateTimeHuman(ev.startsAt)}</span>
                     </div>
                     <div className="eventCard__row">
                       <span className="eventCard__label">Lieu</span>
-                      <span className="eventCard__value">
-                        {safeStr(ev.location)}
-                      </span>
+                      <span className="eventCard__value">{safeStr(ev.location)}</span>
                     </div>
                   </div>
 
@@ -97,7 +87,6 @@ export default function EventTable({
                   </div>
                 </div>
 
-                {/* ✅ inline editor (mobile) */}
                 {renderInlineEditor?.(row)}
               </div>
             );

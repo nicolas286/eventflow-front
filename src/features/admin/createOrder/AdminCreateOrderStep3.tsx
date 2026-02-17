@@ -25,7 +25,6 @@ type Props = {
   computeAttendeeErrors: (fields: EventFormField[], values: Record<string, unknown>) => Record<string, string>;
   setAnswer: (attIndex: number, fieldKey: string, value: unknown) => void;
   attTouched: Record<number, Record<string, true>>;
-
 };
 
 export function AdminCreateOrderStep3({
@@ -39,13 +38,13 @@ export function AdminCreateOrderStep3({
   attTouched,
 }: Props) {
   return (
-    <div style={{ display: "grid", gap: 12 }}>
+    <div className="adminCO_Step">
       {cart.expectedSlots.length === 0 ? (
-        <div style={{ opacity: 0.8 }}>Aucun participant à renseigner pour ces billets.</div>
+        <div className="adminCO_Empty">Aucun participant à renseigner pour ces billets.</div>
       ) : fields.length === 0 ? (
-        <div style={{ opacity: 0.8 }}>Aucun champ configuré sur le formulaire.</div>
+        <div className="adminCO_Empty">Aucun champ configuré sur le formulaire.</div>
       ) : attendees.length === 0 ? (
-        <div style={{ opacity: 0.8 }}>Chargement des participants…</div>
+        <div className="adminCO_Empty">Chargement des participants…</div>
       ) : (
         attendees.map((att, idx) => {
           const product = products.find((x) => x.id === att.eventProductId);
@@ -55,7 +54,6 @@ export function AdminCreateOrderStep3({
           const errors = Object.fromEntries(
             Object.entries(allErrors).filter(([k]) => attemptedSubmit || touched[k])
           );
-
 
           return (
             <AttendeeCard
@@ -71,9 +69,8 @@ export function AdminCreateOrderStep3({
         })
       )}
 
-      <div style={{ opacity: 0.8, fontSize: 13 }}>
-        {cart.expectedSlots.length} participant(s) · Total: {cart.totalCents / 100}{" "}
-        {cart.currency}
+      <div className="adminCO_SummaryLine">
+        {cart.expectedSlots.length} participant(s) · Total: {cart.totalCents / 100} {cart.currency}
       </div>
     </div>
   );

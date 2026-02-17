@@ -1,7 +1,6 @@
 import "../../../styles/desktop/eventEditor.desktop.css";
 import "../../../styles/mobile/eventEditor.mobile.css";
-import { Badge, Card, CardBody, CardHeader } from "../../../ui/components";
-import { getStatusInfo } from "../../../domain/helpers/status";
+import { Card, CardBody, CardHeader } from "../../../ui/components";
 import type { EventOverviewRow } from "../../../domain/models/admin/admin.eventsOverview.schema";
 import EventEditorForm from "./EventEditorForm";
 import type { AdminEventDetailEvent } from "../../../domain/models/admin/admin.eventDetail.schema";
@@ -19,10 +18,7 @@ export default function EventEditor({ event, onUpdateEvent }: Props) {
   if (!event) {
     return (
       <Card>
-        <CardHeader
-          title="Modifier un événement"
-          subtitle="Sélectionnez un événement"
-        />
+        <CardHeader title="Modifier un événement" subtitle="Sélectionnez un événement" />
         <CardBody>
           <div className="eventEditor__empty">Aucun événement sélectionné.</div>
         </CardBody>
@@ -31,14 +27,10 @@ export default function EventEditor({ event, onUpdateEvent }: Props) {
   }
 
   const ev = event.event as Partial<AdminEventDetailEvent>;
-  const status = getStatusInfo(ev.isPublished ? "open" : "draft");
 
   return (
     <Card>
-      <CardHeader
-        title="Modifier un événement"
-        right={<Badge tone={status.tone} label={status.label} />}
-      />
+      <CardHeader title="Modifier un événement" />
       <CardBody>
         <EventEditorForm key={ev.id} event={ev} onConfirm={onUpdateEvent} />
       </CardBody>

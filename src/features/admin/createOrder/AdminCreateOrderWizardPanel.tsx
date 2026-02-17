@@ -13,29 +13,46 @@ import {
 } from "../../../domain/models/admin/admin.orderCreateWizard.schema";
 import type { EventFormField } from "../../../domain/models/db/db.eventFormFields.schema";
 import { validateFieldValue } from "../../../domain/helpers/validateFieldValue";
-import { 
-  sortFields, 
-  isFieldFilled, 
-  areAllAttendeesValid
-} from "../../../domain/helpers/fields";
+import { sortFields, isFieldFilled, areAllAttendeesValid } from "../../../domain/helpers/fields";
 import type { EventProduct } from "../../../domain/models/db/db.eventProducts.schema";
-import { 
-  computeNextQty, 
-  computeRemaining, 
-  sortProducts, 
-  quantitiesToItems, 
+import {
+  computeNextQty,
+  computeRemaining,
+  sortProducts,
+  quantitiesToItems,
   sumItemQuantities,
-  computeTotalCents, 
+  computeTotalCents,
   resolveCurrency,
-  computeExpectedAttendeeSlots, 
-  reconcileAttendeesByIndex } from "../../../domain/helpers/logic";
+  computeExpectedAttendeeSlots,
+  reconcileAttendeesByIndex,
+} from "../../../domain/helpers/logic";
 import type { OrderUI } from "../../../domain/models/admin/admin.ordersSchema";
-import { getFieldKey } from "../../../domain/helpers/fields";
+
+/* ✅ NEW CSS */
+import "../../../styles/desktop/AdminCreateOrder.desktop.css";
+import "../../../styles/mobile/AdminCreateOrder.mobile.css";
+
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia(query).matches : false
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const m = window.matchMedia(query);
+    const onChange = () => setMatches(m.matches);
+    onChange();
+    m.addEventListener?.("change", onChange);
+    return () => m.removeEventListener?.("change", onChange);
+  }, [query]);
+
+  return matches;
+}
 
 function computeAttendeeErrors(fields: EventFormField[], values: Record<string, unknown>) {
   const errs: Record<string, string> = {};
   for (const f of fields) {
-    const key = getFieldKey(f);
+    const key = String((f as any).fieldKey ?? "").trim();
     if (!key) continue;
 
     const msg = validateFieldValue(f, values[key]);
@@ -55,7 +72,6 @@ type AttendeeAnswerPayload = {
   eventFormFieldId: string;
   value: unknown;
 };
-
 
 type Props = {
   isOpen: boolean;
@@ -89,13 +105,10 @@ export function AdminOrderCreateWizardPanel(props: Props) {
 
   const adminRegister = useAdminRegister({ supabase });
 
-  const sortedProducts = useMemo(
-    () => sortProducts(products),
-    [products]);
+  const isMobile = useMediaQuery("(max-width: 720px)");
 
-  const sortedFields = useMemo(
-    () => sortFields(regFields),
-    [regFields]);
+  const sortedProducts = useMemo(() => sortProducts(products), [products]);
+  const sortedFields = useMemo(() => sortFields(regFields), [regFields]);
 
   const [step, setStep] = useState<Step>(1);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -122,12 +135,11 @@ export function AdminOrderCreateWizardPanel(props: Props) {
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
   const cart = useMemo(() => {
-  const items = quantitiesToItems(quantities);
-  const totalTickets = sumItemQuantities(items);
-  const totalCents = computeTotalCents(items, sortedProducts);
-  const currency = resolveCurrency(sortedProducts);
-  const expectedSlots = computeExpectedAttendeeSlots(sortedProducts, quantities);
-
+    const items = quantitiesToItems(quantities);
+    const totalTickets = sumItemQuantities(items);
+    const totalCents = computeTotalCents(items, sortedProducts);
+    const currency = resolveCurrency(sortedProducts);
+    const expectedSlots = computeExpectedAttendeeSlots(sortedProducts, quantities);
     return { items, totalTickets, totalCents, currency, expectedSlots };
   }, [quantities, sortedProducts]);
 
@@ -155,16 +167,12 @@ export function AdminOrderCreateWizardPanel(props: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, isFree]);
 
-
-
-
   useEffect(() => {
-  if (!isOpen) return;
-  setAttendees((prev) => reconcileAttendeesByIndex(prev, cart.expectedSlots));
+    if (!isOpen) return;
+    setAttendees((prev) => reconcileAttendeesByIndex(prev, cart.expectedSlots));
   }, [isOpen, cart.expectedSlots]);
 
-  function updateQty(productId: string, nextQty: number) 
-  {
+  function updateQty(productId: string, nextQty: number) {
     const p = sortedProducts.find((x) => x.id === productId);
     if (!p) return;
 
@@ -175,21 +183,20 @@ export function AdminOrderCreateWizardPanel(props: Props) {
   }
 
   function setAnswer(attIndex: number, fieldKey: string, value: unknown) {
-  setAttendees((prev) =>
-    prev.map((a, i) => (i === attIndex ? { ...a, values: { ...a.values, [fieldKey]: value } } : a)),
-  );
+    setAttendees((prev) =>
+      prev.map((a, i) => (i === attIndex ? { ...a, values: { ...a.values, [fieldKey]: value } } : a))
+    );
 
-  setAttTouched((prev) => {
-    const row = prev[attIndex] ?? {};
-    if (row[fieldKey]) return prev;
-    return { ...prev, [attIndex]: { ...row, [fieldKey]: true } };
-  });
-}
-
+    setAttTouched((prev) => {
+      const row = prev[attIndex] ?? {};
+      if ((row as any)[fieldKey]) return prev;
+      return { ...prev, [attIndex]: { ...row, [fieldKey]: true } };
+    });
+  }
 
   const allAttendeesValid = useMemo(
-  () => areAllAttendeesValid(attendees, sortedFields, isFieldFilled),
-  [attendees, sortedFields]
+    () => areAllAttendeesValid(attendees, sortedFields, isFieldFilled),
+    [attendees, sortedFields]
   );
 
   function canGoStep2() {
@@ -219,10 +226,12 @@ export function AdminOrderCreateWizardPanel(props: Props) {
     step2.touchAll(["buyerEmail", "markPaid", "payMode", "customAmountCents", "paymentMethod", "note"]);
     const parsed2 = step2.validateAll();
     if (!parsed2.ok) return;
+
     const s2data = parsed2.data;
-    const isFree = cart.totalCents <= 0;
-    const markPaid = isFree ? false : s2data.markPaid;
-    const payMode = isFree ? "deposit" : s2data.payMode;
+
+    const isFreeNow = cart.totalCents <= 0;
+    const markPaid = isFreeNow ? false : s2data.markPaid;
+    const payMode = isFreeNow ? "deposit" : s2data.payMode;
 
     const hasAttErrors = attendees.some((a) => {
       const errs = computeAttendeeErrors(sortedFields as EventFormField[], a.values ?? {});
@@ -230,35 +239,27 @@ export function AdminOrderCreateWizardPanel(props: Props) {
     });
     if (hasAttErrors) return;
 
-    // map fieldKey -> fieldId pour construire answers
     const fieldIdByKey = new Map<string, string>();
     for (const f of sortedFields as EventFormField[]) {
-      const k = String(f.fieldKey ?? "").trim();
-      const id = String(f.id ?? "").trim();
+      const k = String((f as any).fieldKey ?? "").trim();
+      const id = String((f as any).id ?? "").trim();
       if (k && id) fieldIdByKey.set(k, id);
     }
 
     const payload = {
       eventId,
       items: cart.items.map((it) => ({ eventProductId: it.eventProductId, quantity: it.quantity })),
-
       attendees: attendees.map((a) => ({
-      eventProductId: a.eventProductId,
-      answers: Object.entries(a.values ?? {})
-        .map(([fieldKey, value]): AttendeeAnswerPayload | null => {
-          const eventFormFieldId = fieldIdByKey.get(fieldKey);
-          if (!eventFormFieldId) return null;
-
-          return {
-            eventFormFieldId,
-            value: value ?? null,
-          };
-        })
-        .filter((x): x is AttendeeAnswerPayload => x !== null),
-    })),
-
+        eventProductId: a.eventProductId,
+        answers: Object.entries(a.values ?? {})
+          .map(([fieldKey, value]): AttendeeAnswerPayload | null => {
+            const eventFormFieldId = fieldIdByKey.get(fieldKey);
+            if (!eventFormFieldId) return null;
+            return { eventFormFieldId, value: value ?? null };
+          })
+          .filter((x): x is AttendeeAnswerPayload => x !== null),
+      })),
       buyerEmail: s2data.buyerEmail.trim(),
-
       markPaid,
       payMode,
       customAmountCents:
@@ -270,11 +271,7 @@ export function AdminOrderCreateWizardPanel(props: Props) {
     };
 
     const res = await adminRegister.register(payload);
-
-    if (!res.ok) 
-    {
-      return;
-    }
+    if (!res.ok) return;
 
     const orderId = res.orderId;
 
@@ -284,7 +281,7 @@ export function AdminOrderCreateWizardPanel(props: Props) {
         id: orderId,
         publicId: orderId.slice(0, 8),
         createdAt: new Date().toISOString(),
-        status: res?.status ?? (s2data.markPaid ? "paid" : "awaiting_payment"),
+        status: (res as any)?.status ?? (s2data.markPaid ? "paid" : "awaiting_payment"),
         totalCents: cart.totalCents,
         currency: cart.currency,
       },
@@ -295,99 +292,84 @@ export function AdminOrderCreateWizardPanel(props: Props) {
 
   if (!isOpen) return null;
 
-  const canGoNext =
-  step === 1 ? canGoStep2() :
-  step === 2 ? canGoStep3() :
-  false;
-
+  const canGoNext = step === 1 ? canGoStep2() : step === 2 ? canGoStep3() : false;
   const canSubmit = allAttendeesValid;
 
+  const styleVars = {
+    ["--admin-createorder-w" as any]: `${editorWidth}px`,
+    ["--admin-createorder-gap" as any]: `${editorGap}px`,
+    ["--admin-createorder-stickyTop" as any]: `${stickyTop}px`,
+  } as React.CSSProperties;
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: `1fr ${editorGap}px ${editorWidth}px`,
-        alignItems: "start",
-      }}
-    >
-      <div style={{ minWidth: 0 }}>{left}</div>
-      <div />
-      <div
-        style={{
-          position: "sticky",
-          top: stickyTop,
-          width: editorWidth,
-          background: "white",
-          borderRadius: 14,
-          border: "1px solid rgba(0,0,0,0.10)",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-          overflow: "hidden",
-        }}
-      >
-        {/* header */}
-        <div style={{ padding: 14, borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
-          <div style={{ fontWeight: 900, fontSize: 16 }}>Ajouter une commande</div>
-          <div style={{ opacity: 0.75, fontSize: 13, marginTop: 4 }}>
-            {step}/3 — {step === 1 ? "Billets" : step === 2 ? "Paiement" : "Participants"}
+    <div className="adminCreateOrderShell" style={styleVars}>
+      {!isMobile ? (
+        <>
+          <div className="adminCreateOrderLeft">{left}</div>
+          <div className="adminCreateOrderGap" />
+        </>
+      ) : null}
+
+      <div className="adminCreateOrderPanel">
+        <div className={isMobile ? "adminCreateOrderPanelInner" : ""}>
+          <div className="adminCreateOrderHeader">
+            <div className="adminCreateOrderTitle">Ajouter une commande</div>
+            <div className="adminCreateOrderStepHint">
+              {step}/3 — {step === 1 ? "Billets" : step === 2 ? "Paiement" : "Participants"}
+            </div>
           </div>
-        </div>
 
-        {/* body */}
-        <div style={{ padding: 14, display: "grid", gap: 12 }}>
-          {adminRegister.error ? (
-            <MessageBox variant="error">{adminRegister.error}</MessageBox>
-          ) : null}
+          <div className="adminCreateOrderBody">
+            {adminRegister.error ? <MessageBox variant="error">{adminRegister.error}</MessageBox> : null}
 
-          {step === 1 && (
-            <AdminCreateOrderStep1
-              products={sortedProducts}
-              quantities={quantities}
-              updateQty={updateQty}
-              computeRemaining={computeRemaining}
-              cart={cart}
-            />
-          )}
+            {step === 1 ? (
+              <AdminCreateOrderStep1
+                products={sortedProducts}
+                quantities={quantities}
+                updateQty={updateQty}
+                computeRemaining={computeRemaining}
+                cart={cart}
+              />
+            ) : null}
 
-          {step === 2 ? (
-            <AdminCreateOrderStep2
-              form={s2}
-              fieldErrors={s2Errors}
-              handleChange={s2Change}
-              handleBlur={s2Blur}
-              shouldShowFieldError={s2ShowErr}
-              currency={cart.currency}
-              isFree={isFree}
-              onResetRegisterError={() => adminRegister.reset()}
-            />
-          ) : null}
+            {step === 2 ? (
+              <AdminCreateOrderStep2
+                form={s2}
+                fieldErrors={s2Errors}
+                handleChange={s2Change}
+                handleBlur={s2Blur}
+                shouldShowFieldError={s2ShowErr}
+                currency={cart.currency}
+                isFree={isFree}
+                onResetRegisterError={() => adminRegister.reset()}
+              />
+            ) : null}
 
-          {step === 3 ? (
-          <AdminCreateOrderStep3
-            cart={cart}
-            attendees={attendees}
-            fields={sortedFields as EventFormField[]}    
-            products={sortedProducts}
-            attemptedSubmit={attemptedSubmit}
-            computeAttendeeErrors={computeAttendeeErrors}
-            setAnswer={setAnswer}
-            attTouched={attTouched}
+            {step === 3 ? (
+              <AdminCreateOrderStep3
+                cart={cart}
+                attendees={attendees}
+                fields={sortedFields as EventFormField[]}
+                products={sortedProducts}
+                attemptedSubmit={attemptedSubmit}
+                computeAttendeeErrors={computeAttendeeErrors}
+                setAnswer={setAnswer}
+                attTouched={attTouched}
+              />
+            ) : null}
+          </div>
+
+          <AdminCreateOrderFooter
+            step={step}
+            loading={adminRegister.loading}
+            onRequestClose={onRequestClose}
+            onBack={() => setStep((s) => (s === 3 ? 2 : 1))}
+            onNext={gotoNext}
+            onSubmit={submit}
+            canGoNext={canGoNext}
+            canSubmit={canSubmit}
           />
-        ) : null}
-
         </div>
-
-        {/* footer */}
-        <AdminCreateOrderFooter
-          step={step}
-          loading={adminRegister.loading}
-          onRequestClose={onRequestClose}
-          onBack={() => setStep((s) => (s === 3 ? 2 : 1))}
-          onNext={gotoNext}
-          onSubmit={submit}
-          canGoNext={canGoNext}
-          canSubmit={canSubmit}
-        />
       </div>
     </div>
   );

@@ -12,33 +12,25 @@ type Props = {
 };
 
 export function AttendeeFieldInput({ field, value, errorMsg, onChange }: Props) {
-  const commonStyle: React.CSSProperties = {
-    width: "100%",
-    padding: "10px 12px",
-    borderRadius: 12,
-    border: "1px solid rgba(0,0,0,0.12)",
-    outline: "none",
-  };
+  const selectOptions = useMemo(() => toSelectOptions(field.options), [field.options]);
 
   const label = (
-    <div style={{ fontWeight: 900, marginBottom: 6 }}>
+    <div className="adminCO_FieldLabel">
       {String(field.label ?? field.fieldKey)}{" "}
-      {field.isRequired ? <span style={{ opacity: 0.7 }}>(requis)</span> : null}
+      {field.isRequired ? <span className="adminCO_FieldReq">(requis)</span> : null}
     </div>
   );
-
-  const selectOptions = useMemo(() => toSelectOptions(field.options), [field.options]);
 
   // date
   if (isBirthDateField(field) || field.fieldType === "date") {
     return (
-      <div>
+      <div className="adminCO_Field">
         {label}
         <input
+          className="adminCO_Control"
           type="date"
           value={typeof value === "string" ? value : ""}
           onChange={(e) => onChange(e.target.value)}
-          style={commonStyle}
         />
         {errorMsg ? <MessageBox variant="error">{errorMsg}</MessageBox> : null}
       </div>
@@ -48,13 +40,13 @@ export function AttendeeFieldInput({ field, value, errorMsg, onChange }: Props) 
   // country
   if (isCountryField(field)) {
     return (
-      <div>
+      <div className="adminCO_Field">
         {label}
         <input
+          className="adminCO_Control"
           type="text"
           value={typeof value === "string" ? value : ""}
           onChange={(e) => onChange(e.target.value)}
-          style={commonStyle}
           placeholder="Pays"
         />
         {errorMsg ? <MessageBox variant="error">{errorMsg}</MessageBox> : null}
@@ -65,13 +57,13 @@ export function AttendeeFieldInput({ field, value, errorMsg, onChange }: Props) 
   // phone
   if (isPhoneField(field)) {
     return (
-      <div>
+      <div className="adminCO_Field">
         {label}
         <input
+          className="adminCO_Control"
           type="tel"
           value={typeof value === "string" ? value : ""}
           onChange={(e) => onChange(e.target.value)}
-          style={commonStyle}
           placeholder="Téléphone"
         />
         {errorMsg ? <MessageBox variant="error">{errorMsg}</MessageBox> : null}
@@ -82,12 +74,12 @@ export function AttendeeFieldInput({ field, value, errorMsg, onChange }: Props) 
   // textarea
   if (field.fieldType === "textarea") {
     return (
-      <div>
+      <div className="adminCO_Field">
         {label}
         <textarea
+          className="adminCO_Control adminCO_Textarea"
           value={typeof value === "string" ? value : ""}
           onChange={(e) => onChange(e.target.value)}
-          style={{ ...commonStyle, minHeight: 90, resize: "vertical" }}
         />
         {errorMsg ? <MessageBox variant="error">{errorMsg}</MessageBox> : null}
       </div>
@@ -97,12 +89,12 @@ export function AttendeeFieldInput({ field, value, errorMsg, onChange }: Props) 
   // select
   if (field.fieldType === "select") {
     return (
-      <div>
+      <div className="adminCO_Field">
         {label}
         <select
+          className="adminCO_Control"
           value={typeof value === "string" ? value : ""}
           onChange={(e) => onChange(e.target.value)}
-          style={commonStyle}
         >
           <option value="">—</option>
           {selectOptions.map((o, i) => (
@@ -110,7 +102,6 @@ export function AttendeeFieldInput({ field, value, errorMsg, onChange }: Props) 
               {o.label}
             </option>
           ))}
-
         </select>
         {errorMsg ? <MessageBox variant="error">{errorMsg}</MessageBox> : null}
       </div>
@@ -120,17 +111,17 @@ export function AttendeeFieldInput({ field, value, errorMsg, onChange }: Props) 
   // checkbox
   if (field.fieldType === "checkbox") {
     return (
-      <div>
-        <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div className="adminCO_Field">
+        <label className="adminCO_CheckRow">
           <input
+            className="adminCO_Checkbox"
             type="checkbox"
             checked={value === true}
             onChange={(e) => onChange(e.target.checked)}
-            style={{ width: 18, height: 18 }}
           />
-          <div style={{ fontWeight: 900 }}>
+          <div className="adminCO_CheckText">
             {String(field.label ?? field.fieldKey)}{" "}
-            {field.isRequired ? <span style={{ opacity: 0.7 }}>(requis)</span> : null}
+            {field.isRequired ? <span className="adminCO_FieldReq">(requis)</span> : null}
           </div>
         </label>
         {errorMsg ? <MessageBox variant="error">{errorMsg}</MessageBox> : null}
@@ -147,9 +138,10 @@ export function AttendeeFieldInput({ field, value, errorMsg, onChange }: Props) 
         : "text";
 
   return (
-    <div>
+    <div className="adminCO_Field">
       {label}
       <input
+        className="adminCO_Control"
         type={inputType}
         value={
           inputType === "number"
@@ -167,7 +159,6 @@ export function AttendeeFieldInput({ field, value, errorMsg, onChange }: Props) 
             onChange(e.target.value);
           }
         }}
-        style={commonStyle}
       />
       {errorMsg ? <MessageBox variant="error">{errorMsg}</MessageBox> : null}
     </div>

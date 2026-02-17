@@ -24,18 +24,16 @@ export function AdminCreateOrderStep1({
   cart,
 }: Props) {
   return (
-    <div style={{ display: "grid", gap: 10 }}>
+    <div className="adminCO_Step">
       {products.length === 0 ? (
-        <div style={{ opacity: 0.8 }}>Aucun billet configuré.</div>
+        <div className="adminCO_Empty">Aucun billet configuré.</div>
       ) : (
         products.map((p) => {
           const qty = Number(quantities[p.id] ?? 0) || 0;
           const remaining = computeRemaining(p);
           const soldOut = remaining === 0 && p.stockQty != null;
 
-          const stockLabel =
-            remaining == null ? "Illimité" : `Stock: ${remaining}`;
-
+          const stockLabel = remaining == null ? "Illimité" : `Stock: ${remaining}`;
           const maxQty = remaining == null ? 99 : remaining;
 
           const createsAtt = p.createsAttendees === true;
@@ -44,29 +42,15 @@ export function AdminCreateOrderStep1({
           return (
             <div
               key={p.id}
-              style={{
-                border: "1px solid rgba(0,0,0,0.10)",
-                borderRadius: 12,
-                padding: 12,
-                opacity: soldOut ? 0.6 : 1,
-              }}
+              className={[
+                "adminCO_TicketCard",
+                soldOut ? "isSoldOut" : "",
+              ].join(" ")}
             >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 12,
-                }}
-              >
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 900 }}>{p.name}</div>
-                  <div
-                    style={{
-                      opacity: 0.75,
-                      fontSize: 13,
-                      marginTop: 2,
-                    }}
-                  >
+              <div className="adminCO_TicketRow">
+                <div className="adminCO_TicketInfo">
+                  <div className="adminCO_TicketName">{p.name}</div>
+                  <div className="adminCO_TicketMeta">
                     {stockLabel}
                     {createsAtt
                       ? ` · ${perUnit} participant(s) / billet`
@@ -74,13 +58,7 @@ export function AdminCreateOrderStep1({
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                  }}
-                >
+                <div className="adminCO_QtyControls">
                   <Button
                     variant="secondary"
                     onClick={() => updateQty(p.id, qty - 1)}
@@ -90,21 +68,12 @@ export function AdminCreateOrderStep1({
                   </Button>
 
                   <input
+                    className="adminCO_QtyInput"
                     type="number"
                     min={0}
                     max={maxQty}
                     value={qty}
-                    onChange={(e) =>
-                      updateQty(p.id, Number(e.target.value))
-                    }
-                    style={{
-                      width: 64,
-                      padding: "8px 10px",
-                      borderRadius: 10,
-                      border: "1px solid rgba(0,0,0,0.12)",
-                      outline: "none",
-                      textAlign: "center",
-                    }}
+                    onChange={(e) => updateQty(p.id, Number(e.target.value))}
                     disabled={soldOut}
                   />
 
@@ -122,17 +91,8 @@ export function AdminCreateOrderStep1({
         })
       )}
 
-      {/* recap */}
-      <div
-        style={{
-          borderTop: "1px solid rgba(0,0,0,0.08)",
-          paddingTop: 10,
-          opacity: 0.85,
-          fontSize: 13,
-        }}
-      >
-        Récap : {cart.totalTickets} billet(s) ·{" "}
-        {cart.expectedSlots.length} participant(s) à renseigner ·{" "}
+      <div className="adminCO_Recap">
+        Récap : {cart.totalTickets} billet(s) · {cart.expectedSlots.length} participant(s) à renseigner ·{" "}
         {cart.totalCents / 100} {cart.currency}
       </div>
     </div>

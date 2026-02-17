@@ -11,7 +11,10 @@ import { useLiveForm } from "../../public/useLiveZodForm";
 
 type Props = {
   event: Partial<AdminEventDetailEvent>;
-  onConfirm: (patch: UpdateEventPatch) => Promise<Event | null>;
+
+  // ✅ IMPORTANT: ton parent ne retourne rien (void),
+  // donc on accepte n'importe quel retour (unknown)
+  onConfirm: (patch: UpdateEventPatch) => Promise<unknown>;
 };
 
 const FORM_KEYS: Array<keyof UpdateEventPatch> = [
@@ -56,27 +59,16 @@ export default function EventEditorForm({ event, onConfirm }: Props) {
 
   const initialDraft = useMemo(() => buildInitialDraft(event), [event]);
 
-  const live = useLiveForm<UpdateEventPatch>(
-    updateEventPatchSchema,
-    initialDraft
-  );
+  const live = useLiveForm<UpdateEventPatch>(updateEventPatchSchema, initialDraft);
 
   useEffect(() => {
     live.reset(initialDraft);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialDraft, live.reset]);
 
   const draft = live.form;
 
-  const primaryLabel = event.isPublished ? "Enregistrer" : "Publier";
-  const primaryNextIsPublished = true;
-
-  const secondaryLabel = event.isPublished
-    ? "Remettre en brouillon"
-    : "Enregistrer le brouillon";
-  const secondaryNextIsPublished = false;
-
-  async function submit(nextIsPublished: boolean) {
+  async function submit() {
     setSubmitError(null);
     setSuccessMsg(null);
 
@@ -88,10 +80,7 @@ export default function EventEditorForm({ event, onConfirm }: Props) {
       return;
     }
 
-    const parsed = updateEventPatchSchema.parse({
-      ...res.data,
-      isPublished: nextIsPublished,
-    });
+    const parsed = updateEventPatchSchema.parse(res.data);
 
     const patch = makePatch(parsed, event);
     if (Object.keys(patch).length === 0) {
@@ -99,9 +88,17 @@ export default function EventEditorForm({ event, onConfirm }: Props) {
       return;
     }
 
-    const updated = await onConfirm(patch);
-      if (updated) setSuccessMsg("Modifications enregistrées avec succès.");
+    try {
+      const result = await onConfirm(patch);
+
+      // ✅ Échec uniquement si onConfirm retourne explicitement null/false
+      const failed = result === null || result === false;
+
+      if (!failed) setSuccessMsg("Modifications enregistrées avec succès.");
       else setSubmitError("Impossible d’enregistrer l’événement.");
+    } catch {
+      setSubmitError("Impossible d’enregistrer l’événement.");
+    }
   }
 
   const showErr = <K extends keyof UpdateEventPatch>(key: K) =>
@@ -109,19 +106,9 @@ export default function EventEditorForm({ event, onConfirm }: Props) {
     !!live.fieldErrors[key];
 
   return (
-    <div>
-
-      {submitError && (
-        <MessageBox variant="error">
-          {submitError}
-        </MessageBox>
-      )}
-
-      {successMsg && (
-        <MessageBox variant="success">
-          {successMsg}
-        </MessageBox>
-      )}
+    <div className="eventEditor">
+      {submitError && <MessageBox variant="error">{submitError}</MessageBox>}
+      {successMsg && <MessageBox variant="success">{successMsg}</MessageBox>}
 
       <Input
         value={draft.title ?? ""}
@@ -148,28 +135,30 @@ export default function EventEditorForm({ event, onConfirm }: Props) {
       <Input
         type="datetime-local"
         value={isoToLocalInput(draft.startsAt ?? null)}
-        onChange={(e) =>
-          live.handleChange("startsAt", localInputToIso(e.target.value))
-        }
+        onChange={(e) => live.handleChange("startsAt", localInputToIso(e.target.value))}
         onBlur={() => live.handleBlur("startsAt")}
         label="Date et heure de début"
       />
       {showErr("startsAt") && (
-        <div className="formError">{live.fieldErrors.startsAt}</div>
+        <div className="eventEditor__error">{live.fieldErrors.startsAt}</div>
       )}
 
-      <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-        <Button
-          label={secondaryLabel}
-          variant="secondary"
-          onClick={() => submit(secondaryNextIsPublished)}
-        />
+      {/* Select publication sous date/heure */}
+      <div className="eventEditor__row1">
+        <div className="eventEditor__label">Publication</div>
+        <select
+          className="eventEditor__select"
+          value={draft.isPublished ? "published" : "draft"}
+          onChange={(e) => live.handleChange("isPublished", e.target.value === "published")}
+          onBlur={() => live.handleBlur("isPublished")}
+        >
+          <option value="draft">Brouillon</option>
+          <option value="published">Publié</option>
+        </select>
+      </div>
 
-        <Button
-          label={primaryLabel}
-          variant="primary"
-          onClick={() => submit(primaryNextIsPublished)}
-        />
+      <div className="eventEditor__footer isLeft">
+        <Button label="Enregistrer" variant="primary" onClick={submit} />
       </div>
     </div>
   );

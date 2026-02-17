@@ -1,3 +1,7 @@
+/* =========================
+   MOBILE PARTICIPANTS
+   ========================= */
+
 @media (max-width: 720px) {
   /* ✅ anti overflow global */
   .adminParticipants,
@@ -13,14 +17,10 @@
     overflow-x: hidden;
   }
 
-  .adminInlineOrderWizard *,
-  .adminInlineEditorWrap * {
-    box-sizing: border-box;
-    min-width: 0;
-    max-width: 350px;
-  }
+  /* =========================
+     HEADER
+     ========================= */
 
-  /* Header : titre en haut, bouton en dessous */
   .adminParticipantsHeader {
     flex-direction: column;
     align-items: stretch;
@@ -32,18 +32,18 @@
     justify-content: flex-start;
   }
 
-  /* Bouton plein width en mobile */
   .adminParticipantsHeaderRight .ui-button {
     width: 100%;
-    max-width: 100%;
   }
 
-  /* Search : select + input SUR LA MÊME LIGNE (toujours) */
+  /* =========================
+     FILTER BAR
+     ========================= */
+
   .adminParticipantsSearch {
     flex-wrap: nowrap;
     align-items: center;
     gap: 10px;
-
     min-width: 0;
     max-width: 100%;
   }
@@ -52,61 +52,52 @@
     flex: 0 0 auto;
     min-width: 140px;
     max-width: 45%;
-    box-sizing: border-box;
   }
 
   .adminSearchInput {
     flex: 1 1 auto;
-    min-width: 0; /* ✅ CRUCIAL */
+    min-width: 0;
     width: auto;
     max-width: 100%;
-    box-sizing: border-box;
   }
 
-  /* Le bouton "Réinitialiser" compact par défaut */
   .adminParticipantsSearch .ui-button {
     flex: 0 0 auto;
     white-space: nowrap;
-    max-width: 100%;
   }
 
-  /* Cards */
+  /* =========================
+     ORDER CARD
+     ========================= */
+
   .adminOrderHeader {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
-
-    min-width: 0;
-  }
-
-  .adminOrderHeader > * {
-    min-width: 0;
-    max-width: 100%;
   }
 
   .adminOrderHeaderRight {
     width: 100%;
     justify-content: space-between;
     gap: 8px;
-
-    min-width: 0;
   }
 
   .adminOrderHeaderRight .ui-button {
-    max-width: 100%;
+    width: 100%;
   }
+
+  /* =========================
+     PERSON CARD
+     ========================= */
 
   .adminPersonTop {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
-
-    min-width: 0;
   }
 
   .adminPersonBadges {
     justify-content: flex-start;
-    min-width: 0;
   }
 
   .adminPersonMeta {
@@ -114,18 +105,108 @@
   }
 
   .adminFieldValue {
-    min-width: 0;
-    max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+
+  /* =========================================================
+     ✅ FIX MAJEUR : WIZARD AJOUT COMMANDE EN MOBILE
+     - Le "trop gros" vient du EditorShell interne en 420px
+     - On force --editor-w à 100% et on rend le panel "inline"
+     - On limite la hauteur pour éviter un bloc énorme
+     ========================================================= */
+
+  .adminInlineOrderWizard {
+    width: 100%;
+    max-width: 100%;
+    margin-top: 14px;
+
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    background: #fff;
+
+    padding: 14px;
+    box-sizing: border-box;
+
+    /* ✅ empêche le bloc énorme */
+    max-height: 78vh;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ✅ Force les variables du EditorShell interne (même si editorWidth=420) */
+  .adminInlineOrderWizard,
+  .adminInlineOrderWizard .uiEditorShell {
+    --editor-w: 100% !important;
+    --editor-gap: 0px !important;
+  }
+
+  /* ❌ On supprime toute limite artificielle qui casse la mise en page */
+  .adminInlineOrderWizard *,
+  .adminInlineEditorWrap * {
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+
+  /* ✅ Neutralise le layout "2 colonnes" du EditorShell */
+  .adminInlineOrderWizard .uiEditorShell {
+    width: 100% !important;
+    display: block !important;
+  }
+
+  .adminInlineOrderWizard .uiEditorLeft {
+    display: none !important;
+  }
+
+  .adminInlineOrderWizard .uiEditorRight {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .adminInlineOrderWizard .uiEditorPanel {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+
+    padding: 0 !important;
+  }
+
+  .adminInlineOrderWizard .uiEditorPanelInner {
+    padding: 0 !important;
+  }
+
+  /* ✅ Grids du wizard: 1 colonne */
+  .adminInlineOrderWizard .adminEventFormGrid {
+    grid-template-columns: 1fr !important;
+    width: 100% !important;
+  }
+
+  .adminInlineOrderWizard input,
+  .adminInlineOrderWizard select,
+  .adminInlineOrderWizard textarea {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* ✅ Boutons full width */
+  .adminInlineOrderWizard .ui-button {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
-/* Ultra small phones (≈ 400px) */
+/* =========================
+   ULTRA SMALL (≤420px)
+   ========================= */
+
 @media (max-width: 420px) {
-  /* Search: on garde select + input sur 1 ligne,
-     mais on autorise le bouton reset à descendre si nécessaire */
   .adminParticipantsSearch {
     flex-wrap: wrap;
     gap: 8px;
@@ -141,62 +222,22 @@
 
   .adminSearchInput {
     flex: 1 1 auto;
-    min-width: 0;
-    width: auto;
     padding: 8px 10px;
     font-size: 11px;
   }
 
-  /* ✅ Reset full width en dessous */
   .adminParticipantsSearch .ui-button {
     order: 3;
     width: 100%;
     justify-content: center;
-    white-space: nowrap;
   }
 
-  /* Header: bouton toujours contenu */
-  .adminParticipantsHeaderRight .ui-button {
+  .adminInlineOrderWizard {
+    padding: 12px;
+    max-height: 76vh;
+  }
+
+  .adminInlineOrderWizard .ui-button {
     width: 100%;
-  }
-
-  /* Order header: boutons prennent la place dispo */
-  .adminOrderHeaderRight {
-    justify-content: flex-start;
-  }
-
-  .adminOrderHeaderRight .ui-button {
-    width: 100%;
-  }
-
-  .adminOrderPill {
-    font-size: 11px;
-    padding: 7px 9px;
-    max-width: 100%;
-  }
-
-  /* Person: badges + lignes */
-  .adminStatusBadge,
-  .adminProductBadge {
-    font-size: 11px;
-    padding: 6px 8px;
-    max-width: 100%;
-  }
-
-  .adminFieldValue {
-    max-width: 60%;
-  }
-
-  /* ✅ Wizard (Ajouter commande) : inputs / select / grid ne débordent pas */
-  .adminInlineOrderWizard .adminEventFormGrid {
-    grid-template-columns: 1fr !important;
-    max-width: 200px;
-  }
-
-  .adminInlineOrderWizard input,
-  .adminInlineOrderWizard select,
-  .adminInlineOrderWizard textarea {
-    width: 100%;
-    max-width: 200px;
   }
 }
