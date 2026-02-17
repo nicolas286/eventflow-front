@@ -52,6 +52,15 @@ export function formatDateTime(value: unknown): string {
   }
 }
 
+export function formatMoney(cents?: number, currency?: string) {
+  const c = typeof cents === "number" ? cents : 0;
+  const cur = currency || "EUR";
+  try {
+    return new Intl.NumberFormat("fr-BE", { style: "currency", currency: cur }).format(c / 100);
+  } catch {
+    return `${(c / 100).toFixed(2)} ${cur}`;
+  }
+}
 
 type RowsLike<T> = T[] | { rows?: T[] } | null | undefined;
 

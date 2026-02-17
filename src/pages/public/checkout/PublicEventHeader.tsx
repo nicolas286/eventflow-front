@@ -3,25 +3,19 @@ import Button from "../../../ui/components/button/Button";
 import { formatDateTimeHuman } from "../../../domain/helpers/dateTime";
 
 import "../../../styles/desktop/publicPages.desktop.css";
+import type { PublicEvent, PublicOrgProfileOverviewForEventPage } from "../../../domain/models/public/public.eventDetailBySlug.schema";
 
 
 type Props = {
   orgSlug: string;
-  org?: { slug: string; logoUrl: string; defaultEventBannerUrl: string };
-  event: {
-    title: string;
-    location: string | null;
-    bannerUrl: string;
-    startsAt: string | null;
-    endsAt: string | null;
-  };
+  org?: PublicOrgProfileOverviewForEventPage;
+  event: PublicEvent;
 };
 
 export function PublicEventHeader({ orgSlug, org, event }: Props) {
   const startText = event.startsAt ? formatDateTimeHuman(event.startsAt) : null;
   const endText = event.endsAt ? formatDateTimeHuman(event.endsAt) : null;
 
-  // ✅ Bannière STRICTEMENT event (via helper)
   const banner = event.bannerUrl;
 
   return (
@@ -30,7 +24,7 @@ export function PublicEventHeader({ orgSlug, org, event }: Props) {
         <>
           <div
             className="publicBannerWrap"
-            style={{ ["--banner-url" as any]: `url("${banner}")` }}
+            style={{ ["--banner-url" as string]: `url("${banner}")` }}
           >
             <div className="publicBannerClip">
               <div className="publicBanner" aria-label={event.title} />

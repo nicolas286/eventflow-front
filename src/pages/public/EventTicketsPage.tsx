@@ -10,11 +10,9 @@ import Badge from "../../ui/components/badge/Badge";
 
 import { PublicEventHeader } from "./checkout/PublicEventHeader";
 import { loadDraft, saveDraft, formatMoney } from "./checkout/checkoutStore";
-import { clampInt } from "../../domain/helpers/logic";
+import { clampInt, sortBySortOrder, sortProducts } from "../../domain/helpers/logic";
 
-/* ✅ CSS */
 import "../../styles/desktop/publicCheckoutBase.desktop.css";
-
 import "../../styles/desktop/eventTicketsPage.desktop.css";
 import "../../styles/mobile/eventTicketsPage.mobile.css";
 
@@ -65,7 +63,7 @@ export function EventTicketsPage() {
   const { org, event, products } = data;
   const quantities = draft?.quantities ?? {};
 
-  const sortedProducts = [...products].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  const sortedProducts = sortBySortOrder(products);
 
   const totalTickets = Object.values(quantities).reduce((a, b) => a + b, 0);
 

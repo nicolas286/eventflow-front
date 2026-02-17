@@ -37,7 +37,7 @@ import "../../styles/desktop/publicCheckoutBase.desktop.css";
 import "../../styles/desktop/eventAttendeesPage.desktop.css";
 import "../../styles/mobile/eventAttendeesPage.mobile.css";
 import type { EventFormFieldUI } from "../../domain/models/db/db.eventFormFields.schema";
-import type { Event } from "../../domain/models/db/db.event.schema";
+import { MessageBox } from "../../ui/components/message/MessageBox";
 
 /* ---------------- Types ---------------- */
 
@@ -304,7 +304,7 @@ export function EventAttendeesPage() {
                               width: "100%",
                               padding: "10px 12px",
                               borderRadius: 12,
-                              border: showErr ? "1px solid rgba(220, 38, 38, 0.55)" : "1px solid rgba(0,0,0,0.10)",
+                              border: "1px solid rgba(0,0,0,0.10)",
                               outline: "none",
                             };
 
@@ -316,12 +316,10 @@ export function EventAttendeesPage() {
                             );
 
                             const errorLine = showErr ? (
-                              <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: "rgba(220, 38, 38, 0.95)" }}>
-                                {errMsg}
-                              </div>
+                              <MessageBox variant="error">{errMsg}</MessageBox>
                             ) : null;
 
-                            if (isBirthDateField(f)) {
+                            if (isBirthDateField(f as EventFormFieldUI)) {
                               return (
                                 <div key={f.id}>
                                   {label}
@@ -337,7 +335,7 @@ export function EventAttendeesPage() {
                               );
                             }
 
-                            if (isCountryField(f)) {
+                            if (isCountryField(f as EventFormFieldUI)) {
                               return (
                                 <div key={f.id}>
                                   {label}
@@ -352,7 +350,7 @@ export function EventAttendeesPage() {
                               );
                             }
 
-                            if (isPhoneField(f)) {
+                            if (isPhoneField(f as EventFormFieldUI)) {
                               return (
                                 <div key={f.id}>
                                   {label}
@@ -397,7 +395,7 @@ export function EventAttendeesPage() {
                                     style={commonStyle}
                                   >
                                     <option value="">—</option>
-                                    {opts.map((o: any, i: number) => (
+                                    {opts.map((o: Record<string, string>, i: number) => (
                                       <option key={i} value={String(o.value ?? o)}>
                                         {String(o.label ?? o)}
                                       </option>

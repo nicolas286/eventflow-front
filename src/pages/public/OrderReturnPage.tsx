@@ -1,22 +1,31 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams, useSearchParams, type To } from "react-router-dom";
 
 import { supabase } from "../../gateways/supabase/supabaseClient";
 import { usePublicEventDetail } from "../../features/admin/hooks/usePublicEventDetail";
 
 import Container from "../../ui/components/container/Container";
 import Card, { CardBody } from "../../ui/components/card/Card";
-import Button from "../../ui/components/button/Button"
+import Button from "../../ui/components/button/Button";
 
 import { PublicEventHeader } from "./checkout/PublicEventHeader";
+import { orderIsFinal as isFinal } from "../../domain/helpers/logic";
+import { formatMoney } from "../../domain/helpers/normalize";
 
 import "../../styles/desktop/publicCheckoutBase.desktop.css";
 import "../../styles/desktop/public/orderReturnPage.desktop.css";
 import "../../styles/mobile/public/orderReturnPage.mobile.css";
 
-type OrderStatus = "open" | "pending" | "paid" | "failed" | "canceled" | "expired" | "awaiting_payment";
+export type OrderStatus =
+  | "open"
+  | "pending"
+  | "paid"
+  | "failed"
+  | "canceled"
+  | "expired"
+  | "awaiting_payment";
 
-type OrderItemPublic = {
+export type OrderItemPublic = {
   name?: string;
   quantity?: number;
   unitPriceCents?: number;
@@ -24,13 +33,12 @@ type OrderItemPublic = {
   currency?: string;
 };
 
-type OrderPublic = {
+export type OrderPublic = {
   id: string;
   status: OrderStatus;
   totalCents?: number;
   currency?: string;
 
-  // 🔑 pour retrouver l’event et rediriger vers l’org
   orgSlug?: string;
   eventSlug?: string;
 
@@ -38,21 +46,9 @@ type OrderPublic = {
   items?: OrderItemPublic[];
 };
 
-function isFinal(status: OrderStatus) {
-  return status === "paid" || status === "failed" || status === "canceled" || status === "expired";
-}
-
-function formatMoney(cents?: number, currency?: string) {
-  const c = typeof cents === "number" ? cents : 0;
-  const cur = currency || "EUR";
-  try {
-    return new Intl.NumberFormat("fr-BE", { style: "currency", currency: cur }).format(c / 100);
-  } catch {
-    return `${(c / 100).toFixed(2)} ${cur}`;
-  }
-}
-
 async function fetchOrder(orderId: string, token: string): Promise<OrderPublic> {
+  if (!orderId) throw new Error("order_fetch_failed");
+
   const res = await fetch(
     `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/order-public?orderId=${encodeURIComponent(
       orderId,
@@ -72,22 +68,21 @@ async function fetchOrder(orderId: string, token: string): Promise<OrderPublic> 
     id: j.id,
     status: j.status,
 
-    totalCents: j.totalCents ?? j.total_cents ?? undefined,
-    currency: j.currency ?? undefined,
+    totalCents: j.totalCents,
+    currency: j.currency,
 
-    // ✅ IMPORTANT : on récupère orgSlug/eventSlug si dispo côté edge function
-    orgSlug: j.orgSlug ?? j.org_slug ?? j.organizationSlug ?? j.organization_slug ?? undefined,
-    eventSlug: j.eventSlug ?? j.event_slug ?? undefined,
+    orgSlug: j.orgSlug,
+    eventSlug: j.eventSlug,
 
-    buyerEmail: j.buyerEmail ?? j.buyer_email ?? undefined,
+    buyerEmail: j.buyerEmail,
 
     items: Array.isArray(j.items)
-      ? j.items.map((it: any) => ({
-          name: it.name ?? it.productName ?? it.product_name ?? undefined,
-          quantity: it.quantity ?? undefined,
-          unitPriceCents: it.unitPriceCents ?? it.unit_price_cents ?? undefined,
-          totalCents: it.totalCents ?? it.total_cents ?? undefined,
-          currency: it.currency ?? undefined,
+      ? j.items.map((it: OrderItemPublic) => ({
+          name: it.name,
+          quantity: it.quantity,
+          unitPriceCents: it.unitPriceCents,
+          totalCents: it.totalCents,
+          currency: it.currency,
         }))
       : undefined,
   };
@@ -98,14 +93,15 @@ export function OrderReturnPage() {
   const [search] = useSearchParams();
   const navigate = useNavigate();
 
-  const isReturn = useMemo(() => search.get("return") === "1", [search]);
+  /* ---------------- Query params (no useMemo: search ref not stable) ---------------- */
 
-  const bookingToken = useMemo(() => {
-    return search.get("token") ?? search.get("bookingToken") ?? null;
-  }, [search]);
+  const isReturn = search.get("return") === "1";
+  const bookingToken = search.get("token") ?? search.get("bookingToken") ?? null;
 
   const orgSlugFromQuery = search.get("org") ?? search.get("orgSlug") ?? null;
   const eventSlugFromQuery = search.get("event") ?? search.get("eventSlug") ?? null;
+
+  /* ---------------- State ---------------- */
 
   const [order, setOrder] = useState<OrderPublic | null>(null);
   const [loading, setLoading] = useState(true);
@@ -114,23 +110,22 @@ export function OrderReturnPage() {
   const intervalRef = useRef<number | null>(null);
   const timeoutRef = useRef<number | null>(null);
 
-  // countdown (paid)
-  const [countdown, setCountdown] = useState<number | null>(null);
-  const countdownRef = useRef<number | null>(null);
-
   const verifying = useMemo(() => {
     if (!isReturn) return false;
     if (!order) return true;
     return !isFinal(order.status);
   }, [isReturn, order]);
 
-  const orgSlug = useMemo(() => order?.orgSlug ?? orgSlugFromQuery ?? null, [order?.orgSlug, orgSlugFromQuery]);
-  const eventSlug = useMemo(() => order?.eventSlug ?? eventSlugFromQuery ?? null, [
-    order?.eventSlug,
-    eventSlugFromQuery,
-  ]);
+  const orgSlug = useMemo(
+    () => order?.orgSlug ?? orgSlugFromQuery ?? null,
+    [order?.orgSlug, orgSlugFromQuery],
+  );
 
-  // ✅ on va chercher les infos event comme dans EventPaymentPage
+  const eventSlug = useMemo(
+    () => order?.eventSlug ?? eventSlugFromQuery ?? null,
+    [order?.eventSlug, eventSlugFromQuery],
+  );
+
   const { loading: eventLoading, data: eventData } = usePublicEventDetail({
     supabase,
     orgSlug,
@@ -138,15 +133,18 @@ export function OrderReturnPage() {
   });
 
   const backUrl = useMemo(() => {
-  if (orgSlug && eventSlug) return `/o/${orgSlug}/e/${eventSlug}`;
-  if (orgSlug) return `/o/${orgSlug}`;
-  return "/"; // dernier recours
-}, [orgSlug, eventSlug]);
+    if (orgSlug && eventSlug) return `/o/${orgSlug}/e/${eventSlug}`;
+    if (orgSlug) return `/o/${orgSlug}`;
+    return "/";
+  }, [orgSlug, eventSlug]);
 
+  /* ---------------- Polling paiement (retour PSP) ---------------- */
 
   useEffect(() => {
-    if (!orderId) return;
-    if (!bookingToken) return;
+    if (!orderId || !bookingToken) return;
+
+    const safeOrderId = orderId;
+    const safeToken = bookingToken;
 
     let cancelled = false;
 
@@ -159,7 +157,7 @@ export function OrderReturnPage() {
 
     async function loadOnce() {
       try {
-        const o = await fetchOrder(orderId, bookingToken);
+        const o = await fetchOrder(safeOrderId, safeToken);
         if (cancelled) return;
         setOrder(o);
         setLoading(false);
@@ -172,12 +170,12 @@ export function OrderReturnPage() {
 
     async function poll() {
       try {
-        const o = await fetchOrder(orderId, bookingToken);
+        const o = await fetchOrder(safeOrderId, safeToken);
         if (cancelled) return;
         setOrder(o);
         if (isFinal(o.status)) stopPolling();
       } catch {
-        // tolère
+        // tolère (réseau / edge)
       }
     }
 
@@ -194,39 +192,57 @@ export function OrderReturnPage() {
       cancelled = true;
       stopPolling();
     };
-  }, [orderId, isReturn, bookingToken]);
+  }, [orderId, bookingToken, isReturn]);
 
-  // ✅ démarrer countdown à paid
+  /* ---------------- Countdown auto-retour (React 19 safe) ---------------- */
+
+  const [now, setNow] = useState(() => Date.now());
+  const [paidStart, setPaidStart] = useState<number | null>(null);
+  const navigatedRef = useRef(false);
+
   useEffect(() => {
+    let alive = true;
+
     if (order?.status !== "paid") {
-      if (countdownRef.current) window.clearInterval(countdownRef.current);
-      countdownRef.current = null;
-      setCountdown(null);
-      return;
+      navigatedRef.current = false;
+      queueMicrotask(() => {
+        if (alive) setPaidStart(null);
+      });
+      return () => {
+        alive = false;
+      };
     }
 
-    if (countdownRef.current) return;
+    const id = window.setInterval(() => {
+      const t = Date.now();
+      setNow(t);
 
-    setCountdown(10);
-
-    countdownRef.current = window.setInterval(() => {
-      setCountdown((c) => {
-        const next = (c ?? 10) - 1;
-        if (next <= 0) {
-          if (countdownRef.current) window.clearInterval(countdownRef.current);
-          countdownRef.current = null;
-          navigate(backUrl, { replace: true });
-          return 0;
-        }
-        return next;
-      });
+      // initialise paidStart au premier tick seulement
+      setPaidStart((prev) => (prev == null ? t : prev));
     }, 1000);
 
     return () => {
-      if (countdownRef.current) window.clearInterval(countdownRef.current);
-      countdownRef.current = null;
+      alive = false;
+      window.clearInterval(id);
     };
-  }, [order?.status, navigate, backUrl]);
+  }, [order?.status]);
+
+  const countdown = useMemo(() => {
+    if (order?.status !== "paid") return null;
+    if (paidStart == null) return 10;
+
+    const elapsed = Math.floor((now - paidStart) / 1000);
+    return Math.max(0, 10 - elapsed);
+  }, [order?.status, now, paidStart]);
+
+  useEffect(() => {
+    if (order?.status === "paid" && countdown === 0 && !navigatedRef.current) {
+      navigatedRef.current = true;
+      navigate(backUrl as To, { replace: true });
+    }
+  }, [order?.status, countdown, navigate, backUrl]);
+
+  /* ---------------- Guards / UI ---------------- */
 
   if (!orderId) return <Navigate to="/" replace />;
 
@@ -249,7 +265,6 @@ export function OrderReturnPage() {
     );
   }
 
-  // 🌀 Loading : spinner flèche
   if (loading) {
     return (
       <div className="publicPage">
@@ -301,18 +316,17 @@ export function OrderReturnPage() {
     );
   }
 
-  // ✅ Header Event (comme EventPaymentPage)
-  const orgForHeader = (eventData as any)?.org ?? (eventData as any)?.organizationProfile;
-  const eventForHeader = (eventData as any)?.event ?? null;
+  const orgForHeader = eventData?.org;
+  const eventForHeader = eventData?.event ?? null;
 
   return (
     <div className="publicPage">
       <Container>
-        {/* Header event : on l’affiche quand on a les infos */}
-        {orgSlug && eventForHeader ? <PublicEventHeader orgSlug={orgSlug} org={orgForHeader} event={eventForHeader} /> : null}
+        {orgSlug && eventForHeader ? (
+          <PublicEventHeader orgSlug={orgSlug} org={orgForHeader} event={eventForHeader} />
+        ) : null}
 
         <div className="orderReturnCenter">
-          {/* verifying : spinner */}
           {verifying ? (
             <Card className="orderReturnCard">
               <CardBody>
@@ -326,7 +340,6 @@ export function OrderReturnPage() {
                   </div>
                 </div>
 
-                {/* petit hint event loading */}
                 {orgSlug && eventSlug && eventLoading ? (
                   <div className="orderReturnHint">Chargement des infos de l’événement…</div>
                 ) : null}
@@ -334,7 +347,6 @@ export function OrderReturnPage() {
             </Card>
           ) : null}
 
-          {/* paid */}
           {!verifying && order.status === "paid" ? (
             <Card className="orderReturnCard">
               <CardBody>
@@ -389,10 +401,11 @@ export function OrderReturnPage() {
 
                 <div className="orderReturnFooter">
                   <div className="orderReturnCountdown">
-                    Retour automatique dans <span className="orderReturnStrong">{countdown ?? 10}s</span>
+                    Retour automatique dans{" "}
+                    <span className="orderReturnStrong">{countdown ?? 10}s</span>
                   </div>
 
-                  <Button onClick={() => navigate(backUrl, { replace: true })}>
+                  <Button onClick={() => navigate(backUrl as To, { replace: true })}>
                     Retour maintenant
                   </Button>
                 </div>
@@ -400,15 +413,15 @@ export function OrderReturnPage() {
             </Card>
           ) : null}
 
-          {/* failed/canceled/expired */}
-          {!verifying && (order.status === "failed" || order.status === "canceled" || order.status === "expired") ? (
+          {!verifying &&
+          (order.status === "failed" || order.status === "canceled" || order.status === "expired") ? (
             <Card className="orderReturnCard">
               <CardBody>
                 <div className="orderReturnStatusPill orderReturnWarn">Paiement non abouti</div>
                 <h2 className="orderReturnTitle">Oups…</h2>
                 <p className="orderReturnSubtitle">Statut : {order.status}</p>
                 <div className="orderReturnFooter" style={{ justifyContent: "center" }}>
-                  <Button onClick={() => navigate(backUrl, { replace: true })}>
+                  <Button onClick={() => navigate(backUrl as To, { replace: true })}>
                     Retour à l’organisation
                   </Button>
                 </div>
@@ -416,7 +429,6 @@ export function OrderReturnPage() {
             </Card>
           ) : null}
 
-          {/* fallback */}
           {!verifying &&
           order.status !== "paid" &&
           order.status !== "failed" &&

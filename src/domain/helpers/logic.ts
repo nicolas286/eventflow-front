@@ -1,4 +1,5 @@
 import type { EventProduct } from "../models/db/db.eventProducts.schema";
+import type { OrderStatus } from "../../pages/public/OrderReturnPage";
 
 
 function toFiniteInt(v: unknown, fallback = 0) {
@@ -28,9 +29,19 @@ export function computeRemaining(p: EventProduct) {
   return remaining;
 }
 
-export function sortProducts(products: EventProduct[]) {
-  return [...(products ?? [])].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+export function sortBySortOrder<T extends { sortOrder?: number | null }>(
+  items: T[] | null | undefined,
+): T[] {
+  return [...(items ?? [])].sort(
+    (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
+  );
 }
+
+export function sortProducts(products: EventProduct[]) {
+  return sortBySortOrder(products);
+}
+
+
 
 export type QuantityMap = Record<string, unknown>;
 
@@ -170,4 +181,8 @@ export function uniqueKey(base: string, existing: Set<string>) {
 
 export function makeClientId() {
   return `tmp_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+export function orderIsFinal(status: OrderStatus) {
+  return status === "paid" || status === "failed" || status === "canceled" || status === "expired";
 }
