@@ -25,6 +25,7 @@ import type { OrderUI } from "../../../../domain/models/admin/admin.ordersSchema
 import { toRows } from "../../../../domain/helpers/normalize";
 import { getFirst } from "../../../../domain/helpers/logic";
 import { makeLocalAnswers, buildUpdateAttendeeFromForm } from "../../../../domain/helpers/attendeeAnswers";
+import * as XLSX from "xlsx";
 
 type FilterMode = "all" | "order" | `field:${string}`;
 
@@ -323,6 +324,81 @@ export function SingleEventParticipantsSection(props: {
 
   const shellOpen = Boolean(rightPanel);
 
+  function normalizeSortKey(s: string) {
+  return (s ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // enlève accents
+    .trim();
+}
+
+const handleExportXls = useCallback(() => {
+  // ✅ Colonnes "fixes" (sans Participant/Détail pour éviter redondance avec Nom/Prénom)
+  const fixedCols = [
+    "Réf commande",
+    "Statut",
+    "Billet",
+    "Index",
+  ] as const;
+
+  // ✅ Colonnes dynamiques = champs form (labels)
+  const formCols = regFields.map((f) => (f.label?.trim() ? f.label.trim() : f.fieldKey));
+
+  const headers = [...fixedCols, ...formCols];
+
+  const rows = localAttendees.map((att) => {
+    const orderId = String(att.orderId ?? "");
+    const meta = orderMetaById.get(orderId);
+    const orderRef = meta?.orderNumber ?? orderId.slice(0, 8);
+
+    const filled = filledFieldsByAttendeeId.get(att.id) ?? [];
+    const filledByKey = new Map(filled.map((x) => [x.key, x.value]));
+
+    const row: Record<string, any> = {
+      "Réf commande": orderRef,
+      Statut: att.status ?? "",
+      Billet: att.productNameSnapshot ?? "",
+      Index: att.attendeeIndex ?? "",
+      __sortKey: normalizeSortKey(computeIdentity(att.id).title ?? ""),
+    };
+
+    // met les champs form par label (et va chercher la valeur via f.key)
+    for (const f of regFields) {
+      const label = f.label?.trim() ? f.label.trim() : f.fieldKey;
+      row[label] = filledByKey.get(f.fieldKey) ?? "";
+    }
+
+    return row;
+  });
+
+  rows.sort((a, b) => String(a.__sortKey).localeCompare(String(b.__sortKey)));
+  for (const r of rows) delete r.__sortKey;
+
+  const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
+
+  // petit confort : largeur colonnes
+  ws["!cols"] = headers.map((h) => ({ wch: Math.min(Math.max(h.length, 14), 38) }));
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Participants");
+
+  const safeEventTitle =
+    String(getFirst(data?.event, ["title", "name"]) ?? "event")
+      .trim()
+      .replace(/[\\/:*?"<>|]+/g, "-")
+      .slice(0, 60) || "event";
+
+  XLSX.writeFile(wb, `participants-${safeEventTitle}.xlsx`);
+}, [
+  regFields,
+  localAttendees,
+  orderMetaById,
+  filledFieldsByAttendeeId,
+  computeIdentity,
+  data?.event,
+]);
+
+
   return (
     <div className="adminSingleEventParticipants">
       <ConfirmModal
@@ -354,6 +430,16 @@ export function SingleEventParticipantsSection(props: {
           </div>
 
           <div className="adminParticipantsHeaderRight">
+            <div className="adminParticipantsHeaderRight">
+            <Button variant="secondary" onClick={handleExportXls} disabled={filteredAttendees.length === 0}>
+              Export XLS
+            </Button>
+
+            <Button variant="primary" onClick={openCreateOrder}>
+              + Ajouter une commande
+            </Button>
+</div>
+
             <Button variant="primary" onClick={openCreateOrder}>
               + Ajouter une commande
             </Button>
