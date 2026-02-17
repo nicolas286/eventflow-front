@@ -1,0 +1,276 @@
+/* =========================
+   Admin Create Order (Desktop)
+   File: AdminCreateOrder.desktop.css
+   ========================= */
+
+.adminCreateOrderShell {
+  display: grid;
+  grid-template-columns: 1fr var(--admin-createorder-gap) var(--admin-createorder-w);
+  align-items: start;
+}
+
+.adminCreateOrderLeft {
+  min-width: 0;
+}
+
+.adminCreateOrderGap {
+  width: var(--admin-createorder-gap);
+}
+
+.adminCreateOrderPanel {
+  position: sticky;
+  top: var(--admin-createorder-stickyTop);
+  width: var(--admin-createorder-w);
+  max-width: 100%;
+  box-sizing: border-box;
+
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+/* Header */
+.adminCreateOrderHeader {
+  padding: 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.adminCreateOrderTitle {
+  font-weight: 950;
+  font-size: 16px;
+  color: #111827;
+  letter-spacing: -0.02em;
+}
+
+.adminCreateOrderStepHint {
+  opacity: 0.75;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+/* Body (no internal scroll) */
+.adminCreateOrderBody {
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+/* ✅ Fallback desktop : si des champs n’ont PAS les classes adminCO_*,
+   on les stylise quand même dans le body du wizard */
+.adminCreateOrderBody input[type="text"],
+.adminCreateOrderBody input[type="email"],
+.adminCreateOrderBody input[type="tel"],
+.adminCreateOrderBody input[type="number"],
+.adminCreateOrderBody input[type="date"],
+.adminCreateOrderBody input[type="datetime-local"],
+.adminCreateOrderBody select,
+.adminCreateOrderBody textarea {
+  width: 100%;
+  box-sizing: border-box;
+
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #fff;
+
+  padding: 10px 12px;
+  font-size: 13px;
+  outline: none;
+}
+
+.adminCreateOrderBody textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.adminCreateOrderBody input:focus,
+.adminCreateOrderBody select:focus,
+.adminCreateOrderBody textarea:focus {
+  border-color: rgba(0, 0, 0, 0.18);
+  box-shadow: 0 0 0 4px rgba(var(--primary, 37 99 235), 0.14);
+}
+
+/* checkbox (fallback) */
+.adminCreateOrderBody input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+/* Footer (desktop) */
+.adminCreateOrderFooter {
+  padding: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.adminCreateOrderFooterLeft,
+.adminCreateOrderFooterRight {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.adminCreateOrderFooterRight {
+  margin-left: auto;
+}
+
+/* ✅ Desktop: on NE force PAS la taille des boutons du footer */
+.adminCreateOrderFooter .ui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* =========================
+   Step 1 (tickets qty)
+   ========================= */
+
+.adminCO_Step {
+  display: grid;
+  gap: 10px;
+}
+
+.adminCO_Empty {
+  opacity: 0.8;
+  font-size: 13px;
+}
+
+.adminCO_TicketCard {
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+}
+
+.adminCO_TicketCard.isSoldOut {
+  opacity: 0.6;
+}
+
+.adminCO_TicketRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.adminCO_TicketInfo {
+  min-width: 0;
+}
+
+.adminCO_TicketName {
+  font-weight: 950;
+  color: #111827;
+}
+
+.adminCO_TicketMeta {
+  opacity: 0.75;
+  font-size: 13px;
+  margin-top: 2px;
+  line-height: 1.3;
+}
+
+.adminCO_QtyControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+/* +/- controls */
+.adminCO_QtyControls .ui-button {
+  height: 44px;
+  min-width: 44px;
+  width: 44px;
+  padding: 0;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+}
+
+.adminCO_QtyInput {
+  width: 56px;
+  height: 44px;
+  padding: 0 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.12);
+  outline: none;
+  text-align: center;
+  font-weight: 900;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.adminCO_Recap {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  padding-top: 10px;
+  opacity: 0.85;
+  font-size: 13px;
+}
+
+/* =========================
+   Step 2 (buyer + payment)
+   ========================= */
+
+.adminCO_FieldBlock {
+  display: grid;
+  gap: 6px;
+}
+
+.adminCO_FieldLabel {
+  font-weight: 950;
+  font-size: 13px;
+  color: #111827;
+}
+
+.adminCO_Input,
+.adminCO_Select,
+.adminCO_Textarea {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  padding: 10px 12px;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.adminCO_Textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.adminCO_Help {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-top: 2px;
+  line-height: 1.35;
+}
+
+.adminCO_CheckRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.adminCO_CheckRow input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+/* =========================
+   Step 3
+   ========================= */
+
+.adminCO_SummaryLine {
+  opacity: 0.8;
+  font-size: 13px;
+}

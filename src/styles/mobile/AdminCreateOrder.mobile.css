@@ -1,0 +1,443 @@
+/* =========================
+   Admin Create Order (Mobile)
+   File: AdminCreateOrder.mobile.css
+   ========================= */
+
+@media (max-width: 720px) {
+  /* Layout: on ne garde QUE le panel en mobile (left caché déjà via TSX) */
+  .adminCreateOrderShell {
+    display: block;
+    width: 100%;
+  }
+
+  /* Panel = sheet propre, full width */
+  .adminCreateOrderPanel {
+    position: relative;
+    top: auto;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+    overflow: visible; /* ✅ pas de scroll interne */
+  }
+
+  /* Sheet “classe” */
+  .adminCreateOrderPanelInner {
+    position: relative;
+    overflow: hidden;
+
+    /* ✅ MODIF DEMANDÉE: on enlève la "card parent" en mobile */
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    margin: 0;
+  }
+
+  /* Header: compact + chic */
+  .adminCreateOrderHeader {
+    padding: 12px 12px 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+    /* léger dégradé subtil */
+    background: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.02),
+      rgba(0, 0, 0, 0.00)
+    );
+  }
+
+  .adminCreateOrderTitle {
+    font-size: 15px;
+    font-weight: 950;
+    letter-spacing: -0.02em;
+    color: #111827;
+    line-height: 1.15;
+  }
+
+  /* Step hint façon “chip” */
+  .adminCreateOrderStepHint {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    margin-top: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+
+    background: rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+
+    font-size: 12px;
+    font-weight: 900;
+    color: rgba(0, 0, 0, 0.65);
+    line-height: 1;
+  }
+
+  /* Body: spacing propre, pas trop gros */
+  .adminCreateOrderBody {
+    padding: 12px;
+    display: grid;
+    gap: 12px;
+  }
+
+  /* ✅ Footer sticky en bas du sheet (sans scroll interne) */
+  .adminCreateOrderFooter {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+
+    padding: 10px 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(10px);
+
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .adminCreateOrderFooterLeft,
+  .adminCreateOrderFooterRight {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .adminCreateOrderFooterRight {
+    margin-left: auto;
+  }
+
+  /* ✅ Même taille pour TOUS les boutons (y compris Fermer) */
+  .adminCreateOrderFooter .ui-button {
+    height: 44px;
+    min-width: 124px;
+    padding: 0 12px;
+    border-radius: 14px;
+
+    font-weight: 950;
+    font-size: 13px;
+    line-height: 1;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Quand l’écran est petit, on évite 3 boutons trop serrés */
+  .adminCreateOrderFooter .ui-button {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  /* =========================
+     Step 1 (tickets)
+     - boutons pas trop petits
+     - input plus petit
+     ========================= */
+
+  .adminCO_TicketCard {
+    border-radius: 16px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+    padding: 12px;
+  }
+
+  .adminCO_TicketRow {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .adminCO_TicketName {
+    font-size: 14px;
+    font-weight: 950;
+  }
+
+  .adminCO_TicketMeta {
+    font-size: 12px;
+    opacity: 0.72;
+  }
+
+  .adminCO_QtyControls {
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  /* boutons +/- uniformes */
+  .adminCO_QtyControls .ui-button {
+    height: 44px;
+    width: 44px;
+    min-width: 44px;
+    border-radius: 14px;
+    padding: 0;
+    font-weight: 950;
+  }
+
+  /* input plus petit (ton souci principal) */
+  .adminCO_QtyInput {
+    height: 44px;
+    width: 56px;
+    padding: 0 8px;
+    border-radius: 14px;
+
+    font-size: 13px;
+    font-weight: 950;
+  }
+
+  /* Recap plus clean */
+  .adminCO_Recap {
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    padding-top: 10px;
+    font-size: 12px;
+    opacity: 0.78;
+    line-height: 1.35;
+  }
+
+  /* =========================
+     Step 2 (fields)
+     ========================= */
+
+  .adminCO_FieldLabel {
+    font-size: 12px;
+    font-weight: 950;
+  }
+
+  .adminCO_Input,
+  .adminCO_Select,
+  .adminCO_Textarea {
+    border-radius: 14px;
+    padding: 11px 12px;
+    font-size: 13px;
+    border: 1px solid rgba(0, 0, 0, 0.10);
+  }
+
+  .adminCO_Textarea {
+    min-height: 84px;
+  }
+
+  .adminCO_Help {
+    font-size: 12px;
+    opacity: 0.7;
+  }
+
+  /* checkbox row plus classe */
+  .adminCO_CheckRow {
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: rgba(0, 0, 0, 0.02);
+  }
+
+  /* =========================
+     Step 3
+     ========================= */
+
+  .adminCO_SummaryLine {
+    font-size: 12px;
+    opacity: 0.75;
+    padding-top: 6px;
+  }
+
+  /* ======================================================
+     ✅ FIX DEMANDÉ : Step 3 - champs participants en 1 colonne
+     Source: AttendeeFieldsForm -> .adminAttendeeFieldsGrid
+     ====================================================== */
+
+  .adminAttendeeFieldsGrid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .adminAttendeeFieldItem {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Anti overflow général dans le bloc participants */
+  .adminCO_AttendeeForm,
+  .adminCO_AttendeeForm * {
+    min-width: 0;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 420px) {
+  .adminCreateOrderPanelInner {
+    /* ✅ on garde la modif: pas de card parent */
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .adminCreateOrderHeader {
+    padding: 10px 10px 9px;
+  }
+
+  .adminCreateOrderBody {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .adminCreateOrderFooter {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  /* Boutons: toujours même taille, mais un peu plus compacts */
+  .adminCreateOrderFooter .ui-button {
+    height: 42px;
+    font-size: 12px;
+    border-radius: 13px;
+  }
+
+  .adminCO_QtyControls .ui-button {
+    height: 42px;
+    width: 42px;
+    min-width: 42px;
+  }
+
+  .adminCO_QtyInput {
+    height: 42px;
+    width: 52px;
+  }
+}
+
+@media (max-width: 720px) {
+  /* =========================
+     Step 3 - Attendees form
+     ========================= */
+
+  .adminCO_AttendeeCard {
+    border-radius: 16px;
+    border: 1px solid rgba(0,0,0,0.08);
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+    padding: 12px;
+  }
+
+  .adminCO_AttendeeHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+    min-width: 0;
+  }
+
+  .adminCO_AttendeeTitle {
+    font-size: 14px;
+    font-weight: 950;
+    color: #111827;
+    min-width: 0;
+  }
+
+  .adminCO_AttendeeSub {
+    margin-left: 8px;
+    font-weight: 800;
+    opacity: 0.65;
+    font-size: 12px;
+  }
+
+  /* ✅ IMPORTANT: on force tout ce qui ressemble à une grille à 1 colonne */
+  .adminCO_AttendeeForm,
+  .adminCO_AttendeeForm form,
+  .adminCO_AttendeeForm .adminEventFormGrid,
+  .adminCO_AttendeeForm .eventEditor__row2,
+  .adminCO_AttendeeForm .eventEditor__row1,
+  .adminCO_AttendeeForm .attendeeFieldsGrid,
+  .adminCO_AttendeeForm .attendeeFormGrid,
+  .adminCO_AttendeeForm .adminAttendeeFieldsGrid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  /* ✅ Chaque item prend toute la largeur (sécurité) */
+  .adminCO_AttendeeForm .adminAttendeeFieldItem {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Champs */
+  .adminCO_Field {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 0;
+  }
+
+  .adminCO_FieldLabel {
+    font-size: 12px;
+    font-weight: 950;
+    color: #111827;
+    line-height: 1.15;
+  }
+
+  .adminCO_FieldReq {
+    opacity: 0.65;
+    font-weight: 900;
+    font-size: 12px;
+    margin-left: 6px;
+  }
+
+  .adminCO_Control {
+    width: 100%;
+    height: 44px;
+    padding: 0 12px;
+
+    border-radius: 14px;
+    border: 1px solid rgba(0,0,0,0.10);
+    background: #fff;
+
+    outline: none;
+    font-size: 13px;
+    font-weight: 900;
+  }
+
+  .adminCO_Control:focus {
+    border-color: rgba(0,0,0,0.18);
+    box-shadow: 0 0 0 4px rgba(var(--primary, 37 99 235), .14);
+  }
+
+  .adminCO_Textarea {
+    height: auto;
+    min-height: 96px;
+    padding: 10px 12px;
+    resize: vertical;
+  }
+
+  .adminCO_CheckRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    padding: 10px 12px;
+    border-radius: 14px;
+
+    border: 1px solid rgba(0,0,0,0.08);
+    background: rgba(0,0,0,0.02);
+  }
+
+  .adminCO_Checkbox {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+  }
+
+  .adminCO_CheckText {
+    font-weight: 950;
+    font-size: 13px;
+    color: #111827;
+  }
+}

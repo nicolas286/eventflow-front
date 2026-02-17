@@ -1,22 +1,18 @@
 import { useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { ConfirmDeleteModal } from "../../ui/components/modals/ConfirmDeleteModal";
 import { useNavigate } from "react-router-dom";
 
-import "../../styles/desktop/admin/adminEventsPage.desktop.css";
+import { ConfirmDeleteModal } from "../../ui/components/modals/ConfirmDeleteModal";
+
+import "../../styles/desktop/admin/adminAllEvent.desktop.css";
 import "../../styles/mobile/admin/adminEventsPage.mobile.css";
 
-import {
-  AdminStats,
-  EventEditor,
-  EventTable,
-  useEventEditorPanel,
-} from "../../features/admin";
+import { AdminStats, EventEditor, EventTable, useEventEditorPanel } from "../../features/admin";
 
 import type { AdminOutletContext } from "./AdminDashboard";
 import type { EventOverviewRow } from "../../domain/models/admin/admin.eventsOverview.schema";
 
-import { Button } from "../../ui/components";
+import { Button, EditorShell } from "../../ui/components";
 import { supabase } from "../../gateways/supabase/supabaseClient";
 import { useCreateEvent } from "../../features/admin/hooks/useCreateEvent";
 import { useUpdateEvent } from "../../features/admin/hooks/useUpdateEvent";
@@ -37,29 +33,13 @@ type ConfirmState = {
 export default function AdminEventsPage() {
   const { events, orgId, bootstrap, refetch } = useOutletContext<AdminOutletContext>();
 
-  const {
-    createEvent,
-    loading: creating,
-    error: createError,
-    reset: resetCreate,
-  } = useCreateEvent({ supabase });
+  const { createEvent, loading: creating, error: createError, reset: resetCreate } = useCreateEvent({ supabase });
 
-  const {
-    updateEvent: doUpdate,
-    loading: saving,
-    error: saveError,
-    reset: resetSave,
-  } = useUpdateEvent({ supabase });
+  const { updateEvent: doUpdate, loading: saving, error: saveError, reset: resetSave } = useUpdateEvent({ supabase });
 
-  const {
-    deleteEvent: doDelete,
-    loading: deleting,
-    error: deleteError,
-    reset: resetDelete,
-  } = useDeleteEvent({ supabase });
+  const { deleteEvent: doDelete, loading: deleting, error: deleteError, reset: resetDelete } = useDeleteEvent({ supabase });
 
-  const { selectedRow, editingId, select, closeIf, onAnimEnd, panelClassName } =
-    useEventEditorPanel(events);
+  const { selectedRow, editingId, select, closeIf, onAnimEnd, panelClassName } = useEventEditorPanel(events);
 
   const [confirm, setConfirm] = useState<ConfirmState>({
     open: false,
@@ -79,11 +59,7 @@ export default function AdminEventsPage() {
 
     resetSave();
 
-    const updated = await doUpdate({
-      eventId: id,
-      patch,
-    });
-
+    const updated = await doUpdate({ eventId: id, patch });
     if (!updated) return;
 
     await refetch();
@@ -91,7 +67,6 @@ export default function AdminEventsPage() {
 
   const deleteEvent = (id: string) => {
     resetDelete();
-
     const row = events.find((e) => e.event.id === id);
 
     setConfirm({
@@ -109,15 +84,10 @@ export default function AdminEventsPage() {
   const confirmDelete = async () => {
     if (!confirm.eventId) return;
 
-    // UX: ferme le panel si on supprime l'event affiché
     closeIf(confirm.eventId);
 
-    const ok = await doDelete({
-      eventId: confirm.eventId,
-      orgId, // optionnel si ton repo le supporte
-    });
-
-    if (!ok) return; // on laisse le modal ouvert + message
+    const ok = await doDelete({ eventId: confirm.eventId, orgId });
+    if (!ok) return;
 
     await refetch();
     cancelDelete();
@@ -144,7 +114,6 @@ export default function AdminEventsPage() {
     if (!created) return;
 
     await refetch();
-
     navigate(`/admin/events/${created.slug}`);
   };
 
@@ -153,82 +122,93 @@ export default function AdminEventsPage() {
   return (
     <>
       <AdminNotices bootstrap={bootstrap} />
-      <AdminStats stats={stats} />
 
-      <div className="adminEventsActions">
-        <Button
-          label={creating ? "Création…" : "Nouvel événement"}
-          onClick={addEvent}
-          disabled={creating}
-        >
-          <PlusIcon />
-          Nouvel événement
-        </Button>
+      <div className="adminAllEventsWrap">
+        <div className="adminAllEventsCard adminAllEventsCard--compact">
+          <div className="adminAllEventsInner">
+            <AdminStats stats={stats} />
+          </div>
+        </div>
       </div>
 
-      {(createError || saveError || deleteError) && (
-        <div className="adminEventsError">
-          {createError ?? saveError ?? deleteError}
-        </div>
-      )}
+      <div className="adminAllEventsWrap">
+        <div className="adminAllEventsCard">
+          <div className="adminAllEventsHeader">
+            <div>
+              <h3 className="adminAllEventsTitle">Événements</h3>
+              <div className="adminAllEventsHint">
+                {events.length} événement(s)
+                {isEditorVisible ? <span className="adminAllEventsDot">• Éditeur ouvert</span> : null}
+              </div>
+            </div>
 
-      <div
-        className={`adminEventsShell ${isEditorVisible ? "isEditorOpen" : ""}`}
-      >
-        <div className="adminEventsLeft">
-          <EventTable
-            events={events}
-            editingId={editingId}
-            onSelect={select}
-            onDelete={deleteEvent}
-
-            /* ✅ NEW: editor inline en mobile, sous la card cliquée */
-            renderInlineEditor={(row) => {
-              if (!selectedRow) return null;
-              if (selectedRow.event.id !== row.event.id) return null;
-
-              return (
-                <div className="adminEventsInlineEditor">
-                  <div
-                    className={`adminEventsEditorPanel adminEventsEditorPanel--inline ${panelClassName}`}
-                    key={selectedRow.event.id}
-                    onAnimationEnd={onAnimEnd}
-                  >
-                    <EventEditor
-                      event={selectedRow}
-                      onUpdateEvent={(patch) =>
-                        void updateEvent(selectedRow.event.id, patch)
-                      }
-                    />
-                    {saving && (
-                      <div className="adminEventsSavingHint">Enregistrement…</div>
-                    )}
-                  </div>
-                </div>
-              );
-            }}
-          />
-        </div>
-
-        {selectedRow && (
-          <div className="adminEventsRight">
-            <div
-              className={`adminEventsEditorPanel ${panelClassName}`}
-              key={selectedRow.event.id}
-              onAnimationEnd={onAnimEnd}
-            >
-              <EventEditor
-                event={selectedRow}
-                onUpdateEvent={(patch) =>
-                  void updateEvent(selectedRow.event.id, patch)
-                }
-              />
-              {saving && (
-                <div className="adminEventsSavingHint">Enregistrement…</div>
-              )}
+            <div className="adminAllEventsHeaderActions">
+              <Button label={creating ? "Création…" : "Nouvel événement"} onClick={addEvent} disabled={creating}>
+                <PlusIcon />
+                Nouvel événement
+              </Button>
             </div>
           </div>
-        )}
+
+          {(createError || saveError || deleteError) && (
+            <div className="adminAllEventsError">{createError ?? saveError ?? deleteError}</div>
+          )}
+
+          <EditorShell
+            isOpen={Boolean(selectedRow)}
+            onRequestClose={() => {
+              if (selectedRow) closeIf(selectedRow.event.id);
+            }}
+            editorWidth={440}
+            editorGap={24}
+            stickyTop={120}
+            left={
+              <EventTable
+                events={events}
+                editingId={editingId}
+                onSelect={select}
+                onDelete={deleteEvent}
+                renderInlineEditor={(row) => {
+                  if (!selectedRow) return null;
+                  if (selectedRow.event.id !== row.event.id) return null;
+
+                  return (
+                    <div className="adminEventsInlineEditor">
+                      <div
+                        className={`adminEventsEditorPanel adminEventsEditorPanel--inline ${panelClassName}`}
+                        key={selectedRow.event.id}
+                        onAnimationEnd={onAnimEnd}
+                      >
+                        <EventEditor
+                          event={selectedRow}
+                          onUpdateEvent={(patch) => void updateEvent(selectedRow.event.id, patch)}
+                        />
+                        {saving && <div className="adminEventsSavingHint">Enregistrement…</div>}
+                      </div>
+                    </div>
+                  );
+                }}
+              />
+            }
+            right={
+              selectedRow ? (
+                <div
+                  className={`adminEventsEditorPanel ${panelClassName}`}
+                  key={selectedRow.event.id}
+                  onAnimationEnd={onAnimEnd}
+                >
+                  <EventEditor
+                    event={selectedRow}
+                    onUpdateEvent={(patch) => void updateEvent(selectedRow.event.id, patch)}
+                  />
+                  {saving && <div className="adminEventsSavingHint">Enregistrement…</div>}
+                </div>
+              ) : (
+                <div />
+              )
+            }
+          />
+        </div>
       </div>
 
       <ConfirmDeleteModal

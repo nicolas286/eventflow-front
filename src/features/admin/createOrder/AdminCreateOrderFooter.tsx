@@ -4,60 +4,49 @@ type Step = 1 | 2 | 3;
 
 type Props = {
   step: Step;
-  onRequestClose: () => void;
-
   loading: boolean;
 
+  onRequestClose: () => void;
   onBack: () => void;
   onNext: () => void;
   onSubmit: () => void;
 
-  canGoNext: boolean;     // step 1/2
-  canSubmit: boolean;     // step 3
-  submitLabel?: string;   // optionnel
+  canGoNext: boolean;
+  canSubmit: boolean;
 };
 
 export function AdminCreateOrderFooter({
   step,
-  onRequestClose,
   loading,
+  onRequestClose,
   onBack,
   onNext,
   onSubmit,
   canGoNext,
   canSubmit,
-  submitLabel,
 }: Props) {
   const isLast = step === 3;
 
   return (
-    <div
-      style={{
-        padding: 14,
-        borderTop: "1px solid rgba(0,0,0,0.08)",
-        display: "flex",
-        justifyContent: "space-between",
-        gap: 10,
-      }}
-    >
-      <Button variant="secondary" onClick={onRequestClose} disabled={loading}>
-        Fermer
-      </Button>
+    <div className="adminCreateOrderFooter">
+      <div className="adminCreateOrderFooterLeft">
+        <Button variant="secondary" onClick={onRequestClose} disabled={loading}>
+          Fermer
+        </Button>
 
-      <div style={{ display: "flex", gap: 10 }}>
-        {step > 1 ? (
-          <Button variant="secondary" onClick={onBack} disabled={loading}>
-            Retour
-          </Button>
-        ) : null}
+        <Button variant="secondary" onClick={onBack} disabled={loading || step === 1}>
+          Retour
+        </Button>
+      </div>
 
+      <div className="adminCreateOrderFooterRight">
         {!isLast ? (
           <Button variant="primary" onClick={onNext} disabled={loading || !canGoNext}>
-            Continuer
+            Suivant
           </Button>
         ) : (
           <Button variant="primary" onClick={onSubmit} disabled={loading || !canSubmit}>
-            {submitLabel ?? (loading ? "Création…" : "Créer la commande")}
+            {loading ? "Création…" : "Créer"}
           </Button>
         )}
       </div>
