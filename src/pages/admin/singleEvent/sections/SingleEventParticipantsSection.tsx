@@ -440,9 +440,6 @@ const handleExportXls = useCallback(() => {
             </Button>
 </div>
 
-            <Button variant="primary" onClick={openCreateOrder}>
-              + Ajouter une commande
-            </Button>
           </div>
         </div>
 
