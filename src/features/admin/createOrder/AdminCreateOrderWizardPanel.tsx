@@ -27,32 +27,17 @@ import {
   reconcileAttendeesByIndex,
 } from "../../../domain/helpers/logic";
 import type { OrderUI } from "../../../domain/models/admin/admin.ordersSchema";
+import { useMediaQuery } from "../../../domain/helpers/ui";
 
-/* ✅ NEW CSS */
 import "../../../styles/desktop/AdminCreateOrder.desktop.css";
 import "../../../styles/mobile/AdminCreateOrder.mobile.css";
 
-function useMediaQuery(query: string) {
-  const [matches, setMatches] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia(query).matches : false
-  );
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const m = window.matchMedia(query);
-    const onChange = () => setMatches(m.matches);
-    onChange();
-    m.addEventListener?.("change", onChange);
-    return () => m.removeEventListener?.("change", onChange);
-  }, [query]);
-
-  return matches;
-}
 
 function computeAttendeeErrors(fields: EventFormField[], values: Record<string, unknown>) {
   const errs: Record<string, string> = {};
   for (const f of fields) {
-    const key = String((f as any).fieldKey ?? "").trim();
+    const key = String(f.fieldKey ?? "").trim();
     if (!key) continue;
 
     const msg = validateFieldValue(f, values[key]);
@@ -189,7 +174,7 @@ export function AdminOrderCreateWizardPanel(props: Props) {
 
     setAttTouched((prev) => {
       const row = prev[attIndex] ?? {};
-      if ((row as any)[fieldKey]) return prev;
+      if (row[fieldKey]) return prev;
       return { ...prev, [attIndex]: { ...row, [fieldKey]: true } };
     });
   }
@@ -241,8 +226,8 @@ export function AdminOrderCreateWizardPanel(props: Props) {
 
     const fieldIdByKey = new Map<string, string>();
     for (const f of sortedFields as EventFormField[]) {
-      const k = String((f as any).fieldKey ?? "").trim();
-      const id = String((f as any).id ?? "").trim();
+      const k = String(f.fieldKey ?? "").trim();
+      const id = String(f.id ?? "").trim();
       if (k && id) fieldIdByKey.set(k, id);
     }
 
@@ -281,7 +266,7 @@ export function AdminOrderCreateWizardPanel(props: Props) {
         id: orderId,
         publicId: orderId.slice(0, 8),
         createdAt: new Date().toISOString(),
-        status: (res as any)?.status ?? (s2data.markPaid ? "paid" : "awaiting_payment"),
+        status: res?.status ?? (s2data.markPaid ? "paid" : "awaiting_payment"),
         totalCents: cart.totalCents,
         currency: cart.currency,
       },
@@ -296,9 +281,9 @@ export function AdminOrderCreateWizardPanel(props: Props) {
   const canSubmit = allAttendeesValid;
 
   const styleVars = {
-    ["--admin-createorder-w" as any]: `${editorWidth}px`,
-    ["--admin-createorder-gap" as any]: `${editorGap}px`,
-    ["--admin-createorder-stickyTop" as any]: `${stickyTop}px`,
+    ["--admin-createorder-w"]: `${editorWidth}px`,
+    ["--admin-createorder-gap"]: `${editorGap}px`,
+    ["--admin-createorder-stickyTop"]: `${stickyTop}px`,
   } as React.CSSProperties;
 
   return (

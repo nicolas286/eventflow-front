@@ -32,7 +32,7 @@ function fmtDate(d: string | null | undefined) {
       year: "numeric",
     });
   } catch {
-    return d as any;
+    return d;
   }
 }
 
@@ -108,12 +108,6 @@ const PLAN_DEFS: Record<PlanKey, PlanDef> = {
     ],
   },
 };
-
-function neighbors(plan: PlanKey): { down?: PlanKey; up?: PlanKey } {
-  if (plan === "free") return { up: "starter" };
-  if (plan === "starter") return { down: "free", up: "pro" };
-  return { down: "starter" };
-}
 
 function canStartSubscription(target: PlanKey): target is "starter" | "pro" {
   return target === "starter" || target === "pro";

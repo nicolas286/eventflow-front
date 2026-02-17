@@ -5,7 +5,7 @@ import type { EventOverviewRow } from "../../../domain/models/admin/admin.events
 import EventEditorForm from "./EventEditorForm";
 import type { AdminEventDetailEvent } from "../../../domain/models/admin/admin.eventDetail.schema";
 
-type EditableEventFields = Partial<
+export type EditableEventFields = Partial<
   Pick<EventOverviewRow["event"], "title" | "isPublished" | "startsAt" | "endsAt">
 > & { location?: string | null };
 

@@ -8,13 +8,11 @@ import { Button, Input } from "../../../ui/components";
 import { MessageBox } from "../../../ui/components/message/MessageBox";
 import { isoToLocalInput, localInputToIso } from "../../../domain/helpers/dateTime";
 import { useLiveForm } from "../../public/useLiveZodForm";
+import type { EditableEventFields } from "./EventEditor";
 
 type Props = {
   event: Partial<AdminEventDetailEvent>;
-
-  // ✅ IMPORTANT: ton parent ne retourne rien (void),
-  // donc on accepte n'importe quel retour (unknown)
-  onConfirm: (patch: UpdateEventPatch) => Promise<unknown>;
+  onConfirm: (patch: EditableEventFields) => void;
 };
 
 const FORM_KEYS: Array<keyof UpdateEventPatch> = [
@@ -91,8 +89,7 @@ export default function EventEditorForm({ event, onConfirm }: Props) {
     try {
       const result = await onConfirm(patch);
 
-      // ✅ Échec uniquement si onConfirm retourne explicitement null/false
-      const failed = result === null || result === false;
+      const failed = result === null;
 
       if (!failed) setSuccessMsg("Modifications enregistrées avec succès.");
       else setSubmitError("Impossible d’enregistrer l’événement.");

@@ -110,7 +110,7 @@ export function EventRegistrationFormPanel(props: Props) {
         isRequired: f.isRequired,
         isActive: f.isActive ?? true,
         sortOrder: clampInt(f.sortOrder ?? 0),
-        options: (f.options ?? null) as any,
+        options: f.options ?? null
       }))
     );
 

@@ -25,9 +25,9 @@ function keyifyCountryName(name: string) {
     .replace(/^_+|_+$/g, "");
 }
 
-export function inferCountryCode(country: string | null | undefined): string | null {
+export function inferCountryCode(country: string | null | undefined): string | undefined {
   const c = (country ?? "").trim();
-  if (!c) return null;
+  if (!c) return undefined;
 
   const key = keyifyCountryName(c);
   return COUNTRY_TO_CODE[key] ?? null;

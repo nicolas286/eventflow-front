@@ -66,6 +66,16 @@ export function AttendeeEditorPanel(props: {
   const [touched, setTouched] = useState<Record<string, true>>({});
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
+const initialValueKey = useMemo(
+  () => JSON.stringify(initialValue),
+  [initialValue]
+);
+
+const fieldsKey = useMemo(
+  () => fields.map((f) => String(f.fieldKey ?? "")).join("|"),
+  [fields]
+);
+
 useEffect(() => {
   if (!isOpen) return;
 
@@ -73,13 +83,8 @@ useEffect(() => {
   setValue(next);
   setTouched({});
   setAttemptedSubmit(false);
+}, [isOpen, initialValueKey, fieldsKey, fields, initialValue]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [
-  isOpen,
-  JSON.stringify(initialValue), // 🔥 déclenche si on change de participant
-  fields.map((f) => String(f.fieldKey ?? "")).join("|"),
-]);
 
 
   const errors = useMemo(() => computeErrors(fields, value), [fields, value]);

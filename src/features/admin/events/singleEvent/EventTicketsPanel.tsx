@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import type { EventProducts } from "../../../../domain/models/db/db.eventProducts.schema";
+import type { EventProduct, EventProducts } from "../../../../domain/models/db/db.eventProducts.schema";
 import type { CreateEventProductInput } from "../../../../domain/models/admin/admin.createEventProduct.schema";
 import type { UpdateEventProductPatch } from "../../../../gateways/supabase/repositories/dashboard/updateEventProductRepo";
 
@@ -159,7 +159,7 @@ export function EventTicketsPanel(props: Props) {
 
   const isSaving = isSavingAll || createLoading || updateLoading || deleteLoading;
 
-  function productToDraft(p: any): TicketDraft {
+  function productToDraft(p: EventProduct): TicketDraft {
     return {
       id: String(p?.id ?? null),
       clientId: String(p?.id ?? makeClientId()),
@@ -476,8 +476,8 @@ export function EventTicketsPanel(props: Props) {
     return arr;
   }, [draft]);
 
-  function getSoldQty(p: any) {
-    return clampInt(p?.soldQty ?? p?.sold_qty ?? 0, 0);
+  function getSoldQty(p: EventProduct) {
+    return clampInt(p?.soldQty ?? 0, 0);
   }
 
   function formatStockLine(sold: number, stockQty: number | null | undefined) {
@@ -627,13 +627,13 @@ export function EventTicketsPanel(props: Props) {
 
     const p = t.id
       ? Array.isArray(products)
-        ? (products as any[]).find((x: any) => String(x?.id) === String(t.id))
+        ? products.find((x: EventProduct) => String(x?.id) === String(t.id))
         : null
       : null;
 
     const currency = "EUR";
-    const sold = getSoldQty(p);
-    const stockLine = formatStockLine(sold, (p as any)?.stockQty ?? t.stockQty);
+    const sold = getSoldQty(p as EventProduct);
+    const stockLine = formatStockLine(sold, p?.stockQty ?? t.stockQty);
 
     const isFxA = moveFx?.aId === t.clientId;
     const isFxB = moveFx?.bId === t.clientId;

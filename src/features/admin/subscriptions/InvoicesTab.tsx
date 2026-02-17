@@ -75,7 +75,7 @@ export function InvoicesTab({ orgId }: { orgId: string }) {
                   </td>
                 </tr>
               ) : (
-                invoices.items.map((inv: any) => (
+                invoices.items.map((inv) => (
                   <tr key={inv.id} style={{ borderTop: "1px solid #e5e7eb" }}>
                     <td style={{ padding: "10px 8px", fontSize: 14 }}>{fmtDateShort(inv.issuedAt)}</td>
                     <td style={{ padding: "10px 8px", fontSize: 14, fontWeight: 600 }}>{inv.number ?? "—"}</td>

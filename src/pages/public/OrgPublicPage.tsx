@@ -125,9 +125,6 @@ export function OrgPublicPage() {
               <div className="publicOrgHeroRight">
                 <div className="publicTitleBlock">
                   <h1 className="publicTitle">{displayName}</h1>
-                  <div className="publicSubtitle">
-                    {profile.slug} · {org.type}
-                  </div>
                 </div>
 
                 <div className="publicActions">

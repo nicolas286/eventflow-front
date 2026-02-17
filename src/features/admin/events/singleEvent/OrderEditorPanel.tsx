@@ -1,12 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button, EditorShell } from "../../../../ui/components";
+import { normalizeText } from "../../../../domain/helpers/normalize";
 
 type AnyRecord = Record<string, any>;
 
-function normalizeStr(v: any): string {
-  if (v === null || v === undefined) return "";
-  return String(v).trim();
-}
 
 function makeLocalOrderId() {
   // id “stable” côté UI (pas uuid) : ok pour du local-only
@@ -73,11 +70,11 @@ export function OrderEditorPanel(props: {
         createdAt: now,
 
         // numéro visible
-        public_id: normalizeStr(publicId) || orderId.slice(0, 8),
-        publicId: normalizeStr(publicId) || orderId.slice(0, 8),
+        public_id: normalizeText(publicId) || orderId.slice(0, 8),
+        publicId: normalizeText(publicId) || orderId.slice(0, 8),
 
-        buyer_email: normalizeStr(buyerEmail) || null,
-        buyerEmail: normalizeStr(buyerEmail) || null,
+        buyer_email: normalizeText(buyerEmail) || null,
+        buyerEmail: normalizeText(buyerEmail) || null,
 
         status, // enum de tes commandes
         isLocal: true,

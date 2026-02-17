@@ -147,7 +147,7 @@ export function EventPaymentPage() {
       for (let i = 0; i < count; i++) expandedProductIds.push(p.id);
     }
 
-    return (draft.attendees ?? []).map((answersByKey, idx) => {
+    return (draft?.attendees ?? []).map((answersByKey, idx) => {
       const eventProductId = expandedProductIds[idx];
       const obj = (answersByKey ?? {}) as Record<string, unknown>;
 
@@ -294,7 +294,7 @@ if (orderId) {
                               {p.createsAttendees ? `${p.attendeesPerUnit} participant(s) / billet` : "Pas de participant créé"}
                             </div>
                           </div>
-                          <div style={{ fontWeight: 800 }}>{formatMoney(qty * p.priceCents, p.currency)}</div>
+                          <div style={{ fontWeight: 800 }}>{formatMoney(qty * p.priceCents, p.currency ?? "EUR")}</div>
                         </div>
                       ))}
                     </div>
