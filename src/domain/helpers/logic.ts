@@ -23,11 +23,23 @@ export function clampInt(
   return n;
 }
 
-export function computeRemaining(p: EventProduct) {
-  if (p.stockQty == null) return null;
-  const remaining = Math.max(0, (p.stockQty ?? 0) - (p.soldQty ?? 0) - (p.reservedQty ?? 0));
-  return remaining;
+export function computeRemaining<
+  T extends {
+    stockQty?: number | null;
+    soldQty?: number | null;
+    reservedQty?: number | null;
+  }
+>(item: T): number | null {
+  if (item.stockQty == null) return null;
+
+  const remaining =
+    (item.stockQty ?? 0) -
+    (item.soldQty ?? 0) -
+    (item.reservedQty ?? 0);
+
+  return Math.max(0, remaining);
 }
+
 
 export function sortBySortOrder<T extends { sortOrder?: number | null }>(
   items: T[] | null | undefined,
@@ -40,8 +52,6 @@ export function sortBySortOrder<T extends { sortOrder?: number | null }>(
 export function sortProducts(products: EventProduct[]) {
   return sortBySortOrder(products);
 }
-
-
 
 export type QuantityMap = Record<string, unknown>;
 

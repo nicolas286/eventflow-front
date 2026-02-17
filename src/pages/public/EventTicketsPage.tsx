@@ -10,12 +10,21 @@ import Badge from "../../ui/components/badge/Badge";
 
 import { PublicEventHeader } from "./checkout/PublicEventHeader";
 import { loadDraft, saveDraft, formatMoney } from "./checkout/checkoutStore";
-import { clampInt, sortBySortOrder, sortProducts } from "../../domain/helpers/logic";
+import {
+  computeRemaining,
+  computeTotalCents,
+  computeNextQty,
+  computeExpectedAttendeeSlots,
+  quantitiesToItems,
+  resolveCurrency,
+  sortBySortOrder,
+  sumItemQuantities,
+  resolveMaxQty
+} from "../../domain/helpers/logic";
 
 import "../../styles/desktop/publicCheckoutBase.desktop.css";
 import "../../styles/desktop/eventTicketsPage.desktop.css";
 import "../../styles/mobile/eventTicketsPage.mobile.css";
-
 
 export function EventTicketsPage() {
   const navigate = useNavigate();
@@ -26,7 +35,6 @@ export function EventTicketsPage() {
     orgSlug,
     eventSlug,
   });
-
 
   const [tick, setTick] = useState(0);
 
@@ -61,32 +69,23 @@ export function EventTicketsPage() {
   }
 
   const { org, event, products } = data;
+
   const quantities = draft?.quantities ?? {};
-
   const sortedProducts = sortBySortOrder(products);
-
-  const totalTickets = Object.values(quantities).reduce((a, b) => a + b, 0);
-
-  const totalCents = sortedProducts.reduce((acc, p) => {
-    const qty = quantities[p.id] ?? 0;
-    return acc + qty * p.priceCents;
-  }, 0);
-
-  const currency = sortedProducts[0]?.currency ?? "EUR";
-
-  const attendeesToCreate = sortedProducts.reduce((acc, p) => {
-    const qty = quantities[p.id] ?? 0;
-    if (!p.createsAttendees) return acc;
-    return acc + qty * (p.attendeesPerUnit ?? 0);
-  }, 0);
-
+  const items = quantitiesToItems(quantities);
+  const totalTickets = sumItemQuantities(items);
+  const totalCents = computeTotalCents(items, sortedProducts);
+  const currency = resolveCurrency(sortedProducts);
+  const attendeesToCreate = computeExpectedAttendeeSlots(sortedProducts, quantities).length;
 
   function updateQty(productId: string, nextQty: number) {
     if (!draft) return;
+
     const p = sortedProducts.find((x) => x.id === productId);
     if (!p) return;
 
-    const q = clampInt(nextQty, { min: 0, max: 99 })
+    const remaining = computeRemaining(p);
+    const q = computeNextQty(nextQty, remaining);
 
     const next = {
       ...draft,
@@ -119,25 +118,22 @@ export function EventTicketsPage() {
             <div className="publicGutter">
               <div className="publicList">
                 {sortedProducts.map((p) => {
-                  const qty = quantities[p.id] ?? 0;
-                  const remaining =
-                    p.stockQty == null ? null : Math.max(0, (p.stockQty ?? 0) - (p.soldQty ?? 0) - (p.reservedQty ?? 0));
+                  const qty = Number(quantities[p.id] ?? 0) || 0;
 
-                  const soldOut = remaining === 0 && p.stockQty != null;
+                  const remaining = computeRemaining(p);
+                  const soldOut = remaining === 0 && remaining != null;
 
-                  const stockLabel =
-                    remaining == null ? "Illimité" : `Stock : ${remaining}`;
-
-                  const maxQty = remaining == null ? 99 : remaining;
-
+                  const stockLabel = remaining == null ? "Illimité" : `Stock : ${remaining}`;
+                  const maxQty = resolveMaxQty(remaining);
 
                   const badgeTone = soldOut ? "danger" : "success";
                   const badgeLabel = soldOut ? "Épuisé" : "Disponible";
 
-
                   const createsAtt = p.createsAttendees === true;
                   const perUnit = p.attendeesPerUnit ?? 0;
                   const createdCount = createsAtt ? qty * perUnit : 0;
+
+                  const moneyCurrency = p.currency ?? currency;
 
                   return (
                     <Card key={p.id} className={soldOut ? "publicTicketCard isSoldOut" : "publicTicketCard"}>
@@ -145,7 +141,7 @@ export function EventTicketsPage() {
                         title={<div className="publicCardTitle">{p.name}</div>}
                         subtitle={
                           <div className="publicSubtitle">
-                            {formatMoney(p.priceCents, p.currency)} · {stockLabel}
+                            {formatMoney(p.priceCents, moneyCurrency)} · {stockLabel}
                           </div>
                         }
                         right={<Badge tone={badgeTone} label={badgeLabel} />}
@@ -202,7 +198,7 @@ export function EventTicketsPage() {
                             </div>
 
                             <div className="publicTicketTotal">
-                              {formatMoney(qty * p.priceCents, p.currency)}
+                              {formatMoney(qty * p.priceCents, moneyCurrency)}
                             </div>
                           </div>
                         </div>
