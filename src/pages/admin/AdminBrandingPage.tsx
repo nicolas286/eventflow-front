@@ -11,6 +11,7 @@ import { type OrgBrandingUI } from "../../domain/models/admin/admin.orgBranding.
 export default function AdminBrandingPage() {
   const { bootstrap, orgId, refetch } = useOutletContext<AdminOutletContext>();
   const orgProfile = bootstrap?.organizationProfile;
+  const orgPlan = bootstrap?.organization?.plan;
 
   const initial = useMemo<OrgBrandingUI>(
     () => ({
@@ -41,6 +42,7 @@ export default function AdminBrandingPage() {
         org={branding}
         setOrg={setBranding}
         onSaved={refetch}
+        orgPlan={orgPlan}
       />
 
         </CardBody>

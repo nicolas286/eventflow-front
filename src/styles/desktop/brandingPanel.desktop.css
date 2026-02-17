@@ -234,3 +234,21 @@
   gap:8px;
   align-items:center;
 }
+
+.brandingPanel__cta {
+  margin-top: 12px;
+}
+
+.brandingPanel__ctaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.brandingPanel__locked {
+  opacity: 0.5;
+  filter: grayscale(0.2);
+  pointer-events: none;
+  user-select: none;
+}

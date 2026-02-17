@@ -2,6 +2,7 @@ import "../../../styles/desktop/brandingPanel.desktop.css";
 import "../../../styles/mobile/brandingPanel.mobile.css";
 
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { Button, Input, Badge } from "../../../ui/components";
 import { MessageBox } from "../../../ui/components/message/MessageBox";
@@ -23,11 +24,21 @@ import { normalizeError } from "../../../domain/errors/errors";
 type BrandingPanelProps = {
   orgId: string;
   org: OrgBrandingUI;
+  orgPlan: "free" | "starter" | "pro" | undefined;
   setOrg: React.Dispatch<React.SetStateAction<OrgBrandingUI>>;
   onSaved: () => Promise<void>;
 };
 
-export default function BrandingPanel({ orgId, org, setOrg, onSaved }: BrandingPanelProps) {
+export default function BrandingPanel({
+  orgId,
+  org,
+  orgPlan,
+  setOrg,
+  onSaved,
+}: BrandingPanelProps) {
+  const navigate = useNavigate();
+  const isFree = orgPlan === "free";
+
   const { loading, error, updated, previewLogoUrl, previewBannerUrl, saveOrgBranding, reset } =
     useSaveOrgBranding({ supabase });
 
@@ -46,7 +57,6 @@ export default function BrandingPanel({ orgId, org, setOrg, onSaved }: BrandingP
     applyOrgTheme(org.primaryColor || "#2563eb");
   }, [org.primaryColor]);
 
-  // Resync live form si org change depuis l'extérieur
   useEffect(() => {
     handleChange("displayName", org.displayName ?? "");
     handleChange("primaryColor", org.primaryColor ?? "");
@@ -77,6 +87,12 @@ export default function BrandingPanel({ orgId, org, setOrg, onSaved }: BrandingP
 
   async function handleSave() {
     setAssetError(null);
+
+    // 👇 si free: on empêche d’essayer de sauvegarder un branding “premium”
+    if (isFree) {
+      return;
+    }
+
     live.touchAll(["displayName", "primaryColor"]);
 
     const parsed = live.validateAll();
@@ -152,8 +168,26 @@ export default function BrandingPanel({ orgId, org, setOrg, onSaved }: BrandingP
         </div>
       </div>
 
-      {/* Ligne 2 : couleur */}
-      <div>
+      {/* CTA si Free */}
+      {isFree ? (
+        <div className="brandingPanel__cta">
+          <MessageBox variant="info">
+            <div className="brandingPanel__ctaRow">
+              <div>
+                Logo, bannière et couleur sont dispo à partir du plan <b>Starter</b>.
+              </div>
+              <Button
+                variant="primary"
+                label="Passer à Starter"
+                onClick={() => navigate("/admin/abonnement")}
+              />
+            </div>
+          </MessageBox>
+        </div>
+      ) : null}
+
+      {/* Ligne 2 : couleur (lock en free) */}
+      <div className={isFree ? "brandingPanel__locked" : undefined}>
         <div className="brandingPanel__label">Couleur principale</div>
         <div className="brandingPanel__row">
           <Input
@@ -167,6 +201,7 @@ export default function BrandingPanel({ orgId, org, setOrg, onSaved }: BrandingP
             onBlur={() => handleBlur("primaryColor")}
             className="brandingPanel__color"
             aria-label="Choisir une couleur"
+            disabled={isFree}
           />
 
           <Input
@@ -178,6 +213,7 @@ export default function BrandingPanel({ orgId, org, setOrg, onSaved }: BrandingP
             }}
             onBlur={() => handleBlur("primaryColor")}
             placeholder="#2563eb"
+            disabled={isFree}
           />
 
           <div className="brandingPanel__chip" title="Couleur actuelle">
@@ -191,8 +227,8 @@ export default function BrandingPanel({ orgId, org, setOrg, onSaved }: BrandingP
         ) : null}
       </div>
 
-      {/* Assets */}
-      <div className="brandingPanel__grid2">
+      {/* Assets (lock en free) */}
+      <div className={`brandingPanel__grid2 ${isFree ? "brandingPanel__locked" : ""}`}>
         <AssetUploader
           label="Logo"
           hint="PNG/JPG/WebP · max 2MB"
@@ -269,9 +305,9 @@ export default function BrandingPanel({ orgId, org, setOrg, onSaved }: BrandingP
         <div className="brandingPanel__actions">
           <Button
             variant="primary"
-            label={loading ? "Sauvegarde…" : "Sauvegarder"}
+            label={isFree ? "Disponible en Starter" : loading ? "Sauvegarde…" : "Sauvegarder"}
             onClick={handleSave}
-            disabled={loading}
+            disabled={loading || isFree}
           />
         </div>
       </div>
