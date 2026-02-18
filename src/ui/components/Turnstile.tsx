@@ -28,7 +28,7 @@ type Props = {
 };
 
 export const Turnstile = forwardRef<TurnstileRef, Props>(function Turnstile(
-  { siteKey, onToken, onError, onExpired, theme = "auto", size = "invisible", className = "" },
+  { siteKey, onToken, onError, onExpired, theme = "auto", size = "normal", className = "" },
   ref
 ) {
   const containerRef = useRef<HTMLDivElement | null>(null);
