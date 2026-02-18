@@ -123,7 +123,7 @@ export default function OnboardingWizard() {
         <div className="onboardingHeader">
           <div>
             <h1>Bienvenue sur EventFlow</h1>
-            <p>Votre organisation est créée. Organisez votre premier événement !</p>
+            <p>Remplissez quelques infos, créez votre organisation et commencez à organiser vos événements !</p>
           </div>
 
         </div>
