@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { supabase } from "../../gateways/supabase/supabaseClient";
@@ -8,7 +8,7 @@ import Container from "../../ui/components/container/Container";
 import Card, { CardBody, CardHeader } from "../../ui/components/card/Card";
 import Button from "../../ui/components/button/Button";
 
-import Turnstile from "../../ui/components/Turnstile";
+import { Turnstile, type TurnstileRef } from "../../ui/components/Turnstile";
 
 import { PublicEventHeader } from "./checkout/PublicEventHeader";
 import {
@@ -61,10 +61,11 @@ export function EventPaymentPage() {
 
   const [buyerEmail, setBuyerEmail] = useState("");
 
-  // ✅ Turnstile token réel (invisible)
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileError, setTurnstileError] = useState<string | null>(null);
+  const [pendingPay, setPendingPay] = useState(false);
 
+  const turnstileRef = useRef<TurnstileRef | null>(null);
   const turnstileSiteKey = (import.meta.env.VITE_TURNSTILE_SITEKEY as string | undefined)?.trim() ?? "";
 
   const { register, loading: registering, error: registerError } = useRegister({ supabase });
@@ -171,23 +172,7 @@ export function EventPaymentPage() {
     });
   }
 
-  async function pay() {
-    if (!orgSlug || !eventSlug) return;
-    if (picked.length === 0) return;
-    if (!accepted) return;
-    if (attendeesMismatch) return;
-
-    const email = buyerEmail.trim();
-    const token = (turnstileToken ?? "").trim();
-
-    if (!email) return;
-    if (!token) {
-      setTurnstileError("Validation anti-bot manquante. Recharge la page et réessaie.");
-      return;
-    }
-
-    setTurnstileError(null);
-
+  async function doRegister(withToken: string) {
     const items = picked.map(({ p, qty }) => ({
       eventProductId: p.id,
       quantity: qty,
@@ -197,15 +182,45 @@ export function EventPaymentPage() {
       eventId: event.id,
       items,
       attendees: buildAttendeesPayload(),
-      buyerEmail: email,
-      turnstileToken: token,
+      buyerEmail: buyerEmail.trim(),
+      turnstileToken: withToken,
     };
+
+    return register(payload as any);
+  }
+
+  async function pay() {
+    if (!orgSlug || !eventSlug) return;
+    if (picked.length === 0) return;
+    if (!accepted) return;
+    if (attendeesMismatch) return;
+
+    const email = buyerEmail.trim();
+    if (!email) return;
+
+    setTurnstileError(null);
+
+    // Si pas de token, on exécute Turnstile et on attend le callback
+    if (!turnstileToken) {
+      if (!turnstileSiteKey) {
+        setTurnstileError("Turnstile non configuré.");
+        return;
+      }
+      setPendingPay(true);
+      turnstileRef.current?.execute();
+      return;
+    }
 
     let r: any;
     try {
-      r = await register(payload as any);
+      r = await doRegister(turnstileToken);
     } catch {
       return;
+    } finally {
+      setPendingPay(false);
+      // token one-shot : on le reset pour éviter réutilisation/expiry
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
     }
 
     if (r && typeof r === "object" && "error" in r) {
@@ -213,13 +228,11 @@ export function EventPaymentPage() {
     }
 
     const orderId = typeof r?.orderId === "string" ? r.orderId : null;
-
     const status = typeof r?.status === "string" ? r.status : null;
 
     const bookingToken =
       typeof r?.bookingToken === "string" && r.bookingToken.trim() ? r.bookingToken.trim() : null;
 
-    // ✅ si gratuit => paid => on a (id + token) => page order return
     if (r?.ok === true && status === "paid" && orderId) {
       clearDraft(orgSlug, eventSlug);
 
@@ -227,15 +240,12 @@ export function EventPaymentPage() {
         ? `/order/${orderId}?token=${encodeURIComponent(bookingToken)}&org=${encodeURIComponent(
             orgSlug
           )}&event=${encodeURIComponent(eventSlug)}`
-        : `/order/${orderId}?org=${encodeURIComponent(orgSlug)}&event=${encodeURIComponent(
-            eventSlug
-          )}`;
+        : `/order/${orderId}?org=${encodeURIComponent(orgSlug)}&event=${encodeURIComponent(eventSlug)}`;
 
       navigate(url);
       return;
     }
 
-    // ✅ si payant => mollie checkout
     if (r?.ok === true && status === "awaiting_payment") {
       const checkoutUrl = r?.checkoutUrl;
 
@@ -246,7 +256,6 @@ export function EventPaymentPage() {
         return;
       }
 
-      // fallback si checkoutUrl absent (rare) : on tente la page order sans return=1
       if (orderId) {
         navigate(
           `/order/${orderId}?token=${encodeURIComponent(bookingToken ?? "")}&org=${encodeURIComponent(
@@ -257,7 +266,6 @@ export function EventPaymentPage() {
       return;
     }
 
-    // fallback ultime : si on a un orderId on tente de montrer quelque chose
     if (orderId) {
       clearDraft(orgSlug, eventSlug);
       navigate(
@@ -265,7 +273,15 @@ export function EventPaymentPage() {
           orgSlug
         )}&event=${encodeURIComponent(eventSlug)}`
       );
-      return;
+    }
+  }
+
+  // Quand on reçoit un token, si l'utilisateur avait cliqué Payer, on relance pay()
+  async function onTurnstileToken(token: string) {
+    setTurnstileToken(token);
+    if (pendingPay) {
+      // relance immédiatement le flow
+      await pay();
     }
   }
 
@@ -273,9 +289,9 @@ export function EventPaymentPage() {
     picked.length > 0 &&
     accepted &&
     !registering &&
+    !pendingPay &&
     !attendeesMismatch &&
-    buyerEmail.trim().length > 0 &&
-    (turnstileToken ?? "").trim().length > 0;
+    buyerEmail.trim().length > 0;
 
   return (
     <div className="publicPage">
@@ -284,7 +300,6 @@ export function EventPaymentPage() {
           <PublicEventHeader orgSlug={orgSlug} org={org} event={event} />
 
           <div className="publicDivider" />
-
           <div className="publicSectionTitle">3/3 — Paiement</div>
 
           {picked.length === 0 ? (
@@ -297,10 +312,7 @@ export function EventPaymentPage() {
                   <CardBody>
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                       {picked.map(({ p, qty }) => (
-                        <div
-                          key={p.id}
-                          style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
-                        >
+                        <div key={p.id} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                           <div>
                             <div style={{ fontWeight: 800 }}>
                               {p.name} × {qty}
@@ -311,9 +323,7 @@ export function EventPaymentPage() {
                                 : "Pas de participant créé"}
                             </div>
                           </div>
-                          <div style={{ fontWeight: 800 }}>
-                            {formatMoney(qty * p.priceCents, p.currency ?? "EUR")}
-                          </div>
+                          <div style={{ fontWeight: 800 }}>{formatMoney(qty * p.priceCents, p.currency ?? "EUR")}</div>
                         </div>
                       ))}
                     </div>
@@ -331,8 +341,7 @@ export function EventPaymentPage() {
 
                     {attendeesMismatch ? (
                       <div className="publicEmpty" style={{ marginTop: 12 }}>
-                        Oups : le nombre de participants ne correspond pas aux billets sélectionnés. Reviens
-                        à l’étape “Participants”.
+                        Oups : le nombre de participants ne correspond pas aux billets sélectionnés. Reviens à l’étape “Participants”.
                       </div>
                     ) : null}
                   </CardBody>
@@ -355,34 +364,28 @@ export function EventPaymentPage() {
                             border: "1px solid rgba(0,0,0,0.10)",
                             outline: "none",
                           }}
-                          disabled={registering}
+                          disabled={registering || pendingPay}
                         />
                       </div>
 
-                      {/* ✅ Turnstile réel */}
                       {turnstileSiteKey ? (
                         <div>
                           <div style={{ fontWeight: 800, marginBottom: 6 }}>Validation anti-bot</div>
                           <Turnstile
+                            ref={turnstileRef}
                             siteKey={turnstileSiteKey}
-                            onToken={(t) => {
-                              setTurnstileToken(t);
-                              setTurnstileError(null);
-                            }}
+                            onToken={onTurnstileToken}
                             onError={() => {
+                              setPendingPay(false);
                               setTurnstileToken(null);
                               setTurnstileError("Impossible de valider (Turnstile). Réessaie ou recharge la page.");
                             }}
                             onExpired={() => {
+                              setPendingPay(false);
                               setTurnstileToken(null);
-                              setTurnstileError("Validation expirée. Recharge la page et réessaie.");
+                              setTurnstileError("Validation expirée. Réessaie.");
                             }}
                           />
-                          {!turnstileToken ? (
-                            <div className="publicSubtitle" style={{ marginTop: 6 }}>
-                              Vérification en cours…
-                            </div>
-                          ) : null}
                           {turnstileError ? (
                             <div className="publicEmpty" style={{ marginTop: 10 }}>
                               {turnstileError}
@@ -390,9 +393,7 @@ export function EventPaymentPage() {
                           ) : null}
                         </div>
                       ) : (
-                        <div className="publicEmpty">
-                          Turnstile non configuré (VITE_TURNSTILE_SITEKEY manquant).
-                        </div>
+                        <div className="publicEmpty">Turnstile non configuré (VITE_TURNSTILE_SITEKEY manquant).</div>
                       )}
 
                       <label style={{ display: "flex", gap: 10, alignItems: "center" }}>
@@ -401,7 +402,7 @@ export function EventPaymentPage() {
                           checked={accepted}
                           onChange={(e) => setAccepted(e.target.checked)}
                           style={{ width: 18, height: 18 }}
-                          disabled={registering}
+                          disabled={registering || pendingPay}
                         />
                         <span style={{ fontWeight: 700 }}>J’accepte les conditions et je confirme l’achat.</span>
                       </label>
@@ -417,14 +418,14 @@ export function EventPaymentPage() {
           <div className="publicDivider" />
 
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-            <Button variant="primary" label="Retour" onClick={goBack} disabled={registering} />
+            <Button variant="primary" label="Retour" onClick={goBack} disabled={registering || pendingPay} />
             <Button
               label={
                 totalCents === 0
-                  ? registering
+                  ? registering || pendingPay
                     ? "Validation…"
                     : "Confirmer"
-                  : registering
+                  : registering || pendingPay
                   ? "Paiement…"
                   : "Payer"
               }

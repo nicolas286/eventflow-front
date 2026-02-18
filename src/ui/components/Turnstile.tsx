@@ -1,24 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+// src/ui/components/security/Turnstile.tsx
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 
 declare global {
   interface Window {
     turnstile?: {
-      render: (
-        container: HTMLElement,
-        options: {
-          sitekey: string;
-          theme?: "light" | "dark" | "auto";
-          size?: "normal" | "compact" | "invisible";
-          appearance?: "always" | "execute" | "interaction-only";
-          tabindex?: number;
-          retry?: "auto" | "never";
-          "refresh-expired"?: "auto" | "manual";
-          callback?: (token: string) => void;
-          "error-callback"?: () => void;
-          "expired-callback"?: () => void;
-          "timeout-callback"?: () => void;
-        }
-      ) => string;
+      render: (container: HTMLElement, options: Record<string, any>) => string;
       execute: (widgetId: string) => void;
       reset: (widgetId: string) => void;
       remove: (widgetId: string) => void;
@@ -26,43 +12,30 @@ declare global {
   }
 }
 
+export type TurnstileRef = {
+  execute: () => void;
+  reset: () => void;
+};
+
 type Props = {
   siteKey: string;
-  onToken: (token: string | null) => void;
+  onToken: (token: string) => void;
   onError?: () => void;
   onExpired?: () => void;
-
-  /** Invisible par défaut (recommandé) */
-  size?: "normal" | "compact" | "invisible";
   theme?: "light" | "dark" | "auto";
-
-  /** Si true, exécute automatiquement au render */
-  autoExecute?: boolean;
-
+  size?: "normal" | "compact" | "invisible";
   className?: string;
 };
 
-/**
- * Turnstile (Cloudflare) - version sans dépendance
- * - rend un widget
- * - renvoie token via onToken
- * - expose execute/reset via refs internes (voir usage plus bas)
- */
-export default function Turnstile({
-  siteKey,
-  onToken,
-  onError,
-  onExpired,
-  size = "invisible",
-  theme = "auto",
-  autoExecute = true,
-  className = "",
-}: Props) {
+export const Turnstile = forwardRef<TurnstileRef, Props>(function Turnstile(
+  { siteKey, onToken, onError, onExpired, theme = "auto", size = "invisible", className = "" },
+  ref
+) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
   const [ready, setReady] = useState(false);
 
-  // 1) load script (une seule fois)
+  // Load script once
   useEffect(() => {
     if (window.turnstile) {
       setReady(true);
@@ -73,14 +46,13 @@ export default function Turnstile({
       'script[src^="https://challenges.cloudflare.com/turnstile/v0/api.js"]'
     );
     if (existing) {
-      // attend que ça soit prêt
-      const t = setInterval(() => {
+      const t = window.setInterval(() => {
         if (window.turnstile) {
-          clearInterval(t);
+          window.clearInterval(t);
           setReady(true);
         }
       }, 50);
-      return () => clearInterval(t);
+      return () => window.clearInterval(t);
     }
 
     const s = document.createElement("script");
@@ -93,78 +65,69 @@ export default function Turnstile({
       setReady(false);
     };
     document.head.appendChild(s);
-
-    return () => {
-      // on ne retire pas le script global (ça évite les glitches si plusieurs pages)
-    };
   }, [onError]);
 
-  // 2) render widget
+  // Render widget once ready
   useEffect(() => {
     const el = containerRef.current;
-    if (!ready || !el || !window.turnstile) return;
+    const ts = window.turnstile;
+    if (!ready || !el || !ts) return;
 
-    // si déjà rendu, clean
+    // Clean previous widget if any
     if (widgetIdRef.current) {
       try {
-        window.turnstile.remove(widgetIdRef.current);
+        ts.remove(widgetIdRef.current);
       } catch {}
       widgetIdRef.current = null;
     }
 
-    const widgetId = window.turnstile.render(el, {
+    const widgetId = ts.render(el, {
       sitekey: siteKey,
       theme,
       size,
-      // pour invisible: le token arrive via callback après execute()
       callback: (token: string) => onToken(token),
-      "error-callback": () => {
-        onToken(null);
-        onError?.();
-      },
-      "expired-callback": () => {
-        onToken(null);
-        onExpired?.();
-      },
-      "timeout-callback": () => {
-        onToken(null);
-        onError?.();
-      },
-      // "refresh-expired": "auto", // optionnel
+      "error-callback": () => onError?.(),
+      "expired-callback": () => onExpired?.(),
+      "timeout-callback": () => onError?.(),
     });
 
     widgetIdRef.current = widgetId;
 
-    if (autoExecute && size === "invisible") {
-      // exécute automatiquement pour obtenir un token
-      try {
-        window.turnstile.execute(widgetId);
-      } catch {
-        // ignore
-      }
-    }
-
     return () => {
-      if (widgetIdRef.current) {
+      const tsCleanup = window.turnstile;
+      if (tsCleanup && widgetIdRef.current) {
         try {
-          const ts = window.turnstile;
-            if (ts && widgetIdRef.current) {
-            try {
-                ts.remove(widgetIdRef.current);
-            } catch {}
-            }
-
+          tsCleanup.remove(widgetIdRef.current);
         } catch {}
         widgetIdRef.current = null;
       }
     };
-  }, [ready, siteKey, theme, size, autoExecute, onToken, onError, onExpired]);
+  }, [ready, siteKey, theme, size, onToken, onError, onExpired]);
 
-  // helpers (optionnel) : expose via window pour debug rapide
-  useEffect(() => {
-    // @ts-ignore
-    window.__turnstile_widget_id__ = widgetIdRef.current;
-  }, [ready]);
+  useImperativeHandle(ref, () => ({
+    execute() {
+      const ts = window.turnstile;
+      const id = widgetIdRef.current;
+      if (!ts || !id) return;
+      try {
+        // reset avant execute pour éviter "already executing"
+        ts.reset(id);
+      } catch {}
+      try {
+        ts.execute(id);
+      } catch {
+        onError?.();
+      }
+    },
+    reset() {
+      const ts = window.turnstile;
+      const id = widgetIdRef.current;
+      if (!ts || !id) return;
+      try {
+        ts.reset(id);
+      } catch {}
+    },
+  }));
 
   return <div ref={containerRef} className={className} />;
-}
+});
