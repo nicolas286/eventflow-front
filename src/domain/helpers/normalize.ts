@@ -77,7 +77,7 @@ export function normalizeContiguousSortOrder(list: DraftField[]) {
 
 export function toNullableTrimmed(v: string | null | undefined) {
   if (v === null) return null;
-  const t = v.trim();
+  const t = v?.trim();
   return t === "" ? null : t;
 }
 
