@@ -14,25 +14,29 @@ type Props = {
 export function AttendeeFieldInput({ field, value, errorMsg, onChange }: Props) {
   const selectOptions = useMemo(() => toSelectOptions(field.options), [field.options]);
 
-  const label = (
-    <div className="adminCO_FieldLabel">
-      {String(field.label ?? field.fieldKey)}{" "}
-      {field.isRequired ? <span className="adminCO_FieldReq">(requis)</span> : null}
+  const fieldLabelText = String(field.label ?? field.fieldKey ?? "");
+  const isReq = Boolean(field.isRequired);
+
+  const Label = () => (
+    <div className="adminFormLabel adminCO_FieldLabel">
+      {fieldLabelText} {isReq ? <span className="adminFormReq adminCO_FieldReq">(requis)</span> : null}
     </div>
   );
+
+  const Error = () => (errorMsg ? <MessageBox variant="error">{errorMsg}</MessageBox> : null);
 
   // date
   if (isBirthDateField(field) || field.fieldType === "date") {
     return (
-      <div className="adminCO_Field">
-        {label}
+      <div className="adminFormField adminCO_Field">
+        <Label />
         <input
-          className="adminCO_Control"
+          className="adminFormControl adminCO_Control"
           type="date"
           value={typeof value === "string" ? value : ""}
           onChange={(e) => onChange(e.target.value)}
         />
-        {errorMsg ? <MessageBox variant="error">{errorMsg}</MessageBox> : null}
+        <Error />
       </div>
     );
   }
@@ -40,16 +44,16 @@ export function AttendeeFieldInput({ field, value, errorMsg, onChange }: Props) 
   // country
   if (isCountryField(field)) {
     return (
-      <div className="adminCO_Field">
-        {label}
+      <div className="adminFormField adminCO_Field">
+        <Label />
         <input
-          className="adminCO_Control"
+          className="adminFormControl adminCO_Control"
           type="text"
           value={typeof value === "string" ? value : ""}
           onChange={(e) => onChange(e.target.value)}
           placeholder="Pays"
         />
-        {errorMsg ? <MessageBox variant="error">{errorMsg}</MessageBox> : null}
+        <Error />
       </div>
     );
   }
@@ -57,16 +61,16 @@ export function AttendeeFieldInput({ field, value, errorMsg, onChange }: Props) 
   // phone
   if (isPhoneField(field)) {
     return (
-      <div className="adminCO_Field">
-        {label}
+      <div className="adminFormField adminCO_Field">
+        <Label />
         <input
-          className="adminCO_Control"
+          className="adminFormControl adminCO_Control"
           type="tel"
           value={typeof value === "string" ? value : ""}
           onChange={(e) => onChange(e.target.value)}
           placeholder="Téléphone"
         />
-        {errorMsg ? <MessageBox variant="error">{errorMsg}</MessageBox> : null}
+        <Error />
       </div>
     );
   }
@@ -74,14 +78,14 @@ export function AttendeeFieldInput({ field, value, errorMsg, onChange }: Props) 
   // textarea
   if (field.fieldType === "textarea") {
     return (
-      <div className="adminCO_Field">
-        {label}
+      <div className="adminFormField adminCO_Field">
+        <Label />
         <textarea
-          className="adminCO_Control adminCO_Textarea"
+          className="adminFormControl adminFormTextarea adminCO_Control adminCO_Textarea"
           value={typeof value === "string" ? value : ""}
           onChange={(e) => onChange(e.target.value)}
         />
-        {errorMsg ? <MessageBox variant="error">{errorMsg}</MessageBox> : null}
+        <Error />
       </div>
     );
   }
@@ -89,10 +93,10 @@ export function AttendeeFieldInput({ field, value, errorMsg, onChange }: Props) 
   // select
   if (field.fieldType === "select") {
     return (
-      <div className="adminCO_Field">
-        {label}
+      <div className="adminFormField adminCO_Field">
+        <Label />
         <select
-          className="adminCO_Control"
+          className="adminFormControl adminCO_Control"
           value={typeof value === "string" ? value : ""}
           onChange={(e) => onChange(e.target.value)}
         >
@@ -103,7 +107,7 @@ export function AttendeeFieldInput({ field, value, errorMsg, onChange }: Props) 
             </option>
           ))}
         </select>
-        {errorMsg ? <MessageBox variant="error">{errorMsg}</MessageBox> : null}
+        <Error />
       </div>
     );
   }
@@ -111,56 +115,55 @@ export function AttendeeFieldInput({ field, value, errorMsg, onChange }: Props) 
   // checkbox
   if (field.fieldType === "checkbox") {
     return (
-      <div className="adminCO_Field">
-        <label className="adminCO_CheckRow">
+      <div className="adminFormField adminCO_Field">
+        <label className="adminFormCheckRow adminCO_CheckRow">
           <input
-            className="adminCO_Checkbox"
+            className="adminFormCheckbox adminCO_Checkbox"
             type="checkbox"
             checked={value === true}
             onChange={(e) => onChange(e.target.checked)}
           />
-          <div className="adminCO_CheckText">
-            {String(field.label ?? field.fieldKey)}{" "}
-            {field.isRequired ? <span className="adminCO_FieldReq">(requis)</span> : null}
+          <div className="adminFormCheckText adminCO_CheckText">
+            {fieldLabelText} {isReq ? <span className="adminFormReq adminCO_FieldReq">(requis)</span> : null}
           </div>
         </label>
-        {errorMsg ? <MessageBox variant="error">{errorMsg}</MessageBox> : null}
+        <Error />
       </div>
     );
   }
 
   // default input
-  const inputType =
-    field.fieldType === "email"
-      ? "email"
-      : field.fieldType === "number"
-        ? "number"
-        : "text";
+  const inputType: "text" | "email" | "number" =
+    field.fieldType === "email" ? "email" : field.fieldType === "number" ? "number" : "text";
+
+  const inputValue =
+    inputType === "number"
+      ? typeof value === "number"
+        ? String(value)
+        : typeof value === "string"
+          ? value
+          : ""
+      : typeof value === "string"
+        ? value
+        : "";
 
   return (
-    <div className="adminCO_Field">
-      {label}
+    <div className="adminFormField adminCO_Field">
+      <Label />
       <input
-        className="adminCO_Control"
+        className="adminFormControl adminCO_Control"
         type={inputType}
-        value={
-          inputType === "number"
-            ? typeof value === "number"
-              ? value
-              : ""
-            : typeof value === "string"
-              ? value
-              : ""
-        }
+        value={inputValue}
         onChange={(e) => {
           if (inputType === "number") {
-            onChange(e.target.value === "" ? null : Number(e.target.value));
+            const raw = e.target.value;
+            onChange(raw === "" ? null : Number(raw));
           } else {
             onChange(e.target.value);
           }
         }}
       />
-      {errorMsg ? <MessageBox variant="error">{errorMsg}</MessageBox> : null}
+      <Error />
     </div>
   );
 }

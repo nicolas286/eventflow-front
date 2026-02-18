@@ -2,7 +2,6 @@ import "../../../styles/desktop/brandingPanel.desktop.css";
 import "../../../styles/mobile/brandingPanel.mobile.css";
 
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import { Button, Input, Badge } from "../../../ui/components";
 import { MessageBox } from "../../../ui/components/message/MessageBox";
@@ -36,7 +35,6 @@ export default function BrandingPanel({
   setOrg,
   onSaved,
 }: BrandingPanelProps) {
-  const navigate = useNavigate();
   const isFree = orgPlan === "free";
 
   const { loading, error, updated, previewLogoUrl, previewBannerUrl, saveOrgBranding, reset } =
@@ -135,25 +133,67 @@ export default function BrandingPanel({
 
   return (
     <div className="brandingPanel">
-      {/* Ligne 1 : nom + preview */}
-      <div className="brandingPanel__grid2">
-        <div>
-          <Input
-            label="Nom affiché"
-            value={form.displayName}
-            onChange={(e) => {
-              setAssetError(null);
-              handleChange("displayName", e.target.value);
-              setOrg((o) => ({ ...o, displayName: e.target.value }));
-            }}
-            onBlur={() => handleBlur("displayName")}
-          />
+      {/* Ligne 1 : Couleur (gauche) + Aperçu (droite) */}
+      <div className="brandingPanel__grid2 brandingPanel__topRow">
+        {/* LEFT: Primary color (better UI) */}
+        <div className={isFree ? "brandingPanel__locked" : undefined}>
+          <div className="brandingPanel__labelRow">
+            <div>
+              <div className="brandingPanel__label">Couleur principale</div>
+              <div className="brandingPanel__help">Elle personnalise les boutons, badges et accents.</div>
+            </div>
 
-          {shouldShowFieldError("displayName") && fieldErrors.displayName ? (
-            <MessageBox variant="error">{fieldErrors.displayName}</MessageBox>
-          ) : null}
+            <div className="brandingPanel__miniActions">
+              <Button
+                variant="ghost"
+                label="Réinitialiser"
+                disabled={isFree}
+                onClick={() => {
+                  const v = "#2563eb";
+                  setAssetError(null);
+                  handleChange("primaryColor", v);
+                  setOrg((o) => ({ ...o, primaryColor: v }));
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="brandingPanel__colorCard">
+            <label className="brandingPanel__colorPick">
+              {/* input color transparent mais cliquable sur toute la zone */}
+              <Input
+                type="color"
+                value={form.primaryColor ?? ""}
+                onChange={(e) => {
+                  setAssetError(null);
+                  handleChange("primaryColor", e.target.value);
+                  setOrg((o) => ({ ...o, primaryColor: e.target.value }));
+                }}
+                onBlur={() => handleBlur("primaryColor")}
+                className="brandingPanel__colorNative"
+                aria-label="Choisir une couleur"
+                disabled={isFree}
+              />
+
+              <span className="brandingPanel__swatch" aria-hidden="true">
+                <span className="brandingPanel__swatchInner" />
+              </span>
+
+              <span className="brandingPanel__colorText">
+                <span className="brandingPanel__colorTitle">Choisir une couleur</span>
+                <span className="brandingPanel__colorSub">
+                  Clique sur le carré pour ouvrir le sélecteur.
+                </span>
+              </span>
+            </label>
+
+            {shouldShowFieldError("primaryColor") && fieldErrors.primaryColor ? (
+              <MessageBox variant="error">{fieldErrors.primaryColor}</MessageBox>
+            ) : null}
+          </div>
         </div>
 
+        {/* RIGHT: Preview card */}
         <div className="brandingPanel__previewCard">
           <div className="brandingPanel__labelRow">
             <div className="brandingPanel__label">Aperçu</div>
@@ -168,64 +208,6 @@ export default function BrandingPanel({
         </div>
       </div>
 
-      {/* CTA si Free */}
-      {isFree ? (
-        <div className="brandingPanel__cta">
-          <MessageBox variant="info">
-            <div className="brandingPanel__ctaRow">
-              <div>
-                Logo, bannière et couleur sont dispo à partir du plan <b>Starter</b>.
-              </div>
-              <Button
-                variant="primary"
-                label="Passer à Starter"
-                onClick={() => navigate("/admin/abonnement")}
-              />
-            </div>
-          </MessageBox>
-        </div>
-      ) : null}
-
-      {/* Ligne 2 : couleur (lock en free) */}
-      <div className={isFree ? "brandingPanel__locked" : undefined}>
-        <div className="brandingPanel__label">Couleur principale</div>
-        <div className="brandingPanel__row">
-          <Input
-            type="color"
-            value={form.primaryColor ?? ""}
-            onChange={(e) => {
-              setAssetError(null);
-              handleChange("primaryColor", e.target.value);
-              setOrg((o) => ({ ...o, primaryColor: e.target.value }));
-            }}
-            onBlur={() => handleBlur("primaryColor")}
-            className="brandingPanel__color"
-            aria-label="Choisir une couleur"
-            disabled={isFree}
-          />
-
-          <Input
-            value={form.primaryColor ?? ""}
-            onChange={(e) => {
-              setAssetError(null);
-              handleChange("primaryColor", e.target.value);
-              setOrg((o) => ({ ...o, primaryColor: e.target.value }));
-            }}
-            onBlur={() => handleBlur("primaryColor")}
-            placeholder="#2563eb"
-            disabled={isFree}
-          />
-
-          <div className="brandingPanel__chip" title="Couleur actuelle">
-            <span className="brandingPanel__chipDot" />
-            <span>{form.primaryColor || "#2563eb"}</span>
-          </div>
-        </div>
-
-        {shouldShowFieldError("primaryColor") && fieldErrors.primaryColor ? (
-          <MessageBox variant="error">{fieldErrors.primaryColor}</MessageBox>
-        ) : null}
-      </div>
 
       {/* Assets (lock en free) */}
       <div className={`brandingPanel__grid2 ${isFree ? "brandingPanel__locked" : ""}`}>

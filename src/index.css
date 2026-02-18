@@ -42,12 +42,12 @@ body {
   background-image:
     radial-gradient(
       1100px 700px at 6% 4%,
-      rgb(var(--primary-bg) / 0.12),
+      rgb(var(--primary-bg) / 0.15),
       transparent 60%
     ),
     radial-gradient(
       900px 600px at 92% 42%,
-      rgb(var(--primary-bg) / 0.08),
+      rgb(var(--primary-bg) / 0.10),
       transparent 62%
     );
 
@@ -65,7 +65,7 @@ body::before {
   pointer-events: none;
   z-index: 0;
 
-  opacity: 0.15;
+  opacity: 0.22;
   mix-blend-mode: multiply;
 
   background-image:
