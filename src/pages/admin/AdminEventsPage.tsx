@@ -165,6 +165,7 @@ export default function AdminEventsPage() {
             left={
               <EventTable
                 events={events}
+                orgSlug={bootstrap.organizationProfile?.slug}
                 editingId={editingId}
                 onSelect={select}
                 onDelete={deleteEvent}

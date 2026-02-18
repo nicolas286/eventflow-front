@@ -32,6 +32,7 @@ export default function AdminDashboard() {
           bootstrap.organizationProfile?.displayName ??
           bootstrap.organization?.name,
         logoUrl: bootstrap.organizationProfile?.logoUrl ?? undefined,
+        slug: bootstrap.organizationProfile?.slug ?? undefined,
       }
     : null;
 

@@ -10,6 +10,7 @@ import { supabase } from "../../../gateways/supabase/supabaseClient";
 export type OrgInfo = {
   name?: string;
   logoUrl?: string;
+  slug?: string;
 };
 
 export type TopNavMode = "public" | "admin";
@@ -49,8 +50,15 @@ function slugify(input: string) {
  * - return `/public/${orgId}`
  */
 function getPublicPath(org?: OrgInfo | null) {
-  const name = org?.name?.trim();
+  if (!org) return "/";
+
+  if (org.slug && org.slug.trim()) {
+    return `/o/${org.slug.trim()}`;
+  }
+
+  const name = org.name?.trim();
   if (!name) return "/";
+
   return `/o/${slugify(name)}`;
 }
 
@@ -72,6 +80,22 @@ export default function TopNav({ org, mode }: TopNavProps) {
     navigate(getPublicPath(org));
     close?.();
   };
+
+  async function copyPublicUrl(close?: () => void) {
+  if (!org) return;
+
+  const path = getPublicPath(org);
+  const fullUrl = `${window.location.origin}${path}`;
+
+  try {
+    await navigator.clipboard.writeText(fullUrl);
+    console.log("URL copiée :", fullUrl);
+  } catch (err) {
+    console.error("Erreur copie presse-papier", err);
+  }
+
+  close?.();
+}
 
   async function handleLogout(close: () => void) {
     if (loggingOut) return;
@@ -125,7 +149,12 @@ export default function TopNav({ org, mode }: TopNavProps) {
               {mode === "admin" ? (
                 <>
                   {/* ✅ lien vers le public */}
-                  <MenuItem label="Voir la page publique" onClick={() => goPublic(close)} />
+                  <MenuItem label="Voir le profil public" onClick={() => goPublic(close)} />
+                  <MenuItem
+                      label="Copier l’adresse du profil public"
+                      onClick={() => copyPublicUrl(close)}
+                    />
+
                   <MenuDivider />
 
                   <MenuItem label="Mes événements" onClick={() => go("event", close)} />
