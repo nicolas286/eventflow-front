@@ -221,19 +221,6 @@ async function handleConnect(mode: "test" | "live") {
               Slug : <span className="structurePanel__mono">{effectiveSlug || "—"}</span>
             </div>
           </div>
-
-          <div className="structurePanel__field">
-            <div className="structurePanel__fieldLabel">Statut</div>
-            <Select
-              value={form.status}
-              onChange={(e) =>
-                setForm((s) => ({ ...s, status: e.target.value as Form["status"] }))
-              }
-            >
-              <option value="active">Actif</option>
-              <option value="suspended">Suspendu</option>
-            </Select>
-          </div>
         </div>
 
         {/* ---------------- Infos publiques ---------------- */}

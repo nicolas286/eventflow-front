@@ -92,15 +92,18 @@ export function FilterBar({
             </option>
           ))}
 
-          {Array.from(groups.entries()).map(([group, opts]) => (
-            <optgroup key={group} label={group}>
-              {opts.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </optgroup>
-          ))}
+          {Array.from(groups.entries()).map(
+            ([group, opts]: [string, FilterBarOption[]]) => (
+              <optgroup key={group} label={group}>
+                {opts.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </optgroup>
+            )
+          )}
+
         </select>
       ) : null}
 

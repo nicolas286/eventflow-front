@@ -46,7 +46,8 @@ export function useSaveAdminProfile(params: { supabase: SupabaseClient }) {
   }
 
   function buildPatch(form: AdminProfileForm): AdminProfilePatch {
-    const country = emptyToNull(form.country);
+    const countryCode = emptyToNull(form.countryCode); 
+    const countryLabel = emptyToNull(form.country);
 
     return {
       firstName: emptyToNull(form.firstName),
@@ -56,7 +57,7 @@ export function useSaveAdminProfile(params: { supabase: SupabaseClient }) {
       addressLine2: emptyToNull(form.addressLine2),
       postalCode: emptyToNull(form.postalCode),
       city: emptyToNull(form.city),
-      countryCode: inferCountryCode(country),
+      countryCode: countryCode ?? inferCountryCode(countryLabel),
     };
   }
 

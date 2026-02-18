@@ -12,6 +12,7 @@ import { inferCountryCode } from "../../../domain/helpers/countries";
 import CountrySelect from "../../../ui/components/forms/CountrySelect";
 import PhoneInput from "../../../ui/components/forms/PhoneInput";
 import { parseE164, buildE164 } from "../../../ui/components/forms/countryPhoneData";
+import { COUNTRY_OPTIONS } from "../../../ui/components/forms/countryPhoneData";
 
 type ProfilePanelProps = {
   profile: AdminProfileForm;
@@ -62,10 +63,17 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
   }
 
   const selectedCountry = useMemo(() => {
-    const c = (profile.country ?? "").trim().toLowerCase();
-    if (!c) return "";
-    return profile.country ?? "";
-  }, [profile.country]);
+  // 1) si on a déjà un label stocké
+  const label = (profile.country ?? "").trim();
+  if (label) return label;
+
+  // 2) sinon, fallback depuis le code
+  const code = (profile.countryCode ?? "").trim().toUpperCase();
+  if (!code) return "";
+
+  const found = COUNTRY_OPTIONS.find((c) => c.iso2.toUpperCase() === code);
+  return found?.label ?? "";
+}, [profile.country, profile.countryCode]);
 
   return (
     <div className="profilePanel">
@@ -129,7 +137,6 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
           <div className="profilePanel__label">Pays</div>
 
           <CountrySelect
-            className="profilePanel__select"
             value={selectedCountry}
             onChange={(countryLabel) => {
               updateField("country", countryLabel || null);

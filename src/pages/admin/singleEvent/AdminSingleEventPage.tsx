@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useOutletContext, useParams, useSearchParams } from "react-router-dom";
+import { useOutletContext, useParams, useSearchParams, useNavigate } from "react-router-dom";
 
 import type { AdminOutletContext } from "./../AdminDashboard";
 import { supabase } from "../../../gateways/supabase/supabaseClient";
@@ -49,6 +49,9 @@ export function AdminSingleEventPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl: TabKey = isTabKey(searchParams.get("tab")) ? (searchParams.get("tab") as TabKey) : "details";
   const [tab, setTab] = useState<TabKey>(tabFromUrl);
+
+  const navigate = useNavigate();
+
 
   useEffect(() => {
     if (tab !== tabFromUrl) setTab(tabFromUrl);
@@ -102,11 +105,21 @@ export function AdminSingleEventPage() {
   }
 
   async function handleConfirmFullPatch(patch: UpdateEventFullPatch): Promise<void> {
-    if (!event?.id) return;
-    const next = await update.updateEvent({ eventId: event.id, patch });
-    if (!next) return;
-    await refreshAll();
+  if (!event?.id) return;
+
+  const next = await update.updateEvent({ eventId: event.id, patch });
+  if (!next) return;
+
+  const nextSlug = (next.slug ?? "").trim();
+  if (nextSlug && nextSlug !== eventSlug) {
+    const sp = new URLSearchParams(searchParams);
+    navigate(`/admin/events/${nextSlug}?${sp.toString()}`, { replace: true });
+    return; 
   }
+
+  await refreshAll();
+}
+
 
   async function uploadEventBanner(file: File): Promise<UploadResult> {
   if (!orgId) throw new Error("ORG_ID_MISSING");

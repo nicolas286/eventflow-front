@@ -41,19 +41,27 @@ async signIn(
 },
 
   async signUp(input: SignupInput): Promise<SignUpResult> {
-    try {
-      const parsed = signupSchema.parse(input); 
-      const { email, password } = parsed;
+  try {
+    const parsed = signupSchema.parse(input);
+    const { email, password } = parsed;
 
-      const { data, error } = await supabase.auth.signUp({ email, password });
-      if (error) throw error;
+    const emailRedirectTo = `${window.location.origin}/admin`; 
 
-      if (!data.session) return { status: "CONFIRMATION_REQUIRED" };
-      return { status: "SIGNED_IN" };
-    } catch (e) {
-      throw normalizeError(e, "Inscription impossible.");
-    }
-  },
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo },
+    });
+
+    if (error) throw error;
+
+    if (!data.session) return { status: "CONFIRMATION_REQUIRED" };
+    return { status: "SIGNED_IN" };
+  } catch (e) {
+    throw normalizeError(e, "Inscription impossible.");
+  }
+},
+
 
   async signOut(): Promise<void> {
     try {

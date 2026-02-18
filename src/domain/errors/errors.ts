@@ -91,7 +91,8 @@ function mapRpcMessageToAppCode(msg: string): AppErrorCode | null {
   if (m === "FORBIDDEN" || /FORBIDDEN/i.test(m)) return "FORBIDDEN";
   if (m === "NOT_FOUND" || /NOT_FOUND/i.test(m)) return "NOT_FOUND";
 
-  if (m === "PLAN_LIMIT_REACHED") return "FORBIDDEN"; // ✅ blocage plan (métier)
+  // ✅ couvre PLAN_LIMIT:, PLAN_LIMIT, PLAN_LIMIT_REACHED, PLAN_LIMIT_...
+  if (/^PLAN_LIMIT\b/i.test(m)) return "FORBIDDEN";
 
   if (/VALIDATION_ERROR/i.test(m) || /VALIDATION\b/i.test(m)) return "VALIDATION";
   if (/CONFLICT/i.test(m)) return "CONFLICT";
@@ -100,20 +101,32 @@ function mapRpcMessageToAppCode(msg: string): AppErrorCode | null {
 }
 
 
+
 function humanBusinessMessage(msg: string): string | null {
   const m = msg.trim();
 
-  // plan / billing
-  if (m === "PLAN_LIMIT_REACHED") {
-    return "Limite de ton abonnement atteinte : tu ne peux plus créer d’événements. Passe sur un plan supérieur pour continuer.";
+  if (/^PLAN_LIMIT\b/i.test(m)) {
+    if (/paid_events_per_year/i.test(m)) {
+      return "Plan gratuit : limite d’événements avec tickets payants atteinte pour cette année. Passe sur Starter pour continuer.";
+    }
+    return "Limite de ton abonnement atteinte. Passe sur un plan supérieur pour continuer.";
   }
 
-  // tu peux en ajouter d’autres au fur et à mesure
   if (m === "FORBIDDEN") return "Accès refusé : tu n’as pas les droits nécessaires.";
   if (m === "NOT_AUTHENTICATED") return "Ta session a expiré. Reconnecte-toi.";
 
   return null;
 }
+
+
+function stripRpcPrefix(raw: string) {
+  return raw
+    .replace(/^VALIDATION_ERROR:\s*/i, "")
+    .replace(/^PLAN_LIMIT:\s*/i, "")
+    .trim();
+}
+
+
 
 
 type SupabaseAuthErrorLike = {
@@ -356,15 +369,15 @@ export function normalizeError(e: unknown, fallbackMessage: string): AppError {
     const status = getFnStatus(e);
     const raw = getFnBodyText(e) ?? (typeof (e as any).message === "string" ? (e as any).message : "");
 
-    const rpcCode = raw ? mapRpcMessageToAppCode(raw) : null;
-    const code = rpcCode ?? mapHttpStatusToAppCode(status);
+   const rpcCode = raw ? mapRpcMessageToAppCode(raw) : null;
+const code = rpcCode ?? mapHttpStatusToAppCode(status);
 
-    const business = raw ? humanBusinessMessage(raw) : null;
-    const validationMsg = raw ? raw.replace(/^VALIDATION_ERROR:\s*/i, "") : "";
+const business = raw ? humanBusinessMessage(raw) : null;
+const cleaned = raw ? stripRpcPrefix(raw) : "";
 
-    const message =
-      business ??
-      (rpcCode ? validationMsg : (raw || fallbackMessage));
+const message = business ?? (rpcCode ? cleaned : (raw || fallbackMessage));
+
+
 
     return new AppError({
       code,
@@ -381,19 +394,16 @@ export function normalizeError(e: unknown, fallbackMessage: string): AppError {
 
    if (isPostgrestError(e)) {
   const rpcCode = mapRpcMessageToAppCode(e.message);
-  const code = rpcCode ?? mapSqlStateToAppCode(e.code);
+const code = rpcCode ?? mapSqlStateToAppCode(e.code);
 
-  // ✅ message humain si business error connue
-  const business = humanBusinessMessage(e.message);
+const business = humanBusinessMessage(e.message);
+const cleaned = stripRpcPrefix(e.message);
 
-  // ✅ validation_error: on enlève le prefix
-  const validationMsg = e.message.replace(/^VALIDATION_ERROR:\s*/i, "");
+const message =
+  business ??
+  (rpcCode ? cleaned : humanDbMessage(e, fallbackMessage));
 
-  const message =
-    business ??
-    (rpcCode
-      ? validationMsg // ex: VALIDATION_ERROR: title too long -> title too long
-      : humanDbMessage(e, fallbackMessage));
+
 
   return new AppError({
     code,

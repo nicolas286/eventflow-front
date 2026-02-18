@@ -61,19 +61,21 @@ export function updateEventProductRepo(supabase: SupabaseClient) {
         return eventProductSchema.parse(snakeToCamel(row));
       }
 
-      const payload = camelToSnake(patchClean);
-
+      const payload = camelToSnake(patchClean) as Record<string, unknown>;
 
       const row = await supabaseSafe(() =>
-        supabase
-          .from("event_products")
-          .update(payload)
-          .eq("id", productId)
-          .select("*")
-          .single()
+        supabase.rpc("update_event_product", {
+          p_input: Object.assign({ product_id: productId }, payload),
+        })
       );
 
-      return eventProductSchema.parse(snakeToCamel(row));
+
+      const updatedRow = await supabaseSafe(() =>
+        supabase.from("event_products").select("*").eq("id", row).single()
+      );
+
+      return eventProductSchema.parse(snakeToCamel(updatedRow));
     },
   };
 }
+

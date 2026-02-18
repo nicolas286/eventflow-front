@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 
-import "../../styles/desktop/onboardingWizard.desktop.css";
-import "../../styles/mobile/onboardingWizard.mobile.css";
+import "../../styles/desktop/OnboardingWizard.desktop.css";
 
 import type { AdminOutletContext } from "../admin/AdminDashboard";
 import { supabase } from "../../gateways/supabase/supabaseClient";
@@ -124,7 +123,7 @@ export default function OnboardingWizard() {
         <div className="onboardingHeader">
           <div>
             <h1>Bienvenue sur EventFlow</h1>
-            <p>Votre organisation est créée. Organisez votre premier événement !</p>
+            <p>Remplissez quelques infos, créez votre organisation et commencez à organiser vos événements !</p>
           </div>
 
         </div>
@@ -193,14 +192,16 @@ export default function OnboardingWizard() {
             </div>
 
             <div className="onboardingRow">
-              <Select label="Type">
-                <option key="Personne physique" value="person">
-                        Personne physique
-                </option>
-                <option key="Personne morale" value="association">
-                        Personne morale
-                </option>
+              <Select
+                label="Type"
+                value={form.orgType}
+                onChange={(e) => set("orgType", e.target.value as WizardForm["orgType"])}
+                disabled={loading}
+              >
+                <option value="person">Personne physique</option>
+                <option value="association">Personne morale</option>
               </Select>
+
             </div>
 
             <Input

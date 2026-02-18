@@ -29,7 +29,6 @@ export function AdminNotices({ bootstrap, className }: Props) {
     isBlank(p.addressLine1) ||
     isBlank(p.postalCode) ||
     isBlank(p.city) ||
-    isBlank(p.country) ||
     isBlank(p.countryCode);
 
     if (addressMissing) {
