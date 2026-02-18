@@ -91,10 +91,8 @@ function mapRpcMessageToAppCode(msg: string): AppErrorCode | null {
   if (m === "FORBIDDEN" || /FORBIDDEN/i.test(m)) return "FORBIDDEN";
   if (m === "NOT_FOUND" || /NOT_FOUND/i.test(m)) return "NOT_FOUND";
 
-    // plan / billing
-  if (m === "PLAN_LIMIT_REACHED") return "FORBIDDEN";
-  if (/^PLAN_LIMIT\b/i.test(m)) return "FORBIDDEN"; // ✅ PLAN_LIMIT: ...
-
+  // ✅ couvre PLAN_LIMIT:, PLAN_LIMIT, PLAN_LIMIT_REACHED, PLAN_LIMIT_...
+  if (/^PLAN_LIMIT\b/i.test(m)) return "FORBIDDEN";
 
   if (/VALIDATION_ERROR/i.test(m) || /VALIDATION\b/i.test(m)) return "VALIDATION";
   if (/CONFLICT/i.test(m)) return "CONFLICT";
@@ -103,28 +101,23 @@ function mapRpcMessageToAppCode(msg: string): AppErrorCode | null {
 }
 
 
+
 function humanBusinessMessage(msg: string): string | null {
   const m = msg.trim();
 
-  // plan / billing
-    // plan / billing
   if (/^PLAN_LIMIT\b/i.test(m)) {
-    // cas précis
     if (/paid_events_per_year/i.test(m)) {
-      return "Plan gratuit : tu as atteint la limite d’événements avec tickets payants sur l’année. Passe sur Starter pour continuer.";
+      return "Plan gratuit : limite d’événements avec tickets payants atteinte pour cette année. Passe sur Starter pour continuer.";
     }
-
-    // fallback générique plan
     return "Limite de ton abonnement atteinte. Passe sur un plan supérieur pour continuer.";
   }
 
-
-  // tu peux en ajouter d’autres au fur et à mesure
   if (m === "FORBIDDEN") return "Accès refusé : tu n’as pas les droits nécessaires.";
   if (m === "NOT_AUTHENTICATED") return "Ta session a expiré. Reconnecte-toi.";
 
   return null;
 }
+
 
 function stripRpcPrefix(raw: string) {
   return raw
@@ -132,6 +125,7 @@ function stripRpcPrefix(raw: string) {
     .replace(/^PLAN_LIMIT:\s*/i, "")
     .trim();
 }
+
 
 
 
@@ -375,13 +369,14 @@ export function normalizeError(e: unknown, fallbackMessage: string): AppError {
     const status = getFnStatus(e);
     const raw = getFnBodyText(e) ?? (typeof (e as any).message === "string" ? (e as any).message : "");
 
-    const rpcCode = raw ? mapRpcMessageToAppCode(raw) : null;
-    const code = rpcCode ?? mapHttpStatusToAppCode(status);
+   const rpcCode = raw ? mapRpcMessageToAppCode(raw) : null;
+const code = rpcCode ?? mapHttpStatusToAppCode(status);
 
-    const business = raw ? humanBusinessMessage(raw) : null;
+const business = raw ? humanBusinessMessage(raw) : null;
+const cleaned = raw ? stripRpcPrefix(raw) : "";
 
-    const cleaned = raw ? stripRpcPrefix(raw) : "";
 const message = business ?? (rpcCode ? cleaned : (raw || fallbackMessage));
+
 
 
     return new AppError({
@@ -399,15 +394,15 @@ const message = business ?? (rpcCode ? cleaned : (raw || fallbackMessage));
 
    if (isPostgrestError(e)) {
   const rpcCode = mapRpcMessageToAppCode(e.message);
-  const code = rpcCode ?? mapSqlStateToAppCode(e.code);
+const code = rpcCode ?? mapSqlStateToAppCode(e.code);
 
-  // ✅ message humain si business error connue
-  const business = humanBusinessMessage(e.message);
+const business = humanBusinessMessage(e.message);
+const cleaned = stripRpcPrefix(e.message);
 
-  const cleaned = stripRpcPrefix(e.message);
 const message =
   business ??
   (rpcCode ? cleaned : humanDbMessage(e, fallbackMessage));
+
 
 
   return new AppError({
