@@ -1,5 +1,9 @@
-// src/ui/components/security/Turnstile.tsx
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+} from "react";
 
 declare global {
   interface Window {
@@ -23,106 +27,121 @@ type Props = {
   onError?: () => void;
   onExpired?: () => void;
   theme?: "light" | "dark" | "auto";
-  size?: "normal" | "compact" | "invisible";
+  size?: "normal" | "compact" | "flexible";
   className?: string;
 };
 
 export const Turnstile = forwardRef<TurnstileRef, Props>(function Turnstile(
-  { siteKey, onToken, onError, onExpired, theme = "auto", size = "normal", className = "" },
+  {
+    siteKey,
+    onToken,
+    onError,
+    onExpired,
+    theme = "auto",
+    size = "normal",
+    className = "",
+  },
   ref
 ) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
-  const [ready, setReady] = useState(false);
+
+  const onTokenRef = useRef(onToken);
+  const onErrorRef = useRef(onError);
+  const onExpiredRef = useRef(onExpired);
+
+  // Sync callback refs
+  useEffect(() => {
+    onTokenRef.current = onToken;
+  }, [onToken]);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
+
+  useEffect(() => {
+    onExpiredRef.current = onExpired;
+  }, [onExpired]);
 
   // Load script once
   useEffect(() => {
-    if (window.turnstile) {
-      setReady(true);
-      return;
-    }
+    if (window.turnstile) return;
 
     const existing = document.querySelector<HTMLScriptElement>(
       'script[src^="https://challenges.cloudflare.com/turnstile/v0/api.js"]'
     );
-    if (existing) {
-      const t = window.setInterval(() => {
-        if (window.turnstile) {
-          window.clearInterval(t);
-          setReady(true);
-        }
-      }, 50);
-      return () => window.clearInterval(t);
-    }
 
-    const s = document.createElement("script");
-    s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-    s.async = true;
-    s.defer = true;
-    s.onload = () => setReady(true);
-    s.onerror = () => {
-      onError?.();
-      setReady(false);
+    if (existing) return;
+
+    const script = document.createElement("script");
+    script.src =
+      "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    script.async = true;
+    script.defer = true;
+
+    script.onerror = () => {
+      onErrorRef.current?.();
     };
-    document.head.appendChild(s);
-  }, [onError]);
 
-  // Render widget once ready
+    document.head.appendChild(script);
+  }, []);
+
+  // Render widget once
   useEffect(() => {
-    const el = containerRef.current;
-    const ts = window.turnstile;
-    if (!ready || !el || !ts) return;
+    const interval = setInterval(() => {
+      const el = containerRef.current;
+      const ts = window.turnstile;
 
-    // Clean previous widget if any
-    if (widgetIdRef.current) {
-      try {
-        ts.remove(widgetIdRef.current);
-      } catch {}
-      widgetIdRef.current = null;
-    }
+      if (!el || !ts) return;
 
-    const widgetId = ts.render(el, {
-      sitekey: siteKey,
-      theme,
-      size,
-      callback: (token: string) => onToken(token),
-      "error-callback": () => onError?.(),
-      "expired-callback": () => onExpired?.(),
-      "timeout-callback": () => onError?.(),
-    });
+      if (widgetIdRef.current) return;
 
-    widgetIdRef.current = widgetId;
+      const widgetId = ts.render(el, {
+        sitekey: siteKey,
+        theme,
+        size,
+        callback: (token: string) => onTokenRef.current?.(token),
+        "error-callback": () => onErrorRef.current?.(),
+        "expired-callback": () => onExpiredRef.current?.(),
+      });
+
+      widgetIdRef.current = widgetId;
+      clearInterval(interval);
+    }, 50);
 
     return () => {
-      const tsCleanup = window.turnstile;
-      if (tsCleanup && widgetIdRef.current) {
+      clearInterval(interval);
+
+      if (window.turnstile && widgetIdRef.current) {
         try {
-          tsCleanup.remove(widgetIdRef.current);
+          window.turnstile.remove(widgetIdRef.current);
         } catch {}
         widgetIdRef.current = null;
       }
     };
-  }, [ready, siteKey, theme, size, onToken, onError, onExpired]);
+  }, [siteKey, theme, size]);
 
   useImperativeHandle(ref, () => ({
     execute() {
       const ts = window.turnstile;
       const id = widgetIdRef.current;
       if (!ts || !id) return;
+
       try {
-        // reset avant execute pour éviter "already executing"
         ts.reset(id);
       } catch {}
+
       try {
         ts.execute(id);
       } catch {
-        onError?.();
+        onErrorRef.current?.();
       }
     },
     reset() {
       const ts = window.turnstile;
       const id = widgetIdRef.current;
       if (!ts || !id) return;
+
       try {
         ts.reset(id);
       } catch {}
