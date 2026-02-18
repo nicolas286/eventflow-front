@@ -79,7 +79,7 @@ const PLAN_DEFS: Record<PlanKey, PlanDef> = {
   starter: {
     key: "starter",
     title: "Starter",
-    price: "11,99 €/mois",
+    price: "15,99 €/mois",
     short: "Pour les petites assos actives.",
     points: [
       "Événements gratuits illimités",
@@ -95,8 +95,8 @@ const PLAN_DEFS: Record<PlanKey, PlanDef> = {
   pro: {
     key: "pro",
     title: "Pro",
-    price: "19,99 €/mois",
-    short: "Pour les organisations qui scale.",
+    price: "25,99 €/mois",
+    short: "Pour les organisations qui scalent.",
     points: [
       "Événements gratuits illimités",
       "Événements payants illimités",
