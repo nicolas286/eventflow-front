@@ -10,6 +10,7 @@ import type {
 } from "../../../domain/models/admin/admin.updateOrgPatch.schema";
 
 import { normalizeError } from "../../../domain/errors/errors";
+import { normalizeWebsite } from "../../../domain/helpers/normalize";
 
 /* ------------------------------------------------------------------ */
 /* Types UI                                                            */
@@ -87,9 +88,11 @@ function buildOrgInfoPatch(
     const iniPhone = toNullableTrimmed(initial.phone);
     if (curPhone !== iniPhone) patch.phone = curPhone;
 
-    const curWeb = toNullableTrimmed(current.website);
-    const iniWeb = toNullableTrimmed(initial.website);
+    const curWeb = normalizeWebsite(current.website);
+    const iniWeb = normalizeWebsite(initial.website);
+
     if (curWeb !== iniWeb) patch.website = curWeb;
+
 
 
   return patch as Omit<UpdateOrgInfoPatch, "orgId">;

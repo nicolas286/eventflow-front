@@ -1,5 +1,6 @@
 import { type DraftField } from "../../features/admin/events/singleEvent/EventRegistrationFormPanel";
 
+
 export function emptyToNull(v: unknown): string | null | undefined {
   if (v === undefined) return undefined;
   if (v === null) return null;
@@ -72,4 +73,24 @@ export function toRows<T>(value: RowsLike<T>): T[] {
 
 export function normalizeContiguousSortOrder(list: DraftField[]) {
   return list.map((f, idx) => ({ ...f, sortOrder: idx + 1 }));
+}
+
+export function toNullableTrimmed(v: string | null | undefined) {
+  if (v === null) return null;
+  const t = v.trim();
+  return t === "" ? null : t;
+}
+
+
+export function normalizeWebsite(input: string | null | undefined): string | null {
+  const value = toNullableTrimmed(input);
+  if (!value) return null;
+
+  // Si déjà http:// ou https:// → on garde
+  if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+
+  // Sinon on force https://
+  return `https://${value}`;
 }
