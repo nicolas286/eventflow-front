@@ -192,14 +192,16 @@ export default function OnboardingWizard() {
             </div>
 
             <div className="onboardingRow">
-              <Select label="Type">
-                <option key="Personne physique" value="person">
-                        Personne physique
-                </option>
-                <option key="Personne morale" value="association">
-                        Personne morale
-                </option>
+              <Select
+                label="Type"
+                value={form.orgType}
+                onChange={(e) => set("orgType", e.target.value as WizardForm["orgType"])}
+                disabled={loading}
+              >
+                <option value="person">Personne physique</option>
+                <option value="association">Personne morale</option>
               </Select>
+
             </div>
 
             <Input
