@@ -147,7 +147,13 @@ export default function Turnstile({
     return () => {
       if (widgetIdRef.current) {
         try {
-          window.turnstile.remove(widgetIdRef.current);
+          const ts = window.turnstile;
+            if (ts && widgetIdRef.current) {
+            try {
+                ts.remove(widgetIdRef.current);
+            } catch {}
+            }
+
         } catch {}
         widgetIdRef.current = null;
       }
