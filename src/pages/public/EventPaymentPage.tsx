@@ -8,6 +8,8 @@ import Container from "../../ui/components/container/Container";
 import Card, { CardBody, CardHeader } from "../../ui/components/card/Card";
 import Button from "../../ui/components/button/Button";
 
+import Turnstile from "../../ui/components/Turnstile";
+
 import { PublicEventHeader } from "./checkout/PublicEventHeader";
 import {
   clearDraft,
@@ -20,9 +22,7 @@ import {
 import "../../styles/desktop/publicCheckoutBase.desktop.css";
 import "../../styles/desktop/eventPaymentPage.desktop.css";
 
-
 import { useRegister } from "../../features/public/register/useRegister";
-
 
 function ensureDraft(orgSlug: string, eventSlug: string): CheckoutDraft {
   const d = loadDraft(orgSlug, eventSlug) as CheckoutDraft;
@@ -60,7 +60,12 @@ export function EventPaymentPage() {
   }, [orgSlug, eventSlug, tick]);
 
   const [buyerEmail, setBuyerEmail] = useState("");
-  const [turnstileToken, setTurnstileToken] = useState("TEST_BYPASS");
+
+  // ✅ Turnstile token réel (invisible)
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileError, setTurnstileError] = useState<string | null>(null);
+
+  const turnstileSiteKey = (import.meta.env.VITE_TURNSTILE_SITEKEY as string | undefined)?.trim() ?? "";
 
   const { register, loading: registering, error: registerError } = useRegister({ supabase });
 
@@ -173,10 +178,15 @@ export function EventPaymentPage() {
     if (attendeesMismatch) return;
 
     const email = buyerEmail.trim();
-    const token = turnstileToken.trim();
+    const token = (turnstileToken ?? "").trim();
 
     if (!email) return;
-    if (!token) return;
+    if (!token) {
+      setTurnstileError("Validation anti-bot manquante. Recharge la page et réessaie.");
+      return;
+    }
+
+    setTurnstileError(null);
 
     const items = picked.map(({ p, qty }) => ({
       eventProductId: p.id,
@@ -202,68 +212,70 @@ export function EventPaymentPage() {
       return;
     }
 
-    const orderId =
-  typeof r?.orderId === "string" ? r.orderId : null;
+    const orderId = typeof r?.orderId === "string" ? r.orderId : null;
 
-const status =
-  typeof r?.status === "string" ? r.status : null;
+    const status = typeof r?.status === "string" ? r.status : null;
 
-const bookingToken =
-  typeof r?.bookingToken === "string" && r.bookingToken.trim()
-    ? r.bookingToken.trim()
-    : null;
+    const bookingToken =
+      typeof r?.bookingToken === "string" && r.bookingToken.trim() ? r.bookingToken.trim() : null;
 
-// ✅ si gratuit => paid => on a (id + token) => page order return
-if (r?.ok === true && status === "paid" && orderId) {
-  clearDraft(orgSlug, eventSlug);
+    // ✅ si gratuit => paid => on a (id + token) => page order return
+    if (r?.ok === true && status === "paid" && orderId) {
+      clearDraft(orgSlug, eventSlug);
 
-  const url = bookingToken
-  ? `/order/${orderId}?token=${encodeURIComponent(bookingToken)}&org=${encodeURIComponent(
-      orgSlug
-    )}&event=${encodeURIComponent(eventSlug)}`
-  : `/order/${orderId}?org=${encodeURIComponent(orgSlug)}&event=${encodeURIComponent(eventSlug)}`;
+      const url = bookingToken
+        ? `/order/${orderId}?token=${encodeURIComponent(bookingToken)}&org=${encodeURIComponent(
+            orgSlug
+          )}&event=${encodeURIComponent(eventSlug)}`
+        : `/order/${orderId}?org=${encodeURIComponent(orgSlug)}&event=${encodeURIComponent(
+            eventSlug
+          )}`;
 
-navigate(url);
-return;
+      navigate(url);
+      return;
+    }
 
-}
+    // ✅ si payant => mollie checkout
+    if (r?.ok === true && status === "awaiting_payment") {
+      const checkoutUrl = r?.checkoutUrl;
 
-// ✅ si payant => mollie checkout
-if (r?.ok === true && status === "awaiting_payment") {
-  const checkoutUrl = r?.checkoutUrl;
+      clearDraft(orgSlug, eventSlug);
 
-  clearDraft(orgSlug, eventSlug);
+      if (typeof checkoutUrl === "string" && checkoutUrl.startsWith("http")) {
+        window.location.assign(checkoutUrl);
+        return;
+      }
 
-  if (typeof checkoutUrl === "string" && checkoutUrl.startsWith("http")) {
-    window.location.assign(checkoutUrl);
-    return;
+      // fallback si checkoutUrl absent (rare) : on tente la page order sans return=1
+      if (orderId) {
+        navigate(
+          `/order/${orderId}?token=${encodeURIComponent(bookingToken ?? "")}&org=${encodeURIComponent(
+            orgSlug
+          )}&event=${encodeURIComponent(eventSlug)}`
+        );
+      }
+      return;
+    }
+
+    // fallback ultime : si on a un orderId on tente de montrer quelque chose
+    if (orderId) {
+      clearDraft(orgSlug, eventSlug);
+      navigate(
+        `/order/${orderId}?token=${encodeURIComponent(bookingToken ?? "")}&org=${encodeURIComponent(
+          orgSlug
+        )}&event=${encodeURIComponent(eventSlug)}`
+      );
+      return;
+    }
   }
 
-  // fallback si checkoutUrl absent (rare) : on tente la page order sans return=1
-  if (orderId) {
-    navigate(
-  `/order/${orderId}?token=${encodeURIComponent(bookingToken)}&org=${encodeURIComponent(
-    orgSlug
-  )}&event=${encodeURIComponent(eventSlug)}`
-);
-
-  }
-  return;
-}
-
-// fallback ultime : si on a un orderId on tente de montrer quelque chose
-if (orderId) {
-  clearDraft(orgSlug, eventSlug);
-  navigate(
-  `/order/${orderId}?token=${encodeURIComponent(bookingToken)}&org=${encodeURIComponent(
-    orgSlug
-  )}&event=${encodeURIComponent(eventSlug)}`
-);
-
-  return;
-}
-
-  }
+  const canPay =
+    picked.length > 0 &&
+    accepted &&
+    !registering &&
+    !attendeesMismatch &&
+    buyerEmail.trim().length > 0 &&
+    (turnstileToken ?? "").trim().length > 0;
 
   return (
     <div className="publicPage">
@@ -285,16 +297,23 @@ if (orderId) {
                   <CardBody>
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                       {picked.map(({ p, qty }) => (
-                        <div key={p.id} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                        <div
+                          key={p.id}
+                          style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
+                        >
                           <div>
                             <div style={{ fontWeight: 800 }}>
                               {p.name} × {qty}
                             </div>
                             <div className="publicSubtitle">
-                              {p.createsAttendees ? `${p.attendeesPerUnit} participant(s) / billet` : "Pas de participant créé"}
+                              {p.createsAttendees
+                                ? `${p.attendeesPerUnit} participant(s) / billet`
+                                : "Pas de participant créé"}
                             </div>
                           </div>
-                          <div style={{ fontWeight: 800 }}>{formatMoney(qty * p.priceCents, p.currency ?? "EUR")}</div>
+                          <div style={{ fontWeight: 800 }}>
+                            {formatMoney(qty * p.priceCents, p.currency ?? "EUR")}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -312,7 +331,8 @@ if (orderId) {
 
                     {attendeesMismatch ? (
                       <div className="publicEmpty" style={{ marginTop: 12 }}>
-                        Oups : le nombre de participants ne correspond pas aux billets sélectionnés. Reviens à l’étape “Participants”.
+                        Oups : le nombre de participants ne correspond pas aux billets sélectionnés. Reviens
+                        à l’étape “Participants”.
                       </div>
                     ) : null}
                   </CardBody>
@@ -339,22 +359,41 @@ if (orderId) {
                         />
                       </div>
 
-                      <div>
-                        <div style={{ fontWeight: 800, marginBottom: 6 }}>Turnstile token (DEV)</div>
-                        <input
-                          value={turnstileToken}
-                          onChange={(e) => setTurnstileToken(e.target.value)}
-                          placeholder='mets "TEST_BYPASS" en dev'
-                          style={{
-                            width: "100%",
-                            padding: "10px 12px",
-                            borderRadius: 12,
-                            border: "1px solid rgba(0,0,0,0.10)",
-                            outline: "none",
-                          }}
-                          disabled={registering}
-                        />
-                      </div>
+                      {/* ✅ Turnstile réel */}
+                      {turnstileSiteKey ? (
+                        <div>
+                          <div style={{ fontWeight: 800, marginBottom: 6 }}>Validation anti-bot</div>
+                          <Turnstile
+                            siteKey={turnstileSiteKey}
+                            onToken={(t) => {
+                              setTurnstileToken(t);
+                              setTurnstileError(null);
+                            }}
+                            onError={() => {
+                              setTurnstileToken(null);
+                              setTurnstileError("Impossible de valider (Turnstile). Réessaie ou recharge la page.");
+                            }}
+                            onExpired={() => {
+                              setTurnstileToken(null);
+                              setTurnstileError("Validation expirée. Recharge la page et réessaie.");
+                            }}
+                          />
+                          {!turnstileToken ? (
+                            <div className="publicSubtitle" style={{ marginTop: 6 }}>
+                              Vérification en cours…
+                            </div>
+                          ) : null}
+                          {turnstileError ? (
+                            <div className="publicEmpty" style={{ marginTop: 10 }}>
+                              {turnstileError}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <div className="publicEmpty">
+                          Turnstile non configuré (VITE_TURNSTILE_SITEKEY manquant).
+                        </div>
+                      )}
 
                       <label style={{ display: "flex", gap: 10, alignItems: "center" }}>
                         <input
@@ -386,18 +425,11 @@ if (orderId) {
                     ? "Validation…"
                     : "Confirmer"
                   : registering
-                    ? "Paiement…"
-                    : "Payer"
+                  ? "Paiement…"
+                  : "Payer"
               }
               onClick={pay}
-              disabled={
-                picked.length === 0 ||
-                !accepted ||
-                registering ||
-                attendeesMismatch ||
-                buyerEmail.trim().length === 0 ||
-                turnstileToken.trim().length === 0
-              }
+              disabled={!canPay}
             />
           </div>
         </div>
