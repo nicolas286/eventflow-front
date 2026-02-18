@@ -729,4 +729,51 @@
 /* Chaque champ prend toute la largeur de sa cellule */
 .adminAttendeeFieldItem {
   min-width: 0;
+
+}  
+.adminAttendeeFieldsGrid{
+  display:grid;
+  gap:14px;
+  grid-template-columns: 1fr;
 }
+
+@media (min-width: 900px){
+  .adminAttendeeFieldsGrid{
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+}
+
+/* assure que les champs CO shrink bien dans la grid */
+.adminAttendeeFieldsGrid .adminCO_Field{
+  min-width:0;
+}
+.adminAttendeeFieldsGrid .adminCO_Control{
+  width:100%;
+  box-sizing:border-box;
+}
+
+.adminFormField{ display:grid; gap:8px; min-width:0; }
+.adminFormLabel{ font-weight:900; font-size:12px; color:#111827; }
+.adminFormReq{ opacity:.7; font-weight:900; margin-left:6px; }
+
+.adminFormControl{
+  width:100%;
+  box-sizing:border-box;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(0,0,0,0.14);
+  background:#fff;
+  font-weight:800;
+  font-size:13px;
+  outline:none;
+}
+.adminFormControl:focus{
+  border-color: rgba(var(--primary-bg) / 0.55);
+  box-shadow: 0 0 0 3px rgba(var(--primary-bg) / 0.14);
+}
+
+.adminFormTextarea{ min-height: 92px; resize: vertical; }
+
+.adminFormCheckRow{ display:flex; align-items:flex-start; gap:10px; }
+.adminFormCheckbox{ margin-top:2px; }
+.adminFormCheckText{ font-weight:800; font-size:13px; color:#111827; }
