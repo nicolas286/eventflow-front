@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 
-import "../../styles/desktop/onboardingWizard.desktop.css";
-import "../../styles/mobile/onboardingWizard.mobile.css";
+import "../../styles/desktop/OnboardingWizard.desktop.css";
 
 import type { AdminOutletContext } from "../admin/AdminDashboard";
 import { supabase } from "../../gateways/supabase/supabaseClient";
