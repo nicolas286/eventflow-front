@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
+import { z } from "zod";
 
 import "../../styles/desktop/OnboardingWizard.desktop.css";
 
@@ -19,13 +20,16 @@ import CountrySelect from "../../ui/components/forms/CountrySelect";
 import PhoneInput from "../../ui/components/forms/PhoneInput";
 import { parseE164, buildE164 } from "../../ui/components/forms/countryPhoneData";
 
+import { MessageBox } from "../../ui/components/message/MessageBox";
+import { useLiveForm } from "../../features/public/useLiveZodForm";
+
 type WizardForm = {
   firstName: string;
   lastName: string;
 
   // UI
-  phone: string; // E164 (ou "")
-  countryLabel: string; // "Belgique"
+  phone: string; // ce que renvoie PhoneInput (parfois national, parfois e164 selon ton composant)
+  countryLabel: string;
 
   // org
   orgType: CreateOrganizationForm["type"];
@@ -40,15 +44,71 @@ function toNullIfEmpty(v: string): string | null {
   return s ? s : null;
 }
 
+// ✅ e164 strict: + puis 7..15 digits (E.164 max 15)
+function isValidE164(e164: string) {
+  return /^\+\d{7,15}$/.test(e164);
+}
+
+/* -------------------- ZOD -------------------- */
+
+const wizardSchema = z.object({
+  firstName: z.string().trim().min(2, "Prénom trop court").max(120, "Prénom trop long"),
+  lastName: z.string().trim().min(2, "Nom trop court").max(120, "Nom trop long"),
+
+  phone: z
+    .string()
+    .trim()
+    .max(40, "Téléphone trop long")
+    .refine(
+      (v) => {
+        if (!v) return true; // optionnel
+
+        // On reconstruit un E164 “propre” depuis ton parser
+        const p = parseE164(v);
+        const e164 = buildE164(p.dial || "+32", p.national);
+
+        // ✅ avant tu faisais juste “return !!e164”
+        // => "+32ffddd" passait. Là non.
+        return isValidE164(e164);
+      },
+      { message: "Téléphone invalide" },
+    ),
+
+  countryLabel: z.string().trim().min(1, "Pays requis").max(120, "Pays invalide"),
+
+  orgType: z.enum(["person", "association"], { message: "Type requis" }),
+  orgName: z.string().trim().min(3, "Nom d’organisation trop court").max(120, "Nom d’organisation trop long"),
+});
+
+const step1Keys: (keyof WizardForm)[] = ["firstName", "lastName", "phone", "countryLabel"];
+
+const step1Schema = wizardSchema.pick({
+  firstName: true,
+  lastName: true,
+  phone: true,
+  countryLabel: true,
+});
+
+const step2Schema = wizardSchema.pick({
+  orgType: true,
+  orgName: true,
+});
+
 export default function OnboardingWizard() {
   const navigate = useNavigate();
   const { bootstrap, refetch } = useOutletContext<AdminOutletContext>();
 
   const userId = bootstrap?.profile?.userId ?? null;
 
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState<1 | 2>(1);
 
-  const [form, setForm] = useState<WizardForm>({
+  const saveProfile = useSaveAdminProfile({ supabase });
+  const createOrg = useCreateOrganization({ supabase });
+
+  const loading = saveProfile.loading || createOrg.loading;
+  const error = saveProfile.error || createOrg.error;
+
+  const live = useLiveForm<WizardForm>(wizardSchema, {
     firstName: "",
     lastName: "",
     phone: "",
@@ -57,62 +117,75 @@ export default function OnboardingWizard() {
     orgName: "",
   });
 
-  const saveProfile = useSaveAdminProfile({ supabase });
-  const createOrg = useCreateOrganization({ supabase });
-
-  const loading = saveProfile.loading || createOrg.loading;
-  const error = saveProfile.error || createOrg.error;
-
-  function set<K extends keyof WizardForm>(key: K, value: WizardForm[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  }
+  const { form, fieldErrors, handleChange, handleBlur, shouldShowFieldError, touchAll, validateAll } = live;
 
   const canGoNext = useMemo(() => {
+    if (step === 1) return step1Schema.safeParse(form).success;
+    return step2Schema.safeParse(form).success;
+  }, [step, form]);
+
+  function goNext() {
     if (step === 1) {
-      return t(form.firstName).length >= 2 && t(form.lastName).length >= 2;
+      // même pattern que vos autres panels
+      touchAll(step1Keys);
+
+      // IMPORTANT: touchAll ne valide pas les champs vides tant qu’il n’y a pas eu blur/change
+      // donc on force le blur (qui valide) sur les champs du step
+      handleBlur("firstName");
+      handleBlur("lastName");
+      handleBlur("phone");
+      handleBlur("countryLabel");
+
+      const ok = step1Schema.safeParse(form).success;
+      if (!ok) return;
+
+      setStep(2);
+      return;
     }
-    if (step === 2) {
-      return t(form.orgName).length >= 3;
-    }
-    return true;
-  }, [step, form.firstName, form.lastName, form.orgName]);
+
+    onSubmitFinal();
+  }
+
+  function goPrev() {
+    if (loading) return;
+    setStep(1);
+  }
 
   async function onSubmitFinal() {
     if (!userId) return;
 
+    touchAll(["firstName", "lastName", "phone", "countryLabel", "orgType", "orgName"]);
+
+    const parsed = validateAll();
+    if (!parsed.ok) return;
+
     // téléphone => e164 clean (sans espaces)
-    const p = parseE164(form.phone || null);
+    const p = parseE164(parsed.data.phone || null);
     const phoneE164 = buildE164(p.dial || "+32", p.national);
 
-    // 1) profile
     const profileForm: AdminProfileForm = {
       userId,
-      firstName: toNullIfEmpty(form.firstName),
-      lastName: toNullIfEmpty(form.lastName),
-      phone: phoneE164 || null,
+      firstName: toNullIfEmpty(parsed.data.firstName),
+      lastName: toNullIfEmpty(parsed.data.lastName),
+      phone: phoneE164 && isValidE164(phoneE164) ? phoneE164 : null,
 
       addressLine1: null,
       addressLine2: null,
       postalCode: null,
       city: null,
 
-      countryCode: inferCountryCode(form.countryLabel),
+      countryCode: inferCountryCode(parsed.data.countryLabel),
     };
 
-    const saved = await saveProfile.saveAdminProfile({
-      userId,
-      form: profileForm,
-    });
+    const saved = await saveProfile.saveAdminProfile({ userId, form: profileForm });
     if (!saved) return;
 
-    // 2) org
     const createdOrgId = await createOrg.createOrganization({
-      type: form.orgType,
-      name: t(form.orgName),
+      type: parsed.data.orgType,
+      name: t(parsed.data.orgName),
     });
     if (!createdOrgId) return;
 
-    // 3) refresh + redirect
     await refetch();
     navigate("/admin");
   }
@@ -125,7 +198,6 @@ export default function OnboardingWizard() {
             <h1>Bienvenue sur EventFlow</h1>
             <p>Remplissez quelques infos, créez votre organisation et commencez à organiser vos événements !</p>
           </div>
-
         </div>
 
         {error ? <div className="onboardingError">{error}</div> : null}
@@ -138,48 +210,67 @@ export default function OnboardingWizard() {
             </div>
 
             <div className="onboardingGrid2">
-              <Input
-                label="Prénom"
-                placeholder="Votre prénom"
-                value={form.firstName}
-                onChange={(e) => set("firstName", e.target.value)}
-                disabled={loading}
-                required
-              />
+              <div>
+                <Input
+                  label="Prénom"
+                  placeholder="Votre prénom"
+                  value={form.firstName}
+                  onChange={(e) => handleChange("firstName", e.target.value)}
+                  onBlur={() => handleBlur("firstName")}
+                  disabled={loading}
+                  required
+                />
+                {shouldShowFieldError("firstName") && fieldErrors.firstName ? (
+                  <MessageBox variant="error">{fieldErrors.firstName}</MessageBox>
+                ) : null}
+              </div>
 
-              <Input
-                label="Nom"
-                placeholder="Votre nom"
-                value={form.lastName}
-                onChange={(e) => set("lastName", e.target.value)}
-                disabled={loading}
-                required
-              />
+              <div>
+                <Input
+                  label="Nom"
+                  placeholder="Votre nom"
+                  value={form.lastName}
+                  onChange={(e) => handleChange("lastName", e.target.value)}
+                  onBlur={() => handleBlur("lastName")}
+                  disabled={loading}
+                  required
+                />
+                {shouldShowFieldError("lastName") && fieldErrors.lastName ? (
+                  <MessageBox variant="error">{fieldErrors.lastName}</MessageBox>
+                ) : null}
+              </div>
             </div>
 
             <div className="onboardingGrid2">
               {/* Téléphone */}
-              <div>
+              <div
+                // ✅ assure qu’on “touche” même si PhoneInput ne déclenche pas un blur propre
+                onBlurCapture={() => handleBlur("phone")}
+              >
                 <PhoneInput
                   label="Téléphone (optionnel)"
                   value={form.phone}
-                  onChange={(v) => set("phone", v)}
+                  onChange={(v) => handleChange("phone", v)}
                   required={false}
                 />
+                {shouldShowFieldError("phone") && fieldErrors.phone ? (
+                  <MessageBox variant="error">{fieldErrors.phone}</MessageBox>
+                ) : null}
               </div>
 
               {/* Pays */}
-              <div>
+              <div onBlurCapture={() => handleBlur("countryLabel")}>
                 <CountrySelect
                   label="Pays"
                   value={form.countryLabel}
-                  onChange={(v) => set("countryLabel", v || "")}
+                  onChange={(v) => handleChange("countryLabel", v || "")}
                   required
                 />
+                {shouldShowFieldError("countryLabel") && fieldErrors.countryLabel ? (
+                  <MessageBox variant="error">{fieldErrors.countryLabel}</MessageBox>
+                ) : null}
               </div>
             </div>
-
-          
           </div>
         )}
 
@@ -192,28 +283,39 @@ export default function OnboardingWizard() {
             </div>
 
             <div className="onboardingRow">
-              <Select
-                label="Type"
-                value={form.orgType}
-                onChange={(e) => set("orgType", e.target.value as WizardForm["orgType"])}
-                disabled={loading}
-              >
-                <option value="person">Personne physique</option>
-                <option value="association">Personne morale</option>
-              </Select>
+              <div>
+                <Select
+                  label="Type"
+                  value={form.orgType}
+                  onChange={(e) => handleChange("orgType", e.target.value as WizardForm["orgType"])}
+                  onBlur={() => handleBlur("orgType")}
+                  disabled={loading}
+                >
+                  <option value="person">Personne physique</option>
+                  <option value="association">Personne morale</option>
+                </Select>
 
+                {shouldShowFieldError("orgType") && fieldErrors.orgType ? (
+                  <MessageBox variant="error">{fieldErrors.orgType}</MessageBox>
+                ) : null}
+              </div>
             </div>
 
-            <Input
-              label="Nom de l’organisation"
-              placeholder="Ex: Maison des Jeunes de…"
-              value={form.orgName}
-              onChange={(e) => set("orgName", e.target.value)}
-              disabled={loading}
-            />
+            <div>
+              <Input
+                label="Nom de l’organisation"
+                placeholder="Ex: Maison des Jeunes de…"
+                value={form.orgName}
+                onChange={(e) => handleChange("orgName", e.target.value)}
+                onBlur={() => handleBlur("orgName")}
+                disabled={loading}
+              />
+              {shouldShowFieldError("orgName") && fieldErrors.orgName ? (
+                <MessageBox variant="error">{fieldErrors.orgName}</MessageBox>
+              ) : null}
+            </div>
           </div>
         )}
-
 
         {/* -------------------- ACTIONS -------------------- */}
         <div className="onboardingActionsBar">
@@ -223,29 +325,15 @@ export default function OnboardingWizard() {
 
           <div className="onboardingActions">
             {step > 1 ? (
-              <Button
-                variant="secondary"
-                label="Précédent"
-                onClick={() => setStep((s) => s - 1)}
-                disabled={loading}
-              />
+              <Button variant="secondary" label="Précédent" onClick={goPrev} disabled={loading} />
             ) : null}
 
-            {step < 3 ? (
-              <Button
-                variant="primary"
-                label="Suivant"
-                onClick={() => setStep((s) => s + 1)}
-                disabled={loading || !canGoNext}
-              />
-            ) : (
-              <Button
-                variant="primary"
-                label={loading ? "Création…" : "Terminer"}
-                onClick={onSubmitFinal}
-                disabled={loading || !canGoNext || !userId}
-              />
-            )}
+            <Button
+              variant="primary"
+              label={step === 2 ? (loading ? "Création…" : "Terminer") : "Suivant"}
+              onClick={goNext}
+              disabled={loading || !canGoNext || (step === 2 && !userId)}
+            />
           </div>
         </div>
       </div>
