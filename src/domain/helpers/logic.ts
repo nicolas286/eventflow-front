@@ -1,5 +1,5 @@
 import type { EventProduct } from "../models/db/db.eventProducts.schema";
-import type { OrderStatus } from "../../pages/public/OrderReturnPage";
+import type { OrderStatus } from "../../pages/public/OrderPage";
 
 
 function toFiniteInt(v: unknown, fallback = 0) {
