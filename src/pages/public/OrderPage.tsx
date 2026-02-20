@@ -329,7 +329,7 @@ export function OrderPage() {
               <span className="orderReturnSpinner" aria-hidden="true" />
               <div>
                 <div className="orderReturnLoadingTitle">Chargement…</div>
-                <div className="orderReturnLoadingSub">Récupération de ta commande</div>
+                <div className="orderReturnLoadingSub">Récupération de votre commande</div>
               </div>
             </div>
           </div>
