@@ -19,6 +19,7 @@ export const organizationProfileSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   defaultEventBannerUrl: z.string().min(5, "L'URL de la bannière est trop courte").max(2048, "L'URL de la bannière est trop longue").nullable(),
+  emailReminderDaysBefore: z.number().int().min(0, "Le nombre de jours doit être positif").max(365, "Le nombre de jours est trop grand").nullable(),
 });
 
 export type OrganizationProfile = z.infer<typeof organizationProfileSchema>;
