@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Navigate, useNavigate, useParams, useSearchParams, type To } from "react-router-dom";
+import { Navigate, useParams, useSearchParams } from "react-router-dom";
 
 import { supabase } from "../../gateways/supabase/supabaseClient";
 import { usePublicEventDetail } from "../../features/admin/hooks/usePublicEventDetail";
