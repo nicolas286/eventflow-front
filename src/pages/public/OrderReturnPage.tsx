@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams, useSearchParams, type To } from "react-router-dom";
 
 import { supabase } from "../../gateways/supabase/supabaseClient";
@@ -46,11 +46,7 @@ export type OrderPublic = {
   items?: OrderItemPublic[];
 };
 
-/**
- * ✅ Pour cette page retour PSP, on considère "partially_paid" comme un état final + succès.
- * (sinon tu restes coincé en "Validation du paiement…")
- */
-function isFinalForReturn(status: OrderStatus) {
+function isFinalStatus(status: OrderStatus) {
   return (
     status === "paid" ||
     status === "partially_paid" ||
@@ -60,8 +56,12 @@ function isFinalForReturn(status: OrderStatus) {
   );
 }
 
-function isSuccessForReturn(status: OrderStatus) {
+function isSuccessStatus(status: OrderStatus) {
   return status === "paid" || status === "partially_paid";
+}
+
+function isFailureStatus(status: OrderStatus) {
+  return status === "failed" || status === "canceled" || status === "expired";
 }
 
 async function fetchOrder(orderId: string, token: string): Promise<OrderPublic> {
@@ -106,12 +106,19 @@ async function fetchOrder(orderId: string, token: string): Promise<OrderPublic> 
   };
 }
 
-export function OrderReturnPage() {
+/**
+ * ✅ Page "Commande" permanente.
+ * - Accessible via lien mail (orderId + token)
+ * - Le mode ?return=1 active un polling agressif (retour PSP)
+ * - On n'auto-redirect plus : le récap est toujours visible
+ */
+export function OrderPage() {
   const { orderId } = useParams<{ orderId: string }>();
+  
   const [search] = useSearchParams();
   const navigate = useNavigate();
 
-  /* ---------------- Query params (no useMemo: search ref not stable) ---------------- */
+  /* ---------------- Query params ---------------- */
 
   const isReturn = search.get("return") === "1";
   const bookingToken = search.get("token") ?? search.get("bookingToken") ?? null;
@@ -125,14 +132,10 @@ export function OrderReturnPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const intervalRef = useRef<number | null>(null);
   const timeoutRef = useRef<number | null>(null);
-
-  const verifying = useMemo(() => {
-    if (!isReturn) return false;
-    if (!order) return true;
-    return !isFinalForReturn(order.status);
-  }, [isReturn, order]);
 
   const orgSlug = useMemo(
     () => order?.orgSlug ?? orgSlugFromQuery ?? null,
@@ -156,32 +159,76 @@ export function OrderReturnPage() {
     return "/";
   }, [orgSlug, eventSlug]);
 
-  /* ---------------- Polling paiement (retour PSP) ---------------- */
+  /* ---------------- Fetch helpers ---------------- */
+
+  const stopPolling = useCallback(() => {
+    if (intervalRef.current) window.clearInterval(intervalRef.current);
+    if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
+    intervalRef.current = null;
+    timeoutRef.current = null;
+  }, []);
+
+  const loadOnce = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!orderId || !bookingToken) return;
+
+      const silent = opts?.silent ?? false;
+
+      let cancelled = false;
+      const cancel = () => {
+        cancelled = true;
+      };
+
+      try {
+        if (!silent) setIsRefreshing(true);
+
+        const o = await fetchOrder(orderId, bookingToken);
+        if (cancelled) return;
+
+        setOrder(o);
+        setError(null);
+        setLoading(false);
+
+        // si c'est final, aucun intérêt de poll
+        if (isFinalStatus(o.status)) stopPolling();
+      } catch {
+        if (cancelled) return;
+
+        setLoading(false);
+        setError("Impossible de charger la commande.");
+      } finally {
+        if (!silent) setIsRefreshing(false);
+      }
+
+      return cancel;
+    },
+    [orderId, bookingToken, stopPolling],
+  );
+
+  /* ---------------- Initial load + polling retour PSP ---------------- */
 
   useEffect(() => {
     if (!orderId || !bookingToken) return;
 
-    const safeOrderId = orderId;
-    const safeToken = bookingToken;
-
     let cancelled = false;
 
-    function stopPolling() {
-      if (intervalRef.current) window.clearInterval(intervalRef.current);
-      if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
-      intervalRef.current = null;
-      timeoutRef.current = null;
+    function safeSetOrder(o: OrderPublic) {
+      if (cancelled) return;
+      setOrder(o);
     }
 
-    async function loadOnce() {
-      try {
-        const o = await fetchOrder(safeOrderId, safeToken);
+    async function firstLoad() {
+      
+        if (!orderId || !bookingToken) return;
+        try {
+        
+        const o = await fetchOrder(orderId, bookingToken);
         if (cancelled) return;
-        setOrder(o);
+        safeSetOrder(o);
+        setError(null);
         setLoading(false);
 
-        // ✅ si c'est déjà final dès le 1er fetch, on coupe direct
-        if (isFinalForReturn(o.status)) stopPolling();
+        if (isFinalStatus(o.status)) stopPolling();
       } catch {
         if (cancelled) return;
         setError("Impossible de charger la commande.");
@@ -190,18 +237,20 @@ export function OrderReturnPage() {
     }
 
     async function poll() {
+      if (!orderId || !bookingToken) return;
       try {
-        const o = await fetchOrder(safeOrderId, safeToken);
+        const o = await fetchOrder(orderId, bookingToken);
         if (cancelled) return;
-        setOrder(o);
-        if (isFinalForReturn(o.status)) stopPolling();
+        safeSetOrder(o);
+        if (isFinalStatus(o.status)) stopPolling();
       } catch {
         // tolère (réseau / edge)
       }
     }
 
-    loadOnce();
+    firstLoad();
 
+    // mode retour PSP : poll agressif, sinon on ne poll pas automatiquement
     if (isReturn) {
       intervalRef.current = window.setInterval(poll, 1500);
       timeoutRef.current = window.setTimeout(() => stopPolling(), 30_000);
@@ -213,57 +262,48 @@ export function OrderReturnPage() {
       cancelled = true;
       stopPolling();
     };
-  }, [orderId, bookingToken, isReturn]);
+  }, [orderId, bookingToken, isReturn, stopPolling]);
 
-  /* ---------------- Countdown auto-retour (React 19 safe) ---------------- */
+  /* ---------------- Derived UI states ---------------- */
 
-  const [now, setNow] = useState(() => Date.now());
-  const [paidStart, setPaidStart] = useState<number | null>(null);
-  const navigatedRef = useRef(false);
+  const statusPill = useMemo(() => {
+    if (!order) return null;
 
-  useEffect(() => {
-    let alive = true;
+    if (isReturn && !isFinalStatus(order.status)) {
+      return { kind: "loading" as const, label: "Validation du paiement…" };
+    }
 
-    if (!order || !isSuccessForReturn(order.status)) {
-      navigatedRef.current = false;
-      queueMicrotask(() => {
-        if (alive) setPaidStart(null);
-      });
-      return () => {
-        alive = false;
+    if (isSuccessStatus(order.status)) {
+      return {
+        kind: "success" as const,
+        label: order.status === "paid" ? "Paiement confirmé ✅" : "Acompte reçu ✅",
       };
     }
 
-    const id = window.setInterval(() => {
-      const t = Date.now();
-      setNow(t);
-
-      // initialise paidStart au premier tick seulement
-      setPaidStart((prev) => (prev == null ? t : prev));
-    }, 1000);
-
-    return () => {
-      alive = false;
-      window.clearInterval(id);
-    };
-  }, [order?.status]);
-
-  const countdown = useMemo(() => {
-    if (!order || !isSuccessForReturn(order.status)) return null;
-    if (paidStart == null) return 10;
-
-    const elapsed = Math.floor((now - paidStart) / 1000);
-    return Math.max(0, 10 - elapsed);
-  }, [order?.status, now, paidStart, order]);
-
-  useEffect(() => {
-    if (order && isSuccessForReturn(order.status) && countdown === 0 && !navigatedRef.current) {
-      navigatedRef.current = true;
-      navigate(backUrl as To, { replace: true });
+    if (isFailureStatus(order.status)) {
+      return { kind: "warn" as const, label: "Paiement non abouti" };
     }
-  }, [order?.status, countdown, navigate, backUrl, order]);
 
-  /* ---------------- Guards / UI ---------------- */
+    return { kind: "info" as const, label: "Commande en cours" };
+  }, [order, isReturn]);
+
+  const subtitle = useMemo(() => {
+    if (!order) return null;
+
+    if (isSuccessStatus(order.status)) {
+      return order.status === "paid"
+        ? "Ta commande est bien enregistrée."
+        : "Ton acompte est bien enregistré. Tu pourras compléter le paiement plus tard.";
+    }
+
+    if (isFailureStatus(order.status)) {
+      return `Statut : ${order.status}`;
+    }
+
+    return `Statut : ${order.status}`;
+  }, [order]);
+
+  /* ---------------- Guards ---------------- */
 
   if (!orderId) return <Navigate to="/" replace />;
 
@@ -304,7 +344,7 @@ export function OrderReturnPage() {
     );
   }
 
-  if (error) {
+  if (error && !order) {
     return (
       <div className="publicPage">
         <Container>
@@ -313,6 +353,9 @@ export function OrderReturnPage() {
               <CardBody>
                 <h2 className="orderReturnTitle">Erreur</h2>
                 <p className="orderReturnSubtitle">{error}</p>
+                <div className="orderReturnFooter" style={{ justifyContent: "center" }}>
+                  <Button onClick={() => loadOnce()}>Réessayer</Button>
+                </div>
               </CardBody>
             </Card>
           </div>
@@ -329,6 +372,9 @@ export function OrderReturnPage() {
             <Card className="orderReturnCard">
               <CardBody>
                 <h2 className="orderReturnTitle">Commande introuvable</h2>
+                <div className="orderReturnFooter" style={{ justifyContent: "center" }}>
+                  <Button onClick={() => loadOnce()}>Rafraîchir</Button>
+                </div>
               </CardBody>
             </Card>
           </div>
@@ -340,6 +386,15 @@ export function OrderReturnPage() {
   const orgForHeader = eventData?.org;
   const eventForHeader = eventData?.event ?? null;
 
+  const pillClass =
+    statusPill?.kind === "success"
+      ? "orderReturnStatusPill orderReturnSuccess"
+      : statusPill?.kind === "warn"
+        ? "orderReturnStatusPill orderReturnWarn"
+        : statusPill?.kind === "loading"
+          ? "orderReturnStatusPill"
+          : "orderReturnStatusPill";
+
   return (
     <div className="publicPage">
       <Container>
@@ -348,130 +403,101 @@ export function OrderReturnPage() {
         ) : null}
 
         <div className="orderReturnCenter">
-          {verifying ? (
-            <Card className="orderReturnCard">
-              <CardBody>
-                <div className="orderReturnLoading">
+          <Card className="orderReturnCard">
+            <CardBody>
+              {statusPill ? <div className={pillClass}>{statusPill.label}</div> : null}
+
+              <h2 className="orderReturnTitle">
+                {isSuccessStatus(order.status) ? "Merci !" : "Récapitulatif de la commande"}
+              </h2>
+
+              <p className="orderReturnSubtitle">{subtitle}</p>
+
+              {isReturn && !isFinalStatus(order.status) ? (
+                <div className="orderReturnLoading" style={{ marginTop: 10 }}>
                   <span className="orderReturnSpinner" aria-hidden="true" />
                   <div>
-                    <div className="orderReturnLoadingTitle">Validation du paiement…</div>
                     <div className="orderReturnLoadingSub">
                       Cela peut prendre quelques secondes. Statut : <strong>{order.status}</strong>
                     </div>
                   </div>
                 </div>
+              ) : null}
 
-                {orgSlug && eventSlug && eventLoading ? (
-                  <div className="orderReturnHint">Chargement des infos de l’événement…</div>
-                ) : null}
-              </CardBody>
-            </Card>
-          ) : null}
+              {orgSlug && eventSlug && eventLoading ? (
+                <div className="orderReturnHint">Chargement des infos de l’événement…</div>
+              ) : null}
 
-          {!verifying && isSuccessForReturn(order.status) ? (
-            <Card className="orderReturnCard">
-              <CardBody>
-                <div className="orderReturnStatusPill orderReturnSuccess">
-                  {order.status === "paid" ? "Paiement réussi ✅" : "Acompte reçu ✅"}
+              {/* --------- Détails commande --------- */}
+              <div className="orderReturnSection">
+                <div className="orderReturnSectionTitle">Détail de la commande</div>
+
+                <div className="orderReturnMeta">
+                  <div>
+                    <span className="orderReturnLabel">Commande :</span>
+                    <span className="orderReturnStrong">{order.id}</span>
+                  </div>
+
+                  {order.buyerEmail ? (
+                    <div>
+                      <span className="orderReturnLabel">Email :</span>
+                      <span className="orderReturnStrong">{order.buyerEmail}</span>
+                    </div>
+                  ) : null}
+
+                  <div>
+                    <span className="orderReturnLabel">Statut :</span>
+                    <span className="orderReturnStrong">{order.status}</span>
+                  </div>
+
+                  <div>
+                    <span className="orderReturnLabel">Total :</span>
+                    <span className="orderReturnStrong">
+                      {formatMoney(order.totalCents, order.currency)}
+                    </span>
+                  </div>
                 </div>
+              </div>
 
-                <h2 className="orderReturnTitle">Merci !</h2>
-                <p className="orderReturnSubtitle">
-                  {order.status === "paid"
-                    ? "Ta commande est bien enregistrée."
-                    : "Ton acompte est bien enregistré. Tu pourras compléter le paiement plus tard."}
-                </p>
-
+              {/* --------- Articles --------- */}
+              {order.items?.length ? (
                 <div className="orderReturnSection">
-                  <div className="orderReturnSectionTitle">Détail de la commande</div>
-
-                  <div className="orderReturnMeta">
-                    <div>
-                      <span className="orderReturnLabel">Commande :</span>
-                      <span className="orderReturnStrong">{order.id}</span>
-                    </div>
-
-                    {order.buyerEmail ? (
-                      <div>
-                        <span className="orderReturnLabel">Email :</span>
-                        <span className="orderReturnStrong">{order.buyerEmail}</span>
-                      </div>
-                    ) : null}
-
-                    <div>
-                      <span className="orderReturnLabel">Total :</span>
-                      <span className="orderReturnStrong">
-                        {formatMoney(order.totalCents, order.currency)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {order.items?.length ? (
-                  <div className="orderReturnSection">
-                    <div className="orderReturnSectionTitle">Articles</div>
-                    <div className="orderReturnItems">
-                      {order.items.map((it, idx) => (
-                        <div key={idx} className="orderReturnItemRow">
-                          <div className="orderReturnItemLeft">
-                            <div className="orderReturnItemName">{it.name ?? "Article"}</div>
-                            <div className="orderReturnItemQty">Quantité : {it.quantity ?? 1}</div>
-                          </div>
-                          <div className="orderReturnItemPrice">
-                            {formatMoney(
-                              it.totalCents ?? (it.unitPriceCents ?? 0) * (it.quantity ?? 1),
-                              it.currency ?? order.currency,
-                            )}
-                          </div>
+                  <div className="orderReturnSectionTitle">Articles</div>
+                  <div className="orderReturnItems">
+                    {order.items.map((it, idx) => (
+                      <div key={idx} className="orderReturnItemRow">
+                        <div className="orderReturnItemLeft">
+                          <div className="orderReturnItemName">{it.name ?? "Article"}</div>
+                          <div className="orderReturnItemQty">Quantité : {it.quantity ?? 1}</div>
                         </div>
-                      ))}
-                    </div>
+                        <div className="orderReturnItemPrice">
+                          {formatMoney(
+                            it.totalCents ?? (it.unitPriceCents ?? 0) * (it.quantity ?? 1),
+                            it.currency ?? order.currency,
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ) : null}
-
-                <div className="orderReturnFooter">
-                  <div className="orderReturnCountdown">
-                    Retour automatique dans{" "}
-                    <span className="orderReturnStrong">{countdown ?? 10}s</span>
-                  </div>
-
-                  <Button onClick={() => navigate(backUrl as To, { replace: true })}>
-                    Retour maintenant
-                  </Button>
                 </div>
-              </CardBody>
-            </Card>
-          ) : null}
+              ) : null}
 
-          {!verifying &&
-          (order.status === "failed" || order.status === "canceled" || order.status === "expired") ? (
-            <Card className="orderReturnCard">
-              <CardBody>
-                <div className="orderReturnStatusPill orderReturnWarn">Paiement non abouti</div>
-                <h2 className="orderReturnTitle">Oups…</h2>
-                <p className="orderReturnSubtitle">Statut : {order.status}</p>
-                <div className="orderReturnFooter" style={{ justifyContent: "center" }}>
-                  <Button onClick={() => navigate(backUrl as To, { replace: true })}>
-                    Retour à l’organisation
-                  </Button>
-                </div>
-              </CardBody>
-            </Card>
-          ) : null}
+              {/* --------- Footer actions --------- */}
+              <div className="orderReturnFooter" style={{ gap: 10, flexWrap: "wrap" }}>
+                <Button onClick={() => loadOnce({ silent: false })} disabled={isRefreshing}>
+                  {isRefreshing ? "Rafraîchissement…" : "Rafraîchir"}
+                </Button>
 
-          {!verifying &&
-          order.status !== "paid" &&
-          order.status !== "partially_paid" &&
-          order.status !== "failed" &&
-          order.status !== "canceled" &&
-          order.status !== "expired" ? (
-            <Card className="orderReturnCard">
-              <CardBody>
-                <h2 className="orderReturnTitle">État de la commande</h2>
-                <p className="orderReturnSubtitle">Statut : {order.status}</p>
-              </CardBody>
-            </Card>
-          ) : null}
+                {/* bouton "voir événement" (optionnel) */}
+                <Button onClick={() => navigate(backUrl as To, { replace: true })}>
+                  Voir l’événement
+                </Button>
+              </div>
+
+              {/* petit hint si tu veux */}
+              {error ? <div className="orderReturnHint">⚠️ {error}</div> : null}
+            </CardBody>
+          </Card>
         </div>
       </Container>
     </div>
