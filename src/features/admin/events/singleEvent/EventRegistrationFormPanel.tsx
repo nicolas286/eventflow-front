@@ -15,6 +15,7 @@ import { slugKey, normalizeContiguousSortOrder } from "../../../../domain/helper
 import { clampInt, uniqueKey, makeClientId } from "../../../../domain/helpers/logic";
 import { optionsToText } from "../../../../domain/helpers/fields";
 import { sortFromDB, parseOptionsLines } from "../../../../domain/helpers/fields";
+import { TrashIcon } from "../../../../ui/components/icon/Icons";
 
 type Props = {
   supabase: SupabaseClient;
@@ -643,7 +644,7 @@ export function EventRegistrationFormPanel(props: Props) {
                           onClick={() => removeLocal(f.clientId)}
                           disabled={isSaving}
                         >
-                          Supprimer
+                          < TrashIcon />
                         </Button>
                       </div>
                     </div>
@@ -749,7 +750,7 @@ export function EventRegistrationFormPanel(props: Props) {
                           onClick={() => removeLocal(f.clientId)}
                           disabled={isSaving}
                         >
-                          Supprimer
+                          < TrashIcon />
                         </Button>
                       </div>
                     </div>
