@@ -116,7 +116,6 @@ export function OrderPage() {
   const { orderId } = useParams<{ orderId: string }>();
   
   const [search] = useSearchParams();
-  const navigate = useNavigate();
 
   /* ---------------- Query params ---------------- */
 
@@ -153,11 +152,6 @@ export function OrderPage() {
     eventSlug,
   });
 
-  const backUrl = useMemo(() => {
-    if (orgSlug && eventSlug) return `/o/${orgSlug}/e/${eventSlug}`;
-    if (orgSlug) return `/o/${orgSlug}`;
-    return "/";
-  }, [orgSlug, eventSlug]);
 
   /* ---------------- Fetch helpers ---------------- */
 
@@ -488,10 +482,6 @@ export function OrderPage() {
                   {isRefreshing ? "Rafraîchissement…" : "Rafraîchir"}
                 </Button>
 
-                {/* bouton "voir événement" (optionnel) */}
-                <Button onClick={() => navigate(backUrl as To, { replace: true })}>
-                  Voir l’événement
-                </Button>
               </div>
 
               {/* petit hint si tu veux */}
