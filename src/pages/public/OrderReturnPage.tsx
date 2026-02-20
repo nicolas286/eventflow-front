@@ -9,7 +9,6 @@ import Card, { CardBody } from "../../ui/components/card/Card";
 import Button from "../../ui/components/button/Button";
 
 import { PublicEventHeader } from "./checkout/PublicEventHeader";
-import { orderIsFinal as isFinal } from "../../domain/helpers/logic";
 import { formatMoney } from "../../domain/helpers/normalize";
 
 import "../../styles/desktop/publicCheckoutBase.desktop.css";
@@ -23,7 +22,8 @@ export type OrderStatus =
   | "failed"
   | "canceled"
   | "expired"
-  | "awaiting_payment";
+  | "awaiting_payment"
+  | "partially_paid";
 
 export type OrderItemPublic = {
   name?: string;
@@ -45,6 +45,24 @@ export type OrderPublic = {
   buyerEmail?: string;
   items?: OrderItemPublic[];
 };
+
+/**
+ * ✅ Pour cette page retour PSP, on considère "partially_paid" comme un état final + succès.
+ * (sinon tu restes coincé en "Validation du paiement…")
+ */
+function isFinalForReturn(status: OrderStatus) {
+  return (
+    status === "paid" ||
+    status === "partially_paid" ||
+    status === "failed" ||
+    status === "canceled" ||
+    status === "expired"
+  );
+}
+
+function isSuccessForReturn(status: OrderStatus) {
+  return status === "paid" || status === "partially_paid";
+}
 
 async function fetchOrder(orderId: string, token: string): Promise<OrderPublic> {
   if (!orderId) throw new Error("order_fetch_failed");
@@ -113,7 +131,7 @@ export function OrderReturnPage() {
   const verifying = useMemo(() => {
     if (!isReturn) return false;
     if (!order) return true;
-    return !isFinal(order.status);
+    return !isFinalForReturn(order.status);
   }, [isReturn, order]);
 
   const orgSlug = useMemo(
@@ -161,6 +179,9 @@ export function OrderReturnPage() {
         if (cancelled) return;
         setOrder(o);
         setLoading(false);
+
+        // ✅ si c'est déjà final dès le 1er fetch, on coupe direct
+        if (isFinalForReturn(o.status)) stopPolling();
       } catch {
         if (cancelled) return;
         setError("Impossible de charger la commande.");
@@ -173,7 +194,7 @@ export function OrderReturnPage() {
         const o = await fetchOrder(safeOrderId, safeToken);
         if (cancelled) return;
         setOrder(o);
-        if (isFinal(o.status)) stopPolling();
+        if (isFinalForReturn(o.status)) stopPolling();
       } catch {
         // tolère (réseau / edge)
       }
@@ -203,7 +224,7 @@ export function OrderReturnPage() {
   useEffect(() => {
     let alive = true;
 
-    if (order?.status !== "paid") {
+    if (!order || !isSuccessForReturn(order.status)) {
       navigatedRef.current = false;
       queueMicrotask(() => {
         if (alive) setPaidStart(null);
@@ -228,19 +249,19 @@ export function OrderReturnPage() {
   }, [order?.status]);
 
   const countdown = useMemo(() => {
-    if (order?.status !== "paid") return null;
+    if (!order || !isSuccessForReturn(order.status)) return null;
     if (paidStart == null) return 10;
 
     const elapsed = Math.floor((now - paidStart) / 1000);
     return Math.max(0, 10 - elapsed);
-  }, [order?.status, now, paidStart]);
+  }, [order?.status, now, paidStart, order]);
 
   useEffect(() => {
-    if (order?.status === "paid" && countdown === 0 && !navigatedRef.current) {
+    if (order && isSuccessForReturn(order.status) && countdown === 0 && !navigatedRef.current) {
       navigatedRef.current = true;
       navigate(backUrl as To, { replace: true });
     }
-  }, [order?.status, countdown, navigate, backUrl]);
+  }, [order?.status, countdown, navigate, backUrl, order]);
 
   /* ---------------- Guards / UI ---------------- */
 
@@ -347,12 +368,19 @@ export function OrderReturnPage() {
             </Card>
           ) : null}
 
-          {!verifying && order.status === "paid" ? (
+          {!verifying && isSuccessForReturn(order.status) ? (
             <Card className="orderReturnCard">
               <CardBody>
-                <div className="orderReturnStatusPill orderReturnSuccess">Paiement réussi ✅</div>
+                <div className="orderReturnStatusPill orderReturnSuccess">
+                  {order.status === "paid" ? "Paiement réussi ✅" : "Acompte reçu ✅"}
+                </div>
+
                 <h2 className="orderReturnTitle">Merci !</h2>
-                <p className="orderReturnSubtitle">Ta commande est bien enregistrée.</p>
+                <p className="orderReturnSubtitle">
+                  {order.status === "paid"
+                    ? "Ta commande est bien enregistrée."
+                    : "Ton acompte est bien enregistré. Tu pourras compléter le paiement plus tard."}
+                </p>
 
                 <div className="orderReturnSection">
                   <div className="orderReturnSectionTitle">Détail de la commande</div>
@@ -372,7 +400,9 @@ export function OrderReturnPage() {
 
                     <div>
                       <span className="orderReturnLabel">Total :</span>
-                      <span className="orderReturnStrong">{formatMoney(order.totalCents, order.currency)}</span>
+                      <span className="orderReturnStrong">
+                        {formatMoney(order.totalCents, order.currency)}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -431,6 +461,7 @@ export function OrderReturnPage() {
 
           {!verifying &&
           order.status !== "paid" &&
+          order.status !== "partially_paid" &&
           order.status !== "failed" &&
           order.status !== "canceled" &&
           order.status !== "expired" ? (
