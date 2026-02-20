@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "../../gateways/supabase/supabaseClient";
 import { usePublicOrgData } from "../../features/admin/hooks/usePublicOrgData";
@@ -8,16 +8,43 @@ import Card, { CardBody } from "../../ui/components/card/Card";
 import Button from "../../ui/components/button/Button";
 import Badge from "../../ui/components/badge/Badge";
 
-import { formatDateTimeHuman } from "../../domain/helpers/dateTime";
-import { toDayEndISO, toDayStartISO } from "../../domain/helpers/dateTime";
+import { formatDateTimeHuman, toDayEndISO, toDayStartISO } from "../../domain/helpers/dateTime";
 
 import "../../styles/desktop/publicPages.desktop.css";
-
 
 import type { PublicEventOverview } from "../../domain/models/public/public.orgEventsOverview.schema";
 
 type SortKey = "date" | "name";
 type SortDir = "asc" | "desc";
+
+function parseTs(iso?: string | null) {
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  return Number.isFinite(t) ? t : null;
+}
+
+// ✅ “clé” temporelle pour filtrer le passé : endsAt si dispo, sinon startsAt
+function getEventPastCutoffTs(e: PublicEventOverview) {
+  return parseTs(e.endsAt) ?? parseTs(e.startsAt);
+}
+
+function getEventState(e: PublicEventOverview, nowTs: number) {
+  const s = parseTs(e.startsAt);
+  const end = parseTs(e.endsAt);
+
+  if (s === null) return "unknown" as const;
+
+  if (s > nowTs) return "upcoming" as const;
+
+  // startsAt <= now
+  if (end !== null) {
+    if (end >= nowTs) return "ongoing" as const;
+    return "past" as const;
+  }
+
+  // pas de endsAt => “en cours” dès que commencé
+  return "ongoing" as const;
+}
 
 export function OrgPublicPage() {
   const { orgSlug } = useParams<{ orgSlug: string }>();
@@ -32,8 +59,14 @@ export function OrgPublicPage() {
   const [dateTo, setDateTo] = useState<string>("");
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
-
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
+  // ✅ “now” pur + refresh léger (pour que “à venir/en cours” bouge tout seul)
+  const [nowTs, setNowTs] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNowTs(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
 
   const filteredSortedEvents = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -41,19 +74,27 @@ export function OrgPublicPage() {
     const fromTs = dateFrom ? Date.parse(toDayStartISO(dateFrom)) : null;
     const toTs = dateTo ? Date.parse(toDayEndISO(dateTo)) : null;
 
+    // ✅ par défaut, on masque le passé (cutoff = now)
+    // mais si l’utilisateur met "Du", ça override
+    const baseFrom = fromTs ?? nowTs;
+
     const base = (events ?? []).filter((e) => {
+      // search
       if (q) {
         const hay = `${e.title ?? ""} ${e.location ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
 
-      if (fromTs || toTs) {
-        if (!e.startsAt) return true;
+      // si pas de date -> visible (ou mets false si tu veux les cacher)
+      const cutoffTs = getEventPastCutoffTs(e);
+      if (cutoffTs === null) return true;
 
-        const s = Date.parse(e.startsAt);
-        if (fromTs !== null && s < fromTs) return false;
-        if (toTs !== null && s > toTs) return false;
-      }
+      // ✅ filtre passé: endsAt/startsAt doit être >= baseFrom
+      if (cutoffTs < baseFrom) return false;
+
+      // ✅ filtre "Au" : on compare sur startsAt (logique “date de début”)
+      const startTs = parseTs(e.startsAt);
+      if (toTs !== null && startTs !== null && startTs > toTs) return false;
 
       return true;
     });
@@ -67,13 +108,13 @@ export function OrgPublicPage() {
         return A.localeCompare(B) * dir;
       }
 
-      const aTs = a.startsAt ? Date.parse(a.startsAt) : Number.POSITIVE_INFINITY;
-      const bTs = b.startsAt ? Date.parse(b.startsAt) : Number.POSITIVE_INFINITY;
+      const aTs = parseTs(a.startsAt) ?? Number.POSITIVE_INFINITY;
+      const bTs = parseTs(b.startsAt) ?? Number.POSITIVE_INFINITY;
       return (aTs - bTs) * dir;
     });
 
     return base;
-  }, [events, query, dateFrom, dateTo, sortKey, sortDir]);
+  }, [events, query, dateFrom, dateTo, sortKey, sortDir, nowTs]);
 
   const hasActiveFilters = !!query.trim() || !!dateFrom || !!dateTo;
 
@@ -157,7 +198,6 @@ export function OrgPublicPage() {
 
         {/* Filtres + tri */}
         <div className={`publicEventsToolbar ${mobileFiltersOpen ? "isMobileOpen" : ""}`}>
-          {/* ✅ Bouton uniquement mobile */}
           <div className="publicMobileFiltersToggle">
             <Button
               variant="secondary"
@@ -230,7 +270,6 @@ export function OrgPublicPage() {
               </select>
             </div>
 
-            {/* Desktop: reset à droite (visible en desktop uniquement via CSS) */}
             {hasActiveFilters ? (
               <div className="publicToolbarActions publicDesktopOnly">
                 <Button variant="secondary" label="Réinitialiser" onClick={resetFilters} />
@@ -249,7 +288,7 @@ export function OrgPublicPage() {
         {events.length === 0 ? (
           <div className="publicEmpty">Aucun événement publié.</div>
         ) : filteredSortedEvents.length === 0 ? (
-          <div className="publicEmpty">Aucun événement ne correspond à tes filtres.</div>
+          <div className="publicEmpty">Aucun événement ne correspond à vos filtres.</div>
         ) : (
           <div className="publicOrgEventsGrid">
             {filteredSortedEvents.map((e: PublicEventOverview) => {
@@ -257,6 +296,14 @@ export function OrgPublicPage() {
 
               const startText = e.startsAt ? formatDateTimeHuman(e.startsAt) : null;
               const endText = e.endsAt ? formatDateTimeHuman(e.endsAt) : null;
+
+              const state = getEventState(e, nowTs);
+              const badge =
+                state === "upcoming" ? (
+                  <Badge tone="info" label="À venir" />
+                ) : state === "ongoing" ? (
+                  <Badge tone="success" label="En cours" />
+                ) : null;
 
               return (
                 <Card key={e.id} className="publicOrgEventCard">
@@ -271,7 +318,7 @@ export function OrgPublicPage() {
                   <CardBody className="publicOrgEventBody">
                     <div className="publicOrgEventHeaderRow">
                       <div className="publicOrgEventTitle">{e.title}</div>
-                      {e.startsAt ? <Badge tone="info" label="À venir" /> : null}
+                      {badge}
                     </div>
 
                     <div className="publicOrgEventLocation">{e.location ?? "Lieu à venir"}</div>
@@ -284,7 +331,7 @@ export function OrgPublicPage() {
                     ) : null}
 
                     <div className="publicOrgEventFooter">
-                      <Link to={`e/${e.slug}`}>
+                      <Link to={`/o/${orgSlug}/e/${e.slug}`}>
                         <Button label="Voir l’événement" />
                       </Link>
                     </div>

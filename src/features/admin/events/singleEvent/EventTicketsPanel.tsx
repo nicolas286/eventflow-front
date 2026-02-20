@@ -5,6 +5,7 @@ import type { CreateEventProductInput } from "../../../../domain/models/admin/ad
 import type { UpdateEventProductPatch } from "../../../../gateways/supabase/repositories/dashboard/updateEventProductRepo";
 
 import { Button, EditorShell, StickySaveBar, FilterBar } from "../../../../ui/components";
+import { TrashIcon } from "../../../../ui/components/icon/Icons";
 
 type OrderItemLike = {
   eventProductId?: string | null;
@@ -738,7 +739,7 @@ export function EventTicketsPanel(props: Props) {
             disabled={isSaving || (!onRemove && Boolean(t.id))}
             className="deleteFormFieldButton"
           >
-            Supprimer
+            <TrashIcon />
           </Button>
         </div>
       </div>

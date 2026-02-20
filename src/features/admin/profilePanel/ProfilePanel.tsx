@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "../../../styles/desktop/profilePanel.desktop.css";
 import "../../../styles/mobile/profilePanel.mobile.css";
 import { Button, Input, Badge } from "../../../ui/components";
 import { supabase } from "../../../gateways/supabase/supabaseClient";
 
 import { useSaveAdminProfile } from "../hooks/useUpdateAdminProfile";
+import { useDeleteAccount } from "../hooks/useDeleteAccount";
 import type { AdminProfileForm } from "../../../domain/models/admin/admin.updateAdminProfile.schema";
 import { inferCountryCode } from "../../../domain/helpers/countries";
 
@@ -14,6 +16,8 @@ import PhoneInput from "../../../ui/components/forms/PhoneInput";
 import { parseE164, buildE164 } from "../../../ui/components/forms/countryPhoneData";
 import { COUNTRY_OPTIONS } from "../../../ui/components/forms/countryPhoneData";
 
+import { ConfirmDeleteModal } from "../../../ui/components/modals/ConfirmDeleteModal";
+
 type ProfilePanelProps = {
   profile: AdminProfileForm;
   setProfile: React.Dispatch<React.SetStateAction<AdminProfileForm>>;
@@ -22,6 +26,14 @@ type ProfilePanelProps = {
 
 export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePanelProps) {
   const { loading, error, updated, saveAdminProfile, reset } = useSaveAdminProfile({ supabase });
+
+  const {
+    loading: deleting,
+    error: deleteError,
+    deleted,
+    deleteAccount,
+    reset: resetDelete,
+  } = useDeleteAccount({ supabase });
 
   function updateField<K extends keyof AdminProfileForm>(key: K, value: AdminProfileForm[K]) {
     setProfile((prev) => ({ ...prev, [key]: value }));
@@ -38,6 +50,12 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
   const [email, setEmail] = useState<string>("");
   const [newPassword, setNewPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
+
+  // ✅ delete modal
+  const [openDelete, setOpenDelete] = useState<boolean>(false);
+
+  const navigate = useNavigate();
+
 
   async function handleSave() {
     reset();
@@ -63,20 +81,50 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
   }
 
   const selectedCountry = useMemo(() => {
-  // 1) si on a déjà un label stocké
-  const label = (profile.country ?? "").trim();
-  if (label) return label;
+    // 1) si on a déjà un label stocké
+    const label = (profile.country ?? "").trim();
+    if (label) return label;
 
-  // 2) sinon, fallback depuis le code
-  const code = (profile.countryCode ?? "").trim().toUpperCase();
-  if (!code) return "";
+    // 2) sinon, fallback depuis le code
+    const code = (profile.countryCode ?? "").trim().toUpperCase();
+    if (!code) return "";
 
-  const found = COUNTRY_OPTIONS.find((c) => c.iso2.toUpperCase() === code);
-  return found?.label ?? "";
-}, [profile.country, profile.countryCode]);
+    const found = COUNTRY_OPTIONS.find((c) => c.iso2.toUpperCase() === code);
+    return found?.label ?? "";
+  }, [profile.country, profile.countryCode]);
+
+  async function handleConfirmDeleteAccount() {
+  resetDelete();
+
+  const ok = await deleteAccount();
+  if (!ok) return;
+
+  await supabase.auth.signOut().catch(() => null);
+
+  navigate("/", { replace: true });
+}
+
+
+  const deleteModalTitle = "Supprimer mon compte";
+  const deleteModalName =
+    "votre compte (et résilier l’abonnement, puis suspendre l’organisation)";
 
   return (
     <div className="profilePanel">
+      <ConfirmDeleteModal
+        open={openDelete}
+        title={deleteModalTitle}
+        eventName={deleteModalName}
+        busy={deleting}
+        error={deleteError}
+        onCancel={() => {
+          if (deleting) return;
+          setOpenDelete(false);
+          resetDelete();
+        }}
+        onConfirm={handleConfirmDeleteAccount}
+      />
+
       {/* Head */}
       <div className="profilePanel__head">
         <div className="profilePanel__headLeft">
@@ -221,6 +269,33 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
         <div className="profilePanel__hint">
           TODO : modifier l’email et le mot de passe via Supabase Auth (avec re-auth si nécessaire).
         </div>
+
+        {/* Danger zone */}
+        <div
+          className="profilePanel__danger"
+          style={{
+            marginTop: 16,
+            paddingTop: 16,
+            borderTop: "1px solid rgba(17, 24, 39, 0.08)",
+          }}
+        >
+          <div style={{ fontWeight: 900, color: "#111827" }}>Zone dangereuse</div>
+          <div style={{ marginTop: 6, fontSize: 13, color: "#6B7280", lineHeight: 1.45 }}>
+            La suppression du compte résilie l’abonnement et suspend l’organisation. Action définitive.
+          </div>
+
+          <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
+            <Button
+              variant="danger"
+              label={deleting ? "Suppression…" : "Supprimer mon compte"}
+              onClick={() => {
+                resetDelete();
+                setOpenDelete(true);
+              }}
+              disabled={deleting || !profile.userId || deleted}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Actions */}
@@ -235,7 +310,7 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
             variant="primary"
             label={loading ? "Sauvegarde…" : "Sauvegarder"}
             onClick={handleSave}
-            disabled={loading || !profile.userId}
+            disabled={loading || !profile.userId || deleting}
           />
         </div>
       </div>

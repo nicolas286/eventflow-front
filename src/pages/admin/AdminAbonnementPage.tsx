@@ -18,6 +18,8 @@ import { InvoicesTab } from "../../features/admin/subscriptions/InvoicesTab";
 
 import "../../styles/desktop/admin/adminSubscription.desktop.css";
 import "../../styles/mobile/admin/adminSubscription.mobile.css";
+import "../../styles/desktop/admin/adminEventsPage.desktop.css";
+
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                            */
@@ -276,12 +278,14 @@ export default function AdminAbonnementPage() {
   return (
     <Container>
       <div className="adminEventTabs">
+        <div className="adminEventTabsInner">
         <TabButton active={tab === "general"} onClick={() => setTabAndUrl("general")}>
           Général
         </TabButton>
         <TabButton active={tab === "invoices"} onClick={() => setTabAndUrl("invoices")}>
           Mes factures
         </TabButton>
+        </div>
       </div>
 
       {tab === "general" && (
@@ -372,7 +376,6 @@ export default function AdminAbonnementPage() {
                 <Row label="Inscriptions / événement" value={fmtLimit(limits.maxRegistrationsPerEvent)} />
                 <Row label="Produits / événement" value={fmtLimit(limits.maxProductsPerEvent)} />
                 <Row label="Champs formulaire" value={fmtLimit(limits.maxFormFields)} />
-                <Row label="Admins" value={fmtLimit(limits.maxAdmins)} />
                 <Row label="Branding Eventflow" value={boolLabel(limits.brandingRequired)} />
               </div>
             </CardBody>

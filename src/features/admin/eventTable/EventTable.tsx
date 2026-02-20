@@ -6,13 +6,14 @@ import { Badge, Button, Card, CardBody, CardHeader } from "../../../ui/component
 import { getStatusInfo } from "../../../domain/helpers/status";
 import { formatDateTimeHuman } from "../../../domain/helpers/dateTime";
 import type { EventOverviewRow } from "../../../domain/models/admin/admin.eventsOverview.schema";
-import { CloseIcon, EditIcon, TrashIcon, EyeIcon } from "../../../ui/components/icon/Icons";
+import { CloseIcon, EditIcon, TrashIcon, EyeIcon, CopyIcon } from "../../../ui/components/icon/Icons";
 
 type EventTableProps = {
   events: EventOverviewRow[];
   editingId?: string;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
+  orgSlug?: string;
 
   renderInlineEditor?: (row: EventOverviewRow) => React.ReactNode;
 };
@@ -28,7 +29,21 @@ export default function EventTable({
   onSelect,
   onDelete,
   renderInlineEditor,
+  orgSlug,
 }: EventTableProps) {
+
+  async function copyPublicEventUrl(orgSlug?: string, eventSlug?: string) {
+  const path = `/o/${orgSlug}/e/${eventSlug}`;
+  const fullUrl = `${window.location.origin}${path}`;
+
+  try {
+    await navigator.clipboard.writeText(fullUrl);
+    console.log("Lien public copié :", fullUrl);
+  } catch (err) {
+    console.error("Erreur copie presse-papier", err);
+  }
+}
+
   return (
     <Card>
       <CardHeader title="Aperçu de mes événements" />
@@ -65,6 +80,19 @@ export default function EventTable({
                   </div>
 
                   <div className="eventCard__actions">
+                    {canView && (
+                      <Button
+                        variant="secondary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyPublicEventUrl(orgSlug, ev.slug!);
+                        }}
+                        title="Copier le lien public"
+                      >
+                        <CopyIcon/>
+                      </Button>
+                    )}
+
                     {canView && (
                       <Link
                         className="eventCard__actionLink"
