@@ -286,8 +286,8 @@ export function OrderPage() {
 
     if (isSuccessStatus(order.status)) {
       return order.status === "paid"
-        ? "Ta commande est bien enregistrée."
-        : "Ton acompte est bien enregistré. Tu pourras compléter le paiement plus tard.";
+        ? "Votre commande est bien enregistrée."
+        : "Votre acompte a bien été reçu.";
     }
 
     if (isFailureStatus(order.status)) {
