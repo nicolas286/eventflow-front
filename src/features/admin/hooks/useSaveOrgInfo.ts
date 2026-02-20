@@ -25,6 +25,7 @@ export type OrgInfoForm = {
   publicEmail: string | null;
   phone: string | null;
   website: string | null;
+  emailReminderDaysBefore: number | null;
 };
 
 type SaveInput = {
