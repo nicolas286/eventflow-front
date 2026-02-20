@@ -94,7 +94,10 @@ function buildOrgInfoPatch(
 
     if (curWeb !== iniWeb) patch.website = curWeb;
 
+    const curRem = current.emailReminderDaysBefore;
+    const iniRem = initial.emailReminderDaysBefore;
 
+    if (curRem !== iniRem) patch.emailReminderDaysBefore = curRem;
 
   return patch as Omit<UpdateOrgInfoPatch, "orgId">;
 }
