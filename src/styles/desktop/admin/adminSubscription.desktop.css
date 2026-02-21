@@ -259,9 +259,15 @@
   flex-wrap: wrap;
 }
 
+/* ✅ override: en mode flex, on laisse respirer */
+.adminSub__plansWrap.isFlex {
+  max-width: none;          /* <- le vrai fix */
+  width: 100%;
+}
+
 /* Chaque carte prend 50% en desktop */
 .adminSub__plansWrap.isFlex .adminSub__planTile {
-  flex: 1 1 340px; 
+  flex: 1 1 320px; 
   min-width: 300px;
 }
 
