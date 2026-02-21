@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useOutletContext, useNavigate, useSearchParams } from "react-router-dom";
+import { useToast } from "../../ui/components/toast/useToast";
 
 import { Container } from "../../ui/components";
 import Card, { CardBody, CardHeader } from "../../ui/components/card/Card";
@@ -119,6 +120,7 @@ export default function AdminAbonnementPage() {
   const location = useLocation();
   const billingGet = useMakeOrganizationBilling({ supabase });
   const billingUpsert = useUpsertOrganizationBilling({ supabase });
+  const { showToast } = useToast();
 
   const [billingModalOpen, setBillingModalOpen] = useState(false);
   const [billingModalMode, setBillingModalMode] = useState<"required" | "edit">("required");
@@ -139,6 +141,8 @@ export default function AdminAbonnementPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tabFromUrl]);
 
+  
+
   function setTabAndUrl(next: TabKey) {
     setTab(next);
     setSearchParams(
@@ -153,6 +157,24 @@ export default function AdminAbonnementPage() {
 
   const { loading: startLoading, error: startError, result, startSubscription, reset } =
     useStartSubscription({ supabase });
+
+    useEffect(() => {
+  if (startError) {
+    showToast({ title: "Erreur", description: startError, variant: "error", duration: 7000 });
+  }
+}, [startError, showToast]);
+
+useEffect(() => {
+  if (!result) return;
+  showToast({
+    title: result.ok ? "Demande enregistrée" : "Synchronisation en attente",
+    description: result.ok
+      ? "Si Mollie s’ouvre, finalisez le paiement. Sinon, le plan est déjà à jour."
+      : "Paiement ok côté Mollie, en attente de synchro côté Eventflow.",
+    variant: result.ok ? "success" : "warning",
+    duration: 6000,
+  });
+}, [result, showToast]);
 
   const {
     loading: cancelLoading,
@@ -196,23 +218,52 @@ useEffect(() => {
   (async () => {
     setIsSyncingReturn(true);
 
+    // ✅ toast "patience"
+    showToast({
+      title: "Paiement reçu",
+      description: "Synchronisation en cours… ça peut prendre quelques secondes.",
+      variant: "info",
+      duration: 5000,
+    });
+
+    let synced = false;
+
     try {
-      // ✅ refetch immédiat + polling (webhook Mollie peut arriver après)
-      const maxTries = 12;          // ~ 12 * 2000ms = 24s
+      const maxTries = 12; // ~24s
       const delayMs = 2000;
 
       for (let i = 0; i < maxTries; i++) {
         await refetch();
 
-        // ⚠️ on lit "bootstrap" mais il sera mis à jour par refetch() via ton OutletContext
-        // Dès que le plan n'est plus free, on stop.
         const p = (bootstrap.organization?.plan ?? "free") as PlanKey;
-        if (p !== "free") break;
+        if (p !== "free") {
+          synced = true;
+          break;
+        }
 
         await sleep(delayMs);
       }
+    } catch {
+      // rien, on gère juste via toast ci-dessous
     } finally {
       setIsSyncingReturn(false);
+
+      // ✅ toast résultat
+      showToast(
+        synced
+          ? {
+              title: "Abonnement activé",
+              description: "Votre plan est à jour. Merci !",
+              variant: "success",
+              duration: 4500,
+            }
+          : {
+              title: "Synchronisation en attente",
+              description: "Ça peut encore prendre un moment. Rafraîchissez la page si nécessaire.",
+              variant: "warning",
+              duration: 6500,
+            }
+      );
 
       const search = nextQs.toString();
       navigate(
@@ -263,12 +314,24 @@ useEffect(() => {
     if (!res) return;
 
     if (res.ok && "action" in res && res.action === "checkout") {
+      showToast({
+          title: "Redirection vers Mollie",
+          description: "Finalisez le paiement, puis revenez sur cette page.",
+          variant: "info",
+          duration: 4000,
+        });
       window.location.href = res.checkoutUrl;
       return;
     }
 
     if (res.ok && "action" in res && res.action === "sub_created") {
       await refetch();
+      showToast({
+        title: "Plan mis à jour",
+        description: "Votre abonnement a été mis à jour.",
+        variant: "success",
+        duration: 4500,
+      });
       return;
     }
   }
@@ -369,20 +432,6 @@ useEffect(() => {
                 </Button>
               </div>
 
-              {/* feedback start */}
-              {(startError || result) && (
-                <div className="adminSub__feedbackWrap">
-                  {startError && <div className="adminSub__alert adminSub__alert--error">{startError}</div>}
-
-                  {!startError && result && (
-                    <div className="adminSub__alert adminSub__alert--success">
-                      {result.ok
-                        ? "Demande bien enregistrée. Si Mollie s’ouvre, finalisez le paiement. Sinon, le plan est déjà à jour."
-                        : "Subscription créée côté Mollie mais pas encore synchronisée côté DB."}
-                    </div>
-                  )}
-                </div>
-              )}
             </CardBody>
           </Card>
 
@@ -524,7 +573,24 @@ useEffect(() => {
 
             if (planToContinue && canStartSubscription(planToContinue)) {
               const res = await startSubscription({ orgId, plan: planToContinue });
-              if (!res) return;
+                  if (!res) {
+                    showToast({
+                      title: "Impossible de démarrer l’abonnement",
+                      description: "Réessayez dans quelques instants.",
+                      variant: "error",
+                      duration: 6000,
+                    });
+                    return;
+                  }
+                  if (!res.ok) {
+                    showToast({
+                      title: "Erreur de paiement",
+                      description: "La demande a échoué. Vérifiez vos infos et réessayez.",
+                      variant: "error",
+                      duration: 6000,
+                    });
+                    return;
+                  }
 
               if (res.ok && "action" in res && res.action === "checkout") {
                 window.location.href = res.checkoutUrl;
