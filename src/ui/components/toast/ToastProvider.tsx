@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import type { Toast, ToastOptions } from "./toast.types";
 import { ToastContext } from "./toast.context";
-import { ToastViewport } from "./ToastViewport";
+import { ToastViewport } from "./ToastViewPort";
 
 function generateId() {
   return Math.random().toString(36).slice(2);
