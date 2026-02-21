@@ -42,7 +42,7 @@ type Draft = {
   // RAW uniquement (DB: events.banner_url)
   bannerUrlRaw: string;
 
-  depositCentsRaw: string;
+  depositEurosRaw: string;
 };
 
 /* ------------------------------------------------------------------ */
@@ -87,7 +87,7 @@ function eventToDraft(event: AdminEventDetailEvent): Draft {
     startsAtLocal: isoToLocalInput(event.startsAt ?? null),
     endsAtLocal: isoToLocalInput(event.endsAt ?? null),
     bannerUrlRaw: (event.bannerUrlRaw ?? "").trim(),
-    depositCentsRaw: String(event.depositCents ?? 0),
+    depositEurosRaw: centsToEuroInput(event.depositCents ?? 0),
   };
 }
 
@@ -98,6 +98,24 @@ function withBust(url: string, seed?: string | null) {
   const v = seed ? Date.parse(seed) || Date.now() : Date.now();
   const sep = u.includes("?") ? "&" : "?";
   return `${u}${sep}v=${v}`;
+}
+
+function centsToEuroInput(cents: number) {
+  const v = Number.isFinite(cents) ? cents / 100 : 0;
+  // input[type=number] attend un point, pas une virgule
+  return v.toFixed(2);
+}
+
+function euroInputToCents(raw: string) {
+  const t = String(raw ?? "").trim();
+  if (!t) return 0;
+
+  // accepte "12,50" ou "12.50"
+  const normalized = t.replace(",", ".");
+  const n = Number(normalized);
+
+  if (!Number.isFinite(n)) return null; // invalide
+  return Math.max(0, Math.round(n * 100));
 }
 
 /* ------------------------------------------------------------------ */
@@ -187,7 +205,7 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
       draft.startsAtLocal === base.startsAtLocal &&
       draft.endsAtLocal === base.endsAtLocal &&
       draft.bannerUrlRaw.trim() === base.bannerUrlRaw.trim() &&
-      draft.depositCentsRaw.trim() === base.depositCentsRaw.trim();
+      draft.depositEurosRaw.trim() === base.depositEurosRaw.trim();
 
     return !same;
   }, [draft, event, bannerFile]);
@@ -234,12 +252,10 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
 
     if (nextIsPublished !== Boolean(event.isPublished)) patch.isPublished = nextIsPublished;
 
-    const raw = draft.depositCentsRaw.trim();
-    const parsed = raw === "" ? 0 : Number(raw);
-    if (!Number.isNaN(parsed)) {
-      const nextDeposit = Math.max(0, Math.trunc(parsed));
+    const cents = euroInputToCents(draft.depositEurosRaw);
+    if (cents != null) {
       const curDeposit = Number(event.depositCents ?? 0);
-      if (nextDeposit !== curDeposit) patch.depositCents = nextDeposit;
+      if (cents !== curDeposit) patch.depositCents = cents;
     }
 
     return patch;
@@ -466,15 +482,16 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
         </div>
 
         <div className="adminEventField adminEventLeftCol">
-          <div className="adminEventLabel">Acompte (centimes)</div>
-          <input
-            type="number"
-            min={0}
-            step={1}
-            className="adminEventInput"
-            value={draft.depositCentsRaw}
-            onChange={(e) => setDraft((d) => ({ ...d, depositCentsRaw: e.target.value }))}
-          />
+          <div className="adminEventLabel">Acompte (€)</div>
+            <input
+              type="number"
+              min={0}
+              step={0.01}
+              inputMode="decimal"
+              className="adminEventInput"
+              value={draft.depositEurosRaw}
+              onChange={(e) => setDraft((d) => ({ ...d, depositEurosRaw: e.target.value }))}
+            />
           {fieldErrors.depositCents && <div className="formError">{fieldErrors.depositCents}</div>}
           <div className="adminEventHint">0 = pas d’acompte.</div>
         </div>

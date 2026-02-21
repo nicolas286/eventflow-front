@@ -62,6 +62,20 @@ function formatMoney(cents: number, currency: string) {
   }
 }
 
+function centsToEuroNumber(cents: number) {
+  const v = Number.isFinite(cents) ? cents / 100 : 0;
+  // pour garder un input propre
+  return Number(v.toFixed(2));
+}
+
+function euroToCents(raw: string) {
+  const t = String(raw ?? "").trim();
+  if (!t) return 0;
+  const n = Number(t.replace(",", "."));
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.round(n * 100));
+}
+
 function clampInt(v: unknown, fallback = 0) {
   const n = typeof v === "number" ? v : Number(String(v ?? ""));
   if (!Number.isFinite(n)) return fallback;
@@ -503,7 +517,6 @@ export function EventTicketsPanel(props: Props) {
       <div className="adminTicketsEditorHeader adminTicketsEditorHeaderInline">
         <div>
           <div className="adminTicketsEditorTitle">{creating ? "Nouveau ticket" : "Modifier ticket"}</div>
-          <div className="adminEventHint">Les prix sont en centimes.</div>
         </div>
       </div>
 
@@ -519,23 +532,15 @@ export function EventTicketsPanel(props: Props) {
         </div>
 
         <div className="adminEventField">
-          <div className="adminEventLabel">Ordre</div>
+          <div className="adminEventLabel">Prix (€)</div>
           <input
             className="adminEventInput"
             type="number"
-            value={editing.sortOrder}
-            onChange={(e) => setEditing({ ...editing, sortOrder: clampInt(e.target.value, 0) })}
-            disabled={isSaving}
-          />
-        </div>
-
-        <div className="adminEventField">
-          <div className="adminEventLabel">Prix (centimes)</div>
-          <input
-            className="adminEventInput"
-            type="number"
-            value={editing.priceCents}
-            onChange={(e) => setEditing({ ...editing, priceCents: clampInt(e.target.value, 0) })}
+            min={0}
+            step={0.01}
+            inputMode="decimal"
+            value={centsToEuroNumber(editing.priceCents)}
+            onChange={(e) => setEditing({ ...editing, priceCents: euroToCents(e.target.value) })}
             disabled={isSaving}
           />
         </div>

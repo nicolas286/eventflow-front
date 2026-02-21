@@ -16,13 +16,16 @@
 
   /* ✅ ANNULATION TOTALE des décalages desktop */
   .publicOrgPage .publicOrgHeroRight {
-    padding-left: 0;
     width: 100%;
 
-    /* on enlève le centrage vertical desktop */
-    justify-content: flex-start;
+    /* ✅ annule le "titre plus bas" desktop */
+    padding-top: 0 !important;
 
-    /* centrage propre en mobile */
+    /* si tu avais du padding horizontal quelque part */
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+
+    justify-content: flex-start;
     align-items: center;
     text-align: center;
 
@@ -34,5 +37,31 @@
     justify-content: center;
     width: 100%;
     margin-top: 12px;
+  }
+
+  /* Barre mail/site */
+
+  .publicOrgPage .publicActions{
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .publicOrgPage .publicMail,
+  .publicOrgPage .publicPhone,
+  .publicOrgPage .publicSite{
+    justify-self: unset;
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .publicOrgPage .publicSite a{
+    justify-content: center;
+    text-align: center;
+    word-break: break-word;
   }
 }
