@@ -25,6 +25,10 @@ import "../../styles/desktop/admin/adminEventsPage.desktop.css";
 /* Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 function fmtDate(d: string | null | undefined) {
   if (!d) return null;
   try {
@@ -72,9 +76,6 @@ const PLAN_DEFS: Record<PlanKey, PlanDef> = {
       "Événements gratuits illimités",
       "1 événement payant / an",
       "Max 50 inscrits / événement payant",
-      "3 produits / événement",
-      "10 champs de formulaire",
-      "1 admin",
       "Branding Eventflow",
     ],
   },
@@ -87,10 +88,7 @@ const PLAN_DEFS: Record<PlanKey, PlanDef> = {
       "Événements gratuits illimités",
       "5 événements payants / an",
       "Inscriptions illimitées",
-      "10 produits / événement",
-      "30 champs de formulaire",
-      "2 admins",
-      "Branding personnalisé",
+      "Couleur & Logo personnalisés",
     ],
     highlight: true,
   },
@@ -103,10 +101,7 @@ const PLAN_DEFS: Record<PlanKey, PlanDef> = {
       "Événements gratuits illimités",
       "Événements payants illimités",
       "Inscriptions illimitées",
-      "10 produits / événement",
-      "30 champs de formulaire",
-      "5 admins",
-      "Branding personnalisé",
+      "Couleur & Logo personnalisés",
     ],
   },
 };
@@ -188,29 +183,50 @@ export default function AdminAbonnementPage() {
   const navigate = useNavigate();
   const didHandleReturn = useRef(false);
 
-  useEffect(() => {
-    if (!isReturn) return;
-    if (didHandleReturn.current) return;
-    didHandleReturn.current = true;
+  const [isSyncingReturn, setIsSyncingReturn] = useState(false);
 
-    const nextQs = new URLSearchParams(location.search);
-    nextQs.delete("return");
+useEffect(() => {
+  if (!isReturn) return;
+  if (didHandleReturn.current) return;
+  didHandleReturn.current = true;
 
-    (async () => {
-      try {
+  const nextQs = new URLSearchParams(location.search);
+  nextQs.delete("return");
+
+  (async () => {
+    setIsSyncingReturn(true);
+
+    try {
+      // ✅ refetch immédiat + polling (webhook Mollie peut arriver après)
+      const maxTries = 12;          // ~ 12 * 2000ms = 24s
+      const delayMs = 2000;
+
+      for (let i = 0; i < maxTries; i++) {
         await refetch();
-      } finally {
-        const search = nextQs.toString();
-        navigate(
-          {
-            pathname: location.pathname,
-            search: search ? `?${search}` : "",
-          },
-          { replace: true }
-        );
+
+        // ⚠️ on lit "bootstrap" mais il sera mis à jour par refetch() via ton OutletContext
+        // Dès que le plan n'est plus free, on stop.
+        const p = (bootstrap.organization?.plan ?? "free") as PlanKey;
+        if (p !== "free") break;
+
+        await sleep(delayMs);
       }
-    })();
-  }, [isReturn, refetch, navigate, location.pathname, location.search]);
+    } finally {
+      setIsSyncingReturn(false);
+
+      const search = nextQs.toString();
+      navigate(
+        {
+          pathname: location.pathname,
+          search: search ? `?${search}` : "",
+        },
+        { replace: true }
+      );
+    }
+  })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [isReturn, refetch, navigate, location.pathname, location.search]);
+
 
   async function ensureBillingOrOpenModal(nextPlan: "starter" | "pro"): Promise<boolean> {
     const billing = await billingGet.fetchBilling(orgId);
@@ -297,6 +313,11 @@ export default function AdminAbonnementPage() {
               subtitle="Votre plan actuel, votre statut, et les prochaines étapes."
             />
             <CardBody>
+              {isSyncingReturn && (
+                <div className="adminSub__mutedLine">
+                  Synchronisation du paiement… votre plan peut mettre quelques secondes à s’actualiser.
+                </div>
+              )}
               <div className="adminSub__summaryGrid">
                 {/* A - Plan */}
                 <div className="adminSub__summaryCol">
@@ -374,8 +395,6 @@ export default function AdminAbonnementPage() {
               <div className="adminSub__limitsGrid">
                 <Row label="Événements / an" value={fmtLimit(limits.maxEventsPerYear)} />
                 <Row label="Inscriptions / événement" value={fmtLimit(limits.maxRegistrationsPerEvent)} />
-                <Row label="Produits / événement" value={fmtLimit(limits.maxProductsPerEvent)} />
-                <Row label="Champs formulaire" value={fmtLimit(limits.maxFormFields)} />
                 <Row label="Branding Eventflow" value={boolLabel(limits.brandingRequired)} />
               </div>
             </CardBody>
