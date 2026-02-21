@@ -1,7 +1,19 @@
+/* ---------------- Date/Time helpers ---------------- */
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+function toValidDate(value: unknown): Date | null {
+  if (!value) return null;
+  const d = value instanceof Date ? value : new Date(String(value));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * Format "humain" fr-FR (dd/mm/yyyy hh:mm)
+ */
 export function formatDateTimeHuman(value: unknown): string {
-  if (!value) return "—";
-  const d = new Date(String(value));
-  if (Number.isNaN(d.getTime())) return String(value);
+  const d = toValidDate(value);
+  if (!d) return "—";
   return new Intl.DateTimeFormat("fr-FR", {
     year: "numeric",
     month: "2-digit",
@@ -11,25 +23,59 @@ export function formatDateTimeHuman(value: unknown): string {
   }).format(d);
 }
 
+/**
+ * Convertit une date (ISO, Date, etc.) vers le format attendu par <input type="datetime-local" />
+ * => "YYYY-MM-DDTHH:mm" (en heure locale)
+ */
 export function isoToLocalInput(value: unknown): string {
-  if (!value) return "";
-  const d = new Date(String(value));
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
+  const d = toValidDate(value);
+  if (!d) return "";
   const yyyy = d.getFullYear();
-  const mm = pad(d.getMonth() + 1);
-  const dd = pad(d.getDate());
-  const hh = pad(d.getHours());
-  const mi = pad(d.getMinutes());
+  const mm = pad2(d.getMonth() + 1);
+  const dd = pad2(d.getDate());
+  const hh = pad2(d.getHours());
+  const mi = pad2(d.getMinutes());
   return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
 }
 
+/**
+ * Convertit la valeur de <input type="datetime-local" /> en ISO UTC
+ */
 export function localInputToIso(value: string): string {
   if (!value) return "";
-  const d = new Date(value);
+  const d = new Date(value); // interprété en local
   if (Number.isNaN(d.getTime())) return "";
   return d.toISOString();
 }
+
+/**
+ * Renvoie la valeur à passer à l'attribut min/max de datetime-local
+ * Ex:
+ *   min={localDateTimeMinNow()}
+ *   min={localDateTimeMinNow(5)} // maintenant + 5 min
+ */
+export function localDateTimeMinNow(offsetMinutes = 0): string {
+  const d = new Date();
+  if (offsetMinutes) d.setMinutes(d.getMinutes() + offsetMinutes);
+  // important: arrondir à la minute (datetime-local est souvent au format minute)
+  d.setSeconds(0, 0);
+  return isoToLocalInput(d);
+}
+
+/**
+ * Optionnel: clamp UI (si le user tape manuellement une valeur < min)
+ * Retourne un ISO propre, en respectant un min local.
+ */
+export function clampLocalInputToMinIso(localValue: string, minLocal: string): string {
+  if (!localValue) return "";
+  const chosen = new Date(localValue);
+  const min = new Date(minLocal);
+  if (Number.isNaN(chosen.getTime()) || Number.isNaN(min.getTime())) return "";
+  const final = chosen.getTime() < min.getTime() ? min : chosen;
+  return final.toISOString();
+}
+
+/* ---------------- Day ISO helpers ---------------- */
 
 export function toDayStartISO(d: string) {
   return `${d}T00:00:00.000Z`;

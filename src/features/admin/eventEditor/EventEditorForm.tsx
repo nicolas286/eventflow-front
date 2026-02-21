@@ -6,7 +6,7 @@ import {
 import type { AdminEventDetailEvent } from "../../../domain/models/admin/admin.eventDetail.schema";
 import { Button, Input } from "../../../ui/components";
 import { MessageBox } from "../../../ui/components/message/MessageBox";
-import { isoToLocalInput, localInputToIso } from "../../../domain/helpers/dateTime";
+import { isoToLocalInput, localDateTimeMinNow, localInputToIso } from "../../../domain/helpers/dateTime";
 import { useLiveForm } from "../../public/useLiveZodForm";
 import type { EditableEventFields } from "./EventEditor";
 
@@ -102,6 +102,8 @@ export default function EventEditorForm({ event, onConfirm }: Props) {
     live.shouldShowFieldError(key, { hideUntilTouched: true }) &&
     !!live.fieldErrors[key];
 
+  const minLocal = localDateTimeMinNow();
+
   return (
     <div className="eventEditor">
       {submitError && <MessageBox variant="error">{submitError}</MessageBox>}
@@ -132,6 +134,7 @@ export default function EventEditorForm({ event, onConfirm }: Props) {
       <Input
         type="datetime-local"
         value={isoToLocalInput(draft.startsAt ?? null)}
+        min={minLocal}
         onChange={(e) => live.handleChange("startsAt", localInputToIso(e.target.value))}
         onBlur={() => live.handleBlur("startsAt")}
         label="Date et heure de début"

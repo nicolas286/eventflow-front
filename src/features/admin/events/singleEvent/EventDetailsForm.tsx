@@ -9,6 +9,7 @@ import {
 import {Button, StickySaveBar } from "../../../../ui/components";
 
 import type { AdminEventDetailEvent } from "../../../../domain/models/admin/admin.eventDetail.schema";
+import { localDateTimeMinNow } from "../../../../domain/helpers/dateTime";
 
 
 /* ------------------------------------------------------------------ */
@@ -383,7 +384,7 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
       <div className="adminEventHeaderRow">
         <div>
           <h3 style={{ margin: 0 }}>Détails</h3>
-          <div className="adminEventHint">Modifie les informations principales de l’événement.</div>
+          <div className="adminEventHint">Modifiez les informations principales de l’événement.</div>
         </div>
       </div>
 
@@ -427,6 +428,7 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
           <input
             type="datetime-local"
             className="adminEventInput"
+            min={localDateTimeMinNow()} 
             value={draft.startsAtLocal}
             onChange={(e) => setDraft((d) => ({ ...d, startsAtLocal: e.target.value }))}
           />
@@ -474,6 +476,7 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
           <div className="adminEventLabel">Fin (optionnel)</div>
           <input
             type="datetime-local"
+            min={localDateTimeMinNow()} 
             className="adminEventInput"
             value={draft.endsAtLocal}
             onChange={(e) => setDraft((d) => ({ ...d, endsAtLocal: e.target.value }))}
