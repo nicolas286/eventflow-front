@@ -21,7 +21,6 @@ import "../../styles/desktop/admin/adminSubscription.desktop.css";
 import "../../styles/mobile/admin/adminSubscription.mobile.css";
 import "../../styles/desktop/admin/adminEventsPage.desktop.css";
 
-
 /* ------------------------------------------------------------------ */
 /* Helpers                                                            */
 /* ------------------------------------------------------------------ */
@@ -65,6 +64,7 @@ type PlanDef = {
   short: string;
   points: string[];
   highlight?: boolean;
+  ctaLabel?: string;
 };
 
 const PLAN_DEFS: Record<PlanKey, PlanDef> = {
@@ -91,19 +91,23 @@ const PLAN_DEFS: Record<PlanKey, PlanDef> = {
       "Inscriptions illimitées",
       "Couleur & Logo personnalisés",
     ],
-    highlight: true,
+    highlight: false,
+    ctaLabel: "Passer en Starter",
   },
   pro: {
     key: "pro",
     title: "Pro",
     price: "25,99 €/mois",
-    short: "Pour les organisations qui scalent.",
+    short: "Le meilleur pour scaler (illimité).",
     points: [
       "Événements gratuits illimités",
       "Événements payants illimités",
       "Inscriptions illimitées",
       "Couleur & Logo personnalisés",
     ],
+    // ✅ on met Pro en valeur
+    highlight: true,
+    ctaLabel: "Passer en Pro",
   },
 };
 
@@ -118,9 +122,11 @@ function canStartSubscription(target: PlanKey): target is "starter" | "pro" {
 export default function AdminAbonnementPage() {
   const { bootstrap, refetch, orgId } = useOutletContext<AdminOutletContext>();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { showToast } = useToast();
+
   const billingGet = useMakeOrganizationBilling({ supabase });
   const billingUpsert = useUpsertOrganizationBilling({ supabase });
-  const { showToast } = useToast();
 
   const [billingModalOpen, setBillingModalOpen] = useState(false);
   const [billingModalMode, setBillingModalMode] = useState<"required" | "edit">("required");
@@ -141,8 +147,6 @@ export default function AdminAbonnementPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tabFromUrl]);
 
-  
-
   function setTabAndUrl(next: TabKey) {
     setTab(next);
     setSearchParams(
@@ -158,24 +162,6 @@ export default function AdminAbonnementPage() {
   const { loading: startLoading, error: startError, result, startSubscription, reset } =
     useStartSubscription({ supabase });
 
-    useEffect(() => {
-  if (startError) {
-    showToast({ title: "Erreur", description: startError, variant: "error", duration: 7000 });
-  }
-}, [startError, showToast]);
-
-useEffect(() => {
-  if (!result) return;
-  showToast({
-    title: result.ok ? "Demande enregistrée" : "Synchronisation en attente",
-    description: result.ok
-      ? "Si Mollie s’ouvre, finalisez le paiement. Sinon, le plan est déjà à jour."
-      : "Paiement ok côté Mollie, en attente de synchro côté Eventflow.",
-    variant: result.ok ? "success" : "warning",
-    duration: 6000,
-  });
-}, [result, showToast]);
-
   const {
     loading: cancelLoading,
     error: cancelError,
@@ -183,6 +169,42 @@ useEffect(() => {
     cancelSubscription,
     reset: resetCancel,
   } = useCancelSubscription({ supabase });
+
+  // toasts: start error / result
+  useEffect(() => {
+    if (!startError) return;
+    showToast({ title: "Erreur", description: startError, variant: "error", duration: 7000 });
+  }, [startError, showToast]);
+
+  useEffect(() => {
+    if (!result) return;
+
+    showToast({
+      title: result.ok ? "Demande enregistrée" : "Synchronisation en attente",
+      description: result.ok
+        ? "Si Mollie s’ouvre, finalisez le paiement. Sinon, le plan est déjà à jour."
+        : "Paiement ok côté Mollie, en attente de synchro côté Eventflow.",
+      variant: result.ok ? "success" : "warning",
+      duration: 6000,
+    });
+  }, [result, showToast]);
+
+  useEffect(() => {
+    if (!cancelError) return;
+    showToast({ title: "Erreur", description: cancelError, variant: "error", duration: 7000 });
+  }, [cancelError, showToast]);
+
+  useEffect(() => {
+    if (!cancelResult) return;
+    showToast({
+      title: cancelResult.ok ? "Abonnement résilié" : "Résiliation en attente",
+      description: cancelResult.ok
+        ? "Vous êtes repassé en Free. Les limites sont appliquées."
+        : "Résiliation lancée. La synchronisation peut prendre un moment.",
+      variant: cancelResult.ok ? "success" : "warning",
+      duration: 6500,
+    });
+  }, [cancelResult, showToast]);
 
   const org = bootstrap.organization;
   const sub = bootstrap.subscription;
@@ -202,82 +224,77 @@ useEffect(() => {
 
   const startedAtLabel = fmtDate(org?.planStartedAt ?? null);
 
-  const navigate = useNavigate();
   const didHandleReturn = useRef(false);
-
   const [isSyncingReturn, setIsSyncingReturn] = useState(false);
 
-useEffect(() => {
-  if (!isReturn) return;
-  if (didHandleReturn.current) return;
-  didHandleReturn.current = true;
+  // ✅ Retour Mollie : refetch + polling + toasts
+  useEffect(() => {
+    if (!isReturn) return;
+    if (didHandleReturn.current) return;
+    didHandleReturn.current = true;
 
-  const nextQs = new URLSearchParams(location.search);
-  nextQs.delete("return");
+    const nextQs = new URLSearchParams(location.search);
+    nextQs.delete("return");
 
-  (async () => {
-    setIsSyncingReturn(true);
+    (async () => {
+      setIsSyncingReturn(true);
 
-    // ✅ toast "patience"
-    showToast({
-      title: "Paiement reçu",
-      description: "Synchronisation en cours… ça peut prendre quelques secondes.",
-      variant: "info",
-      duration: 5000,
-    });
+      showToast({
+        title: "Paiement reçu",
+        description: "Synchronisation en cours… ça peut prendre quelques secondes.",
+        variant: "info",
+        duration: 5000,
+      });
 
-    let synced = false;
+      const beforePlan = (bootstrap.organization?.plan ?? "free") as PlanKey;
+      let synced = false;
 
-    try {
-      const maxTries = 12; // ~24s
-      const delayMs = 2000;
+      try {
+        const maxTries = 12; // ~24s
+        const delayMs = 2000;
 
-      for (let i = 0; i < maxTries; i++) {
-        await refetch();
+        for (let i = 0; i < maxTries; i++) {
+          await refetch();
+          const current = (bootstrap.organization?.plan ?? "free") as PlanKey;
 
-        const p = (bootstrap.organization?.plan ?? "free") as PlanKey;
-        if (p !== "free") {
-          synced = true;
-          break;
+          if (current !== beforePlan) {
+            synced = true;
+            break;
+          }
+
+          await sleep(delayMs);
         }
+      } finally {
+        setIsSyncingReturn(false);
 
-        await sleep(delayMs);
+        showToast(
+          synced
+            ? {
+                title: "Plan mis à jour",
+                description: "Votre abonnement est à jour. Merci !",
+                variant: "success",
+                duration: 4500,
+              }
+            : {
+                title: "Synchronisation en attente",
+                description: "Ça peut encore prendre un moment. Rafraîchissez la page si besoin.",
+                variant: "warning",
+                duration: 6500,
+              }
+        );
+
+        const search = nextQs.toString();
+        navigate(
+          {
+            pathname: location.pathname,
+            search: search ? `?${search}` : "",
+          },
+          { replace: true }
+        );
       }
-    } catch {
-      // rien, on gère juste via toast ci-dessous
-    } finally {
-      setIsSyncingReturn(false);
-
-      // ✅ toast résultat
-      showToast(
-        synced
-          ? {
-              title: "Abonnement activé",
-              description: "Votre plan est à jour. Merci !",
-              variant: "success",
-              duration: 4500,
-            }
-          : {
-              title: "Synchronisation en attente",
-              description: "Ça peut encore prendre un moment. Rafraîchissez la page si nécessaire.",
-              variant: "warning",
-              duration: 6500,
-            }
-      );
-
-      const search = nextQs.toString();
-      navigate(
-        {
-          pathname: location.pathname,
-          search: search ? `?${search}` : "",
-        },
-        { replace: true }
-      );
-    }
-  })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [isReturn, refetch, navigate, location.pathname, location.search]);
-
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReturn, refetch, navigate, location.pathname, location.search]);
 
   async function ensureBillingOrOpenModal(nextPlan: "starter" | "pro"): Promise<boolean> {
     const billing = await billingGet.fetchBilling(orgId);
@@ -311,20 +328,39 @@ useEffect(() => {
     if (!okBilling) return;
 
     const res = await startSubscription({ orgId, plan: target });
-    if (!res) return;
 
-    if (res.ok && "action" in res && res.action === "checkout") {
+    if (!res) {
       showToast({
-          title: "Redirection vers Mollie",
-          description: "Finalisez le paiement, puis revenez sur cette page.",
-          variant: "info",
-          duration: 4000,
-        });
+        title: "Impossible de démarrer l’abonnement",
+        description: "Réessayez dans quelques instants.",
+        variant: "error",
+        duration: 6000,
+      });
+      return;
+    }
+
+    if (!res.ok) {
+      showToast({
+        title: "Erreur de paiement",
+        description: "La demande a échoué. Vérifiez vos infos et réessayez.",
+        variant: "error",
+        duration: 6000,
+      });
+      return;
+    }
+
+    if ("action" in res && res.action === "checkout") {
+      showToast({
+        title: "Redirection vers Mollie",
+        description: "Finalisez le paiement, puis revenez sur cette page.",
+        variant: "info",
+        duration: 4000,
+      });
       window.location.href = res.checkoutUrl;
       return;
     }
 
-    if (res.ok && "action" in res && res.action === "sub_created") {
+    if ("action" in res && res.action === "sub_created") {
       await refetch();
       showToast({
         title: "Plan mis à jour",
@@ -350,20 +386,36 @@ useEffect(() => {
     if (!res?.ok) return;
 
     await refetch();
+
+    // ✅ toast "retour en free"
+    showToast({
+      title: "Retour en Free",
+      description: "OK. Les limites Free sont appliquées. (Si ça tarde: rafraîchissez.)",
+      variant: "success",
+      duration: 6000,
+    });
   }
 
   const anyLoading = startLoading || cancelLoading;
+
+  // ✅ quand on est free : proposer Starter + Pro (Pro mis en avant)
+  const upgradeTiles =
+    plan === "free"
+      ? (["pro", "starter"] as const) // Pro d'abord pour pousser la conversion
+      : plan === "starter"
+      ? (["pro"] as const)
+      : ([] as const);
 
   return (
     <Container>
       <div className="adminEventTabs">
         <div className="adminEventTabsInner">
-        <TabButton active={tab === "general"} onClick={() => setTabAndUrl("general")}>
-          Général
-        </TabButton>
-        <TabButton active={tab === "invoices"} onClick={() => setTabAndUrl("invoices")}>
-          Mes factures
-        </TabButton>
+          <TabButton active={tab === "general"} onClick={() => setTabAndUrl("general")}>
+            Général
+          </TabButton>
+          <TabButton active={tab === "invoices"} onClick={() => setTabAndUrl("invoices")}>
+            Mes factures
+          </TabButton>
         </div>
       </div>
 
@@ -371,16 +423,14 @@ useEffect(() => {
         <>
           {/* ---------------------- Card 1: Résumé ---------------------- */}
           <Card>
-            <CardHeader
-              title="Abonnement"
-              subtitle="Votre plan actuel, votre statut, et les prochaines étapes."
-            />
+            <CardHeader title="Abonnement" subtitle="Votre plan actuel, votre statut, et les prochaines étapes." />
             <CardBody>
               {isSyncingReturn && (
                 <div className="adminSub__mutedLine">
                   Synchronisation du paiement… votre plan peut mettre quelques secondes à s’actualiser.
                 </div>
               )}
+
               <div className="adminSub__summaryGrid">
                 {/* A - Plan */}
                 <div className="adminSub__summaryCol">
@@ -401,17 +451,12 @@ useEffect(() => {
                   {plan === "free" && !sub ? (
                     <div className="adminSub__text">
                       Vous êtes sur le plan <b>Free</b>.
-                      <div className="adminSub__mutedLine">
-                        Aucune échéance, upgrade possible à tout moment.
-                      </div>
+                      <div className="adminSub__mutedLine">Aucune échéance, upgrade possible à tout moment.</div>
                     </div>
                   ) : (
                     <div className="adminSub__text">
-                      Prochaine échéance :{" "}
-                      <span className="adminSub__valueStrong">{periodEndLabel ?? "—"}</span>
-                      <div className="adminSub__mutedLine">
-                        Paiement via {sub?.provider ?? org.paymentsProvider}.
-                      </div>
+                      Prochaine échéance : <span className="adminSub__valueStrong">{periodEndLabel ?? "—"}</span>
+                      <div className="adminSub__mutedLine">Paiement via {sub?.provider ?? org.paymentsProvider}.</div>
                     </div>
                   )}
                 </div>
@@ -431,7 +476,6 @@ useEffect(() => {
                   Infos de facturation
                 </Button>
               </div>
-
             </CardBody>
           </Card>
 
@@ -457,7 +501,7 @@ useEffect(() => {
               title="Changer de plan"
               subtitle={
                 plan === "free"
-                  ? "Passez au plan Starter pour débloquer plus de capacité."
+                  ? "Choisissez Starter… ou passez direct en Pro (recommandé)."
                   : plan === "starter"
                   ? "Vous pouvez upgrader vers Pro."
                   : "Vous êtes sur le plan Pro."
@@ -467,33 +511,27 @@ useEffect(() => {
               <div className={isPaidPlan ? "adminSub__plan2Col" : ""}>
                 {/* Gauche : upgrade */}
                 <div className="adminSub__plansWrap">
-                  {plan === "free" && (
+                  {upgradeTiles.map((target) => (
                     <PlanTile
-                      title={PLAN_DEFS.starter.title}
-                      price={PLAN_DEFS.starter.price}
-                      points={PLAN_DEFS.starter.points}
-                      highlight={PLAN_DEFS.starter.highlight}
+                      key={target}
+                      title={PLAN_DEFS[target].title}
+                      price={PLAN_DEFS[target].price}
+                      points={PLAN_DEFS[target].points}
+                      highlight={PLAN_DEFS[target].highlight}
                       kind="up"
                       currentPlan={plan}
-                      targetPlan="starter"
+                      targetPlan={target}
                       loading={anyLoading}
-                      onAction={() => onChoosePlan("starter")}
+                      onAction={() => onChoosePlan(target)}
+                      badgeLabel={target === "pro" ? "Recommandé" : "Upgrade"}
+                      actionLabelOverride={PLAN_DEFS[target].ctaLabel}
+                      helperOverride={
+                        target === "pro"
+                          ? "Le meilleur choix si vous faites des événements payants régulièrement."
+                          : undefined
+                      }
                     />
-                  )}
-
-                  {plan === "starter" && (
-                    <PlanTile
-                      title={PLAN_DEFS.pro.title}
-                      price={PLAN_DEFS.pro.price}
-                      points={PLAN_DEFS.pro.points}
-                      highlight={PLAN_DEFS.pro.highlight}
-                      kind="up"
-                      currentPlan={plan}
-                      targetPlan="pro"
-                      loading={anyLoading}
-                      onAction={() => onChoosePlan("pro")}
-                    />
-                  )}
+                  ))}
                 </div>
 
                 {/* Droite : résiliation */}
@@ -520,9 +558,7 @@ useEffect(() => {
 
                       {(cancelError || cancelResult) && (
                         <div className="adminSub__feedbackWrap">
-                          {cancelError && (
-                            <div className="adminSub__alert adminSub__alert--error">{cancelError}</div>
-                          )}
+                          {cancelError && <div className="adminSub__alert adminSub__alert--error">{cancelError}</div>}
 
                           {!cancelError && cancelResult && (
                             <div className="adminSub__alert adminSub__alert--success">
@@ -539,7 +575,7 @@ useEffect(() => {
               </div>
 
               <div className="adminSub__footNote">
-                {plan === "free" && <>Upgrade vers Starter via Mollie.</>}
+                {plan === "free" && <>Upgrade vers Starter ou Pro via Mollie.</>}
                 {plan === "starter" && <>Upgrade vers Pro via Mollie.</>}
                 {plan === "pro" && <>Vous pouvez résilier à tout moment.</>}
               </div>
@@ -573,32 +609,46 @@ useEffect(() => {
 
             if (planToContinue && canStartSubscription(planToContinue)) {
               const res = await startSubscription({ orgId, plan: planToContinue });
-                  if (!res) {
-                    showToast({
-                      title: "Impossible de démarrer l’abonnement",
-                      description: "Réessayez dans quelques instants.",
-                      variant: "error",
-                      duration: 6000,
-                    });
-                    return;
-                  }
-                  if (!res.ok) {
-                    showToast({
-                      title: "Erreur de paiement",
-                      description: "La demande a échoué. Vérifiez vos infos et réessayez.",
-                      variant: "error",
-                      duration: 6000,
-                    });
-                    return;
-                  }
 
-              if (res.ok && "action" in res && res.action === "checkout") {
+              if (!res) {
+                showToast({
+                  title: "Impossible de démarrer l’abonnement",
+                  description: "Réessayez dans quelques instants.",
+                  variant: "error",
+                  duration: 6000,
+                });
+                return;
+              }
+
+              if (!res.ok) {
+                showToast({
+                  title: "Erreur de paiement",
+                  description: "La demande a échoué. Vérifiez vos infos et réessayez.",
+                  variant: "error",
+                  duration: 6000,
+                });
+                return;
+              }
+
+              if ("action" in res && res.action === "checkout") {
+                showToast({
+                  title: "Redirection vers Mollie",
+                  description: "Finalisez le paiement, puis revenez sur cette page.",
+                  variant: "info",
+                  duration: 4000,
+                });
                 window.location.href = res.checkoutUrl;
                 return;
               }
 
-              if (res.ok && "action" in res && res.action === "sub_created") {
+              if ("action" in res && res.action === "sub_created") {
                 await refetch();
+                showToast({
+                  title: "Plan mis à jour",
+                  description: "Votre abonnement a été mis à jour.",
+                  variant: "success",
+                  duration: 4500,
+                });
                 return;
               }
             }
@@ -633,6 +683,9 @@ function PlanTile({
   targetPlan,
   onAction,
   loading,
+  badgeLabel,
+  actionLabelOverride,
+  helperOverride,
 }: {
   title: string;
   price: string;
@@ -643,13 +696,18 @@ function PlanTile({
   targetPlan: PlanKey;
   onAction?: () => void;
   loading?: boolean;
+  badgeLabel?: string;
+  actionLabelOverride?: string;
+  helperOverride?: string;
 }) {
-  const actionLabel = kind === "up" ? `Passer à ${title}` : `Redescendre à ${title}`;
+  const defaultActionLabel = kind === "up" ? `Passer à ${title}` : `Redescendre à ${title}`;
+  const actionLabel = actionLabelOverride ?? defaultActionLabel;
 
   const helper =
-    kind === "up"
+    helperOverride ??
+    (kind === "up"
       ? "Vous garderez l’accès immédiatement après confirmation."
-      : "Attention : baisse des limites et fonctionnalités.";
+      : "Attention : baisse des limites et fonctionnalités.");
 
   const isEnabled = Boolean(onAction) && !loading;
 
@@ -663,7 +721,7 @@ function PlanTile({
 
         <div className="adminSub__planRight">
           <div className="adminSub__planPrice">{price}</div>
-          <Badge>{kind === "up" ? "Upgrade" : "Downgrade"}</Badge>
+          <Badge>{badgeLabel ?? (kind === "up" ? "Upgrade" : "Downgrade")}</Badge>
         </div>
       </div>
 
@@ -678,11 +736,7 @@ function PlanTile({
       <div className="adminSub__planHelper">{helper}</div>
 
       <div className="adminSub__planAction">
-        <Button
-          disabled={!isEnabled}
-          className="adminSub__fullWidthBtn"
-          onClick={onAction}
-        >
+        <Button disabled={!isEnabled} className="adminSub__fullWidthBtn" onClick={onAction}>
           {loading && isEnabled ? "Ouverture Mollie…" : actionLabel}
         </Button>
       </div>
@@ -695,11 +749,7 @@ function PlanTile({
 function TabButton(props: { active?: boolean; onClick: () => void; children: React.ReactNode }) {
   const { active, onClick, children } = props;
   return (
-    <button
-      onClick={onClick}
-      className={active ? "adminEventTab isActive" : "adminEventTab"}
-      type="button"
-    >
+    <button onClick={onClick} className={active ? "adminEventTab isActive" : "adminEventTab"} type="button">
       {children}
     </button>
   );
