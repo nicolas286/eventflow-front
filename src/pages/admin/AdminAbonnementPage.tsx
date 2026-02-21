@@ -501,7 +501,7 @@ export default function AdminAbonnementPage() {
               title="Changer de plan"
               subtitle={
                 plan === "free"
-                  ? "Choisissez Starter… ou passez direct en Pro (recommandé)."
+                  ? "Choisissez un plan payant pour débloquer plus de fonctionnalités et soutenir Eventflow."
                   : plan === "starter"
                   ? "Vous pouvez upgrader vers Pro."
                   : "Vous êtes sur le plan Pro."
@@ -510,7 +510,7 @@ export default function AdminAbonnementPage() {
             <CardBody>
               <div className={isPaidPlan ? "adminSub__plan2Col" : ""}>
                 {/* Gauche : upgrade */}
-                <div className="adminSub__plansWrap">
+                <div className={plan === "free" ? "adminSub__plansWrap isFlex" : "adminSub__plansWrap"}>
                   {upgradeTiles.map((target) => (
                     <PlanTile
                       key={target}
@@ -530,6 +530,7 @@ export default function AdminAbonnementPage() {
                           ? "Le meilleur choix si vous faites des événements payants régulièrement."
                           : undefined
                       }
+                      buttonVariant={target === "starter" ? "secondary" : undefined} // ✅ Starter en secondary
                     />
                   ))}
                 </div>
@@ -686,6 +687,7 @@ function PlanTile({
   badgeLabel,
   actionLabelOverride,
   helperOverride,
+  buttonVariant
 }: {
   title: string;
   price: string;
@@ -699,6 +701,7 @@ function PlanTile({
   badgeLabel?: string;
   actionLabelOverride?: string;
   helperOverride?: string;
+  buttonVariant?: "primary" | "secondary" | "danger";
 }) {
   const defaultActionLabel = kind === "up" ? `Passer à ${title}` : `Redescendre à ${title}`;
   const actionLabel = actionLabelOverride ?? defaultActionLabel;
@@ -736,7 +739,7 @@ function PlanTile({
       <div className="adminSub__planHelper">{helper}</div>
 
       <div className="adminSub__planAction">
-        <Button disabled={!isEnabled} className="adminSub__fullWidthBtn" onClick={onAction}>
+        <Button  variant={buttonVariant} disabled={!isEnabled} className="adminSub__fullWidthBtn" onClick={onAction}>
           {loading && isEnabled ? "Ouverture Mollie…" : actionLabel}
         </Button>
       </div>
