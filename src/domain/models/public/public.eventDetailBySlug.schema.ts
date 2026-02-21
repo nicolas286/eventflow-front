@@ -22,6 +22,7 @@ export const publicEventSchema = eventSchema.pick({
   bannerUrl: true,
   startsAt: true,
   endsAt: true,
+  depositCents: true,
 });
 
 export const publicEventProductSchema = eventProductSchema.pick({

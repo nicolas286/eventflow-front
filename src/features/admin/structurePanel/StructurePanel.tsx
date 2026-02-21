@@ -14,18 +14,21 @@ import type { OrganizationProfile } from "../../../domain/models/db/db.organizat
 type Props = {
   orgId: string;
   orgInfo: Organization | null;
-  orgProfile: OrganizationProfile | null; 
+  orgProfile: OrganizationProfile | null;
   onSaved: () => Promise<void>;
 };
 
 type Form = {
   type: NonNullable<Organization["type"]>;
-  name: string; 
+  name: string;
   status: NonNullable<Organization["status"]>;
   description: string;
   publicEmail: string;
   phone: string;
   website: string;
+
+  // ✅ NEW: nullable (vide = null)
+  emailReminderDaysBefore: number | null;
 };
 
 const emptyForm: Form = {
@@ -36,6 +39,7 @@ const emptyForm: Form = {
   publicEmail: "",
   phone: "",
   website: "",
+  emailReminderDaysBefore: null,
 };
 
 function toForm(o: Organization | null, profile: OrganizationProfile | null): Form {
@@ -49,6 +53,7 @@ function toForm(o: Organization | null, profile: OrganizationProfile | null): Fo
     publicEmail: profile.publicEmail ?? "",
     phone: profile.phone ?? "",
     website: profile.website ?? "",
+    emailReminderDaysBefore: profile.emailReminderDaysBefore ?? null,
   };
 }
 
@@ -58,6 +63,17 @@ function prettyPaymentLabel(s: Organization["paymentsStatus"]) {
   if (s === "connected") return "Connecté";
   if (s === "revoked") return "Révoqué";
   return s;
+}
+
+/** ✅ helper : string input -> number|null (>=0) */
+function parseNullableNonNegativeInt(v: string): number | null {
+  const t = String(v ?? "").trim();
+  if (!t) return null; // vide => null
+  const n = Number(t);
+  if (!Number.isFinite(n)) return null;
+  const i = Math.floor(n);
+  if (i < 0) return 0;
+  return i;
 }
 
 export default function StructurePanel({ orgId, orgInfo, orgProfile, onSaved }: Props) {
@@ -152,32 +168,35 @@ export default function StructurePanel({ orgId, orgInfo, orgProfile, onSaved }: 
 
     if (!res) return;
 
-    // ✅ On ne set plus org ici.
-    // On refresh le bootstrap, qui redescendra dans org -> initial -> form.
+    // ✅ refresh bootstrap
     await onSaved();
 
-    // ✅ Et on resync immédiatement le form avec la réponse RPC (UX instant)
+    // ✅ resync immédiat avec réponse RPC
     setForm({
-        type: res.type as Form["type"],
-        name: res.name ?? "",
-        status: res.status as Form["status"],
-        description: res.profile.description ?? "",
-        publicEmail: res.profile.publicEmail ?? "",
-        phone: res.profile.phone ?? "",
-        website: res.profile.website ?? "",
-      });
+      type: res.type as Form["type"],
+      name: res.name ?? "",
+      status: res.status as Form["status"],
+      description: res.profile.description ?? "",
+      publicEmail: res.profile.publicEmail ?? "",
+      phone: res.profile.phone ?? "",
+      website: res.profile.website ?? "",
 
+      // ✅ NEW
+      emailReminderDaysBefore:
+        typeof res.profile.emailReminderDaysBefore === "number"
+          ? Math.max(0, res.profile.emailReminderDaysBefore)
+          : null,
+    });
   }
 
-async function handleConnect(mode: "test" | "live") {
-  resetConnect();
-  setConnectFlash(null);
+  async function handleConnect(mode: "test" | "live") {
+    resetConnect();
+    setConnectFlash(null);
 
-  const url = await startMollieConnect({ orgId, mode });
+    const url = await startMollieConnect({ orgId, mode });
 
-  if (url) window.location.href = url;
-}
-
+    if (url) window.location.href = url;
+  }
 
   /* -------- render -------- */
 
@@ -201,9 +220,7 @@ async function handleConnect(mode: "test" | "live") {
             <div className="structurePanel__fieldLabel">Type</div>
             <Select
               value={form.type}
-              onChange={(e) =>
-                setForm((s) => ({ ...s, type: e.target.value as Form["type"] }))
-              }
+              onChange={(e) => setForm((s) => ({ ...s, type: e.target.value as Form["type"] }))}
             >
               <option value="association">Association</option>
               <option value="person">Personne</option>
@@ -246,34 +263,48 @@ async function handleConnect(mode: "test" | "live") {
 
           <div className="structurePanel__grid2Inner">
             <Input
-                label="Email public"
-                value={form.publicEmail}
-                onChange={(e) => setForm((s) => ({ ...s, publicEmail: e.target.value }))}
-                placeholder="contact@..."
-              />
-
+              label="Email public"
+              value={form.publicEmail}
+              onChange={(e) => setForm((s) => ({ ...s, publicEmail: e.target.value }))}
+              placeholder="contact@..."
+            />
 
             <Input
               label="Téléphone"
               value={form.phone}
-              onChange={(e) =>
-                setForm((s) => ({ ...s, phone: e.target.value }))
-              }
+              onChange={(e) => setForm((s) => ({ ...s, phone: e.target.value }))}
               placeholder="+32 ..."
             />
-
           </div>
 
           <div className="structurePanel__field">
-          <Input
-            label="Site web"
-            value={form.website}
-            onChange={(e) =>
-              setForm((s) => ({ ...s, website: e.target.value }))
-            }
-            placeholder="https://..."
-          />
+            <Input
+              label="Site web"
+              value={form.website}
+              onChange={(e) => setForm((s) => ({ ...s, website: e.target.value }))}
+              placeholder="https://..."
+            />
+          </div>
 
+          {/* ✅ NEW: rappel email */}
+          <div className="structurePanel__field">
+            <Input
+              label="Rappel email (jours avant l’événement)"
+              type="number"
+              inputMode="numeric"
+              min={0}
+              value={form.emailReminderDaysBefore === null ? "" : String(form.emailReminderDaysBefore)}
+              onChange={(e) =>
+                setForm((s) => ({
+                  ...s,
+                  emailReminderDaysBefore: parseNullableNonNegativeInt(e.target.value),
+                }))
+              }
+              placeholder="ex: 3 (laisser vide pour désactiver)"
+            />
+            <div className="structurePanel__help">
+              Vide = aucun rappel automatique. 0 = rappel le jour même.
+            </div>
           </div>
         </div>
       </div>
@@ -291,8 +322,8 @@ async function handleConnect(mode: "test" | "live") {
           <div className="structurePanel__chip">
             <span className="structurePanel__chipLabel">Statut</span>
             <span className="structurePanel__chipValue">
-            {orgInfo ? prettyPaymentLabel(orgInfo.paymentsStatus) : "—"}
-          </span>
+              {orgInfo ? prettyPaymentLabel(orgInfo.paymentsStatus) : "—"}
+            </span>
 
             {orgInfo?.paymentsLiveReady ? (
               <span className="structurePanel__chipOk">live prêt</span>

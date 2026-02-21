@@ -19,7 +19,7 @@ import { OrgPublicPage } from "./pages/public/OrgPublicPage";
 import { EventTicketsPage } from "./pages/public/EventTicketsPage";
 import { EventAttendeesPage } from "./pages/public/EventAttendeesPage";
 import { EventPaymentPage } from "./pages/public/EventPaymentPage";
-import { OrderReturnPage } from "./pages/public/OrderReturnPage";
+import { OrderPage } from "./pages/public/OrderPage";
 
 /* Layouts */
 import { AdminLayout } from "./ui/layouts/AdminLayout";
@@ -67,7 +67,7 @@ function App() {
         </Route>
 
         {/* PUBLIC – return Mollie */}
-        <Route path="/order/:orderId" element={<OrderReturnPage />} />
+        <Route path="/order/:orderId" element={<OrderPage />} />
       </Route>
 
       {/* ROOT / FALLBACK */}

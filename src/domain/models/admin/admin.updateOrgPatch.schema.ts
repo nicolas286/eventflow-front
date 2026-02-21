@@ -25,6 +25,7 @@ const profilePatchSchema = organizationProfileSchema
     publicEmail: true,
     phone: true,
     website: true,
+    emailReminderDaysBefore: true,
   })
   .partial();
 
@@ -57,6 +58,7 @@ export const updateOrgInfoPatchSchema = orgIdSchema
     publicEmail: organizationProfileSchema.shape.publicEmail,
     phone: organizationProfileSchema.shape.phone,
     website: organizationProfileSchema.shape.website,
+    emailReminderDaysBefore: organizationProfileSchema.shape.emailReminderDaysBefore,
   }),
 });
 

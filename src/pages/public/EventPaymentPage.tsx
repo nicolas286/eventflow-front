@@ -119,6 +119,17 @@ export function EventPaymentPage() {
   const totalCents = picked.reduce((acc, x) => acc + x.qty * x.p.priceCents, 0);
   const currency = picked[0]?.p.currency ?? "EUR";
 
+  const depositCents = typeof event?.depositCents === "number" ? event.depositCents : 0;
+
+  const dueNowCentsUi =
+    totalCents <= 0
+      ? 0
+      : depositCents > 0
+      ? Math.min(totalCents, depositCents)
+      : totalCents;
+
+  const hasDeposit = depositCents > 0 && totalCents > 0;
+
   const attendeesCount = picked.reduce((acc, x) => {
     if (!x.p.createsAttendees) return acc;
     return acc + x.qty * (x.p.attendeesPerUnit ?? 0);
@@ -331,9 +342,20 @@ export function EventPaymentPage() {
                     <div className="publicDivider" />
 
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <div style={{ fontWeight: 800 }}>Total</div>
-                      <div style={{ fontWeight: 800 }}>{formatMoney(totalCents, currency)}</div>
-                    </div>
+                        <div style={{ fontWeight: 800 }}>{hasDeposit ? "À payer maintenant" : "Total"}</div>
+                        <div style={{ fontWeight: 800 }}>{formatMoney(dueNowCentsUi, currency)}</div>
+                      </div>
+
+                      {hasDeposit ? (
+                        <>
+                          <div className="publicSubtitle" style={{ marginTop: 6 }}>
+                            Total commande : {formatMoney(totalCents, currency)}
+                          </div>
+                          <div className="publicSubtitle" style={{ marginTop: 2 }}>
+                            Le solde sera à régler plus tard (selon les modalités de l’organisateur).
+                          </div>
+                        </>
+                      ) : null}
 
                     <div className="publicSubtitle" style={{ marginTop: 6 }}>
                       Participants à renseigner : {attendeesCount}
@@ -420,18 +442,18 @@ export function EventPaymentPage() {
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
             <Button variant="primary" label="Retour" onClick={goBack} disabled={registering || pendingPay} />
             <Button
-              label={
-                totalCents === 0
-                  ? registering || pendingPay
-                    ? "Validation…"
-                    : "Confirmer"
-                  : registering || pendingPay
-                  ? "Paiement…"
-                  : "Payer"
-              }
-              onClick={pay}
-              disabled={!canPay}
-            />
+                  label={
+                    totalCents === 0
+                      ? registering || pendingPay
+                        ? "Validation…"
+                        : "Confirmer"
+                      : registering || pendingPay
+                      ? "Paiement…"
+                      : `Payer ${formatMoney(dueNowCentsUi, currency)}`
+                  }
+                  onClick={pay}
+                  disabled={!canPay}
+                />
           </div>
         </div>
       </Container>

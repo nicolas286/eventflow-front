@@ -34,6 +34,8 @@ export function updateOrgInfoRepo(supabase: SupabaseClient) {
       if ("publicEmail" in parsed) rpcInput.public_email = parsed.publicEmail;
       if ("phone" in parsed) rpcInput.phone = parsed.phone;
       if ("website" in parsed) rpcInput.website = parsed.website;
+      if ("emailReminderDaysBefore" in parsed)
+  rpcInput.email_reminder_days_before = parsed.emailReminderDaysBefore;
 
       const raw = await supabaseSafe(() =>
         supabase.rpc("update_organization", { p_input: rpcInput })

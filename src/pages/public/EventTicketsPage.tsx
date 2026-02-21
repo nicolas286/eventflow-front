@@ -123,7 +123,6 @@ export function EventTicketsPage() {
                   const remaining = computeRemaining(p);
                   const soldOut = remaining === 0 && remaining != null;
 
-                  const stockLabel = remaining == null ? "Illimité" : `Stock : ${remaining}`;
                   const maxQty = resolveMaxQty(remaining);
 
                   const badgeTone = soldOut ? "danger" : "success";
@@ -141,7 +140,7 @@ export function EventTicketsPage() {
                         title={<div className="publicCardTitle">{p.name}</div>}
                         subtitle={
                           <div className="publicSubtitle">
-                            {formatMoney(p.priceCents, moneyCurrency)} · {stockLabel}
+                            {formatMoney(p.priceCents, moneyCurrency)} 
                           </div>
                         }
                         right={<Badge tone={badgeTone} label={badgeLabel} />}

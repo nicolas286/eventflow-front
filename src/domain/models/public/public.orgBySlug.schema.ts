@@ -11,7 +11,8 @@ export const publicOrganizationOverviewSchema = organizationSchema.pick({
 export const publicOrganizationProfileSchema = organizationProfileSchema.omit({
   orgId: true,
   createdAt: true,
-  updatedAt: true
+  updatedAt: true, 
+  emailReminderDaysBefore: true,
 });
 
 export const publicOrgBySlugSchema = z.object({
