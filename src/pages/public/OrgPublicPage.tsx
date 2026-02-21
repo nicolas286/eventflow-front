@@ -7,6 +7,7 @@ import Container from "../../ui/components/container/Container";
 import Card, { CardBody } from "../../ui/components/card/Card";
 import Button from "../../ui/components/button/Button";
 import Badge from "../../ui/components/badge/Badge";
+import { AttachmentIcon, FolderIcon, GlobeIcon, PhoneIcon, SearchIcon, SendIcon } from "../../ui/components/icon/Icons";
 
 import { formatDateTimeHuman, toDayEndISO, toDayStartISO } from "../../domain/helpers/dateTime";
 
@@ -168,32 +169,44 @@ export function OrgPublicPage() {
                   <h1 className="publicTitle">{displayName}</h1>
                 </div>
 
-                <div className="publicActions">
-                  {profile.website ? (
-                    <a href={profile.website} target="_blank" rel="noreferrer">
-                      <Button variant="primary" label="Site web" />
-                    </a>
-                  ) : null}
+                {profile.description ? (
+                  <div className="publicProse" style={{ whiteSpace: "pre-wrap" }}>
+                    {profile.description}
+                  </div>
+                ) : (
+                  <div className="publicEmpty">Cette organisation n’a pas encore de description.</div>
+                )}
 
-                  {profile.publicEmail ? (
-                    <a href={`mailto:${profile.publicEmail}`}>
-                      <Button variant="primary" label="Contact" />
-                    </a>
-                  ) : null}
+
                 </div>
-              </div>
             </div>
           </div>
+          
 
           <div className="publicDivider" />
+            <div className="publicActions">
 
-          {profile.description ? (
-            <div className="publicProse" style={{ whiteSpace: "pre-wrap" }}>
-              {profile.description}
+              {profile.publicEmail ? (
+                <div className="publicMail">
+                  <SendIcon /> {profile.publicEmail}
+                </div>
+              ) : null}
+
+              {profile.phone ? (
+                <div className="publicPhone">
+                  <PhoneIcon /> {profile.phone}
+                </div>
+              ) : null}
+
+              {profile.website ? (
+                <div className="publicSite">
+                  <a href={profile.website} target="_blank" rel="noreferrer">
+                    <GlobeIcon /> {profile.website}
+                  </a>
+                </div>
+              ) : null}
+
             </div>
-          ) : (
-            <div className="publicEmpty">Cette organisation n’a pas encore de description.</div>
-          )}
         </div>
 
         {/* Filtres + tri */}
