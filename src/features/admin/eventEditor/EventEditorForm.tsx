@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   updateEventPatchSchema,
   type UpdateEventPatch,
@@ -108,7 +109,12 @@ export default function EventEditorForm({ event, onConfirm }: Props) {
     <div className="eventEditor">
       {submitError && <MessageBox variant="error">{submitError}</MessageBox>}
       {successMsg && <MessageBox variant="success">{successMsg}</MessageBox>}
-
+        <Link
+        className="eventCard__actionLink"
+        to={`/admin/events/${event.slug}`}
+        onClick={(e) => e.stopPropagation()}
+        title="Voir et modifier les détails de l'événement"
+      ><div className="eventCard__title">Aller à l'éditeur complet</div></Link>
       <Input
         value={draft.title ?? ""}
         onChange={(e) => live.handleChange("title", e.target.value)}

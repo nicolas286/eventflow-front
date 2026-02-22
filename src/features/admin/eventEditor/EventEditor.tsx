@@ -18,7 +18,7 @@ export default function EventEditor({ event, onUpdateEvent }: Props) {
   if (!event) {
     return (
       <Card>
-        <CardHeader title="Modifier un événement" subtitle="Sélectionnez un événement" />
+        <CardHeader title="Modification rapide" subtitle="Sélectionnez un événement" />
         <CardBody>
           <div className="eventEditor__empty">Aucun événement sélectionné.</div>
         </CardBody>
@@ -30,7 +30,7 @@ export default function EventEditor({ event, onUpdateEvent }: Props) {
 
   return (
     <Card>
-      <CardHeader title="Modifier un événement" />
+      <CardHeader title="Modification rapide" subtitle={ev.title} />
       <CardBody>
         <EventEditorForm key={ev.id} event={ev} onConfirm={onUpdateEvent} />
       </CardBody>

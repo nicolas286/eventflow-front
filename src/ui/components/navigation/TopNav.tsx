@@ -6,6 +6,7 @@ import "../../../styles/mobile/topNav.mobile.css";
 
 import HamburgerMenu, { MenuDivider, MenuHeader, MenuItem } from "../menus/HamburgerMenu";
 import { supabase } from "../../../gateways/supabase/supabaseClient";
+import { useToast } from "../../../ui/components/toast/useToast"; // ✅ add
 
 export type OrgInfo = {
   name?: string;
@@ -31,7 +32,6 @@ const adminKeyToPath: Record<AdminNavKey, string> = {
   abonnement: "/admin/abonnement",
 };
 
-// slugify simple basé sur le nom (tu peux remplacer par ton vrai slug/orgId si tu l’as)
 function slugify(input: string) {
   return input
     .normalize("NFD")
@@ -42,13 +42,6 @@ function slugify(input: string) {
     .replace(/(^-|-$)/g, "");
 }
 
-/**
- * 🔁 ADAPTE ICI si ton routing public est différent
- * Exemples possibles:
- * - return `/o/${org.slug}`
- * - return `/org/${orgId}`
- * - return `/public/${orgId}`
- */
 function getPublicPath(org?: OrgInfo | null) {
   if (!org) return "/";
 
@@ -65,6 +58,7 @@ function getPublicPath(org?: OrgInfo | null) {
 export default function TopNav({ org, mode }: TopNavProps) {
   const navigate = useNavigate();
   const [loggingOut, setLoggingOut] = useState(false);
+  const { showToast } = useToast(); // ✅ add
 
   const title = org?.name ?? "Billetterie";
   const subtitle: ReactNode = mode === "public" ? "Espace public" : "Espace admin";
@@ -82,20 +76,47 @@ export default function TopNav({ org, mode }: TopNavProps) {
   };
 
   async function copyPublicUrl(close?: () => void) {
-  if (!org) return;
+    if (!org) return;
 
-  const path = getPublicPath(org);
-  const fullUrl = `${window.location.origin}${path}`;
+    const path = getPublicPath(org);
+    const fullUrl = `${window.location.origin}${path}`;
 
-  try {
-    await navigator.clipboard.writeText(fullUrl);
-    console.log("URL copiée :", fullUrl);
-  } catch (err) {
-    console.error("Erreur copie presse-papier", err);
+    try {
+      // ✅ clipboard API (https only + perms)
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(fullUrl);
+      } else {
+        // fallback rare (vieux navigateurs / context)
+        const ta = document.createElement("textarea");
+        ta.value = fullUrl;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        if (!ok) throw new Error("COPY_FAILED");
+      }
+
+      showToast({
+        title: "Copié",
+        description: "Adresse du profil public copiée dans le presse-papier.",
+        variant: "success",
+        duration: 3500,
+      });
+    } catch (err) {
+      console.error("Erreur copie presse-papier", err);
+      showToast({
+        title: "Impossible de copier",
+        description: "Votre navigateur a bloqué l’accès au presse-papier. Copiez manuellement l’URL.",
+        variant: "error",
+        duration: 6000,
+      });
+    }
+
+    close?.();
   }
-
-  close?.();
-}
 
   async function handleLogout(close: () => void) {
     if (loggingOut) return;
@@ -110,7 +131,6 @@ export default function TopNav({ org, mode }: TopNavProps) {
   }
 
   const onLogoClick = () => {
-    // ✅ clic logo => page publique
     goPublic();
   };
 
@@ -148,12 +168,8 @@ export default function TopNav({ org, mode }: TopNavProps) {
 
               {mode === "admin" ? (
                 <>
-                  {/* ✅ lien vers le public */}
                   <MenuItem label="Voir le profil public" onClick={() => goPublic(close)} />
-                  <MenuItem
-                      label="Copier l’adresse du profil public"
-                      onClick={() => copyPublicUrl(close)}
-                    />
+                  <MenuItem label="Copier l’adresse du profil public" onClick={() => copyPublicUrl(close)} />
 
                   <MenuDivider />
 
