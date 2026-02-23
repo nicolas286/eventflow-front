@@ -1,1 +1,9 @@
-/*  /index.html  200
+[[redirects]]
+  from = "/share/o/:orgSlug/e/:eventSlug"
+  to = "/.netlify/functions/share-event?orgSlug=:orgSlug&eventSlug=:eventSlug"
+  status = 200
+  force = true
+[[redirects]]
+    from = "/*"
+    to = "/index.html"
+    status = 200
