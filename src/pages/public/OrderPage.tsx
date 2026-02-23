@@ -406,7 +406,8 @@ export function OrderPage() {
               </h2>
 
               <p className="orderReturnSubtitle">{subtitle}</p>
-              <p>Vous recevrez un mail de confirmation dans quelques instants.</p>
+              <p className="orderReturnSubtitle">Vous recevrez un mail de confirmation dans quelques instants.</p>
+              <p className="orderReturnSubtitle">Pour toutes questions, contactez l'organisateur de l'événement.</p>
 
               {isReturn && !isFinalStatus(order.status) ? (
                 <div className="orderReturnLoading" style={{ marginTop: 10 }}>
