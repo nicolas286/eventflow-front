@@ -6,6 +6,8 @@ import { Container } from "../../ui/components";
 import Card, { CardBody, CardHeader } from "../../ui/components/card/Card";
 import Badge from "../../ui/components/badge/Badge";
 import Button from "../../ui/components/button/Button";
+import { Input } from "../../ui/components";
+import CountrySelect from "../../ui/components/forms/CountrySelect";
 
 import type { AdminOutletContext } from "./AdminDashboard";
 import { supabase } from "../../gateways/supabase/supabaseClient";
@@ -14,7 +16,12 @@ import { useCancelSubscription } from "../../features/admin/hooks/useCancelSubsc
 import { useMakeOrganizationBilling } from "../../features/admin/hooks/useMakeOrganizationBilling";
 import { useUpsertOrganizationBilling } from "../../features/admin/hooks/useUpsertOrganizationBilling";
 
-import BillingModal from "../../features/admin/subscriptions/BillingModal";
+import type {
+  OrganizationBilling,
+  OrganizationBillingPatch,
+} from "../../domain/models/db/db.organizationBilling.schema";
+import { inferCountryCode } from "../../domain/helpers/countries";
+
 import { InvoicesTab } from "../../features/admin/subscriptions/InvoicesTab";
 
 import "../../styles/desktop/admin/adminSubscription.desktop.css";
@@ -49,6 +56,18 @@ function fmtLimit(v: number | null | undefined) {
 
 function boolLabel(v: boolean) {
   return v ? "Oui" : "Non";
+}
+
+/* ------------------------------------------------------------------ */
+/* Billing helpers (from BillingModal)                                */
+/* ------------------------------------------------------------------ */
+
+function t(v: string) {
+  return v.trim();
+}
+function toNullIfEmpty(v: string): string | null {
+  const s = t(v);
+  return s ? s : null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -128,12 +147,10 @@ export default function AdminAbonnementPage() {
   const billingGet = useMakeOrganizationBilling({ supabase });
   const billingUpsert = useUpsertOrganizationBilling({ supabase });
 
-  const [billingModalOpen, setBillingModalOpen] = useState(false);
-  const [billingModalMode, setBillingModalMode] = useState<"required" | "edit">("required");
   const [pendingPlan, setPendingPlan] = useState<PlanKey | null>(null);
 
-  type TabKey = "general" | "invoices";
-  const TAB_KEYS: TabKey[] = ["general", "invoices"];
+  type TabKey = "general" | "invoices" | "billing";
+  const TAB_KEYS: TabKey[] = ["general", "invoices", "billing"];
   function isTabKey(v: string | null): v is TabKey {
     return !!v && (TAB_KEYS as string[]).includes(v);
   }
@@ -296,13 +313,20 @@ export default function AdminAbonnementPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isReturn, refetch, navigate, location.pathname, location.search]);
 
-  async function ensureBillingOrOpenModal(nextPlan: "starter" | "pro"): Promise<boolean> {
+  async function ensureBillingOrGoToTab(nextPlan: "starter" | "pro"): Promise<boolean> {
     const billing = await billingGet.fetchBilling(orgId);
     if (billing) return true;
 
     setPendingPlan(nextPlan);
-    setBillingModalMode("required");
-    setBillingModalOpen(true);
+    setTabAndUrl("billing");
+
+    showToast({
+      title: "Infos de facturation requises",
+      description: "Complétez la facturation pour activer un plan payant.",
+      variant: "info",
+      duration: 6000,
+    });
+
     return false;
   }
 
@@ -324,7 +348,7 @@ export default function AdminAbonnementPage() {
 
     if (!canStartSubscription(target)) return;
 
-    const okBilling = await ensureBillingOrOpenModal(target);
+    const okBilling = await ensureBillingOrGoToTab(target);
     if (!okBilling) return;
 
     const res = await startSubscription({ orgId, plan: target });
@@ -416,6 +440,9 @@ export default function AdminAbonnementPage() {
           <TabButton active={tab === "invoices"} onClick={() => setTabAndUrl("invoices")}>
             Mes factures
           </TabButton>
+          <TabButton active={tab === "billing"} onClick={() => setTabAndUrl("billing")}>
+            Facturation
+          </TabButton>
         </div>
       </div>
 
@@ -466,11 +493,9 @@ export default function AdminAbonnementPage() {
                 <Button
                   variant="secondary"
                   disabled={billingGet.loading || billingUpsert.loading}
-                  onClick={async () => {
-                    setBillingModalMode("edit");
+                  onClick={() => {
                     setPendingPlan(null);
-                    setBillingModalOpen(true);
-                    await billingGet.fetchBilling(orgId);
+                    setTabAndUrl("billing");
                   }}
                 >
                   Infos de facturation
@@ -587,25 +612,21 @@ export default function AdminAbonnementPage() {
 
       {tab === "invoices" && <InvoicesTab orgId={orgId} />}
 
-      {billingModalOpen && (
-        <BillingModal
-          mode={billingModalMode}
+      {tab === "billing" && (
+        <BillingTab
+          mode={pendingPlan ? "required" : "edit"}
+          orgId={orgId}
+          initial={billingGet.billing ?? null}
           loading={billingGet.loading || billingUpsert.loading}
           error={billingGet.error || billingUpsert.error}
-          initial={billingGet.billing}
-          onClose={() => {
-            setBillingModalOpen(false);
-            billingGet.reset();
-            billingUpsert.reset();
-          }}
           onSave={async (patch) => {
             const updated = await billingUpsert.upsertOrganizationBilling(patch);
             if (!updated) return;
 
             await billingGet.fetchBilling(orgId);
 
+            // si on venait d'un upgrade bloqué, continuer
             const planToContinue = pendingPlan;
-            setBillingModalOpen(false);
             setPendingPlan(null);
 
             if (planToContinue && canStartSubscription(planToContinue)) {
@@ -652,9 +673,17 @@ export default function AdminAbonnementPage() {
                 });
                 return;
               }
+
+              return;
             }
+
+            showToast({
+              title: "Facturation enregistrée",
+              description: "Vos informations de facturation ont été mises à jour.",
+              variant: "success",
+              duration: 4500,
+            });
           }}
-          orgId={orgId}
         />
       )}
     </Container>
@@ -687,7 +716,7 @@ function PlanTile({
   badgeLabel,
   actionLabelOverride,
   helperOverride,
-  buttonVariant
+  buttonVariant,
 }: {
   title: string;
   price: string;
@@ -739,7 +768,7 @@ function PlanTile({
       <div className="adminSub__planHelper">{helper}</div>
 
       <div className="adminSub__planAction">
-        <Button  variant={buttonVariant} disabled={!isEnabled} className="adminSub__fullWidthBtn" onClick={onAction}>
+        <Button variant={buttonVariant} disabled={!isEnabled} className="adminSub__fullWidthBtn" onClick={onAction}>
           {loading && isEnabled ? "Ouverture Mollie…" : actionLabel}
         </Button>
       </div>
@@ -755,5 +784,259 @@ function TabButton(props: { active?: boolean; onClick: () => void; children: Rea
     <button onClick={onClick} className={active ? "adminEventTab isActive" : "adminEventTab"} type="button">
       {children}
     </button>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* BillingTab (from BillingModal)                                      */
+/* ------------------------------------------------------------------ */
+
+function BillingTab(props: {
+  mode: "required" | "edit";
+  orgId: string;
+
+  initial: OrganizationBilling | null;
+
+  loading: boolean;
+  error: string | null;
+
+  onSave: (patch: OrganizationBillingPatch) => Promise<void>;
+}) {
+  const { mode, orgId, initial, loading, error, onSave } = props;
+
+  const [form, setForm] = useState({
+    legalName: "",
+    vatCountryLabel: "Belgique",
+    vatNumber: "",
+
+    addressLine1: "",
+    addressLine2: "",
+    postalCode: "",
+    city: "",
+    countryLabel: "Belgique",
+
+    billingEmail: "",
+    invoiceReference: "",
+  });
+
+  function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  // Fetch (only if missing) + Sync when initial changes
+  useEffect(() => {
+    // nothing to do here: fetch is triggered by parent via billingGet,
+    // but if initial is null and we are in edit mode, user may still want to load it.
+    // Keeping the sync logic only:
+    if (!initial) return;
+
+    setForm({
+      legalName: initial.legalName ?? "",
+      vatCountryLabel: initial.vatCountryCode ? initial.vatCountryCode : "Belgique",
+      vatNumber: initial.vatNumber ?? "",
+
+      addressLine1: initial.addressLine1 ?? "",
+      addressLine2: initial.addressLine2 ?? "",
+      postalCode: initial.postalCode ?? "",
+      city: initial.city ?? "",
+      countryLabel: initial.countryCode ? initial.countryCode : "Belgique",
+
+      billingEmail: initial.billingEmail ?? "",
+      invoiceReference: initial.invoiceReference ?? "",
+    });
+  }, [initial]);
+
+  const title = mode === "required" ? "Infos de facturation requises" : "Infos de facturation";
+  const subtitle =
+    mode === "required"
+      ? "Avant de souscrire, on a besoin de ces informations pour générer vos factures."
+      : "Consultez et modifiez les informations utilisées sur vos factures.";
+
+  const canSave = useMemo(() => {
+    return (
+      t(form.legalName).length >= 2 &&
+      t(form.addressLine1).length >= 2 &&
+      t(form.postalCode).length >= 2 &&
+      t(form.city).length >= 2
+    );
+  }, [form.legalName, form.addressLine1, form.postalCode, form.city]);
+
+  async function submit() {
+    if (!canSave) return;
+
+    const patch: OrganizationBillingPatch = {
+      orgId,
+
+      legalName: t(form.legalName),
+
+      vatCountryCode: toNullIfEmpty(String(inferCountryCode(form.vatCountryLabel) ?? "")),
+      vatNumber: toNullIfEmpty(form.vatNumber),
+
+      addressLine1: t(form.addressLine1),
+      addressLine2: toNullIfEmpty(form.addressLine2),
+
+      postalCode: t(form.postalCode),
+      city: t(form.city),
+
+      countryCode: inferCountryCode(form.countryLabel),
+
+      billingEmail: toNullIfEmpty(form.billingEmail),
+      invoiceReference: toNullIfEmpty(form.invoiceReference),
+    };
+
+    await onSave(patch);
+  }
+
+  return (
+    <Card>
+      <CardHeader title={title} subtitle={subtitle} />
+      <CardBody>
+        {error ? (
+          <div className="adminSub__alert adminSub__alert--error" style={{ marginBottom: 12 }}>
+            {error}
+          </div>
+        ) : null}
+
+        <div
+          className="billingTabGrid"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+            gap: 12,
+          }}
+        >
+          <div style={{ gridColumn: "1 / -1" }}>
+            <Input
+              label="Raison sociale"
+              value={form.legalName}
+              onChange={(e) => set("legalName", e.target.value)}
+              disabled={loading}
+              required
+            />
+          </div>
+
+          <div>
+            <CountrySelect
+              label="Pays TVA (optionnel)"
+              value={form.vatCountryLabel}
+              onChange={(v) => set("vatCountryLabel", v || "")}
+              required={false}
+            />
+          </div>
+
+          <div>
+            <Input
+              label="Numéro TVA (optionnel)"
+              placeholder="Ex: BE0123456789"
+              value={form.vatNumber}
+              onChange={(e) => set("vatNumber", e.target.value)}
+              disabled={loading}
+            />
+          </div>
+
+          <div style={{ gridColumn: "1 / -1" }}>
+            <Input
+              label="Adresse"
+              placeholder="Rue, numéro"
+              value={form.addressLine1}
+              onChange={(e) => set("addressLine1", e.target.value)}
+              disabled={loading}
+              required
+            />
+          </div>
+
+          <div style={{ gridColumn: "1 / -1" }}>
+            <Input
+              label="Complément d'adresse (optionnel)"
+              placeholder="Boîte, étage…"
+              value={form.addressLine2}
+              onChange={(e) => set("addressLine2", e.target.value)}
+              disabled={loading}
+            />
+          </div>
+
+          <div>
+            <Input
+              label="Code postal"
+              placeholder="Ex: 5000"
+              value={form.postalCode}
+              onChange={(e) => set("postalCode", e.target.value)}
+              disabled={loading}
+              required
+            />
+          </div>
+
+          <div>
+            <Input
+              label="Ville"
+              placeholder="Ex: Namur"
+              value={form.city}
+              onChange={(e) => set("city", e.target.value)}
+              disabled={loading}
+              required
+            />
+          </div>
+
+          <div>
+            <CountrySelect
+              label="Pays"
+              value={form.countryLabel}
+              onChange={(v) => set("countryLabel", v || "")}
+              required
+            />
+          </div>
+
+          <div>
+            <Input
+              label="Email de facturation (optionnel)"
+              placeholder="facturation@…"
+              value={form.billingEmail}
+              onChange={(e) => set("billingEmail", e.target.value)}
+              disabled={loading}
+            />
+          </div>
+
+          <div style={{ gridColumn: "1 / -1" }}>
+            <Input
+              label="Référence facture (optionnel)"
+              placeholder="Ex: Projet / PO / référence interne…"
+              value={form.invoiceReference}
+              onChange={(e) => set("invoiceReference", e.target.value)}
+              disabled={loading}
+            />
+          </div>
+        </div>
+
+        <div style={{ height: 12 }} />
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <Button
+            variant="primary"
+            disabled={loading || !canSave}
+            onClick={submit}
+          >
+            {loading ? "Sauvegarde…" : "Sauvegarder"}
+          </Button>
+
+          {mode === "required" ? (
+            <div style={{ fontSize: 12, color: "#6b7280", alignSelf: "center" }}>
+              Ces infos seront utilisées pour vos factures EventFlow.
+            </div>
+          ) : null}
+        </div>
+
+        <div style={{ marginTop: 10, fontSize: 12, color: "#9ca3af" }}>
+          Vous pourrez modifier ces informations à tout moment.
+        </div>
+
+        <style>{`
+          @media (max-width: 640px) {
+            .billingTabGrid {
+              grid-template-columns: 1fr !important;
+            }
+          }
+        `}</style>
+      </CardBody>
+    </Card>
   );
 }

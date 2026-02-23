@@ -269,6 +269,21 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
         <div className="profilePanel__hint">
           TODO : modifier l’email et le mot de passe via Supabase Auth (avec re-auth si nécessaire).
         </div>
+        <div className="profilePanel__actionsBar">
+          <div className="profilePanel__status">
+            {error ? <div className="profilePanel__error">{error}</div> : null}
+            {updated ? <div className="profilePanel__success">Profil sauvegardé</div> : null}
+          </div>
+
+          <div className="profilePanel__actions">
+            <Button
+              variant="primary"
+              label={loading ? "Sauvegarde…" : "Sauvegarder"}
+              onClick={handleSave}
+              disabled={loading || !profile.userId || deleting}
+            />
+          </div>
+        </div>
 
         {/* Danger zone */}
         <div
@@ -299,21 +314,7 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
       </div>
 
       {/* Actions */}
-      <div className="profilePanel__actionsBar">
-        <div className="profilePanel__status">
-          {error ? <div className="profilePanel__error">{error}</div> : null}
-          {updated ? <div className="profilePanel__success">Profil sauvegardé</div> : null}
-        </div>
 
-        <div className="profilePanel__actions">
-          <Button
-            variant="primary"
-            label={loading ? "Sauvegarde…" : "Sauvegarder"}
-            onClick={handleSave}
-            disabled={loading || !profile.userId || deleting}
-          />
-        </div>
-      </div>
     </div>
   );
 }
