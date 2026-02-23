@@ -14,7 +14,7 @@ export function AdminLoginPage() {
         <EventFlowLogo/>
 
         <div className="auth-header">
-          <h1 className="auth-title">Bienvenue sur Eventflow</h1>
+          <h1 className="auth-title">Bienvenue sur EventFlow</h1>
           <p className="auth-subtitle">
             Connectez-vous pour gérer vos événements
           </p>

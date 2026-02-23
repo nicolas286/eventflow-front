@@ -1,0 +1,17 @@
+.legalPage {
+  max-width: 900px;
+  margin: 40px auto;
+}
+
+.legalSection {
+  margin-bottom: 32px;
+}
+
+.legalSection h2 {
+  margin-bottom: 12px;
+}
+
+.legalSection p {
+  margin-bottom: 6px;
+  line-height: 1.6;
+}

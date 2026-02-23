@@ -43,3 +43,10 @@
 }
 
 .publicFooterSep { opacity: 0.5; }
+
+.publicFooterSupport {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 14px;
+  opacity: 0.8;
+}

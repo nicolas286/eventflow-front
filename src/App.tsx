@@ -33,6 +33,9 @@ import { AdminAuthLayout } from "./ui/layouts/AdminAuthLayout";
 /* Toast */
 import { ToastProvider } from "./ui/components/toast/ToastProvider";
 import "./ui/components/toast/toast.css";
+import LegalPage from "./pages/public/Legal";
+import PrivacyPage from "./pages/public/Privacy";
+import TermsPage from "./pages/public/TermsPage";
 
 function App() {
   return (
@@ -73,6 +76,10 @@ function App() {
 
           {/* PUBLIC – return Mollie */}
           <Route path="/order/:orderId" element={<OrderPage />} />
+
+          <Route path="/mentions-legales" element={<LegalPage />} />
+          <Route path="/politique-confidentialite" element={<PrivacyPage />} />
+          <Route path="/cgu" element={<TermsPage />} />
         </Route>
 
         {/* ROOT / FALLBACK */}

@@ -22,7 +22,21 @@ export default function PublicFooter() {
           <Link to="/politique-confidentialite" className="publicFooterLink">
             Politique de confidentialité
           </Link>
+          <span className="publicFooterSep">·</span>
+          <Link to="/cgu" className="publicFooterLink">
+            Conditions générales d’utilisation
+          </Link>
         </div>
+      </div>
+
+       <div className="publicFooterSupport">
+        Besoin d’aide ?{" "}
+        <a
+          href="mailto:support@useeventflow.eu"
+          className="publicFooterLink"
+        >
+          support@useeventflow.eu
+        </a>
       </div>
     </footer>
   );
