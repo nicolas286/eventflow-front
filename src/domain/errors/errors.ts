@@ -114,6 +114,9 @@ function humanBusinessMessage(msg: string): string | null {
 
   if (m === "FORBIDDEN") return "Accès refusé : tu n’as pas les droits nécessaires.";
   if (m === "NOT_AUTHENTICATED") return "Ta session a expiré. Reconnecte-toi.";
+  if (/Edge Function returned a non-2xx status code/i.test(m)) {
+  return "Erreur serveur pendant la réservation. Réessaie dans quelques instants.";
+}
 
   return null;
 }
@@ -288,29 +291,32 @@ function getFnStatus(e: FunctionsErrorLike): number | null {
 }
 
 function getFnBodyText(e: FunctionsErrorLike): string | null {
-  const ctx = (e as Record<string, unknown>).context as Record<string, unknown> | undefined;
+  const ctx = (e as any)?.context;
   const body = ctx?.body;
 
+  // body déjà string
   if (typeof body === "string") return body;
 
-  if (typeof body === "object" && body !== null) {
-    const anyBody = body as Record<string, unknown>;
-
+  // body objet (souvent déjà parsé)
+  if (body && typeof body === "object") {
     const msg =
-      (typeof anyBody.message === "string" && anyBody.message) ||
-      (typeof anyBody.error === "string" && anyBody.error) ||
-      (typeof anyBody.details === "string" && anyBody.details) ||
+      (typeof body.message === "string" && body.message) ||
+      (typeof body.error === "string" && body.error) ||
+      (typeof body.details === "string" && body.details) ||
       null;
 
     if (msg) return msg;
 
     try {
       const s = JSON.stringify(body);
-      return s === "{}" ? null : s; // ✅
+      return s === "{}" ? null : s;
     } catch {
       return null;
     }
   }
+
+  // sinon, on tente le message global (celui que tu vois)
+  if (typeof (e as any).message === "string") return (e as any).message;
 
   return null;
 }
