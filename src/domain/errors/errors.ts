@@ -293,19 +293,20 @@ function getFnBodyText(e: FunctionsErrorLike): string | null {
 
   if (typeof body === "string") return body;
 
-  // parfois body est un objet déjà parsé
   if (typeof body === "object" && body !== null) {
-    // tente message / error / code
     const anyBody = body as Record<string, unknown>;
+
     const msg =
       (typeof anyBody.message === "string" && anyBody.message) ||
       (typeof anyBody.error === "string" && anyBody.error) ||
+      (typeof anyBody.details === "string" && anyBody.details) ||
       null;
 
     if (msg) return msg;
 
     try {
-      return JSON.stringify(body);
+      const s = JSON.stringify(body);
+      return s === "{}" ? null : s; // ✅
     } catch {
       return null;
     }
@@ -323,6 +324,15 @@ function mapHttpStatusToAppCode(status: number | null): AppErrorCode {
   if (status === 400 || status === 422) return "VALIDATION";
   if (status >= 500) return "NETWORK"; // serveur / gateway down → côté UX c’est “réessaie”
   return "UNKNOWN";
+}
+
+function sanitizeRawMessage(raw: string | null): string | null {
+  if (!raw) return null;
+  const t = raw.trim();
+  if (!t) return null;
+  if (t === "{}") return null;               // ✅ le cas qui te plombe
+  if (t === "null" || t === "undefined") return null;
+  return t;
 }
 
 
@@ -367,28 +377,27 @@ export function normalizeError(e: unknown, fallbackMessage: string): AppError {
 
     if (isFunctionsErrorLike(e)) {
     const status = getFnStatus(e);
-    const raw = getFnBodyText(e) ?? (typeof (e as any).message === "string" ? (e as any).message : "");
 
-   const rpcCode = raw ? mapRpcMessageToAppCode(raw) : null;
+let raw =
+  getFnBodyText(e) ??
+  (typeof (e as any).message === "string" ? (e as any).message : null);
+
+raw = sanitizeRawMessage(raw);
+
+const rpcCode = raw ? mapRpcMessageToAppCode(raw) : null;
 const code = rpcCode ?? mapHttpStatusToAppCode(status);
 
 const business = raw ? humanBusinessMessage(raw) : null;
 const cleaned = raw ? stripRpcPrefix(raw) : "";
 
-const message = business ?? (rpcCode ? cleaned : (raw || fallbackMessage));
+const message = business ?? (rpcCode ? cleaned : (raw ?? fallbackMessage));
 
-
-
-    return new AppError({
-      code,
-      message,
-      cause: e,
-      meta: {
-        kind: "functions",
-        status,
-        rawMessage: raw || null,
-      },
-    });
+return new AppError({
+  code,
+  message,
+  cause: e,
+  meta: { kind: "functions", status, rawMessage: raw },
+});
   }
 
 
