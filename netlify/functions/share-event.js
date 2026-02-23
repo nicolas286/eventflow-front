@@ -108,14 +108,17 @@ exports.handler = async (event) => {
 </html>`;
 
     return {
-      statusCode: 200,
-      headers: {
-        "content-type": "text/html; charset=utf-8",
-        "cache-control": "public, max-age=300",
-        "x-ef-share": "1",
-      },
-      body: html,
-    };
+  statusCode: 200,
+  headers: {
+    "content-type": "text/html; charset=utf-8",
+    "cache-control": "no-store",
+    "pragma": "no-cache",
+    "x-robots-tag": "noindex",
+    // super important pour éviter certains comportements edge/cdn
+    "accept-ranges": "none",
+  },
+  body: html,
+};
   } catch (e) {
     return { statusCode: 500, body: "Server error" };
   }
