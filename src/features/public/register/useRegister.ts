@@ -41,7 +41,7 @@ export function useRegister(params: { supabase: SupabaseClient }) {
       setState({ loading: false, error: ne.message, result: null });
 
       // au lieu de retourner null (qui casse tes if), on throw :
-      throw e;
+      throw ne;
     }
   }
 
