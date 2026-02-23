@@ -7,7 +7,7 @@ import Container from "../../ui/components/container/Container";
 import Card, { CardBody } from "../../ui/components/card/Card";
 import Button from "../../ui/components/button/Button";
 import Badge from "../../ui/components/badge/Badge";
-import { AttachmentIcon, FolderIcon, GlobeIcon, PhoneIcon, SearchIcon, SendIcon } from "../../ui/components/icon/Icons";
+import { GlobeIcon, PhoneIcon, SendIcon } from "../../ui/components/icon/Icons";
 
 import { formatDateTimeHuman, toDayEndISO, toDayStartISO } from "../../domain/helpers/dateTime";
 

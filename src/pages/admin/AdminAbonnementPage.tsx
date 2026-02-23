@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useOutletContext, useNavigate, useSearchParams } from "react-router-dom";
+import { useToast } from "../../ui/components/toast/useToast";
 
 import { Container } from "../../ui/components";
 import Card, { CardBody, CardHeader } from "../../ui/components/card/Card";
 import Badge from "../../ui/components/badge/Badge";
 import Button from "../../ui/components/button/Button";
+import { Input } from "../../ui/components";
+import CountrySelect from "../../ui/components/forms/CountrySelect";
 
 import type { AdminOutletContext } from "./AdminDashboard";
 import { supabase } from "../../gateways/supabase/supabaseClient";
@@ -13,13 +16,17 @@ import { useCancelSubscription } from "../../features/admin/hooks/useCancelSubsc
 import { useMakeOrganizationBilling } from "../../features/admin/hooks/useMakeOrganizationBilling";
 import { useUpsertOrganizationBilling } from "../../features/admin/hooks/useUpsertOrganizationBilling";
 
-import BillingModal from "../../features/admin/subscriptions/BillingModal";
+import type {
+  OrganizationBilling,
+  OrganizationBillingPatch,
+} from "../../domain/models/db/db.organizationBilling.schema";
+import { inferCountryCode } from "../../domain/helpers/countries";
+
 import { InvoicesTab } from "../../features/admin/subscriptions/InvoicesTab";
 
 import "../../styles/desktop/admin/adminSubscription.desktop.css";
 import "../../styles/mobile/admin/adminSubscription.mobile.css";
 import "../../styles/desktop/admin/adminEventsPage.desktop.css";
-
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                            */
@@ -52,6 +59,18 @@ function boolLabel(v: boolean) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Billing helpers (from BillingModal)                                */
+/* ------------------------------------------------------------------ */
+
+function t(v: string) {
+  return v.trim();
+}
+function toNullIfEmpty(v: string): string | null {
+  const s = t(v);
+  return s ? s : null;
+}
+
+/* ------------------------------------------------------------------ */
 /* Plans (UI source of truth)                                         */
 /* ------------------------------------------------------------------ */
 
@@ -64,6 +83,7 @@ type PlanDef = {
   short: string;
   points: string[];
   highlight?: boolean;
+  ctaLabel?: string;
 };
 
 const PLAN_DEFS: Record<PlanKey, PlanDef> = {
@@ -90,19 +110,23 @@ const PLAN_DEFS: Record<PlanKey, PlanDef> = {
       "Inscriptions illimitées",
       "Couleur & Logo personnalisés",
     ],
-    highlight: true,
+    highlight: false,
+    ctaLabel: "Passer en Starter",
   },
   pro: {
     key: "pro",
     title: "Pro",
     price: "25,99 €/mois",
-    short: "Pour les organisations qui scalent.",
+    short: "Le meilleur pour scaler (illimité).",
     points: [
       "Événements gratuits illimités",
       "Événements payants illimités",
       "Inscriptions illimitées",
       "Couleur & Logo personnalisés",
     ],
+    // ✅ on met Pro en valeur
+    highlight: true,
+    ctaLabel: "Passer en Pro",
   },
 };
 
@@ -117,15 +141,16 @@ function canStartSubscription(target: PlanKey): target is "starter" | "pro" {
 export default function AdminAbonnementPage() {
   const { bootstrap, refetch, orgId } = useOutletContext<AdminOutletContext>();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { showToast } = useToast();
+
   const billingGet = useMakeOrganizationBilling({ supabase });
   const billingUpsert = useUpsertOrganizationBilling({ supabase });
 
-  const [billingModalOpen, setBillingModalOpen] = useState(false);
-  const [billingModalMode, setBillingModalMode] = useState<"required" | "edit">("required");
   const [pendingPlan, setPendingPlan] = useState<PlanKey | null>(null);
 
-  type TabKey = "general" | "invoices";
-  const TAB_KEYS: TabKey[] = ["general", "invoices"];
+  type TabKey = "general" | "invoices" | "billing";
+  const TAB_KEYS: TabKey[] = ["general", "invoices", "billing"];
   function isTabKey(v: string | null): v is TabKey {
     return !!v && (TAB_KEYS as string[]).includes(v);
   }
@@ -162,6 +187,42 @@ export default function AdminAbonnementPage() {
     reset: resetCancel,
   } = useCancelSubscription({ supabase });
 
+  // toasts: start error / result
+  useEffect(() => {
+    if (!startError) return;
+    showToast({ title: "Erreur", description: startError, variant: "error", duration: 7000 });
+  }, [startError, showToast]);
+
+  useEffect(() => {
+    if (!result) return;
+
+    showToast({
+      title: result.ok ? "Demande enregistrée" : "Synchronisation en attente",
+      description: result.ok
+        ? "Si Mollie s’ouvre, finalisez le paiement. Sinon, le plan est déjà à jour."
+        : "Paiement ok côté Mollie, en attente de synchro côté Eventflow.",
+      variant: result.ok ? "success" : "warning",
+      duration: 6000,
+    });
+  }, [result, showToast]);
+
+  useEffect(() => {
+    if (!cancelError) return;
+    showToast({ title: "Erreur", description: cancelError, variant: "error", duration: 7000 });
+  }, [cancelError, showToast]);
+
+  useEffect(() => {
+    if (!cancelResult) return;
+    showToast({
+      title: cancelResult.ok ? "Abonnement résilié" : "Résiliation en attente",
+      description: cancelResult.ok
+        ? "Vous êtes repassé en Free. Les limites sont appliquées."
+        : "Résiliation lancée. La synchronisation peut prendre un moment.",
+      variant: cancelResult.ok ? "success" : "warning",
+      duration: 6500,
+    });
+  }, [cancelResult, showToast]);
+
   const org = bootstrap.organization;
   const sub = bootstrap.subscription;
   const limits = bootstrap.planLimits;
@@ -180,61 +241,92 @@ export default function AdminAbonnementPage() {
 
   const startedAtLabel = fmtDate(org?.planStartedAt ?? null);
 
-  const navigate = useNavigate();
   const didHandleReturn = useRef(false);
-
   const [isSyncingReturn, setIsSyncingReturn] = useState(false);
 
-useEffect(() => {
-  if (!isReturn) return;
-  if (didHandleReturn.current) return;
-  didHandleReturn.current = true;
+  // ✅ Retour Mollie : refetch + polling + toasts
+  useEffect(() => {
+    if (!isReturn) return;
+    if (didHandleReturn.current) return;
+    didHandleReturn.current = true;
 
-  const nextQs = new URLSearchParams(location.search);
-  nextQs.delete("return");
+    const nextQs = new URLSearchParams(location.search);
+    nextQs.delete("return");
 
-  (async () => {
-    setIsSyncingReturn(true);
+    (async () => {
+      setIsSyncingReturn(true);
 
-    try {
-      // ✅ refetch immédiat + polling (webhook Mollie peut arriver après)
-      const maxTries = 12;          // ~ 12 * 2000ms = 24s
-      const delayMs = 2000;
+      showToast({
+        title: "Paiement reçu",
+        description: "Synchronisation en cours… ça peut prendre quelques secondes.",
+        variant: "info",
+        duration: 5000,
+      });
 
-      for (let i = 0; i < maxTries; i++) {
-        await refetch();
+      const beforePlan = (bootstrap.organization?.plan ?? "free") as PlanKey;
+      let synced = false;
 
-        // ⚠️ on lit "bootstrap" mais il sera mis à jour par refetch() via ton OutletContext
-        // Dès que le plan n'est plus free, on stop.
-        const p = (bootstrap.organization?.plan ?? "free") as PlanKey;
-        if (p !== "free") break;
+      try {
+        const maxTries = 12; // ~24s
+        const delayMs = 2000;
 
-        await sleep(delayMs);
+        for (let i = 0; i < maxTries; i++) {
+          await refetch();
+          const current = (bootstrap.organization?.plan ?? "free") as PlanKey;
+
+          if (current !== beforePlan) {
+            synced = true;
+            break;
+          }
+
+          await sleep(delayMs);
+        }
+      } finally {
+        setIsSyncingReturn(false);
+
+        showToast(
+          synced
+            ? {
+                title: "Plan mis à jour",
+                description: "Votre abonnement est à jour. Merci !",
+                variant: "success",
+                duration: 4500,
+              }
+            : {
+                title: "Synchronisation en attente",
+                description: "Ça peut encore prendre un moment. Rafraîchissez la page si besoin.",
+                variant: "warning",
+                duration: 6500,
+              }
+        );
+
+        const search = nextQs.toString();
+        navigate(
+          {
+            pathname: location.pathname,
+            search: search ? `?${search}` : "",
+          },
+          { replace: true }
+        );
       }
-    } finally {
-      setIsSyncingReturn(false);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReturn, refetch, navigate, location.pathname, location.search]);
 
-      const search = nextQs.toString();
-      navigate(
-        {
-          pathname: location.pathname,
-          search: search ? `?${search}` : "",
-        },
-        { replace: true }
-      );
-    }
-  })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [isReturn, refetch, navigate, location.pathname, location.search]);
-
-
-  async function ensureBillingOrOpenModal(nextPlan: "starter" | "pro"): Promise<boolean> {
+  async function ensureBillingOrGoToTab(nextPlan: "starter" | "pro"): Promise<boolean> {
     const billing = await billingGet.fetchBilling(orgId);
     if (billing) return true;
 
     setPendingPlan(nextPlan);
-    setBillingModalMode("required");
-    setBillingModalOpen(true);
+    setTabAndUrl("billing");
+
+    showToast({
+      title: "Infos de facturation requises",
+      description: "Complétez la facturation pour activer un plan payant.",
+      variant: "info",
+      duration: 6000,
+    });
+
     return false;
   }
 
@@ -256,19 +348,50 @@ useEffect(() => {
 
     if (!canStartSubscription(target)) return;
 
-    const okBilling = await ensureBillingOrOpenModal(target);
+    const okBilling = await ensureBillingOrGoToTab(target);
     if (!okBilling) return;
 
     const res = await startSubscription({ orgId, plan: target });
-    if (!res) return;
 
-    if (res.ok && "action" in res && res.action === "checkout") {
+    if (!res) {
+      showToast({
+        title: "Impossible de démarrer l’abonnement",
+        description: "Réessayez dans quelques instants.",
+        variant: "error",
+        duration: 6000,
+      });
+      return;
+    }
+
+    if (!res.ok) {
+      showToast({
+        title: "Erreur de paiement",
+        description: "La demande a échoué. Vérifiez vos infos et réessayez.",
+        variant: "error",
+        duration: 6000,
+      });
+      return;
+    }
+
+    if ("action" in res && res.action === "checkout") {
+      showToast({
+        title: "Redirection vers Mollie",
+        description: "Finalisez le paiement, puis revenez sur cette page.",
+        variant: "info",
+        duration: 4000,
+      });
       window.location.href = res.checkoutUrl;
       return;
     }
 
-    if (res.ok && "action" in res && res.action === "sub_created") {
+    if ("action" in res && res.action === "sub_created") {
       await refetch();
+      showToast({
+        title: "Plan mis à jour",
+        description: "Votre abonnement a été mis à jour.",
+        variant: "success",
+        duration: 4500,
+      });
       return;
     }
   }
@@ -287,20 +410,39 @@ useEffect(() => {
     if (!res?.ok) return;
 
     await refetch();
+
+    // ✅ toast "retour en free"
+    showToast({
+      title: "Retour en Free",
+      description: "OK. Les limites Free sont appliquées. (Si ça tarde: rafraîchissez.)",
+      variant: "success",
+      duration: 6000,
+    });
   }
 
   const anyLoading = startLoading || cancelLoading;
+
+  // ✅ quand on est free : proposer Starter + Pro (Pro mis en avant)
+  const upgradeTiles =
+    plan === "free"
+      ? (["pro", "starter"] as const) // Pro d'abord pour pousser la conversion
+      : plan === "starter"
+      ? (["pro"] as const)
+      : ([] as const);
 
   return (
     <Container>
       <div className="adminEventTabs">
         <div className="adminEventTabsInner">
-        <TabButton active={tab === "general"} onClick={() => setTabAndUrl("general")}>
-          Général
-        </TabButton>
-        <TabButton active={tab === "invoices"} onClick={() => setTabAndUrl("invoices")}>
-          Mes factures
-        </TabButton>
+          <TabButton active={tab === "general"} onClick={() => setTabAndUrl("general")}>
+            Général
+          </TabButton>
+          <TabButton active={tab === "invoices"} onClick={() => setTabAndUrl("invoices")}>
+            Mes factures
+          </TabButton>
+          <TabButton active={tab === "billing"} onClick={() => setTabAndUrl("billing")}>
+            Facturation
+          </TabButton>
         </div>
       </div>
 
@@ -308,16 +450,14 @@ useEffect(() => {
         <>
           {/* ---------------------- Card 1: Résumé ---------------------- */}
           <Card>
-            <CardHeader
-              title="Abonnement"
-              subtitle="Votre plan actuel, votre statut, et les prochaines étapes."
-            />
+            <CardHeader title="Abonnement" subtitle="Votre plan actuel, votre statut, et les prochaines étapes." />
             <CardBody>
               {isSyncingReturn && (
                 <div className="adminSub__mutedLine">
                   Synchronisation du paiement… votre plan peut mettre quelques secondes à s’actualiser.
                 </div>
               )}
+
               <div className="adminSub__summaryGrid">
                 {/* A - Plan */}
                 <div className="adminSub__summaryCol">
@@ -338,17 +478,12 @@ useEffect(() => {
                   {plan === "free" && !sub ? (
                     <div className="adminSub__text">
                       Vous êtes sur le plan <b>Free</b>.
-                      <div className="adminSub__mutedLine">
-                        Aucune échéance, upgrade possible à tout moment.
-                      </div>
+                      <div className="adminSub__mutedLine">Aucune échéance, upgrade possible à tout moment.</div>
                     </div>
                   ) : (
                     <div className="adminSub__text">
-                      Prochaine échéance :{" "}
-                      <span className="adminSub__valueStrong">{periodEndLabel ?? "—"}</span>
-                      <div className="adminSub__mutedLine">
-                        Paiement via {sub?.provider ?? org.paymentsProvider}.
-                      </div>
+                      Prochaine échéance : <span className="adminSub__valueStrong">{periodEndLabel ?? "—"}</span>
+                      <div className="adminSub__mutedLine">Paiement via {sub?.provider ?? org.paymentsProvider}.</div>
                     </div>
                   )}
                 </div>
@@ -358,31 +493,14 @@ useEffect(() => {
                 <Button
                   variant="secondary"
                   disabled={billingGet.loading || billingUpsert.loading}
-                  onClick={async () => {
-                    setBillingModalMode("edit");
+                  onClick={() => {
                     setPendingPlan(null);
-                    setBillingModalOpen(true);
-                    await billingGet.fetchBilling(orgId);
+                    setTabAndUrl("billing");
                   }}
                 >
                   Infos de facturation
                 </Button>
               </div>
-
-              {/* feedback start */}
-              {(startError || result) && (
-                <div className="adminSub__feedbackWrap">
-                  {startError && <div className="adminSub__alert adminSub__alert--error">{startError}</div>}
-
-                  {!startError && result && (
-                    <div className="adminSub__alert adminSub__alert--success">
-                      {result.ok
-                        ? "Demande bien enregistrée. Si Mollie s’ouvre, finalisez le paiement. Sinon, le plan est déjà à jour."
-                        : "Subscription créée côté Mollie mais pas encore synchronisée côté DB."}
-                    </div>
-                  )}
-                </div>
-              )}
             </CardBody>
           </Card>
 
@@ -408,7 +526,7 @@ useEffect(() => {
               title="Changer de plan"
               subtitle={
                 plan === "free"
-                  ? "Passez au plan Starter pour débloquer plus de capacité."
+                  ? "Choisissez un plan payant pour débloquer plus de fonctionnalités et soutenir Eventflow."
                   : plan === "starter"
                   ? "Vous pouvez upgrader vers Pro."
                   : "Vous êtes sur le plan Pro."
@@ -417,34 +535,29 @@ useEffect(() => {
             <CardBody>
               <div className={isPaidPlan ? "adminSub__plan2Col" : ""}>
                 {/* Gauche : upgrade */}
-                <div className="adminSub__plansWrap">
-                  {plan === "free" && (
+                <div className={plan === "free" ? "adminSub__plansWrap isFlex" : "adminSub__plansWrap"}>
+                  {upgradeTiles.map((target) => (
                     <PlanTile
-                      title={PLAN_DEFS.starter.title}
-                      price={PLAN_DEFS.starter.price}
-                      points={PLAN_DEFS.starter.points}
-                      highlight={PLAN_DEFS.starter.highlight}
+                      key={target}
+                      title={PLAN_DEFS[target].title}
+                      price={PLAN_DEFS[target].price}
+                      points={PLAN_DEFS[target].points}
+                      highlight={PLAN_DEFS[target].highlight}
                       kind="up"
                       currentPlan={plan}
-                      targetPlan="starter"
+                      targetPlan={target}
                       loading={anyLoading}
-                      onAction={() => onChoosePlan("starter")}
+                      onAction={() => onChoosePlan(target)}
+                      badgeLabel={target === "pro" ? "Recommandé" : "Upgrade"}
+                      actionLabelOverride={PLAN_DEFS[target].ctaLabel}
+                      helperOverride={
+                        target === "pro"
+                          ? "Le meilleur choix si vous faites des événements payants régulièrement."
+                          : undefined
+                      }
+                      buttonVariant={target === "starter" ? "secondary" : undefined} // ✅ Starter en secondary
                     />
-                  )}
-
-                  {plan === "starter" && (
-                    <PlanTile
-                      title={PLAN_DEFS.pro.title}
-                      price={PLAN_DEFS.pro.price}
-                      points={PLAN_DEFS.pro.points}
-                      highlight={PLAN_DEFS.pro.highlight}
-                      kind="up"
-                      currentPlan={plan}
-                      targetPlan="pro"
-                      loading={anyLoading}
-                      onAction={() => onChoosePlan("pro")}
-                    />
-                  )}
+                  ))}
                 </div>
 
                 {/* Droite : résiliation */}
@@ -471,9 +584,7 @@ useEffect(() => {
 
                       {(cancelError || cancelResult) && (
                         <div className="adminSub__feedbackWrap">
-                          {cancelError && (
-                            <div className="adminSub__alert adminSub__alert--error">{cancelError}</div>
-                          )}
+                          {cancelError && <div className="adminSub__alert adminSub__alert--error">{cancelError}</div>}
 
                           {!cancelError && cancelResult && (
                             <div className="adminSub__alert adminSub__alert--success">
@@ -490,7 +601,7 @@ useEffect(() => {
               </div>
 
               <div className="adminSub__footNote">
-                {plan === "free" && <>Upgrade vers Starter via Mollie.</>}
+                {plan === "free" && <>Upgrade vers Starter ou Pro via Mollie.</>}
                 {plan === "starter" && <>Upgrade vers Pro via Mollie.</>}
                 {plan === "pro" && <>Vous pouvez résilier à tout moment.</>}
               </div>
@@ -501,43 +612,78 @@ useEffect(() => {
 
       {tab === "invoices" && <InvoicesTab orgId={orgId} />}
 
-      {billingModalOpen && (
-        <BillingModal
-          mode={billingModalMode}
+      {tab === "billing" && (
+        <BillingTab
+          mode={pendingPlan ? "required" : "edit"}
+          orgId={orgId}
+          initial={billingGet.billing ?? null}
           loading={billingGet.loading || billingUpsert.loading}
           error={billingGet.error || billingUpsert.error}
-          initial={billingGet.billing}
-          onClose={() => {
-            setBillingModalOpen(false);
-            billingGet.reset();
-            billingUpsert.reset();
-          }}
           onSave={async (patch) => {
             const updated = await billingUpsert.upsertOrganizationBilling(patch);
             if (!updated) return;
 
             await billingGet.fetchBilling(orgId);
 
+            // si on venait d'un upgrade bloqué, continuer
             const planToContinue = pendingPlan;
-            setBillingModalOpen(false);
             setPendingPlan(null);
 
             if (planToContinue && canStartSubscription(planToContinue)) {
               const res = await startSubscription({ orgId, plan: planToContinue });
-              if (!res) return;
 
-              if (res.ok && "action" in res && res.action === "checkout") {
+              if (!res) {
+                showToast({
+                  title: "Impossible de démarrer l’abonnement",
+                  description: "Réessayez dans quelques instants.",
+                  variant: "error",
+                  duration: 6000,
+                });
+                return;
+              }
+
+              if (!res.ok) {
+                showToast({
+                  title: "Erreur de paiement",
+                  description: "La demande a échoué. Vérifiez vos infos et réessayez.",
+                  variant: "error",
+                  duration: 6000,
+                });
+                return;
+              }
+
+              if ("action" in res && res.action === "checkout") {
+                showToast({
+                  title: "Redirection vers Mollie",
+                  description: "Finalisez le paiement, puis revenez sur cette page.",
+                  variant: "info",
+                  duration: 4000,
+                });
                 window.location.href = res.checkoutUrl;
                 return;
               }
 
-              if (res.ok && "action" in res && res.action === "sub_created") {
+              if ("action" in res && res.action === "sub_created") {
                 await refetch();
+                showToast({
+                  title: "Plan mis à jour",
+                  description: "Votre abonnement a été mis à jour.",
+                  variant: "success",
+                  duration: 4500,
+                });
                 return;
               }
+
+              return;
             }
+
+            showToast({
+              title: "Facturation enregistrée",
+              description: "Vos informations de facturation ont été mises à jour.",
+              variant: "success",
+              duration: 4500,
+            });
           }}
-          orgId={orgId}
         />
       )}
     </Container>
@@ -567,6 +713,10 @@ function PlanTile({
   targetPlan,
   onAction,
   loading,
+  badgeLabel,
+  actionLabelOverride,
+  helperOverride,
+  buttonVariant,
 }: {
   title: string;
   price: string;
@@ -577,13 +727,19 @@ function PlanTile({
   targetPlan: PlanKey;
   onAction?: () => void;
   loading?: boolean;
+  badgeLabel?: string;
+  actionLabelOverride?: string;
+  helperOverride?: string;
+  buttonVariant?: "primary" | "secondary" | "danger";
 }) {
-  const actionLabel = kind === "up" ? `Passer à ${title}` : `Redescendre à ${title}`;
+  const defaultActionLabel = kind === "up" ? `Passer à ${title}` : `Redescendre à ${title}`;
+  const actionLabel = actionLabelOverride ?? defaultActionLabel;
 
   const helper =
-    kind === "up"
+    helperOverride ??
+    (kind === "up"
       ? "Vous garderez l’accès immédiatement après confirmation."
-      : "Attention : baisse des limites et fonctionnalités.";
+      : "Attention : baisse des limites et fonctionnalités.");
 
   const isEnabled = Boolean(onAction) && !loading;
 
@@ -597,7 +753,7 @@ function PlanTile({
 
         <div className="adminSub__planRight">
           <div className="adminSub__planPrice">{price}</div>
-          <Badge>{kind === "up" ? "Upgrade" : "Downgrade"}</Badge>
+          <Badge>{badgeLabel ?? (kind === "up" ? "Upgrade" : "Downgrade")}</Badge>
         </div>
       </div>
 
@@ -612,11 +768,7 @@ function PlanTile({
       <div className="adminSub__planHelper">{helper}</div>
 
       <div className="adminSub__planAction">
-        <Button
-          disabled={!isEnabled}
-          className="adminSub__fullWidthBtn"
-          onClick={onAction}
-        >
+        <Button variant={buttonVariant} disabled={!isEnabled} className="adminSub__fullWidthBtn" onClick={onAction}>
           {loading && isEnabled ? "Ouverture Mollie…" : actionLabel}
         </Button>
       </div>
@@ -629,12 +781,262 @@ function PlanTile({
 function TabButton(props: { active?: boolean; onClick: () => void; children: React.ReactNode }) {
   const { active, onClick, children } = props;
   return (
-    <button
-      onClick={onClick}
-      className={active ? "adminEventTab isActive" : "adminEventTab"}
-      type="button"
-    >
+    <button onClick={onClick} className={active ? "adminEventTab isActive" : "adminEventTab"} type="button">
       {children}
     </button>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* BillingTab (from BillingModal)                                      */
+/* ------------------------------------------------------------------ */
+
+function BillingTab(props: {
+  mode: "required" | "edit";
+  orgId: string;
+
+  initial: OrganizationBilling | null;
+
+  loading: boolean;
+  error: string | null;
+
+  onSave: (patch: OrganizationBillingPatch) => Promise<void>;
+}) {
+  const { mode, orgId, initial, loading, error, onSave } = props;
+
+  const [form, setForm] = useState({
+    legalName: "",
+    vatCountryLabel: "Belgique",
+    vatNumber: "",
+
+    addressLine1: "",
+    addressLine2: "",
+    postalCode: "",
+    city: "",
+    countryLabel: "Belgique",
+
+    billingEmail: "",
+    invoiceReference: "",
+  });
+
+  function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  // Fetch (only if missing) + Sync when initial changes
+  useEffect(() => {
+    // nothing to do here: fetch is triggered by parent via billingGet,
+    // but if initial is null and we are in edit mode, user may still want to load it.
+    // Keeping the sync logic only:
+    if (!initial) return;
+
+    setForm({
+      legalName: initial.legalName ?? "",
+      vatCountryLabel: initial.vatCountryCode ? initial.vatCountryCode : "Belgique",
+      vatNumber: initial.vatNumber ?? "",
+
+      addressLine1: initial.addressLine1 ?? "",
+      addressLine2: initial.addressLine2 ?? "",
+      postalCode: initial.postalCode ?? "",
+      city: initial.city ?? "",
+      countryLabel: initial.countryCode ? initial.countryCode : "Belgique",
+
+      billingEmail: initial.billingEmail ?? "",
+      invoiceReference: initial.invoiceReference ?? "",
+    });
+  }, [initial]);
+
+  const title = mode === "required" ? "Infos de facturation requises" : "Infos de facturation";
+  const subtitle =
+    mode === "required"
+      ? "Avant de souscrire, on a besoin de ces informations pour générer vos factures."
+      : "Consultez et modifiez les informations utilisées sur vos factures.";
+
+  const canSave = useMemo(() => {
+    return (
+      t(form.legalName).length >= 2 &&
+      t(form.addressLine1).length >= 2 &&
+      t(form.postalCode).length >= 2 &&
+      t(form.city).length >= 2
+    );
+  }, [form.legalName, form.addressLine1, form.postalCode, form.city]);
+
+  async function submit() {
+    if (!canSave) return;
+
+    const patch: OrganizationBillingPatch = {
+      orgId,
+
+      legalName: t(form.legalName),
+
+      vatCountryCode: toNullIfEmpty(String(inferCountryCode(form.vatCountryLabel) ?? "")),
+      vatNumber: toNullIfEmpty(form.vatNumber),
+
+      addressLine1: t(form.addressLine1),
+      addressLine2: toNullIfEmpty(form.addressLine2),
+
+      postalCode: t(form.postalCode),
+      city: t(form.city),
+
+      countryCode: inferCountryCode(form.countryLabel),
+
+      billingEmail: toNullIfEmpty(form.billingEmail),
+      invoiceReference: toNullIfEmpty(form.invoiceReference),
+    };
+
+    await onSave(patch);
+  }
+
+  return (
+    <Card>
+      <CardHeader title={title} subtitle={subtitle} />
+      <CardBody>
+        {error ? (
+          <div className="adminSub__alert adminSub__alert--error" style={{ marginBottom: 12 }}>
+            {error}
+          </div>
+        ) : null}
+
+        <div
+          className="billingTabGrid"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+            gap: 12,
+          }}
+        >
+          <div style={{ gridColumn: "1 / -1" }}>
+            <Input
+              label="Raison sociale"
+              value={form.legalName}
+              onChange={(e) => set("legalName", e.target.value)}
+              disabled={loading}
+              required
+            />
+          </div>
+
+          <div>
+            <CountrySelect
+              label="Pays TVA (optionnel)"
+              value={form.vatCountryLabel}
+              onChange={(v) => set("vatCountryLabel", v || "")}
+              required={false}
+            />
+          </div>
+
+          <div>
+            <Input
+              label="Numéro TVA (optionnel)"
+              placeholder="Ex: BE0123456789"
+              value={form.vatNumber}
+              onChange={(e) => set("vatNumber", e.target.value)}
+              disabled={loading}
+            />
+          </div>
+
+          <div style={{ gridColumn: "1 / -1" }}>
+            <Input
+              label="Adresse"
+              placeholder="Rue, numéro"
+              value={form.addressLine1}
+              onChange={(e) => set("addressLine1", e.target.value)}
+              disabled={loading}
+              required
+            />
+          </div>
+
+          <div style={{ gridColumn: "1 / -1" }}>
+            <Input
+              label="Complément d'adresse (optionnel)"
+              placeholder="Boîte, étage…"
+              value={form.addressLine2}
+              onChange={(e) => set("addressLine2", e.target.value)}
+              disabled={loading}
+            />
+          </div>
+
+          <div>
+            <Input
+              label="Code postal"
+              placeholder="Ex: 5000"
+              value={form.postalCode}
+              onChange={(e) => set("postalCode", e.target.value)}
+              disabled={loading}
+              required
+            />
+          </div>
+
+          <div>
+            <Input
+              label="Ville"
+              placeholder="Ex: Namur"
+              value={form.city}
+              onChange={(e) => set("city", e.target.value)}
+              disabled={loading}
+              required
+            />
+          </div>
+
+          <div>
+            <CountrySelect
+              label="Pays"
+              value={form.countryLabel}
+              onChange={(v) => set("countryLabel", v || "")}
+              required
+            />
+          </div>
+
+          <div>
+            <Input
+              label="Email de facturation (optionnel)"
+              placeholder="facturation@…"
+              value={form.billingEmail}
+              onChange={(e) => set("billingEmail", e.target.value)}
+              disabled={loading}
+            />
+          </div>
+
+          <div style={{ gridColumn: "1 / -1" }}>
+            <Input
+              label="Référence facture (optionnel)"
+              placeholder="Ex: Projet / PO / référence interne…"
+              value={form.invoiceReference}
+              onChange={(e) => set("invoiceReference", e.target.value)}
+              disabled={loading}
+            />
+          </div>
+        </div>
+
+        <div style={{ height: 12 }} />
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <Button
+            variant="primary"
+            disabled={loading || !canSave}
+            onClick={submit}
+          >
+            {loading ? "Sauvegarde…" : "Sauvegarder"}
+          </Button>
+
+          {mode === "required" ? (
+            <div style={{ fontSize: 12, color: "#6b7280", alignSelf: "center" }}>
+              Ces infos seront utilisées pour vos factures EventFlow.
+            </div>
+          ) : null}
+        </div>
+
+        <div style={{ marginTop: 10, fontSize: 12, color: "#9ca3af" }}>
+          Vous pourrez modifier ces informations à tout moment.
+        </div>
+
+        <style>{`
+          @media (max-width: 640px) {
+            .billingTabGrid {
+              grid-template-columns: 1fr !important;
+            }
+          }
+        `}</style>
+      </CardBody>
+    </Card>
   );
 }

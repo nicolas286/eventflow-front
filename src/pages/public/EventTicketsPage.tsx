@@ -7,6 +7,7 @@ import Container from "../../ui/components/container/Container";
 import Card, { CardBody, CardHeader } from "../../ui/components/card/Card";
 import Button from "../../ui/components/button/Button";
 import Badge from "../../ui/components/badge/Badge";
+import { Seo } from "../../ui/layouts/Seo";
 
 import { PublicEventHeader } from "./checkout/PublicEventHeader";
 import { loadDraft, saveDraft, formatMoney } from "./checkout/checkoutStore";
@@ -102,7 +103,26 @@ export function EventTicketsPage() {
     navigate(`/o/${orgSlug}/e/${eventSlug}/participants`);
   }
 
+   const baseUrl = import.meta.env.VITE_PUBLIC_BASE_URL; 
+    const url = `${baseUrl}/o/${orgSlug}/e/${eventSlug}/billets`;
+
+    const title = event ? `${event.title} – ${org?.displayName ?? "Eventflow"}` : "Événement";
+    const desc = event?.description?.slice(0, 160) ?? "Réserve tes billets.";
+
+    const ogImage = event?.bannerUrl;
+
+
   return (
+    <>
+      <Seo
+        title={title}
+        description={desc}
+        canonicalUrl={url}
+        ogTitle={title}
+        ogDescription={desc}
+        ogUrl={url}
+        ogImage={ogImage}
+      />
     <div className="publicPage">
       <Container>
         <div className="publicSurface">
@@ -225,5 +245,6 @@ export function EventTicketsPage() {
         </div>
       </Container>
     </div>
+    </>
   );
 }
