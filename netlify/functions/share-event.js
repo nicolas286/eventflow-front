@@ -1,3 +1,4 @@
+// netlify/functions/share-event.js
 const { createClient } = require("@supabase/supabase-js");
 
 function esc(s) {
@@ -14,11 +15,16 @@ function safeSlice(s, n = 160) {
   return t.length > n ? t.slice(0, n - 1) + "…" : t;
 }
 
+function isMetaBot(headers) {
+  const ua = String(headers?.["user-agent"] || headers?.["User-Agent"] || "").toLowerCase();
+  return ua.includes("facebookexternalhit") || ua.includes("facebot");
+}
+
 exports.handler = async (event) => {
-   try {
+  try {
+    // /share/o/:orgSlug/e/:eventSlug
     const path = event.path || "";
     const m = path.match(/^\/share\/o\/([^/]+)\/e\/([^/]+)\/?$/);
-
     const orgSlug = m?.[1];
     const eventSlug = m?.[2];
 
@@ -40,29 +46,18 @@ exports.handler = async (event) => {
     const { data: org, error: orgErr } = await supabase.rpc("get_public_org_by_slug", {
       p_slug: orgSlug,
     });
+    if (orgErr || !org) return { statusCode: 404, body: "Org not found" };
 
-    if (orgErr || !org) {
-      return { statusCode: 404, body: "Org not found" };
-    }
-
-    // 2) events overview via RPC public (tu l’as déjà)
-    // on cherche l’event par slug dans le résultat
+    // 2) events overview via RPC public
     const { data: overview, error: ovErr } = await supabase.rpc("get_public_org_events_overview", {
       p_org_slug: orgSlug,
     });
+    if (ovErr || !overview) return { statusCode: 404, body: "Events not found" };
 
-    if (ovErr || !overview) {
-      return { statusCode: 404, body: "Events not found" };
-    }
-
-    // ⚠️ adapte selon la shape exacte que renvoie ta RPC
-    // Je pars sur un truc classique : overview.events = [{ slug, title, description, bannerUrl/banner_url, ... }]
+    // ⚠️ adapte si ta shape est différente
     const events = overview?.events ?? overview?.data?.events ?? [];
     const ev = Array.isArray(events) ? events.find((x) => String(x?.slug) === eventSlug) : null;
-
-    if (!ev) {
-      return { statusCode: 404, body: "Event not found" };
-    }
+    if (!ev) return { statusCode: 404, body: "Event not found" };
 
     const orgName = org?.name ?? "Eventflow";
     const orgDesc = org?.description ?? "";
@@ -73,7 +68,6 @@ exports.handler = async (event) => {
     const title = `${evTitle} – ${orgName}`;
     const desc = safeSlice(evDesc || orgDesc || "Infos et billets.", 160);
 
-    // banner url : adapte clés camel/snake selon ton RPC
     const ogImage =
       ev?.bannerUrl ||
       ev?.banner_url ||
@@ -83,6 +77,16 @@ exports.handler = async (event) => {
 
     const targetUrl = `${baseUrl}/o/${encodeURIComponent(orgSlug)}/e/${encodeURIComponent(eventSlug)}/billets`;
     const shareUrl = `${baseUrl}/share/o/${encodeURIComponent(orgSlug)}/e/${encodeURIComponent(eventSlug)}`;
+
+    const bot = isMetaBot(event.headers);
+
+    // ✅ Meta/Facebot : on évite la redirection automatique (sinon il “suit” et perd les OG)
+    const redirectTags = bot
+      ? ""
+      : `
+<meta http-equiv="refresh" content="0;url=${esc(targetUrl)}"/>
+<script>window.location.replace(${JSON.stringify(targetUrl)});</script>
+`;
 
     const html = `<!doctype html>
 <html lang="fr">
@@ -94,31 +98,41 @@ exports.handler = async (event) => {
 <link rel="canonical" href="${esc(targetUrl)}"/>
 
 <meta property="og:type" content="website"/>
+<meta property="og:site_name" content="Eventflow"/>
 <meta property="og:title" content="${esc(title)}"/>
 <meta property="og:description" content="${esc(desc)}"/>
 <meta property="og:url" content="${esc(shareUrl)}"/>
 <meta property="og:image" content="${esc(ogImage)}"/>
+<meta property="og:image:secure_url" content="${esc(ogImage)}"/>
+<meta property="og:image:type" content="image/jpeg"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
 
 <meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="${esc(title)}"/>
+<meta name="twitter:description" content="${esc(desc)}"/>
+<meta name="twitter:image" content="${esc(ogImage)}"/>
 
-<meta http-equiv="refresh" content="0;url=${esc(targetUrl)}"/>
-<script>window.location.replace(${JSON.stringify(targetUrl)});</script>
+${redirectTags}
 </head>
-<body>Redirecting…</body>
+<body>${bot ? "OK" : "Redirecting…"}</body>
 </html>`;
 
+    const len = Buffer.byteLength(html, "utf8");
+
     return {
-  statusCode: 200,
-  headers: {
-    "content-type": "text/html; charset=utf-8",
-    "cache-control": "no-store",
-    "pragma": "no-cache",
-    "x-robots-tag": "noindex",
-    // super important pour éviter certains comportements edge/cdn
-    "accept-ranges": "none",
-  },
-  body: html,
-};
+      statusCode: 200,
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "content-length": String(len),
+        "cache-control": "no-store, no-cache, must-revalidate, max-age=0",
+        pragma: "no-cache",
+        expires: "0",
+        "x-robots-tag": "noindex",
+        "x-ef-share": "1",
+      },
+      body: html,
+    };
   } catch (e) {
     return { statusCode: 500, body: "Server error" };
   }
