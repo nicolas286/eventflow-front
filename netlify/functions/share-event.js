@@ -9,49 +9,73 @@ function esc(s) {
     .replaceAll("'", "&#039;");
 }
 
+function safeSlice(s, n = 160) {
+  const t = String(s ?? "").trim();
+  return t.length > n ? t.slice(0, n - 1) + "…" : t;
+}
+
 exports.handler = async (event) => {
   try {
-    const orgSlug = event.queryStringParameters?.orgSlug;
-    const eventSlug = event.queryStringParameters?.eventSlug;
+    const orgSlug = event.queryStringParameters?.orgSlug?.trim();
+    const eventSlug = event.queryStringParameters?.eventSlug?.trim();
 
     if (!orgSlug || !eventSlug) {
       return { statusCode: 400, body: "Missing params" };
     }
 
-    const baseUrl = process.env.PUBLIC_BASE_URL || "https://eventflow-staging.netlify.app";
-    const supabaseUrl = process.env.VITE_SUPABASE_URL;
-    const supabaseAnon = process.env.VITE_SUPABASE_ANON_KEY;
+    const baseUrl = (process.env.PUBLIC_BASE_URL || "https://eventflow-staging.netlify.app").replace(/\/+$/, "");
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseAnon = process.env.SUPABASE_ANON_KEY;
+
     if (!supabaseUrl || !supabaseAnon) {
       return { statusCode: 500, body: "Missing Supabase env" };
     }
 
     const supabase = createClient(supabaseUrl, supabaseAnon);
 
+    // 1) org via RPC public
+    const { data: org, error: orgErr } = await supabase.rpc("get_public_org_by_slug", {
+      p_slug: orgSlug,
+    });
 
-    const { data: org, error: orgErr } = await supabase
-      .from("orgs")
-      .select("id, slug, name, description, banner_url")
-      .eq("slug", orgSlug)
-      .maybeSingle();
+    if (orgErr || !org) {
+      return { statusCode: 404, body: "Org not found" };
+    }
 
-    if (orgErr || !org) return { statusCode: 404, body: "Org not found" };
+    // 2) events overview via RPC public (tu l’as déjà)
+    // on cherche l’event par slug dans le résultat
+    const { data: overview, error: ovErr } = await supabase.rpc("get_public_org_events_overview", {
+      p_org_slug: orgSlug,
+    });
 
-    const { data: ev, error: evErr } = await supabase
-      .from("events")
-      .select("slug, title, description, banner_url")
-      .eq("org_id", org.id)
-      .eq("slug", eventSlug)
-      .maybeSingle();
+    if (ovErr || !overview) {
+      return { statusCode: 404, body: "Events not found" };
+    }
 
-    if (evErr || !ev) return { statusCode: 404, body: "Event not found" };
+    // ⚠️ adapte selon la shape exacte que renvoie ta RPC
+    // Je pars sur un truc classique : overview.events = [{ slug, title, description, bannerUrl/banner_url, ... }]
+    const events = overview?.events ?? overview?.data?.events ?? [];
+    const ev = Array.isArray(events) ? events.find((x) => String(x?.slug) === eventSlug) : null;
 
-    const title = `${ev.title} – ${org.name}`;
-    const desc = (ev.description || org.description || "").slice(0, 160) || "Infos et billets.";
+    if (!ev) {
+      return { statusCode: 404, body: "Event not found" };
+    }
 
+    const orgName = org?.name ?? "Eventflow";
+    const orgDesc = org?.description ?? "";
 
+    const evTitle = ev?.title ?? "Événement";
+    const evDesc = ev?.description ?? "";
+
+    const title = `${evTitle} – ${orgName}`;
+    const desc = safeSlice(evDesc || orgDesc || "Infos et billets.", 160);
+
+    // banner url : adapte clés camel/snake selon ton RPC
     const ogImage =
-      ev.banner_url ||
-      org.banner_url ||
+      ev?.bannerUrl ||
+      ev?.banner_url ||
+      org?.bannerUrl ||
+      org?.banner_url ||
       `${baseUrl}/og/default.jpg`;
 
     const targetUrl = `${baseUrl}/o/${encodeURIComponent(orgSlug)}/e/${encodeURIComponent(eventSlug)}/billets`;
@@ -62,10 +86,8 @@ exports.handler = async (event) => {
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(desc)}"/>
-
 <link rel="canonical" href="${esc(targetUrl)}"/>
 
 <meta property="og:type" content="website"/>
@@ -73,20 +95,21 @@ exports.handler = async (event) => {
 <meta property="og:description" content="${esc(desc)}"/>
 <meta property="og:url" content="${esc(shareUrl)}"/>
 <meta property="og:image" content="${esc(ogImage)}"/>
+
 <meta name="twitter:card" content="summary_large_image"/>
 
 <meta http-equiv="refresh" content="0;url=${esc(targetUrl)}"/>
+<script>window.location.replace(${JSON.stringify(targetUrl)});</script>
 </head>
-<body>
-Redirecting…
-</body>
+<body>Redirecting…</body>
 </html>`;
 
     return {
       statusCode: 200,
       headers: {
         "content-type": "text/html; charset=utf-8",
-        "cache-control": "public, max-age=300", // 5 min
+        "cache-control": "public, max-age=300",
+        "x-ef-share": "1",
       },
       body: html,
     };
