@@ -124,7 +124,6 @@ const PLAN_DEFS: Record<PlanKey, PlanDef> = {
       "Inscriptions illimitées",
       "Couleur & Logo personnalisés",
     ],
-    // ✅ on met Pro en valeur
     highlight: true,
     ctaLabel: "Passer en Pro",
   },
@@ -411,7 +410,6 @@ export default function AdminAbonnementPage() {
 
     await refetch();
 
-    // ✅ toast "retour en free"
     showToast({
       title: "Retour en Free",
       description: "OK. Les limites Free sont appliquées. (Si ça tarde: rafraîchissez.)",
@@ -422,10 +420,9 @@ export default function AdminAbonnementPage() {
 
   const anyLoading = startLoading || cancelLoading;
 
-  // ✅ quand on est free : proposer Starter + Pro (Pro mis en avant)
   const upgradeTiles =
     plan === "free"
-      ? (["pro", "starter"] as const) // Pro d'abord pour pousser la conversion
+      ? (["pro", "starter"] as const)
       : plan === "starter"
       ? (["pro"] as const)
       : ([] as const);
@@ -448,7 +445,6 @@ export default function AdminAbonnementPage() {
 
       {tab === "general" && (
         <>
-          {/* ---------------------- Card 1: Résumé ---------------------- */}
           <Card>
             <CardHeader title="Abonnement" subtitle="Votre plan actuel, votre statut, et les prochaines étapes." />
             <CardBody>
@@ -459,7 +455,6 @@ export default function AdminAbonnementPage() {
               )}
 
               <div className="adminSub__summaryGrid">
-                {/* A - Plan */}
                 <div className="adminSub__summaryCol">
                   <div className="adminSub__label">Plan actuel</div>
                   <div className="adminSub__badges">
@@ -471,7 +466,6 @@ export default function AdminAbonnementPage() {
                   </div>
                 </div>
 
-                {/* B - Échéance */}
                 <div className="adminSub__summaryCol">
                   <div className="adminSub__label">Période</div>
 
@@ -506,7 +500,6 @@ export default function AdminAbonnementPage() {
 
           <div className="adminSub__spacer" />
 
-          {/* ---------------------- Card 2: Limites ---------------------- */}
           <Card>
             <CardHeader title="Limites" subtitle="Ce que votre plan autorise actuellement." />
             <CardBody>
@@ -520,7 +513,6 @@ export default function AdminAbonnementPage() {
 
           <div className="adminSub__spacer" />
 
-          {/* ---------------------- Card 3: Changer de plan ---------------------- */}
           <Card>
             <CardHeader
               title="Changer de plan"
@@ -534,7 +526,6 @@ export default function AdminAbonnementPage() {
             />
             <CardBody>
               <div className={isPaidPlan ? "adminSub__plan2Col" : ""}>
-                {/* Gauche : upgrade */}
                 <div className={plan === "free" ? "adminSub__plansWrap isFlex" : "adminSub__plansWrap"}>
                   {upgradeTiles.map((target) => (
                     <PlanTile
@@ -555,12 +546,11 @@ export default function AdminAbonnementPage() {
                           ? "Le meilleur choix si vous faites des événements payants régulièrement."
                           : undefined
                       }
-                      buttonVariant={target === "starter" ? "secondary" : undefined} // ✅ Starter en secondary
+                      buttonVariant={target === "starter" ? "secondary" : undefined}
                     />
                   ))}
                 </div>
 
-                {/* Droite : résiliation */}
                 {isPaidPlan ? (
                   <div className="adminSub__cancelCol">
                     <div className="adminSub__dangerBox">
@@ -625,7 +615,6 @@ export default function AdminAbonnementPage() {
 
             await billingGet.fetchBilling(orgId);
 
-            // si on venait d'un upgrade bloqué, continuer
             const planToContinue = pendingPlan;
             setPendingPlan(null);
 
@@ -806,7 +795,7 @@ function BillingTab(props: {
 
   const [form, setForm] = useState({
     legalName: "",
-    vatCountryLabel: "Belgique",
+    vatCountryLabel: "", // ✅ pas de TVA par défaut (sinon ça force une TVA)
     vatNumber: "",
 
     addressLine1: "",
@@ -823,16 +812,28 @@ function BillingTab(props: {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  // Fetch (only if missing) + Sync when initial changes
+  // ✅ pays TVA -> code (null si vide)
+  const vatCountryCode = useMemo(() => {
+    const c = inferCountryCode(form.vatCountryLabel);
+    return c ? String(c) : null;
+  }, [form.vatCountryLabel]);
+
+  // ✅ si pays TVA sélectionné => numéro TVA requis
+  const needsVat = Boolean(vatCountryCode);
+
+  // ✅ si on repasse à "pas de TVA", on wipe le numéro
   useEffect(() => {
-    // nothing to do here: fetch is triggered by parent via billingGet,
-    // but if initial is null and we are in edit mode, user may still want to load it.
-    // Keeping the sync logic only:
+    if (!needsVat && form.vatNumber) set("vatNumber", "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needsVat]);
+
+  // Sync when initial changes
+  useEffect(() => {
     if (!initial) return;
 
     setForm({
       legalName: initial.legalName ?? "",
-      vatCountryLabel: initial.vatCountryCode ? initial.vatCountryCode : "Belgique",
+      vatCountryLabel: initial.vatCountryCode ? initial.vatCountryCode : "", // ✅
       vatNumber: initial.vatNumber ?? "",
 
       addressLine1: initial.addressLine1 ?? "",
@@ -853,13 +854,17 @@ function BillingTab(props: {
       : "Consultez et modifiez les informations utilisées sur vos factures.";
 
   const canSave = useMemo(() => {
-    return (
+    const baseOk =
       t(form.legalName).length >= 2 &&
       t(form.addressLine1).length >= 2 &&
       t(form.postalCode).length >= 2 &&
-      t(form.city).length >= 2
-    );
-  }, [form.legalName, form.addressLine1, form.postalCode, form.city]);
+      t(form.city).length >= 2;
+
+    // ✅ si pays TVA sélectionné => numéro TVA requis (check simple)
+    const vatOk = !needsVat || t(form.vatNumber).length >= 6;
+
+    return baseOk && vatOk;
+  }, [form.legalName, form.addressLine1, form.postalCode, form.city, form.vatNumber, needsVat]);
 
   async function submit() {
     if (!canSave) return;
@@ -869,8 +874,9 @@ function BillingTab(props: {
 
       legalName: t(form.legalName),
 
-      vatCountryCode: toNullIfEmpty(String(inferCountryCode(form.vatCountryLabel) ?? "")),
-      vatNumber: toNullIfEmpty(form.vatNumber),
+      // ✅ TVA : null tant que pas de pays TVA
+      vatCountryCode: vatCountryCode,
+      vatNumber: needsVat ? toNullIfEmpty(form.vatNumber) : null,
 
       addressLine1: t(form.addressLine1),
       addressLine2: toNullIfEmpty(form.addressLine2),
@@ -926,11 +932,12 @@ function BillingTab(props: {
 
           <div>
             <Input
-              label="Numéro TVA (optionnel)"
+              label={needsVat ? "Numéro TVA" : "Numéro TVA (optionnel)"}
               placeholder="Ex: BE0123456789"
               value={form.vatNumber}
               onChange={(e) => set("vatNumber", e.target.value)}
-              disabled={loading}
+              disabled={loading || !needsVat} // ✅ grisé tant que pas de pays TVA
+              required={needsVat} // ✅ requis si pays TVA sélectionné
             />
           </div>
 
@@ -1010,11 +1017,7 @@ function BillingTab(props: {
         <div style={{ height: 12 }} />
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <Button
-            variant="primary"
-            disabled={loading || !canSave}
-            onClick={submit}
-          >
+          <Button variant="primary" disabled={loading || !canSave} onClick={submit}>
             {loading ? "Sauvegarde…" : "Sauvegarder"}
           </Button>
 
