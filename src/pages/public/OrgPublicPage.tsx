@@ -8,6 +8,7 @@ import Card, { CardBody } from "../../ui/components/card/Card";
 import Button from "../../ui/components/button/Button";
 import Badge from "../../ui/components/badge/Badge";
 import { GlobeIcon, PhoneIcon, SendIcon } from "../../ui/components/icon/Icons";
+import { Seo } from "../../ui/layouts/Seo";
 
 import { formatDateTimeHuman, toDayEndISO, toDayStartISO } from "../../domain/helpers/dateTime";
 
@@ -153,7 +154,24 @@ export function OrgPublicPage() {
 
   const displayName = profile.displayName ?? org.name;
 
+  const baseUrl = import.meta.env.VITE_PUBLIC_BASE_URL; 
+  const url = `${baseUrl}/o/${orgSlug}`;
+
+  const title = `${displayName} – Eventflow, la billetterie sans commission`;
+  const desc = "Réservez vos billets";
+
+
+
   return (
+        <>
+        <Seo
+          title={title}
+          description={desc}
+          canonicalUrl={url}
+          ogTitle={title}
+          ogDescription={desc}
+          ogUrl={url}
+        />
     <div className="publicPage publicOrgPage">
       <Container>
         <div className="publicSurface">
@@ -356,5 +374,6 @@ export function OrgPublicPage() {
         )}
       </Container>
     </div>
+    </>
   );
 }
