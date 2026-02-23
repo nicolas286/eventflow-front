@@ -34,53 +34,55 @@ export default function EventTable({
 }: EventTableProps) {
   const { showToast } = useToast(); // ✅ add
 
-  async function copyPublicEventUrl(orgSlug?: string, eventSlug?: string) {
-    if (!orgSlug || !eventSlug) {
-      showToast({
-        title: "Impossible de copier",
-        description: "Lien public indisponible (slug manquant).",
-        variant: "error",
-        duration: 5000,
-      });
-      return;
-    }
-
-    const path = `/o/${orgSlug}/e/${eventSlug}`;
-    const fullUrl = `${window.location.origin}${path}`;
-
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(fullUrl);
-      } else {
-        // fallback rare
-        const ta = document.createElement("textarea");
-        ta.value = fullUrl;
-        ta.style.position = "fixed";
-        ta.style.left = "-9999px";
-        document.body.appendChild(ta);
-        ta.focus();
-        ta.select();
-        const ok = document.execCommand("copy");
-        document.body.removeChild(ta);
-        if (!ok) throw new Error("COPY_FAILED");
-      }
-
-      showToast({
-        title: "Copié",
-        description: "Lien public de l’événement copié.",
-        variant: "success",
-        duration: 3500,
-      });
-    } catch (err) {
-      console.error("Erreur copie presse-papier", err);
-      showToast({
-        title: "Impossible de copier",
-        description: "Votre navigateur a bloqué l’accès au presse-papier.",
-        variant: "error",
-        duration: 6000,
-      });
-    }
+ async function copyPublicEventUrl(orgSlug?: string, eventSlug?: string) {
+  if (!orgSlug || !eventSlug) {
+    showToast({
+      title: "Impossible de copier",
+      description: "Lien public indisponible (slug manquant).",
+      variant: "error",
+      duration: 5000,
+    });
+    return;
   }
+
+  const baseUrl =
+    import.meta.env.VITE_PUBLIC_BASE_URL ||
+    "https://eventflow-staging.netlify.app";
+
+  const fullUrl = `${baseUrl}/share/o/${orgSlug}/e/${eventSlug}`;
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(fullUrl);
+    } else {
+      const ta = document.createElement("textarea");
+      ta.value = fullUrl;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      if (!ok) throw new Error("COPY_FAILED");
+    }
+
+    showToast({
+      title: "Copié",
+      description: "Lien de partage de l’événement copié.",
+      variant: "success",
+      duration: 3500,
+    });
+  } catch (err) {
+    console.error("Erreur copie presse-papier", err);
+    showToast({
+      title: "Impossible de copier",
+      description: "Votre navigateur a bloqué l’accès au presse-papier.",
+      variant: "error",
+      duration: 6000,
+    });
+  }
+}
 
   return (
     <Card>
