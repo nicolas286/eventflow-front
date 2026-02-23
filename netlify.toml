@@ -2,8 +2,8 @@
   functions = "netlify/functions"
 
 [[redirects]]
-  from = "/share/o/:orgSlug/e/:eventSlug"
-  to = "/.netlify/functions/share-event?orgSlug=:orgSlug&eventSlug=:eventSlug"
+  from = "/share/*"
+  to = "/.netlify/functions/share-event"
   status = 200
   force = true
 

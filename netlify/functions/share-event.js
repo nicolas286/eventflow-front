@@ -15,9 +15,12 @@ function safeSlice(s, n = 160) {
 }
 
 exports.handler = async (event) => {
-  try {
-    const orgSlug = event.queryStringParameters?.orgSlug?.trim();
-    const eventSlug = event.queryStringParameters?.eventSlug?.trim();
+   try {
+    const path = event.path || "";
+    const m = path.match(/^\/share\/o\/([^/]+)\/e\/([^/]+)\/?$/);
+
+    const orgSlug = m?.[1];
+    const eventSlug = m?.[2];
 
     if (!orgSlug || !eventSlug) {
       return { statusCode: 400, body: "Missing params" };
