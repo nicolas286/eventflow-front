@@ -24,8 +24,8 @@ exports.handler = async (event) => {
     }
 
     const baseUrl = (process.env.PUBLIC_BASE_URL || "https://eventflow-staging.netlify.app").replace(/\/+$/, "");
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseAnon = process.env.SUPABASE_ANON_KEY;
+    const supabaseUrl = process.env.VITE_SUPABASE_URL;
+    const supabaseAnon = process.env.VITE_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseAnon) {
       return { statusCode: 500, body: "Missing Supabase env" };
