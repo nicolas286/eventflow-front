@@ -477,12 +477,20 @@ export function OrderPage() {
               ) : null}
 
               {/* --------- Footer actions --------- */}
-              <div className="orderReturnFooter" style={{ gap: 10, flexWrap: "wrap" }}>
-                <Button onClick={() => loadOnce({ silent: false })} disabled={isRefreshing}>
-                  {isRefreshing ? "Rafraîchissement…" : "Rafraîchir"}
-                </Button>
+            <div className="orderReturnFooter" style={{ gap: 10, flexWrap: "wrap" }}>
+              <Button onClick={() => loadOnce({ silent: false })} disabled={isRefreshing} variant="secondary">
+                {isRefreshing ? "Rafraîchissement…" : "Rafraîchir"}
+              </Button>
 
-              </div>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  window.location.href = "https://www.useeventflow.eu";
+                }}
+              >
+                Retourner à l'accueil
+              </Button>
+            </div>
 
               {/* petit hint si tu veux */}
               {error ? <div className="orderReturnHint">⚠️ {error}</div> : null}
