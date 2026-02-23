@@ -406,6 +406,7 @@ export function OrderPage() {
               </h2>
 
               <p className="orderReturnSubtitle">{subtitle}</p>
+              <p>Vous recevrez un mail de confirmation dans quelques instants.</p>
 
               {isReturn && !isFinalStatus(order.status) ? (
                 <div className="orderReturnLoading" style={{ marginTop: 10 }}>
