@@ -366,7 +366,7 @@ export function OrgPublicPage() {
 
                         <Link to={`/o/${orgSlug}/e/${e.slug}`}>
                           <Button
-                            variant="secondary"
+                            variant="primary"
                             title="Voir l’événement"
                             aria-label="Voir l’événement"
                           >
