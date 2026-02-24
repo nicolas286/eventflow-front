@@ -1,2 +1,13 @@
 [build]
   functions = "netlify/functions"
+
+[[redirects]]
+  from = "/share/*"
+  to = "/.netlify/functions/share-event"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

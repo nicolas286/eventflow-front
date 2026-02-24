@@ -2,21 +2,26 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../../styles/desktop/profilePanel.desktop.css";
 import "../../../styles/mobile/profilePanel.mobile.css";
+
 import { Button, Input, Badge } from "../../../ui/components";
+import { useToast } from "../../../ui/components/toast/useToast";
+
 import { supabase } from "../../../gateways/supabase/supabaseClient";
+import { authRepo } from "../../../gateways/supabase/repositories/auth/authRepo";
+import { normalizeError } from "../../../domain/errors/errors";
 
 import { useSaveAdminProfile } from "../hooks/useUpdateAdminProfile";
 import { useDeleteAccount } from "../hooks/useDeleteAccount";
 import type { AdminProfileForm } from "../../../domain/models/admin/admin.updateAdminProfile.schema";
 import { inferCountryCode } from "../../../domain/helpers/countries";
 
-/* ✅ factorisé */
 import CountrySelect from "../../../ui/components/forms/CountrySelect";
 import PhoneInput from "../../../ui/components/forms/PhoneInput";
-import { parseE164, buildE164 } from "../../../ui/components/forms/countryPhoneData";
-import { COUNTRY_OPTIONS } from "../../../ui/components/forms/countryPhoneData";
+import { parseE164, buildE164, COUNTRY_OPTIONS } from "../../../ui/components/forms/countryPhoneData";
 
 import { ConfirmDeleteModal } from "../../../ui/components/modals/ConfirmDeleteModal";
+
+import { ChangePasswordModal } from "../../../ui/components/modals/ChangePasswordModal";
 
 type ProfilePanelProps = {
   profile: AdminProfileForm;
@@ -25,6 +30,9 @@ type ProfilePanelProps = {
 };
 
 export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePanelProps) {
+  const { showToast } = useToast();
+  const navigate = useNavigate();
+
   const { loading, error, updated, saveAdminProfile, reset } = useSaveAdminProfile({ supabase });
 
   const {
@@ -46,38 +54,110 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
     return name || "Compte admin";
   }, [profile.firstName, profile.lastName]);
 
-  // "Compte" (Auth) — UI only pour l’instant
-  const [email, setEmail] = useState<string>("");
-  const [newPassword, setNewPassword] = useState<string>("");
-  const [confirmPassword, setConfirmPassword] = useState<string>("");
 
-  // ✅ delete modal
+  /* ---------------- Password modal ---------------- */
+
+  const [pwOpen, setPwOpen] = useState(false);
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwError, setPwError] = useState<React.ReactNode>(null);
   const [openDelete, setOpenDelete] = useState<boolean>(false);
 
-  const navigate = useNavigate();
+  async function handlePasswordConfirm(payload: { currentPassword: string; newPassword: string }) {
+    setPwError(null);
 
+    try {
+      setPwLoading(true);
+
+      // 1) récupérer email (source de vérité Supabase)
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (userErr) throw userErr;
+
+      const userEmail = userData.user?.email;
+      if (!userEmail) throw new Error("EMAIL_REQUIRED");
+
+      // 2) re-auth avec l’ancien mot de passe
+      const { error: reauthErr } = await supabase.auth.signInWithPassword({
+        email: userEmail,
+        password: payload.currentPassword,
+      });
+      if (reauthErr) throw reauthErr;
+
+      // 3) update password
+      await authRepo.updatePassword(payload.newPassword);
+
+      showToast({
+        title: "Mot de passe mis à jour",
+        description: "Votre mot de passe a été modifié avec succès.",
+        variant: "success",
+        duration: 4000,
+      });
+
+      setPwOpen(false);
+    } catch (e) {
+      const err = normalizeError(e, "Impossible de changer le mot de passe.");
+      setPwError(err.message);
+
+      showToast({
+        title: "Erreur",
+        description: err.message,
+        variant: "error",
+        duration: 6000,
+      });
+    } finally {
+      setPwLoading(false);
+    }
+  }
+
+  /* ---------------- Save profile ---------------- */
 
   async function handleSave() {
     reset();
 
-    // ⚠️ inchangé : on construit bien une valeur e164 sans espaces
-    const p = parseE164(profile.phone);
-    const phoneE164 = buildE164(p.dial || "+32", p.national);
+    try {
+      // ⚠️ inchangé : on construit bien une valeur e164 sans espaces
+      const p = parseE164(profile.phone);
+      const phoneE164 = buildE164(p.dial || "+32", p.national);
 
-    const next: AdminProfileForm = {
-      ...profile,
-      phone: phoneE164 || null,
-    };
+      const next: AdminProfileForm = {
+        ...profile,
+        phone: phoneE164 || null,
+      };
 
-    const res = await saveAdminProfile({
-      userId: next.userId,
-      form: next,
-    });
+      const res = await saveAdminProfile({
+        userId: next.userId,
+        form: next,
+      });
 
-    if (!res) return;
+      if (!res) {
+        // ton hook met déjà error; on ajoute juste un toast
+        showToast({
+          title: "Sauvegarde impossible",
+          description: "Vérifiez les champs et réessayez.",
+          variant: "error",
+          duration: 6000,
+        });
+        return;
+      }
 
-    setProfile(res);
-    await onSaved();
+      setProfile(res);
+      await onSaved();
+
+      showToast({
+        title: "Profil enregistré",
+        description: "Vos informations ont été sauvegardées.",
+        variant: "success",
+        duration: 3500,
+      });
+    } catch (e) {
+      const err = normalizeError(e, "Impossible de sauvegarder le profil.");
+
+      showToast({
+        title: "Erreur",
+        description: err.message,
+        variant: "error",
+        duration: 6000,
+      });
+    }
   }
 
   const selectedCountry = useMemo(() => {
@@ -94,21 +174,20 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
   }, [profile.country, profile.countryCode]);
 
   async function handleConfirmDeleteAccount() {
-  resetDelete();
+    resetDelete();
 
-  const ok = await deleteAccount();
-  if (!ok) return;
+    const ok = await deleteAccount();
+    if (!ok) return;
 
-  await supabase.auth.signOut().catch(() => null);
-
-  navigate("/", { replace: true });
-}
-
+    await supabase.auth.signOut().catch(() => null);
+    navigate("/", { replace: true });
+  }
 
   const deleteModalTitle = "Supprimer mon compte";
   const deleteModalName =
     "votre compte (et résilier l’abonnement, puis suspendre l’organisation)";
 
+    
   return (
     <div className="profilePanel">
       <ConfirmDeleteModal
@@ -123,6 +202,19 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
           resetDelete();
         }}
         onConfirm={handleConfirmDeleteAccount}
+      />
+
+      {/* ✅ Password modal */}
+      <ChangePasswordModal
+        isOpen={pwOpen}
+        loading={pwLoading}
+        error={pwError}
+        onCancel={() => {
+          if (pwLoading) return;
+          setPwOpen(false);
+          setPwError(null);
+        }}
+        onConfirm={handlePasswordConfirm}
       />
 
       {/* Head */}
@@ -167,7 +259,6 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
         <div className="profilePanel__phone">
           <div className="profilePanel__label">Téléphone</div>
 
-          {/* ✅ même structure visuelle, mais logique factorisée */}
           <PhoneInput
             value={profile.phone}
             onChange={(next) => {
@@ -229,53 +320,26 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
         </div>
       </div>
 
-      {/* Compte (Auth) — UI only */}
+      {/* Compte (Auth) */}
       <div className="profilePanel__section">
-        <div className="profilePanel__sectionHead">
-          <div className="profilePanel__sectionTitle">Compte</div>
-          <Badge tone="warn" label="Bientôt" />
-        </div>
-
-        <div className="profilePanel__grid2">
-          <Input
-            label="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="email@exemple.com"
-            disabled
-          />
-          <div />
-        </div>
-
-        <div className="profilePanel__grid2">
-          <Input
-            label="Nouveau mot de passe"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="••••••••"
-            type="password"
-            disabled
-          />
-          <Input
-            label="Confirmer le mot de passe"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="••••••••"
-            type="password"
-            disabled
-          />
-        </div>
-
-        <div className="profilePanel__hint">
-          TODO : modifier l’email et le mot de passe via Supabase Auth (avec re-auth si nécessaire).
-        </div>
+        
         <div className="profilePanel__actionsBar">
           <div className="profilePanel__status">
             {error ? <div className="profilePanel__error">{error}</div> : null}
             {updated ? <div className="profilePanel__success">Profil sauvegardé</div> : null}
           </div>
 
-          <div className="profilePanel__actions">
+          <div className="profilePanel__actions" style={{ display: "flex", gap: 10 }}>
+            <Button
+              variant="secondary"
+              label="Changer le mot de passe"
+              onClick={() => {
+                setPwError(null);
+                setPwOpen(true);
+              }}
+              disabled={pwLoading || deleting}
+            />
+
             <Button
               variant="primary"
               label={loading ? "Sauvegarde…" : "Sauvegarder"}
@@ -312,9 +376,8 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
           </div>
         </div>
       </div>
-
-      {/* Actions */}
-
     </div>
   );
+
+
 }

@@ -114,6 +114,9 @@ function humanBusinessMessage(msg: string): string | null {
 
   if (m === "FORBIDDEN") return "Accès refusé : tu n’as pas les droits nécessaires.";
   if (m === "NOT_AUTHENTICATED") return "Ta session a expiré. Reconnecte-toi.";
+  if (/Edge Function returned a non-2xx status code/i.test(m)) {
+  return "Erreur serveur pendant la réservation. Réessaie dans quelques instants.";
+}
 
   return null;
 }
@@ -288,28 +291,32 @@ function getFnStatus(e: FunctionsErrorLike): number | null {
 }
 
 function getFnBodyText(e: FunctionsErrorLike): string | null {
-  const ctx = (e as Record<string, unknown>).context as Record<string, unknown> | undefined;
+  const ctx = (e as any)?.context;
   const body = ctx?.body;
 
+  // body déjà string
   if (typeof body === "string") return body;
 
-  // parfois body est un objet déjà parsé
-  if (typeof body === "object" && body !== null) {
-    // tente message / error / code
-    const anyBody = body as Record<string, unknown>;
+  // body objet (souvent déjà parsé)
+  if (body && typeof body === "object") {
     const msg =
-      (typeof anyBody.message === "string" && anyBody.message) ||
-      (typeof anyBody.error === "string" && anyBody.error) ||
+      (typeof body.message === "string" && body.message) ||
+      (typeof body.error === "string" && body.error) ||
+      (typeof body.details === "string" && body.details) ||
       null;
 
     if (msg) return msg;
 
     try {
-      return JSON.stringify(body);
+      const s = JSON.stringify(body);
+      return s === "{}" ? null : s;
     } catch {
       return null;
     }
   }
+
+  // sinon, on tente le message global (celui que tu vois)
+  if (typeof (e as any).message === "string") return (e as any).message;
 
   return null;
 }
@@ -323,6 +330,15 @@ function mapHttpStatusToAppCode(status: number | null): AppErrorCode {
   if (status === 400 || status === 422) return "VALIDATION";
   if (status >= 500) return "NETWORK"; // serveur / gateway down → côté UX c’est “réessaie”
   return "UNKNOWN";
+}
+
+function sanitizeRawMessage(raw: string | null): string | null {
+  if (!raw) return null;
+  const t = raw.trim();
+  if (!t) return null;
+  if (t === "{}") return null;               // ✅ le cas qui te plombe
+  if (t === "null" || t === "undefined") return null;
+  return t;
 }
 
 
@@ -367,28 +383,27 @@ export function normalizeError(e: unknown, fallbackMessage: string): AppError {
 
     if (isFunctionsErrorLike(e)) {
     const status = getFnStatus(e);
-    const raw = getFnBodyText(e) ?? (typeof (e as any).message === "string" ? (e as any).message : "");
 
-   const rpcCode = raw ? mapRpcMessageToAppCode(raw) : null;
+let raw =
+  getFnBodyText(e) ??
+  (typeof (e as any).message === "string" ? (e as any).message : null);
+
+raw = sanitizeRawMessage(raw);
+
+const rpcCode = raw ? mapRpcMessageToAppCode(raw) : null;
 const code = rpcCode ?? mapHttpStatusToAppCode(status);
 
 const business = raw ? humanBusinessMessage(raw) : null;
 const cleaned = raw ? stripRpcPrefix(raw) : "";
 
-const message = business ?? (rpcCode ? cleaned : (raw || fallbackMessage));
+const message = business ?? (rpcCode ? cleaned : (raw ?? fallbackMessage));
 
-
-
-    return new AppError({
-      code,
-      message,
-      cause: e,
-      meta: {
-        kind: "functions",
-        status,
-        rawMessage: raw || null,
-      },
-    });
+return new AppError({
+  code,
+  message,
+  cause: e,
+  meta: { kind: "functions", status, rawMessage: raw },
+});
   }
 
 

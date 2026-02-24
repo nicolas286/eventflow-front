@@ -106,7 +106,7 @@ export function EventTicketsPage() {
    const baseUrl = import.meta.env.VITE_PUBLIC_BASE_URL; 
     const url = `${baseUrl}/o/${orgSlug}/e/${eventSlug}/billets`;
 
-    const title = event ? `${event.title} – ${org?.displayName ?? "Eventflow"}` : "Événement";
+    const title = event ? `${event.title} – ${org?.displayName ?? "Eventflow, la billetterie sans commission"}` : "Événement";
     const desc = event?.description?.slice(0, 160) ?? "Réserve tes billets.";
 
     const ogImage = event?.bannerUrl;

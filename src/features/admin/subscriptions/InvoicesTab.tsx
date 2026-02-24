@@ -1,7 +1,5 @@
 import { useEffect } from "react";
-import { Button } from "../../../ui/components";
-import { Badge } from "../../../ui/components";
-import { Card, CardBody, CardHeader} from "../../../ui/components";
+import { Button, Badge, Card, CardBody, CardHeader } from "../../../ui/components";
 import { useMakeInvoiceList } from "../hooks/useMakeInvoiceList";
 import { supabase } from "../../../gateways/supabase/supabaseClient";
 
@@ -9,6 +7,7 @@ function fmtMoneyCents(v: number | null | undefined) {
   if (v === null || v === undefined) return "—";
   return (v / 100).toLocaleString("fr-BE", { style: "currency", currency: "EUR" });
 }
+
 function fmtDateShort(d: string | null | undefined) {
   if (!d) return "—";
   try {
@@ -26,84 +25,121 @@ export function InvoicesTab({ orgId }: { orgId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId]);
 
- async function onDownloadPdf(inv: any) {
-  if (!inv.pdfPath) return;
+  async function onDownloadPdf(inv: any) {
+    if (!inv.pdfPath) return;
 
-  const { data, error } = await supabase.functions.invoke(
-    "get-invoice-pdf-url",
-    {
+    const { data, error } = await supabase.functions.invoke("get-invoice-pdf-url", {
       body: { invoice_id: inv.id },
-    }
-  );
+    });
 
-  if (error || !data?.url) {
-    console.error("PDF download failed", error);
-    return;
+    if (error || !data?.url) {
+      console.error("PDF download failed", error);
+      return;
+    }
+
+    window.open(data.url, "_blank", "noopener,noreferrer");
   }
 
-  window.open(data.url, "_blank", "noopener,noreferrer");
-}
-
+  const isEmpty = invoices.items.length === 0 && !invoices.loading;
 
   return (
     <Card>
       <CardHeader title="Mes factures" subtitle="Historique des factures et téléchargements PDF." />
       <CardBody>
-        {invoices.error && (
-          <div style={{ padding: 10, border: "1px solid #fecaca", background: "#fef2f2", borderRadius: 10 }}>
-            {invoices.error}
-          </div>
-        )}
+        {invoices.error && <div className="adminSub__alert adminSub__alert--error">{invoices.error}</div>}
 
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
-            <thead>
-              <tr style={{ textAlign: "left", fontSize: 13, color: "#6b7280" }}>
-                <th style={{ padding: "10px 8px" }}>Date</th>
-                <th style={{ padding: "10px 8px" }}>Numéro</th>
-                <th style={{ padding: "10px 8px" }}>Montant</th>
-                <th style={{ padding: "10px 8px" }}>Statut</th>
-                <th style={{ padding: "10px 8px" }} />
-              </tr>
-            </thead>
-
-            <tbody>
-              {invoices.items.length === 0 && !invoices.loading ? (
-                <tr>
-                  <td colSpan={5} style={{ padding: 12, color: "#6b7280", fontSize: 14 }}>
-                    Aucune facture pour l’instant.
-                  </td>
-                </tr>
-              ) : (
-                invoices.items.map((inv) => (
-                  <tr key={inv.id} style={{ borderTop: "1px solid #e5e7eb" }}>
-                    <td style={{ padding: "10px 8px", fontSize: 14 }}>{fmtDateShort(inv.issuedAt)}</td>
-                    <td style={{ padding: "10px 8px", fontSize: 14, fontWeight: 600 }}>{inv.number ?? "—"}</td>
-                    <td style={{ padding: "10px 8px", fontSize: 14 }}>{fmtMoneyCents(inv.totalCents)}</td>
-                    <td style={{ padding: "10px 8px" }}>
+        {/* Wrapper unique pour forcer le comportement CSS */}
+        <div className="invWrap" data-invoices-view="wrap">
+          {/* ============ MOBILE LIST (hidden by default, shown on mobile) ============ */}
+          <div className="invMobileList" data-invoices-view="mobile">
+            {isEmpty ? (
+              <div className="invEmpty">Aucune facture pour l’instant.</div>
+            ) : (
+              invoices.items.map((inv) => (
+                <div key={inv.id} className="invMobileCard">
+                  <div className="invMobileTop">
+                    <div className="invMobileLeft">
+                      <div className="invMobileTitle">{inv.number ? `Facture ${inv.number}` : "Facture"}</div>
+                      <div className="invMobileMeta">{fmtDateShort(inv.issuedAt)}</div>
+                    </div>
+                    <div className="invMobileRight">
                       <Badge>{inv.status ?? "—"}</Badge>
-                    </td>
-                    <td style={{ padding: "10px 8px", width: 220 }}>
-                      <Button variant="secondary" onClick={() => onDownloadPdf(inv)}>
-                        Télécharger PDF
-                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="invMobileGrid">
+                    <div className="invMobileRow">
+                      <div className="invMobileLabel">Montant</div>
+                      <div className="invMobileValue">{fmtMoneyCents(inv.totalCents)}</div>
+                    </div>
+                    <div className="invMobileRow">
+                      <div className="invMobileLabel">Numéro</div>
+                      <div className="invMobileValue">{inv.number ?? "—"}</div>
+                    </div>
+                    <div className="invMobileRow">
+                      <div className="invMobileLabel">Date</div>
+                      <div className="invMobileValue">{fmtDateShort(inv.issuedAt)}</div>
+                    </div>
+                  </div>
+
+                  <div className="invMobileActions">
+                    <Button variant="secondary" onClick={() => onDownloadPdf(inv)} disabled={!inv.pdfPath}>
+                      Télécharger PDF
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* ============ DESKTOP TABLE (shown by default, hidden on mobile) ============ */}
+          <div className="invDesktopTable" data-invoices-view="desktop">
+            <table className="invTable">
+              <thead>
+                <tr className="invHeadRow">
+                  <th className="invTh">Date</th>
+                  <th className="invTh">Numéro</th>
+                  <th className="invTh">Montant</th>
+                  <th className="invTh">Statut</th>
+                  <th className="invTh invThRight" />
+                </tr>
+              </thead>
+
+              <tbody>
+                {isEmpty ? (
+                  <tr>
+                    <td colSpan={5} className="invEmptyRow">
+                      Aucune facture pour l’instant.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  invoices.items.map((inv) => (
+                    <tr key={inv.id} className="invTr">
+                      <td className="invTd">{fmtDateShort(inv.issuedAt)}</td>
+                      <td className="invTd invTdStrong">{inv.number ?? "—"}</td>
+                      <td className="invTd">{fmtMoneyCents(inv.totalCents)}</td>
+                      <td className="invTd">
+                        <Badge>{inv.status ?? "—"}</Badge>
+                      </td>
+                      <td className="invTd invTdRight">
+                        <Button variant="secondary" onClick={() => onDownloadPdf(inv)} disabled={!inv.pdfPath}>
+                          Télécharger PDF
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div style={{ marginTop: 12, display: "flex", gap: 10 }}>
+        <div className="invFooterActions">
           <Button variant="secondary" disabled={invoices.loading} onClick={() => invoices.fetchFirst({ orgId })}>
             Rafraîchir
           </Button>
 
-          <Button
-            disabled={invoices.loading || !invoices.hasMore}
-            onClick={() => invoices.fetchMore({ orgId })}
-          >
+          <Button disabled={invoices.loading || !invoices.hasMore} onClick={() => invoices.fetchMore({ orgId })}>
             {invoices.loading ? "Chargement…" : invoices.hasMore ? "Charger plus" : "Tout est chargé"}
           </Button>
         </div>

@@ -2,13 +2,14 @@ import "../../../styles/desktop/auth.desktop.css";
 import "../../../styles/mobile/auth.mobile.css";
 
 import { useState } from "react";
+import { Link } from "react-router-dom";
+
 import { signupSchema, type SignupInput } from "../../../domain/models/admin/admin.auth.schema";
 import { authRepo } from "../../../gateways/supabase/repositories/auth/authRepo";
 import { normalizeError } from "../../../domain/errors/errors";
 import Button from "../button/Button";
 import Input from "../inputs/Input";
 import { MessageBox } from "../message/MessageBox";
-import { TermsModal } from "../modals/TermsModal";
 import { useLiveForm } from "../../../features/public/useLiveZodForm";
 
 export function SignUpForm() {
@@ -23,7 +24,6 @@ export function SignUpForm() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [termsOpen, setTermsOpen] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,75 +54,72 @@ export function SignUpForm() {
   }
 
   return (
-    <>
-      <form onSubmit={handleSubmit} className="auth-form">
-        <Input
-          label="Email"
-          type="email"
-          placeholder="Adresse email"
-          value={form.email}
+    <form onSubmit={handleSubmit} className="auth-form">
+      <Input
+        label="Email"
+        type="email"
+        placeholder="Adresse email"
+        value={form.email}
+        onChange={(e) => {
+          setSubmitError(null);
+          setSuccessMessage(null);
+          handleChange("email", e.target.value);
+        }}
+        onBlur={() => handleBlur("email")}
+        autoComplete="email"
+      />
+      {shouldShowFieldError("email") && fieldErrors.email && (
+        <MessageBox variant="error">{fieldErrors.email}</MessageBox>
+      )}
+
+      <Input
+        label="Mot de passe"
+        type="password"
+        value={form.password}
+        placeholder="Votre mot de passe"
+        onChange={(e) => {
+          setSubmitError(null);
+          setSuccessMessage(null);
+          handleChange("password", e.target.value);
+        }}
+        onBlur={() => handleBlur("password")}
+        autoComplete="new-password"
+      />
+      {shouldShowFieldError("password") && fieldErrors.password && (
+        <MessageBox variant="error">{fieldErrors.password}</MessageBox>
+      )}
+
+      <div className="auth-row">
+        <input
+          id="acceptTerms"
+          type="checkbox"
+          checked={form.acceptTerms}
           onChange={(e) => {
             setSubmitError(null);
             setSuccessMessage(null);
-            handleChange("email", e.target.value);
+            handleChange("acceptTerms", e.target.checked);
           }}
-          onBlur={() => handleBlur("email")}
-          autoComplete="email"
+          onBlur={() => handleBlur("acceptTerms")}
         />
-        {shouldShowFieldError("email") && fieldErrors.email && (
-          <MessageBox variant="error">{fieldErrors.email}</MessageBox>
-        )}
+        <label htmlFor="acceptTerms" className="auth-checkbox-label">
+          J’accepte les{" "}
+          <Link to="/cgu" className="auth-link">
+            conditions générales
+          </Link>
+        </label>
+      </div>
 
-        <Input
-          label="Mot de passe"
-          type="password"
-          value={form.password}
-          placeholder="Votre mot de passe"
-          onChange={(e) => {
-            setSubmitError(null);
-            setSuccessMessage(null);
-            handleChange("password", e.target.value);
-          }}
-          onBlur={() => handleBlur("password")}
-          autoComplete="new-password"
-        />
-        {shouldShowFieldError("password") && fieldErrors.password && (
-          <MessageBox variant="error">{fieldErrors.password}</MessageBox>
-        )}
-
-        <div className="auth-row">
-          <input
-            id="acceptTerms"
-            type="checkbox"
-            checked={form.acceptTerms}
-            onChange={(e) => {
-              setSubmitError(null);
-              setSuccessMessage(null);
-              handleChange("acceptTerms", e.target.checked);
-            }}
-            onBlur={() => handleBlur("acceptTerms")}
-          />
-          <label htmlFor="acceptTerms" className="auth-checkbox-label">
-            J’accepte les{" "}
-            <button type="button" className="auth-link" onClick={() => setTermsOpen(true)}>
-              conditions
-            </button>
-          </label>
-        </div>
-
-        {shouldShowFieldError("acceptTerms", { hideUntilTouched: true }) && fieldErrors.acceptTerms && (
+      {shouldShowFieldError("acceptTerms", { hideUntilTouched: true }) &&
+        fieldErrors.acceptTerms && (
           <MessageBox variant="error">{fieldErrors.acceptTerms}</MessageBox>
         )}
 
-        {submitError && <MessageBox variant="error">{submitError}</MessageBox>}
-        {successMessage && <MessageBox variant="success">{successMessage}</MessageBox>}
+      {submitError && <MessageBox variant="error">{submitError}</MessageBox>}
+      {successMessage && <MessageBox variant="success">{successMessage}</MessageBox>}
 
-        <Button type="submit" variant="primary" disabled={loading}>
-          {loading ? "Création..." : "Créer un compte"}
-        </Button>
-      </form>
-
-      <TermsModal open={termsOpen} onClose={() => setTermsOpen(false)} />
-    </>
+      <Button type="submit" variant="primary" disabled={loading}>
+        {loading ? "Création..." : "Créer un compte"}
+      </Button>
+    </form>
   );
 }
