@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Button, Input } from "../../ui/components";
+import { Button} from "../../ui/components";
+import PasswordInput from "../../ui/components/inputs/PasswordInput";
 import { MessageBox } from "../../ui/components/message/MessageBox";
 import { authRepo } from "../../gateways/supabase/repositories/auth/authRepo";
 import { supabase } from "../../gateways/supabase/supabaseClient";
@@ -121,16 +122,14 @@ export function AdminResetPasswordPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
-          <Input
+          <PasswordInput
             label="Nouveau mot de passe"
-            type="password"
             placeholder="Nouveau mot de passe"
             value={form.password}
             onChange={(e) => {
               setErrorMsg(null);
               setOkMsg(null);
               handleChange("password", e.target.value);
-
               if (form.confirmPassword) handleChange("confirmPassword", form.confirmPassword);
             }}
             onBlur={() => handleBlur("password")}
@@ -140,9 +139,8 @@ export function AdminResetPasswordPage() {
             <MessageBox variant="error">{fieldErrors.password}</MessageBox>
           )}
 
-          <Input
+          <PasswordInput
             label="Confirmer le mot de passe"
-            type="password"
             placeholder="Confirmez le mot de passe"
             value={form.confirmPassword}
             onChange={(e) => {

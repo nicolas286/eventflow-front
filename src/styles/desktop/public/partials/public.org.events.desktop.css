@@ -68,6 +68,12 @@
   margin-top: 0;
 }
 
+.publicOrgEventActions {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* ✅ léger espace entre les boutons */
+}
+
 /* ------- Public events toolbar ------- */
 
 .publicEventsToolbar {

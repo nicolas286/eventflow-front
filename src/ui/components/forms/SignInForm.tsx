@@ -6,6 +6,7 @@ import { loginSchema, type LoginInput } from "../../../domain/models/admin/admin
 import { authRepo } from "../../../gateways/supabase/repositories/auth/authRepo";
 import { normalizeError } from "../../../domain/errors/errors";
 import Button from "../button/Button";
+import PasswordInput from "../inputs/PasswordInput";
 import Input from "../inputs/Input";
 import { MessageBox } from "../message/MessageBox";
 import { useLiveForm } from "../../../features/public/useLiveZodForm";
@@ -63,10 +64,9 @@ export function SignInForm() {
         <MessageBox variant="error">{fieldErrors.email}</MessageBox>
       )}
 
-      <Input
+      <PasswordInput
         label="Mot de passe"
         placeholder="Votre mot de passe"
-        type="password"
         value={form.password}
         onChange={(e) => {
           setSubmitError(null);
