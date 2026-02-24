@@ -1,8 +1,8 @@
 import { useState } from "react";
 import type { ChangeEventHandler, InputHTMLAttributes, ReactNode } from "react";
 
-import "../../../styles/desktop/Input.desktop.css";
-import "../../../styles/mobile/Input.mobile.css";
+import "../../../styles/desktop/input.desktop.css";
+import "../../../styles/mobile/input.mobile.css";
 
 import { EyeIcon, EyeOffIcon } from "../icon/Icons";
 
