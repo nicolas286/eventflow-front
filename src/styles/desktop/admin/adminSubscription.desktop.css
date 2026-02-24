@@ -289,3 +289,15 @@
   background: linear-gradient(90deg, #3b82f6, #6366f1);
   border-radius: 8px 8px 0 0;
 }
+
+/* =========================
+   Invoices: default desktop
+   ========================= */
+
+.invWrap [data-invoices-view="mobile"] {
+  display: none;
+}
+
+.invWrap [data-invoices-view="desktop"] {
+  display: block;
+}

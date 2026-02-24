@@ -1,15 +1,310 @@
 @media (max-width: 860px) {
-  .adminSub__plan2Col {
-    grid-template-columns: 1fr;
-  }
-
-  .adminSub__cancelCol {
-    justify-content: stretch;
-  }
-
-  /* Les deux blocs prennent toute la largeur */
-  .adminSub__plansWrap,
-  .adminSub__dangerBox {
+  .adminSub__page {
+    width: 100%;
     max-width: 100%;
+    overflow-x: hidden;
   }
+  .adminSub__page * {
+    box-sizing: border-box;
+    max-width: 100%;
+    min-width: 0;
+  }
+}
+
+/* ---------------- Tabs ---------------- */
+@media (max-width: 860px) {
+  .adminEventTabs {
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    margin: 0 0 14px 0 !important;
+    width: 100% !important;
+
+    padding: 10px 0;
+    background: rgba(0, 0, 0, 0.03);
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+    display: flex;
+    justify-content: center;
+  }
+
+  .adminEventTabsInner {
+    width: 100%;
+    max-width: 1100px;
+    padding: 0 12px;
+
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .adminEventTab {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 10px 10px;
+    border-radius: 12px;
+
+    border: 1px solid rgba(0, 0, 0, 0.10);
+    background: rgba(255, 255, 255, 0.92);
+    color: rgba(0, 0, 0, 0.72);
+
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1.1;
+    text-align: center;
+
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .adminEventTab.isActive {
+    background: rgb(var(--primary));
+    border-color: rgb(var(--primary));
+    color: rgb(var(--primary-contrast));
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.08);
+  }
+}
+
+@media (max-width: 430px) {
+  .adminEventTab {
+    flex: 1 1 calc(50% - 4px);
+    font-size: 12.5px;
+    padding: 10px 8px;
+  }
+  .adminEventTabsInner .adminEventTab:nth-child(3) {
+    flex: 1 1 100%;
+  }
+}
+
+/* ---------------- Général ---------------- */
+@media (max-width: 640px) {
+  .adminSub__summaryGrid {
+    grid-template-columns: 1fr !important;
+  }
+  .adminSub__limitsGrid {
+    grid-template-columns: 1fr !important;
+    max-width: 100% !important;
+  }
+  .adminSub__limitRow {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .adminSub__limitValue {
+    width: 100%;
+    text-align: left;
+  }
+}
+
+/* ---------------- Changer de plan (PlanTiles) ---------------- */
+@media (max-width: 640px) {
+  .adminSub__plan2Col {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  .adminSub__plansWrap.isFlex {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+
+  .adminSub__plansWrap.isFlex .adminSub__planTile {
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+
+  .adminSub__planTile {
+    padding: 12px !important;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .adminSub__planTop {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+
+  .adminSub__planRight {
+    width: 100%;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 10px !important;
+    flex-wrap: wrap !important;
+  }
+
+  /* ✅ fix: bouton dont le texte sort */
+  .adminSub__planAction button,
+  .adminSub__planAction .adminSub__fullWidthBtn {
+    width: 100% !important;
+    max-width: 100% !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    line-height: 1.15 !important;
+    padding: 12px 12px !important;
+  }
+}
+
+/* ---------------- Factures (mobile cards) ---------------- */
+.invFooterActions {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.invTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.invHeadRow {
+  text-align: left;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.invTh {
+  padding: 10px 8px;
+}
+
+.invThRight {
+  width: 220px;
+}
+
+.invTr {
+  border-top: 1px solid #e5e7eb;
+}
+
+.invTd {
+  padding: 10px 8px;
+  font-size: 14px;
+}
+
+.invTdStrong {
+  font-weight: 800;
+}
+
+.invTdRight {
+  width: 220px;
+}
+
+.invEmptyRow {
+  padding: 12px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.invEmpty {
+  padding: 12px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  /* force mobile layout */
+  .invWrap [data-invoices-view="desktop"] {
+    display: none !important;
+  }
+
+  .invWrap [data-invoices-view="mobile"] {
+    display: grid !important;
+    gap: 12px;
+  }
+
+  .invMobileCard {
+    border: 1px solid rgba(0, 0, 0, 0.10);
+    border-radius: 14px;
+    background: #fff;
+    padding: 12px;
+  }
+
+  .invMobileTop {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .invMobileTitle {
+    font-weight: 950;
+    font-size: 14px;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  .invMobileMeta {
+    margin-top: 2px;
+    font-size: 12px;
+    color: #6b7280;
+  }
+
+  .invMobileGrid {
+    margin-top: 10px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .invMobileRow {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .invMobileLabel {
+    font-size: 12px;
+    color: #6b7280;
+    flex: 0 0 auto;
+  }
+
+  .invMobileValue {
+    font-size: 13px;
+    font-weight: 900;
+    color: #111827;
+    text-align: right;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .invMobileActions {
+    margin-top: 12px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .invMobileActions button {
+    width: 100%;
+  }
+
+  .invFooterActions button {
+    width: 100%;
+  }
+}
+
+/* =========================================
+   FIX bouton "Annuler l'abonnement"
+   Autorise retour à la ligne
+========================================= */
+
+.adminSub__dangerAction .adminSub__fullWidthBtn,
+.adminSub__dangerAction button {
+  width: 100% !important;
+  max-width: 100% !important;
+
+  white-space: normal !important;     /* ✅ autorise retour à la ligne */
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+
+  line-height: 1.15 !important;
+  padding: 12px 14px !important;
 }

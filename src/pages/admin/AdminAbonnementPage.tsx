@@ -16,10 +16,7 @@ import { useCancelSubscription } from "../../features/admin/hooks/useCancelSubsc
 import { useMakeOrganizationBilling } from "../../features/admin/hooks/useMakeOrganizationBilling";
 import { useUpsertOrganizationBilling } from "../../features/admin/hooks/useUpsertOrganizationBilling";
 
-import type {
-  OrganizationBilling,
-  OrganizationBillingPatch,
-} from "../../domain/models/db/db.organizationBilling.schema";
+import type { OrganizationBilling, OrganizationBillingPatch } from "../../domain/models/db/db.organizationBilling.schema";
 import { inferCountryCode } from "../../domain/helpers/countries";
 
 import { InvoicesTab } from "../../features/admin/subscriptions/InvoicesTab";
@@ -59,7 +56,7 @@ function boolLabel(v: boolean) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Billing helpers (from BillingModal)                                */
+/* Billing helpers                                                    */
 /* ------------------------------------------------------------------ */
 
 function t(v: string) {
@@ -71,7 +68,7 @@ function toNullIfEmpty(v: string): string | null {
 }
 
 /* ------------------------------------------------------------------ */
-/* Plans (UI source of truth)                                         */
+/* Plans                                                              */
 /* ------------------------------------------------------------------ */
 
 type PlanKey = "free" | "starter" | "pro";
@@ -92,24 +89,14 @@ const PLAN_DEFS: Record<PlanKey, PlanDef> = {
     title: "Free",
     price: "0 €",
     short: "Pour démarrer et tester.",
-    points: [
-      "Événements gratuits illimités",
-      "1 événement payant / an",
-      "Max 50 inscrits / événement payant",
-      "Branding Eventflow",
-    ],
+    points: ["Événements gratuits illimités", "1 événement payant / an", "Max 50 inscrits / événement payant", "Branding Eventflow"],
   },
   starter: {
     key: "starter",
     title: "Starter",
     price: "15,99 €/mois",
     short: "Pour les petites assos actives.",
-    points: [
-      "Événements gratuits illimités",
-      "5 événements payants / an",
-      "Inscriptions illimitées",
-      "Couleur & Logo personnalisés",
-    ],
+    points: ["Événements gratuits illimités", "5 événements payants / an", "Inscriptions illimitées", "Couleur & Logo personnalisés"],
     highlight: false,
     ctaLabel: "Passer en Starter",
   },
@@ -118,12 +105,7 @@ const PLAN_DEFS: Record<PlanKey, PlanDef> = {
     title: "Pro",
     price: "25,99 €/mois",
     short: "Le meilleur pour scaler (illimité).",
-    points: [
-      "Événements gratuits illimités",
-      "Événements payants illimités",
-      "Inscriptions illimitées",
-      "Couleur & Logo personnalisés",
-    ],
+    points: ["Événements gratuits illimités", "Événements payants illimités", "Inscriptions illimitées", "Couleur & Logo personnalisés"],
     highlight: true,
     ctaLabel: "Passer en Pro",
   },
@@ -175,18 +157,11 @@ export default function AdminAbonnementPage() {
     );
   }
 
-  const { loading: startLoading, error: startError, result, startSubscription, reset } =
-    useStartSubscription({ supabase });
+  const { loading: startLoading, error: startError, result, startSubscription, reset } = useStartSubscription({ supabase });
 
-  const {
-    loading: cancelLoading,
-    error: cancelError,
-    result: cancelResult,
-    cancelSubscription,
-    reset: resetCancel,
-  } = useCancelSubscription({ supabase });
+  const { loading: cancelLoading, error: cancelError, result: cancelResult, cancelSubscription, reset: resetCancel } =
+    useCancelSubscription({ supabase });
 
-  // toasts: start error / result
   useEffect(() => {
     if (!startError) return;
     showToast({ title: "Erreur", description: startError, variant: "error", duration: 7000 });
@@ -194,7 +169,6 @@ export default function AdminAbonnementPage() {
 
   useEffect(() => {
     if (!result) return;
-
     showToast({
       title: result.ok ? "Demande enregistrée" : "Synchronisation en attente",
       description: result.ok
@@ -214,9 +188,7 @@ export default function AdminAbonnementPage() {
     if (!cancelResult) return;
     showToast({
       title: cancelResult.ok ? "Abonnement résilié" : "Résiliation en attente",
-      description: cancelResult.ok
-        ? "Vous êtes repassé en Free. Les limites sont appliquées."
-        : "Résiliation lancée. La synchronisation peut prendre un moment.",
+      description: cancelResult.ok ? "Vous êtes repassé en Free. Les limites sont appliquées." : "Résiliation lancée. La synchronisation peut prendre un moment.",
       variant: cancelResult.ok ? "success" : "warning",
       duration: 6500,
     });
@@ -243,7 +215,6 @@ export default function AdminAbonnementPage() {
   const didHandleReturn = useRef(false);
   const [isSyncingReturn, setIsSyncingReturn] = useState(false);
 
-  // ✅ Retour Mollie : refetch + polling + toasts
   useEffect(() => {
     if (!isReturn) return;
     if (didHandleReturn.current) return;
@@ -266,7 +237,7 @@ export default function AdminAbonnementPage() {
       let synced = false;
 
       try {
-        const maxTries = 12; // ~24s
+        const maxTries = 12;
         const delayMs = 2000;
 
         for (let i = 0; i < maxTries; i++) {
@@ -285,28 +256,12 @@ export default function AdminAbonnementPage() {
 
         showToast(
           synced
-            ? {
-                title: "Plan mis à jour",
-                description: "Votre abonnement est à jour. Merci !",
-                variant: "success",
-                duration: 4500,
-              }
-            : {
-                title: "Synchronisation en attente",
-                description: "Ça peut encore prendre un moment. Rafraîchissez la page si besoin.",
-                variant: "warning",
-                duration: 6500,
-              }
+            ? { title: "Plan mis à jour", description: "Votre abonnement est à jour. Merci !", variant: "success", duration: 4500 }
+            : { title: "Synchronisation en attente", description: "Ça peut encore prendre un moment. Rafraîchissez la page si besoin.", variant: "warning", duration: 6500 }
         );
 
         const search = nextQs.toString();
-        navigate(
-          {
-            pathname: location.pathname,
-            search: search ? `?${search}` : "",
-          },
-          { replace: true }
-        );
+        navigate({ pathname: location.pathname, search: search ? `?${search}` : "" }, { replace: true });
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -353,44 +308,24 @@ export default function AdminAbonnementPage() {
     const res = await startSubscription({ orgId, plan: target });
 
     if (!res) {
-      showToast({
-        title: "Impossible de démarrer l’abonnement",
-        description: "Réessayez dans quelques instants.",
-        variant: "error",
-        duration: 6000,
-      });
+      showToast({ title: "Impossible de démarrer l’abonnement", description: "Réessayez dans quelques instants.", variant: "error", duration: 6000 });
       return;
     }
 
     if (!res.ok) {
-      showToast({
-        title: "Erreur de paiement",
-        description: "La demande a échoué. Vérifiez vos infos et réessayez.",
-        variant: "error",
-        duration: 6000,
-      });
+      showToast({ title: "Erreur de paiement", description: "La demande a échoué. Vérifiez vos infos et réessayez.", variant: "error", duration: 6000 });
       return;
     }
 
     if ("action" in res && res.action === "checkout") {
-      showToast({
-        title: "Redirection vers Mollie",
-        description: "Finalisez le paiement, puis revenez sur cette page.",
-        variant: "info",
-        duration: 4000,
-      });
+      showToast({ title: "Redirection vers Mollie", description: "Finalisez le paiement, puis revenez sur cette page.", variant: "info", duration: 4000 });
       window.location.href = res.checkoutUrl;
       return;
     }
 
     if ("action" in res && res.action === "sub_created") {
       await refetch();
-      showToast({
-        title: "Plan mis à jour",
-        description: "Votre abonnement a été mis à jour.",
-        variant: "success",
-        duration: 4500,
-      });
+      showToast({ title: "Plan mis à jour", description: "Votre abonnement a été mis à jour.", variant: "success", duration: 4500 });
       return;
     }
   }
@@ -400,9 +335,7 @@ export default function AdminAbonnementPage() {
 
     if (!isPaidPlan) return;
 
-    const ok = window.confirm(
-      "Confirmer la résiliation ?\n\nVotre organisation repassera en Free et les limites seront réduites."
-    );
+    const ok = window.confirm("Confirmer la résiliation ?\n\nVotre organisation repassera en Free et les limites seront réduites.");
     if (!ok) return;
 
     const res = await cancelSubscription({ orgId });
@@ -421,14 +354,12 @@ export default function AdminAbonnementPage() {
   const anyLoading = startLoading || cancelLoading;
 
   const upgradeTiles =
-    plan === "free"
-      ? (["pro", "starter"] as const)
-      : plan === "starter"
-      ? (["pro"] as const)
-      : ([] as const);
+    plan === "free" ? (["pro", "starter"] as const) : plan === "starter" ? (["pro"] as const) : ([] as const);
 
   return (
-    <Container>
+ <Container>
+    <div className="adminSub__page">
+
       <div className="adminEventTabs">
         <div className="adminEventTabsInner">
           <TabButton active={tab === "general"} onClick={() => setTabAndUrl("general")}>
@@ -448,11 +379,7 @@ export default function AdminAbonnementPage() {
           <Card>
             <CardHeader title="Abonnement" subtitle="Votre plan actuel, votre statut, et les prochaines étapes." />
             <CardBody>
-              {isSyncingReturn && (
-                <div className="adminSub__mutedLine">
-                  Synchronisation du paiement… votre plan peut mettre quelques secondes à s’actualiser.
-                </div>
-              )}
+              {isSyncingReturn && <div className="adminSub__mutedLine">Synchronisation du paiement… votre plan peut mettre quelques secondes à s’actualiser.</div>}
 
               <div className="adminSub__summaryGrid">
                 <div className="adminSub__summaryCol">
@@ -541,11 +468,7 @@ export default function AdminAbonnementPage() {
                       onAction={() => onChoosePlan(target)}
                       badgeLabel={target === "pro" ? "Recommandé" : "Upgrade"}
                       actionLabelOverride={PLAN_DEFS[target].ctaLabel}
-                      helperOverride={
-                        target === "pro"
-                          ? "Le meilleur choix si vous faites des événements payants régulièrement."
-                          : undefined
-                      }
+                      helperOverride={target === "pro" ? "Le meilleur choix si vous faites des événements payants régulièrement." : undefined}
                       buttonVariant={target === "starter" ? "secondary" : undefined}
                     />
                   ))}
@@ -557,17 +480,11 @@ export default function AdminAbonnementPage() {
                       <div className="adminSub__dangerTitle">Résilier l’abonnement</div>
 
                       <div className="adminSub__dangerText">
-                        Vous repasserez sur le plan <b>Free</b>. Les limites (admins, produits, champs, etc.) seront réduites
-                        immédiatement après confirmation.
+                        Vous repasserez sur le plan <b>Free</b>. Les limites (admins, produits, champs, etc.) seront réduites immédiatement après confirmation.
                       </div>
 
                       <div className="adminSub__dangerAction">
-                        <Button
-                          variant="danger"
-                          className="adminSub__fullWidthBtn"
-                          disabled={anyLoading}
-                          onClick={onCancelPlan}
-                        >
+                        <Button variant="danger" className="adminSub__fullWidthBtn" disabled={anyLoading} onClick={onCancelPlan}>
                           {cancelLoading ? "Résiliation…" : "Annuler l’abonnement et repasser en Free"}
                         </Button>
                       </div>
@@ -578,9 +495,7 @@ export default function AdminAbonnementPage() {
 
                           {!cancelError && cancelResult && (
                             <div className="adminSub__alert adminSub__alert--success">
-                              {cancelResult.ok
-                                ? "Abonnement résilié. Votre organisation est repassée en Free."
-                                : "Résiliation lancée mais pas encore synchronisée côté DB."}
+                              {cancelResult.ok ? "Abonnement résilié. Votre organisation est repassée en Free." : "Résiliation lancée mais pas encore synchronisée côté DB."}
                             </div>
                           )}
                         </div>
@@ -622,59 +537,35 @@ export default function AdminAbonnementPage() {
               const res = await startSubscription({ orgId, plan: planToContinue });
 
               if (!res) {
-                showToast({
-                  title: "Impossible de démarrer l’abonnement",
-                  description: "Réessayez dans quelques instants.",
-                  variant: "error",
-                  duration: 6000,
-                });
+                showToast({ title: "Impossible de démarrer l’abonnement", description: "Réessayez dans quelques instants.", variant: "error", duration: 6000 });
                 return;
               }
 
               if (!res.ok) {
-                showToast({
-                  title: "Erreur de paiement",
-                  description: "La demande a échoué. Vérifiez vos infos et réessayez.",
-                  variant: "error",
-                  duration: 6000,
-                });
+                showToast({ title: "Erreur de paiement", description: "La demande a échoué. Vérifiez vos infos et réessayez.", variant: "error", duration: 6000 });
                 return;
               }
 
               if ("action" in res && res.action === "checkout") {
-                showToast({
-                  title: "Redirection vers Mollie",
-                  description: "Finalisez le paiement, puis revenez sur cette page.",
-                  variant: "info",
-                  duration: 4000,
-                });
+                showToast({ title: "Redirection vers Mollie", description: "Finalisez le paiement, puis revenez sur cette page.", variant: "info", duration: 4000 });
                 window.location.href = res.checkoutUrl;
                 return;
               }
 
               if ("action" in res && res.action === "sub_created") {
                 await refetch();
-                showToast({
-                  title: "Plan mis à jour",
-                  description: "Votre abonnement a été mis à jour.",
-                  variant: "success",
-                  duration: 4500,
-                });
+                showToast({ title: "Plan mis à jour", description: "Votre abonnement a été mis à jour.", variant: "success", duration: 4500 });
                 return;
               }
 
               return;
             }
 
-            showToast({
-              title: "Facturation enregistrée",
-              description: "Vos informations de facturation ont été mises à jour.",
-              variant: "success",
-              duration: 4500,
-            });
+            showToast({ title: "Facturation enregistrée", description: "Vos informations de facturation ont été mises à jour.", variant: "success", duration: 4500 });
           }}
         />
       )}
+      </div>
     </Container>
   );
 }
@@ -726,9 +617,7 @@ function PlanTile({
 
   const helper =
     helperOverride ??
-    (kind === "up"
-      ? "Vous garderez l’accès immédiatement après confirmation."
-      : "Attention : baisse des limites et fonctionnalités.");
+    (kind === "up" ? "Vous garderez l’accès immédiatement après confirmation." : "Attention : baisse des limites et fonctionnalités.");
 
   const isEnabled = Boolean(onAction) && !loading;
 
@@ -777,25 +666,22 @@ function TabButton(props: { active?: boolean; onClick: () => void; children: Rea
 }
 
 /* ------------------------------------------------------------------ */
-/* BillingTab (from BillingModal)                                      */
+/* BillingTab                                                         */
 /* ------------------------------------------------------------------ */
 
 function BillingTab(props: {
   mode: "required" | "edit";
   orgId: string;
-
   initial: OrganizationBilling | null;
-
   loading: boolean;
   error: string | null;
-
   onSave: (patch: OrganizationBillingPatch) => Promise<void>;
 }) {
   const { mode, orgId, initial, loading, error, onSave } = props;
 
   const [form, setForm] = useState({
     legalName: "",
-    vatCountryLabel: "", // ✅ pas de TVA par défaut (sinon ça force une TVA)
+    vatCountryLabel: "",
     vatNumber: "",
 
     addressLine1: "",
@@ -812,28 +698,24 @@ function BillingTab(props: {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  // ✅ pays TVA -> code (null si vide)
   const vatCountryCode = useMemo(() => {
     const c = inferCountryCode(form.vatCountryLabel);
     return c ? String(c) : null;
   }, [form.vatCountryLabel]);
 
-  // ✅ si pays TVA sélectionné => numéro TVA requis
   const needsVat = Boolean(vatCountryCode);
 
-  // ✅ si on repasse à "pas de TVA", on wipe le numéro
   useEffect(() => {
     if (!needsVat && form.vatNumber) set("vatNumber", "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [needsVat]);
 
-  // Sync when initial changes
   useEffect(() => {
     if (!initial) return;
 
     setForm({
       legalName: initial.legalName ?? "",
-      vatCountryLabel: initial.vatCountryCode ? initial.vatCountryCode : "", // ✅
+      vatCountryLabel: initial.vatCountryCode ? initial.vatCountryCode : "",
       vatNumber: initial.vatNumber ?? "",
 
       addressLine1: initial.addressLine1 ?? "",
@@ -854,15 +736,8 @@ function BillingTab(props: {
       : "Consultez et modifiez les informations utilisées sur vos factures.";
 
   const canSave = useMemo(() => {
-    const baseOk =
-      t(form.legalName).length >= 2 &&
-      t(form.addressLine1).length >= 2 &&
-      t(form.postalCode).length >= 2 &&
-      t(form.city).length >= 2;
-
-    // ✅ si pays TVA sélectionné => numéro TVA requis (check simple)
+    const baseOk = t(form.legalName).length >= 2 && t(form.addressLine1).length >= 2 && t(form.postalCode).length >= 2 && t(form.city).length >= 2;
     const vatOk = !needsVat || t(form.vatNumber).length >= 6;
-
     return baseOk && vatOk;
   }, [form.legalName, form.addressLine1, form.postalCode, form.city, form.vatNumber, needsVat]);
 
@@ -871,10 +746,8 @@ function BillingTab(props: {
 
     const patch: OrganizationBillingPatch = {
       orgId,
-
       legalName: t(form.legalName),
 
-      // ✅ TVA : null tant que pas de pays TVA
       vatCountryCode: vatCountryCode,
       vatNumber: needsVat ? toNullIfEmpty(form.vatNumber) : null,
 
@@ -897,37 +770,15 @@ function BillingTab(props: {
     <Card>
       <CardHeader title={title} subtitle={subtitle} />
       <CardBody>
-        {error ? (
-          <div className="adminSub__alert adminSub__alert--error" style={{ marginBottom: 12 }}>
-            {error}
-          </div>
-        ) : null}
+        {error ? <div className="adminSub__alert adminSub__alert--error billingTab__error">{error}</div> : null}
 
-        <div
-          className="billingTabGrid"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-            gap: 12,
-          }}
-        >
-          <div style={{ gridColumn: "1 / -1" }}>
-            <Input
-              label="Raison sociale"
-              value={form.legalName}
-              onChange={(e) => set("legalName", e.target.value)}
-              disabled={loading}
-              required
-            />
+        <div className="billingTabGrid">
+          <div className="billingTabSpan2">
+            <Input label="Raison sociale" value={form.legalName} onChange={(e) => set("legalName", e.target.value)} disabled={loading} required />
           </div>
 
           <div>
-            <CountrySelect
-              label="Pays TVA (optionnel)"
-              value={form.vatCountryLabel}
-              onChange={(v) => set("vatCountryLabel", v || "")}
-              required={false}
-            />
+            <CountrySelect label="Pays TVA (optionnel)" value={form.vatCountryLabel} onChange={(v) => set("vatCountryLabel", v || "")} required={false} />
           </div>
 
           <div>
@@ -936,12 +787,12 @@ function BillingTab(props: {
               placeholder="Ex: BE0123456789"
               value={form.vatNumber}
               onChange={(e) => set("vatNumber", e.target.value)}
-              disabled={loading || !needsVat} // ✅ grisé tant que pas de pays TVA
-              required={needsVat} // ✅ requis si pays TVA sélectionné
+              disabled={loading || !needsVat}
+              required={needsVat}
             />
           </div>
 
-          <div style={{ gridColumn: "1 / -1" }}>
+          <div className="billingTabSpan2">
             <Input
               label="Adresse"
               placeholder="Rue, numéro"
@@ -952,7 +803,7 @@ function BillingTab(props: {
             />
           </div>
 
-          <div style={{ gridColumn: "1 / -1" }}>
+          <div className="billingTabSpan2">
             <Input
               label="Complément d'adresse (optionnel)"
               placeholder="Boîte, étage…"
@@ -963,34 +814,15 @@ function BillingTab(props: {
           </div>
 
           <div>
-            <Input
-              label="Code postal"
-              placeholder="Ex: 5000"
-              value={form.postalCode}
-              onChange={(e) => set("postalCode", e.target.value)}
-              disabled={loading}
-              required
-            />
+            <Input label="Code postal" placeholder="Ex: 5000" value={form.postalCode} onChange={(e) => set("postalCode", e.target.value)} disabled={loading} required />
           </div>
 
           <div>
-            <Input
-              label="Ville"
-              placeholder="Ex: Namur"
-              value={form.city}
-              onChange={(e) => set("city", e.target.value)}
-              disabled={loading}
-              required
-            />
+            <Input label="Ville" placeholder="Ex: Namur" value={form.city} onChange={(e) => set("city", e.target.value)} disabled={loading} required />
           </div>
 
           <div>
-            <CountrySelect
-              label="Pays"
-              value={form.countryLabel}
-              onChange={(v) => set("countryLabel", v || "")}
-              required
-            />
+            <CountrySelect label="Pays" value={form.countryLabel} onChange={(v) => set("countryLabel", v || "")} required />
           </div>
 
           <div>
@@ -1003,7 +835,7 @@ function BillingTab(props: {
             />
           </div>
 
-          <div style={{ gridColumn: "1 / -1" }}>
+          <div className="billingTabSpan2">
             <Input
               label="Référence facture (optionnel)"
               placeholder="Ex: Projet / PO / référence interne…"
@@ -1014,31 +846,15 @@ function BillingTab(props: {
           </div>
         </div>
 
-        <div style={{ height: 12 }} />
-
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <div className="billingTabActions">
           <Button variant="primary" disabled={loading || !canSave} onClick={submit}>
             {loading ? "Sauvegarde…" : "Sauvegarder"}
           </Button>
 
-          {mode === "required" ? (
-            <div style={{ fontSize: 12, color: "#6b7280", alignSelf: "center" }}>
-              Ces infos seront utilisées pour vos factures EventFlow.
-            </div>
-          ) : null}
+          {mode === "required" ? <div className="billingTabHint">Ces infos seront utilisées pour vos factures EventFlow.</div> : null}
         </div>
 
-        <div style={{ marginTop: 10, fontSize: 12, color: "#9ca3af" }}>
-          Vous pourrez modifier ces informations à tout moment.
-        </div>
-
-        <style>{`
-          @media (max-width: 640px) {
-            .billingTabGrid {
-              grid-template-columns: 1fr !important;
-            }
-          }
-        `}</style>
+        <div className="billingTabFoot">Vous pourrez modifier ces informations à tout moment.</div>
       </CardBody>
     </Card>
   );
