@@ -9,6 +9,7 @@ import { authRepo } from "../../../gateways/supabase/repositories/auth/authRepo"
 import { normalizeError } from "../../../domain/errors/errors";
 import Button from "../button/Button";
 import Input from "../inputs/Input";
+import PasswordInput from "../inputs/PasswordInput";
 import { MessageBox } from "../message/MessageBox";
 import { useLiveForm } from "../../../features/public/useLiveZodForm";
 
@@ -72,18 +73,16 @@ export function SignUpForm() {
         <MessageBox variant="error">{fieldErrors.email}</MessageBox>
       )}
 
-      <Input
+      <PasswordInput
         label="Mot de passe"
-        type="password"
-        value={form.password}
         placeholder="Votre mot de passe"
+        value={form.password}
         onChange={(e) => {
           setSubmitError(null);
-          setSuccessMessage(null);
           handleChange("password", e.target.value);
         }}
         onBlur={() => handleBlur("password")}
-        autoComplete="new-password"
+        autoComplete="current-password"
       />
       {shouldShowFieldError("password") && fieldErrors.password && (
         <MessageBox variant="error">{fieldErrors.password}</MessageBox>

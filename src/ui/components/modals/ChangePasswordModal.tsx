@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { z } from "zod";
 
 import Button from "../button/Button";
-import Input from "../inputs/Input";
+import PasswordInput from "../inputs/PasswordInput";
 import { MessageBox } from "../message/MessageBox"; // adapte si ton chemin est différent
 
 import { signupSchema } from "../../../domain/models/admin/admin.auth.schema";
@@ -128,18 +128,15 @@ export function ChangePasswordModal({
         }}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>
-          {title}
-        </div>
+        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>{title}</div>
 
         <div style={{ fontSize: 14, opacity: 0.85, marginBottom: 12, lineHeight: 1.4 }}>
           Entrez votre mot de passe actuel, puis choisissez un nouveau mot de passe.
         </div>
 
         <div style={{ display: "grid", gap: 10, marginBottom: 12 }}>
-          <Input
+          <PasswordInput
             label="Mot de passe actuel"
-            type="password"
             value={form.currentPassword}
             onChange={(e) => handleChange("currentPassword", e.target.value)}
             onBlur={() => handleBlur("currentPassword")}
@@ -149,9 +146,8 @@ export function ChangePasswordModal({
             <MessageBox variant="error">{fieldErrors.currentPassword}</MessageBox>
           ) : null}
 
-          <Input
+          <PasswordInput
             label="Nouveau mot de passe"
-            type="password"
             value={form.newPassword}
             onChange={(e) => {
               handleChange("newPassword", e.target.value);
@@ -165,9 +161,8 @@ export function ChangePasswordModal({
             <MessageBox variant="error">{fieldErrors.newPassword}</MessageBox>
           ) : null}
 
-          <Input
+          <PasswordInput
             label="Confirmer le nouveau mot de passe"
-            type="password"
             value={form.confirmPassword}
             onChange={(e) => handleChange("confirmPassword", e.target.value)}
             onBlur={() => handleBlur("confirmPassword")}
@@ -189,11 +184,7 @@ export function ChangePasswordModal({
             {cancelLabel}
           </Button>
 
-          <Button
-            variant={"primary" as any}
-            onClick={handleConfirm as any}
-            disabled={loading}
-          >
+          <Button variant={"primary" as any} onClick={handleConfirm as any} disabled={loading}>
             {loading ? confirmLoadingLabel : confirmLabel}
           </Button>
         </div>
