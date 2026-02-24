@@ -7,9 +7,8 @@ import Container from "../../ui/components/container/Container";
 import Card, { CardBody } from "../../ui/components/card/Card";
 import Button from "../../ui/components/button/Button";
 import Badge from "../../ui/components/badge/Badge";
-import { GlobeIcon, PhoneIcon, SendIcon, FacebookIcon, EyeIcon } from "../../ui/components/icon/Icons";
+import { GlobeIcon, PhoneIcon, SendIcon } from "../../ui/components/icon/Icons";
 import { Seo } from "../../ui/layouts/Seo";
-import { makeShareEventUrl, openFacebookShare } from "../../domain/helpers/shareUrls";
 
 import { formatDateTimeHuman, toDayEndISO, toDayStartISO } from "../../domain/helpers/dateTime";
 
