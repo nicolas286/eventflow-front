@@ -97,6 +97,19 @@
   }
 }
 
+.adminSub__dangerAction .adminSub__fullWidthBtn,
+.adminSub__dangerAction button {
+  width: 100% !important;
+  max-width: 100% !important;
+
+  white-space: normal !important;     /* ✅ autorise retour à la ligne */
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+
+  line-height: 1.15 !important;
+  padding: 12px 14px !important;
+}
+
 /* ---------------- Changer de plan (PlanTiles) ---------------- */
 @media (max-width: 640px) {
   .adminSub__plan2Col {
@@ -291,20 +304,4 @@
   }
 }
 
-/* =========================================
-   FIX bouton "Annuler l'abonnement"
-   Autorise retour à la ligne
-========================================= */
 
-.adminSub__dangerAction .adminSub__fullWidthBtn,
-.adminSub__dangerAction button {
-  width: 100% !important;
-  max-width: 100% !important;
-
-  white-space: normal !important;     /* ✅ autorise retour à la ligne */
-  overflow-wrap: anywhere !important;
-  word-break: break-word !important;
-
-  line-height: 1.15 !important;
-  padding: 12px 14px !important;
-}
