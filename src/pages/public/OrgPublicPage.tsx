@@ -365,29 +365,15 @@ export function OrgPublicPage() {
                     <div className="publicOrgEventFooter">
                       <div className="publicOrgEventActions">
 
-                        {/* 1️⃣ Voir (icône) */}
                         <Link to={`/o/${orgSlug}/e/${e.slug}`}>
                           <Button
                             variant="secondary"
                             title="Voir l’événement"
                             aria-label="Voir l’événement"
                           >
-                            <EyeIcon />
+                            Billets
                           </Button>
                         </Link>
-
-                        {/* 2️⃣ Facebook */}
-                        <Button
-                          variant="secondary"
-                          title="Partager sur Facebook"
-                          aria-label="Partager sur Facebook"
-                          onClick={() => {
-                            const shareUrl = makeShareEventUrl(orgSlug!, e.slug!);
-                            openFacebookShare(shareUrl);
-                          }}
-                        >
-                          <FacebookIcon />
-                        </Button>
 
                       </div>
                     </div>
