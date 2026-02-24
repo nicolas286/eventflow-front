@@ -62,3 +62,23 @@
     width: 100%;
   }
 }
+
+@media (max-width: 860px) {
+  .publicOrgEventActions {
+    gap: 8px;
+  }
+
+  /* ✅ compacter les boutons icônes */
+  .publicOrgEventActions .ui-button {
+    height: 34px;
+    padding: 0 10px;
+    min-width: 34px;
+    border-radius: 12px;
+  }
+
+  /* ✅ icônes légèrement plus petites */
+  .publicOrgEventActions .ui-button svg {
+    width: 16px;
+    height: 16px;
+  }
+}

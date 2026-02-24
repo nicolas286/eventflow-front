@@ -362,9 +362,19 @@ export function OrgPublicPage() {
                     ) : null}
 
                     <div className="publicOrgEventFooter">
-                      <Link to={`/o/${orgSlug}/e/${e.slug}`}>
-                        <Button label="Voir l’événement" />
-                      </Link>
+                      <div className="publicOrgEventActions">
+
+                        <Link to={`/o/${orgSlug}/e/${e.slug}`}>
+                          <Button
+                            variant="primary"
+                            title="Voir l’événement"
+                            aria-label="Voir l’événement"
+                          >
+                            Billets
+                          </Button>
+                        </Link>
+
+                      </div>
                     </div>
                   </CardBody>
                 </Card>

@@ -64,3 +64,49 @@
   flex: 1 1 auto;
   min-width: 0;
 }
+
+.ui-passwordField__control {
+  position: relative;
+}
+
+.ui-passwordField__input {
+  padding-right: 40px; /* place pour l’icône */
+}
+
+.ui-passwordField__toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+
+  background: transparent;
+  border: none;
+  padding: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+}
+
+.ui-passwordField__toggle svg {
+  width: 18px;
+  height: 18px;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+
+@media (hover: hover) {
+  .ui-passwordField__toggle:hover svg {
+    opacity: 1;
+  }
+}
+
+.ui-passwordField__toggle:focus-visible {
+  outline: none;
+}
+
+.ui-passwordField__toggle:focus-visible svg {
+  opacity: 1;
+}

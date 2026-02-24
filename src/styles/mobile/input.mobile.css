@@ -1,0 +1,14 @@
+@media (max-width: 860px) {
+  .ui-passwordField__input {
+    padding-right: 36px;
+  }
+
+  .ui-passwordField__toggle {
+    right: 10px;
+  }
+
+  .ui-passwordField__toggle svg {
+    width: 16px;
+    height: 16px;
+  }
+}
