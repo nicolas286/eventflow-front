@@ -6,7 +6,7 @@ import {
   type UpdateEventFullPatch,
 } from "../../../../domain/models/admin/admin.updateEventFullPatch.schema";
 
-import {Button, StickySaveBar } from "../../../../ui/components";
+import {Button, Input, StickySaveBar } from "../../../../ui/components";
 
 import type { AdminEventDetailEvent } from "../../../../domain/models/admin/admin.eventDetail.schema";
 import { localDateTimeMinNow } from "../../../../domain/helpers/dateTime";
@@ -103,8 +103,7 @@ function withBust(url: string, seed?: string | null) {
 
 function centsToEuroInput(cents: number) {
   const v = Number.isFinite(cents) ? cents / 100 : 0;
-  // input[type=number] attend un point, pas une virgule
-  return v.toFixed(2);
+  return v.toFixed(2).replace(".", ",");
 }
 
 function euroInputToCents(raw: string) {
@@ -486,14 +485,23 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
 
         <div className="adminEventField adminEventLeftCol">
           <div className="adminEventLabel">Acompte (€)</div>
-            <input
-              type="number"
-              min={0}
-              step={0.01}
-              inputMode="decimal"
-              className="adminEventInput"
+            <Input
+              format="price"
+              priceLocale="fr"
+              placeholder="0,00"
               value={draft.depositEurosRaw}
-              onChange={(e) => setDraft((d) => ({ ...d, depositEurosRaw: e.target.value }))}
+              onValueChange={(v) => {
+                if (v.kind === "priceDraft") {
+                  setDraft((d) => ({ ...d, depositEurosRaw: v.raw }));
+                  return;
+                }
+
+                if (v.kind === "priceCommit") {
+                  const formatted = (v.cents / 100).toFixed(2).replace(".", ",");
+                  setDraft((d) => ({ ...d, depositEurosRaw: formatted }));
+                  return;
+                }
+              }}
             />
           {fieldErrors.depositCents && <div className="formError">{fieldErrors.depositCents}</div>}
           <div className="adminEventHint">0 = pas d’acompte.</div>
