@@ -7,8 +7,8 @@ export const FIELD_TYPES = [
   { value: "textarea", label: "Texte long" },
   { value: "number", label: "Nombre" },
   { value: "checkbox", label: "Case à cocher" },
-  { value: "select", label: "Liste (select)" },
-  { value: "radio", label: "Radio" },
+  { value: "select", label: "Liste déroulante" },
+  // { value: "radio", label: "Radio" },
 ] as const;
 
 export type FieldType = (typeof FIELD_TYPES)[number]["value"];
