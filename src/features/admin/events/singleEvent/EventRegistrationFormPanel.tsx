@@ -13,9 +13,9 @@ import { FIELD_TYPES, type FieldType } from "../../../../domain/constants/fieldT
 import { useMediaQuery } from "../../../../domain/helpers/ui";
 import { slugKey, normalizeContiguousSortOrder } from "../../../../domain/helpers/normalize";
 import { clampInt, uniqueKey, makeClientId } from "../../../../domain/helpers/logic";
-import { optionsToText } from "../../../../domain/helpers/fields";
-import { sortFromDB, parseOptionsLines } from "../../../../domain/helpers/fields";
+import { optionsToText, sortFromDB, parseOptionsLines, optionsToInlineText } from "../../../../domain/helpers/fields";
 import { TrashIcon } from "../../../../ui/components/icon/Icons";
+
 
 type Props = {
   supabase: SupabaseClient;
@@ -148,7 +148,7 @@ export function EventRegistrationFormPanel(props: Props) {
   }
 
   function buildOptions(fieldType: FieldType, optionsText: string) {
-    if (fieldType === "select" || fieldType === "radio") return parseOptionsLines(optionsText);
+    if (fieldType === "select" /*|| fieldType === "radio"*/) return parseOptionsLines(optionsText);
     return null;
   }
 
@@ -491,7 +491,7 @@ export function EventRegistrationFormPanel(props: Props) {
           </label>
         </div>
 
-        {(editing.fieldType === "select" || editing.fieldType === "radio") && (
+        {(editing.fieldType === "select" /*|| editing.fieldType === "radio"*/) && (
           <div className="adminEventField adminEventFieldSpan2">
             <div className="adminEventLabel">Options</div>
             <textarea
@@ -579,6 +579,8 @@ export function EventRegistrationFormPanel(props: Props) {
 
                 const active = Boolean(f.isActive ?? true);
                 const required = Boolean(f.isRequired ?? false);
+                const type = String(f.fieldType ?? "text");
+                const optsLine = (type === "select" || type === "radio") ? optionsToInlineText(f.options ?? undefined, 80) : null;
 
                 const animDir = moveAnim[f.clientId];
                 const cardAnimClass = animDir === "up" ? "isMoveUp" : animDir === "down" ? "isMoveDown" : "";
@@ -601,7 +603,8 @@ export function EventRegistrationFormPanel(props: Props) {
                       </div>
 
                       <div className="adminRegMeta">
-                        <span>Type : {String(f.fieldType ?? "text")}</span>
+                        <span>Type : {type}</span>
+                        {optsLine ? <span className="adminRegOptionsInline">• {optsLine}</span> : null}
                       </div>
 
                       <div className="adminRegActions">
@@ -689,6 +692,7 @@ export function EventRegistrationFormPanel(props: Props) {
                   const active = Boolean(f.isActive ?? true);
                   const required = Boolean(f.isRequired ?? false);
                   const type = String(f.fieldType ?? "text");
+                  const optsLine = (type === "select" || type === "radio") ? optionsToInlineText(f.options ?? undefined, 80) : null;
 
                   const animDir = moveAnim[f.clientId];
                   const cardAnimClass = animDir === "up" ? "isMoveUp" : animDir === "down" ? "isMoveDown" : "";
@@ -708,6 +712,7 @@ export function EventRegistrationFormPanel(props: Props) {
 
                       <div className="adminRegMeta">
                         <span>Type : {type}</span>
+                        {optsLine ? <span className="adminRegOptionsInline">• {optsLine}</span> : null}
                       </div>
 
                       <div className="adminRegActions">
