@@ -1,5 +1,3 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-
 import type { EventProduct, EventProducts } from "../../../../domain/models/db/db.eventProducts.schema";
 import type { CreateEventProductInput } from "../../../../domain/models/admin/admin.createEventProduct.schema";
 import type { UpdateEventProductPatch } from "../../../../gateways/supabase/repositories/dashboard/updateEventProductRepo";
@@ -7,6 +5,11 @@ import type { UpdateEventProductPatch } from "../../../../gateways/supabase/repo
 import { Button, EditorShell, StickySaveBar, FilterBar } from "../../../../ui/components";
 import { TrashIcon } from "../../../../ui/components/icon/Icons";
 import { Input } from "../../../../ui/components";
+import { useMediaQuery } from "../../../../domain/helpers/ui";
+import { formatMoney } from "../../../../domain/helpers/normalize";
+import { nonNegInt, posInt } from "../../../../domain/helpers/logic";
+
+import { useEventTicketsEditor, type TicketDraft } from "../../hooks/useEventTicketsEditor";
 
 type OrderItemLike = {
   eventProductId?: string | null;
@@ -38,91 +41,6 @@ type Props = {
   onChanged?: () => void;
 };
 
-function useMediaQuery(query: string) {
-  const [matches, setMatches] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia(query).matches : false
-  );
-
-  useEffect(() => {
-    const m = window.matchMedia(query);
-    const onChange = () => setMatches(m.matches);
-    onChange();
-    m.addEventListener?.("change", onChange);
-    return () => m.removeEventListener?.("change", onChange);
-  }, [query]);
-
-  return matches;
-}
-
-function formatMoney(cents: number, currency: string) {
-  const v = Number.isFinite(cents) ? cents / 100 : 0;
-  try {
-    return new Intl.NumberFormat("fr-BE", { style: "currency", currency }).format(v);
-  } catch {
-    return `${v.toFixed(2)} ${currency}`;
-  }
-}
-
-function clampInt(v: unknown, fallback = 0) {
-  const n = typeof v === "number" ? v : Number(String(v ?? ""));
-  if (!Number.isFinite(n)) return fallback;
-  return Math.trunc(n);
-}
-
-function toNullIfEmpty(s: string) {
-  const t = (s ?? "").trim();
-  return t.length ? t : null;
-}
-
-function makeClientId() {
-  return `tmp_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-}
-
-function normalizeContiguousSortOrder<T extends { sortOrder: number }>(list: T[]) {
-  return list.map((x, idx) => ({ ...x, sortOrder: idx + 1 }));
-}
-
-type TicketDraft = {
-  id: string | null;
-  clientId: string;
-
-  name: string;
-  description: string;
-  priceCents: number;
-  currency: "EUR";
-  stockQty: number | null;
-  sortOrder: number;
-  createsAttendees: boolean;
-  attendeesPerUnit: number;
-  isActive: boolean;
-  isGatekeeper: boolean;
-  closeEventWhenSoldOut: boolean;
-
-  isNew?: boolean;
-};
-
-type EditState = {
-  id: string | null; // clientId
-  name: string;
-  description: string;
-  priceCents: number;
-  currency: "EUR";
-  stockQty: number | null;
-  sortOrder: number;
-  createsAttendees: boolean;
-  attendeesPerUnit: number;
-  isActive: boolean;
-  isGatekeeper: boolean;
-  closeEventWhenSoldOut: boolean;
-};
-
-type MoveFx = {
-  aId: string;
-  bId: string;
-  dir: -1 | 1;
-  nonce: number;
-} | null;
-
 export function EventTicketsPanel(props: Props) {
   const {
     event,
@@ -138,366 +56,55 @@ export function EventTicketsPanel(props: Props) {
 
   const isMobile = useMediaQuery("(max-width: 1050px)");
 
-  const [draft, setDraft] = useState<TicketDraft[]>([]);
-  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const {
+    // state / derived
+    editing,
+    creating,
+    isDirty,
+    isSaving,
+    isSavingAll,
+    saveAllError,
+    moveFx,
+    query,
+    setQuery,
+    sorted,
+    filtered,
+    isFiltering,
+    closingKey,
+    isClosing,
 
-  const [editing, setEditing] = useState<EditState | null>(null);
-  const [creating, setCreating] = useState(false);
+    // setters
+    setEditing,
 
-  const [isDirty, setIsDirty] = useState(false);
-  const [isSavingAll, setIsSavingAll] = useState(false);
-  const [saveAllError, setSaveAllError] = useState<string | null>(null);
+    // actions
+    openCreate,
+    openEdit,
+    closeEditor,
+    moveLocal,
+    toggleLocal,
+    removeLocal,
+    upsertLocalFromEditor,
+    resetLocalChanges,
+    saveAll,
 
-  const lastLoadedSigRef = useRef<string>("");
-  const moveFxTimerRef = useRef<number | null>(null);
-  const closeTimerRef = useRef<number | null>(null);
-  const [moveFx, setMoveFx] = useState<MoveFx>(null);
-  const [query, setQuery] = useState("");
-
-  const isFiltering = query.trim().length > 0;
-  // fermeture animée inline
-  const [closingKey, setClosingKey] = useState<string | null>(null); // "create" ou clientId
-  const [isClosing, setIsClosing] = useState(false);
-
-  const isSaving = isSavingAll || createLoading || updateLoading || deleteLoading;
-
-  function productToDraft(p: EventProduct): TicketDraft {
-    return {
-      id: String(p?.id ?? null),
-      clientId: String(p?.id ?? makeClientId()),
-      name: String(p?.name ?? ""),
-      description: String(p?.description ?? ""),
-      priceCents: clampInt(p?.priceCents ?? 0, 0),
-      currency: "EUR",
-      stockQty: p?.stockQty == null ? null : clampInt(p.stockQty, 0),
-      sortOrder: clampInt(p?.sortOrder ?? 0, 0),
-      createsAttendees: Boolean(p?.createsAttendees ?? true),
-      attendeesPerUnit: clampInt(p?.attendeesPerUnit ?? 1, 1) || 1,
-      isActive: Boolean(p?.isActive ?? true),
-      isGatekeeper: Boolean(p?.isGatekeeper ?? false),
-      closeEventWhenSoldOut: Boolean(p?.closeEventWhenSoldOut ?? false),
-    };
-  }
-
-  const incomingSig = useMemo(() => {
-    const arr = Array.isArray(products) ? [...products] : [];
-    arr.sort((a, b) => clampInt(a?.sortOrder ?? 0, 0) - clampInt(b?.sortOrder ?? 0, 0));
-    return arr
-      .map((p) => `${String(p?.id)}:${String(p?.updatedAt ?? "")}:${clampInt(p?.sortOrder ?? 0, 0)}`)
-      .join("|");
-  }, [products]);
-
-  useEffect(() => {
-    if (isDirty) return;
-    if (lastLoadedSigRef.current === incomingSig) return;
-
-    const arr = Array.isArray(products) ? [...products] : [];
-    arr.sort((a, b) => clampInt(a?.sortOrder ?? 0, 0) - clampInt(b?.sortOrder ?? 0, 0));
-
-    const next = normalizeContiguousSortOrder(arr.map(productToDraft));
-    setDraft(next);
-    setDeletedIds(new Set());
-    setSaveAllError(null);
-    lastLoadedSigRef.current = incomingSig;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [incomingSig, isDirty]);
-
-  useEffect(() => {
-    return () => {
-      if (moveFxTimerRef.current) window.clearTimeout(moveFxTimerRef.current);
-      if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
-    };
-  }, []);
-
-  function armMoveFx(next: MoveFx) {
-    setMoveFx(next);
-    if (moveFxTimerRef.current) window.clearTimeout(moveFxTimerRef.current);
-    moveFxTimerRef.current = window.setTimeout(() => setMoveFx(null), 240);
-  }
-
-  function markDirty() {
-    setIsDirty(true);
-    setSaveAllError(null);
-  }
-
-  function cancelClosingIfAny() {
-    setIsClosing(false);
-    setClosingKey(null);
-    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
-  }
-
-  function openCreate() {
-    cancelClosingIfAny();
-    setSaveAllError(null);
-    setCreating(true);
-    setEditing({
-      id: null,
-      name: "",
-      description: "",
-      priceCents: 0,
-      currency: "EUR",
-      stockQty: null,
-      sortOrder: (draft.at(-1)?.sortOrder ?? 0) + 1,
-      createsAttendees: true,
-      attendeesPerUnit: 1,
-      isActive: true,
-      isGatekeeper: false,
-      closeEventWhenSoldOut: false,
-    });
-  }
-
-  function openEdit(f: TicketDraft) {
-    cancelClosingIfAny();
-    setSaveAllError(null);
-    setCreating(false);
-    setEditing({
-      id: f.clientId,
-      name: f.name,
-      description: f.description,
-      priceCents: f.priceCents,
-      currency: "EUR",
-      stockQty: f.stockQty,
-      sortOrder: f.sortOrder,
-      createsAttendees: f.createsAttendees,
-      attendeesPerUnit: f.attendeesPerUnit,
-      isActive: f.isActive,
-      isGatekeeper: f.isGatekeeper,
-      closeEventWhenSoldOut: f.closeEventWhenSoldOut,
-    });
-  }
-
-  function closeEditor() {
-    if (!editing) {
-      setCreating(false);
-      return;
-    }
-
-    const key = creating ? "create" : (editing.id ?? null);
-    if (!key) {
-      setEditing(null);
-      setCreating(false);
-      return;
-    }
-
-    setIsClosing(true);
-    setClosingKey(key);
-
-    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
-    closeTimerRef.current = window.setTimeout(() => {
-      setEditing(null);
-      setCreating(false);
-      setIsClosing(false);
-      setClosingKey(null);
-    }, 180);
-  }
-
-  function moveLocal(clientId: string, dir: -1 | 1) {
-    setDraft((prev) => {
-      const idx = prev.findIndex((x) => x.clientId === clientId);
-      if (idx < 0) return prev;
-
-      const nextIdx = idx + dir;
-      if (nextIdx < 0 || nextIdx >= prev.length) return prev;
-
-      const a = prev[idx];
-      const b = prev[nextIdx];
-      armMoveFx({ aId: a.clientId, bId: b.clientId, dir, nonce: Date.now() });
-
-      const copy = [...prev];
-      const tmp = copy[idx];
-      copy[idx] = copy[nextIdx];
-      copy[nextIdx] = tmp;
-
-      return normalizeContiguousSortOrder(copy);
-    });
-    markDirty();
-  }
-
-  function toggleLocal(clientId: string, patch: Partial<Pick<TicketDraft, "isActive">>) {
-    setDraft((prev) => prev.map((t) => (t.clientId === clientId ? { ...t, ...patch } : t)));
-    markDirty();
-  }
-
-  function removeLocal(clientId: string) {
-    const ok = window.confirm("Supprimer ce ticket ? (les commandes passées restent intactes)");
-    if (!ok) return;
-
-    setDraft((prev) => {
-      const found = prev.find((x) => x.clientId === clientId);
-      if (!found) return prev;
-
-      if (found.id && onRemove) {
-        setDeletedIds((s) => {
-          const ns = new Set(s);
-          ns.add(found.id!);
-          return ns;
-        });
-      }
-
-      const next = prev.filter((x) => x.clientId !== clientId);
-      return normalizeContiguousSortOrder(next);
-    });
-
-    if (editing?.id === clientId) closeEditor();
-    markDirty();
-  }
-
-  function upsertLocalFromEditor() {
-    if (!editing) return;
-    const name = String(editing.name ?? "").trim();
-    if (!name) return;
-
-    if (creating) {
-      const clientId = makeClientId();
-      const next: TicketDraft = {
-        id: null,
-        clientId,
-        name,
-        description: String(editing.description ?? ""),
-        priceCents: clampInt(editing.priceCents, 0),
-        currency: "EUR",
-        stockQty: editing.stockQty == null ? null : clampInt(editing.stockQty, 0),
-        sortOrder: draft.length + 1,
-        createsAttendees: Boolean(editing.createsAttendees),
-        attendeesPerUnit: clampInt(editing.attendeesPerUnit, 1) || 1,
-        isActive: Boolean(editing.isActive),
-        isGatekeeper: Boolean(editing.isGatekeeper),
-        closeEventWhenSoldOut: Boolean(editing.closeEventWhenSoldOut),
-        isNew: true,
-      };
-
-      setDraft((prev) => normalizeContiguousSortOrder([...prev, next]));
-      markDirty();
-      closeEditor();
-      return;
-    }
-
-    const clientId = editing.id;
-    if (!clientId) return;
-
-    setDraft((prev) =>
-      prev.map((t) =>
-        t.clientId === clientId
-          ? {
-              ...t,
-              name,
-              description: String(editing.description ?? ""),
-              priceCents: clampInt(editing.priceCents, 0),
-              stockQty: editing.stockQty == null ? null : clampInt(editing.stockQty, 0),
-              createsAttendees: Boolean(editing.createsAttendees),
-              attendeesPerUnit: clampInt(editing.attendeesPerUnit, 1) || 1,
-              isActive: Boolean(editing.isActive),
-              isGatekeeper: Boolean(editing.isGatekeeper),
-              closeEventWhenSoldOut: Boolean(editing.closeEventWhenSoldOut),
-            }
-          : t
-      )
-    );
-
-    markDirty();
-    closeEditor();
-  }
-
-  function resetLocalChanges() {
-    setIsDirty(false);
-    setSaveAllError(null);
-    lastLoadedSigRef.current = "";
-  }
-
-  async function saveAll() {
-    if (!event?.id) return;
-    if (isSaving) return;
-
-    setIsSavingAll(true);
-    setSaveAllError(null);
-
-    try {
-      if (onRemove) {
-        const toDelete = Array.from(deletedIds);
-        for (const id of toDelete) {
-          await onRemove(id);
-        }
-      }
-
-      const normalized = normalizeContiguousSortOrder(draft);
-
-      for (const t of normalized) {
-        const base: CreateEventProductInput = {
-          eventId: event.id,
-          name: String(t.name ?? "").trim(),
-          description: toNullIfEmpty(String(t.description ?? "")),
-          priceCents: clampInt(t.priceCents, 0),
-          currency: "EUR",
-          stockQty: t.stockQty == null ? null : clampInt(t.stockQty, 0),
-          sortOrder: clampInt(t.sortOrder, 0),
-          createsAttendees: Boolean(t.createsAttendees),
-          attendeesPerUnit: clampInt(t.attendeesPerUnit, 1) || 1,
-          isActive: Boolean(t.isActive),
-          isGatekeeper: Boolean(t.isGatekeeper),
-          closeEventWhenSoldOut: Boolean(t.closeEventWhenSoldOut),
-        };
-
-        if (!t.id) {
-          await onCreate(base);
-          continue;
-        }
-
-        const patch: UpdateEventProductPatch = {
-          name: base.name,
-          description: base.description,
-          priceCents: base.priceCents,
-          currency: base.currency,
-          stockQty: base.stockQty,
-          sortOrder: base.sortOrder,
-          createsAttendees: base.createsAttendees,
-          attendeesPerUnit: base.attendeesPerUnit,
-          isActive: base.isActive,
-          isGatekeeper: base.isGatekeeper,
-          closeEventWhenSoldOut: base.closeEventWhenSoldOut,
-        };
-
-        await onUpdate({ productId: t.id, patch });
-      }
-
-      setIsDirty(false);
-      setDeletedIds(new Set());
-      onChanged?.();
-    } catch (e: any) {
-      setSaveAllError(e?.message ? String(e.message) : "Erreur inconnue");
-    } finally {
-      setIsSavingAll(false);
-    }
-  }
+    // helpers
+    getSoldQty,
+    formatStockLine,
+  } = useEventTicketsEditor({
+    eventId: event?.id ?? null,
+    products,
+    onCreate,
+    onUpdate,
+    onRemove,
+    onChanged,
+    createLoading,
+    updateLoading,
+    deleteLoading,
+  });
 
   const isOpen = Boolean(editing);
   const editingId = editing?.id ?? null;
-
-  const sorted = useMemo(() => {
-    const arr = [...draft];
-    arr.sort((a, b) => clampInt(a.sortOrder, 0) - clampInt(b.sortOrder, 0));
-    return arr;
-  }, [draft]);
-
-  function getSoldQty(p: EventProduct) {
-    return clampInt(p?.soldQty ?? 0, 0);
-  }
-
-  function formatStockLine(sold: number, stockQty: number | null | undefined) {
-    if (stockQty == null) return `${sold} vendus / illimité`;
-    const stock = clampInt(stockQty, 0);
-    return `${stock - sold} / ${stock}`;
-  }
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return sorted;
-
-    return sorted.filter((t) => {
-      const name = String(t.name ?? "").toLowerCase();
-      const desc = String(t.description ?? "").toLowerCase();
-      return name.includes(q) || desc.includes(q);
-    });
-  }, [sorted, query]);
+  const showCreateInline = (isOpen && creating) || (isClosing && closingKey === "create");
 
   const editorNode = editing ? (
     <div className="adminTicketsEditorCard">
@@ -519,20 +126,19 @@ export function EventTicketsPanel(props: Props) {
         </div>
 
         <div className="adminEventField">
-            <div className="adminEventLabel">Prix (€)</div>
-            <Input
-              format="price"
-              priceLocale="fr"
-              placeholder="0,00"
-              disabled={isSaving}
-              value={editing ? (editing.priceCents / 100).toFixed(2).replace(".", ",") : ""}
-              onValueChange={(v) => {
-                if (v.kind !== "priceCommit") return;
-
-                setEditing((prev) => (prev ? { ...prev, priceCents: v.cents } : prev));
-              }}
-            />
-          </div>
+          <div className="adminEventLabel">Prix (€)</div>
+          <Input
+            format="price"
+            priceLocale="fr"
+            placeholder="0,00"
+            disabled={isSaving}
+            value={(editing.priceCents / 100).toFixed(2).replace(".", ",")}
+            onValueChange={(v) => {
+              if (v.kind !== "priceCommit") return;
+              setEditing((prev) => (prev ? { ...prev, priceCents: v.cents } : prev));
+            }}
+          />
+        </div>
 
         <div className="adminEventField">
           <div className="adminEventLabel">Devise</div>
@@ -550,7 +156,7 @@ export function EventTicketsPanel(props: Props) {
             onChange={(e) =>
               setEditing({
                 ...editing,
-                stockQty: e.target.value === "" ? null : clampInt(e.target.value, 0),
+                stockQty: e.target.value === "" ? null : nonNegInt(e.target.value),
               })
             }
             disabled={isSaving}
@@ -589,7 +195,7 @@ export function EventTicketsPanel(props: Props) {
             className="adminEventInput"
             type="number"
             value={editing.attendeesPerUnit}
-            onChange={(e) => setEditing({ ...editing, attendeesPerUnit: clampInt(e.target.value, 0) })}
+            onChange={(e) => setEditing({ ...editing, attendeesPerUnit: posInt(e.target.value) })}
             disabled={!editing.createsAttendees || isSaving}
           />
         </div>
@@ -620,14 +226,13 @@ export function EventTicketsPanel(props: Props) {
   function renderTicketCard(t: TicketDraft, idx: number) {
     const active = Boolean(t.isActive ?? true);
 
-    const p = t.id
-      ? Array.isArray(products)
+    const p =
+      t.id && Array.isArray(products)
         ? products.find((x: EventProduct) => String(x?.id) === String(t.id))
-        : null
-      : null;
+        : null;
 
     const currency = "EUR";
-    const sold = getSoldQty(p as EventProduct);
+    const sold = getSoldQty(p);
     const stockLine = formatStockLine(sold, p?.stockQty ?? t.stockQty);
 
     const isFxA = moveFx?.aId === t.clientId;
@@ -646,18 +251,12 @@ export function EventTicketsPanel(props: Props) {
     return (
       <div
         key={t.clientId}
-        className={[
-          active ? "adminTicketCard" : "adminTicketCard isInactive",
-          "adminReorderCard",
-          fxClass,
-        ].join(" ")}
+        className={[active ? "adminTicketCard" : "adminTicketCard isInactive", "adminReorderCard", fxClass].join(" ")}
         data-movefx={moveFx?.nonce ?? ""}
       >
         <div className="adminTicketTop">
           <div className="adminTicketTitle">{t.name || "—"}</div>
-          <div className={active ? "adminTicketPill" : "adminTicketPill isOff"}>
-            {active ? "Actif" : "Inactif"}
-          </div>
+          <div className={active ? "adminTicketPill" : "adminTicketPill isOff"}>{active ? "Actif" : "Inactif"}</div>
         </div>
 
         <div className="adminTicketMeta">
@@ -694,19 +293,12 @@ export function EventTicketsPanel(props: Props) {
             Modifier
           </Button>
 
-          <Button
-            variant="secondary"
-            onClick={() => toggleLocal(t.clientId, { isActive: !active })}
-            disabled={isSaving}
-          >
+          <Button variant="secondary" onClick={() => toggleLocal(t.clientId, { isActive: !active })} disabled={isSaving}>
             {active ? "Désactiver" : "Activer"}
           </Button>
 
           <Button
-            className={[
-              "adminReorderBtn",
-              isFxA && moveFx?.dir === -1 ? "isBumpUp" : "",
-            ].join(" ")}
+            className={["adminReorderBtn", isFxA && moveFx?.dir === -1 ? "isBumpUp" : ""].join(" ")}
             onClick={() => moveLocal(t.clientId, -1)}
             disabled={isSaving || isFiltering || idx === 0}
             aria-label={isFiltering ? "Réordonnancement désactivé pendant une recherche" : "Monter"}
@@ -715,13 +307,14 @@ export function EventTicketsPanel(props: Props) {
           </Button>
 
           <Button
-            className={[
-              "adminReorderBtn",
-              isFxA && moveFx?.dir === 1 ? "isBumpDown" : "",
-            ].join(" ")}
+            className={["adminReorderBtn", isFxA && moveFx?.dir === 1 ? "isBumpDown" : ""].join(" ")}
             onClick={() => moveLocal(t.clientId, 1)}
             disabled={isSaving || isFiltering || idx === sorted.length - 1}
-            title={isFiltering ? "Réordonnancement désactivé pendant une recherche. Efface le filtre pour changer l’ordre." : undefined}
+            title={
+              isFiltering
+                ? "Réordonnancement désactivé pendant une recherche. Efface le filtre pour changer l’ordre."
+                : undefined
+            }
             aria-label={isFiltering ? "Réordonnancement désactivé pendant une recherche" : "Descendre"}
           >
             ↓
@@ -739,8 +332,6 @@ export function EventTicketsPanel(props: Props) {
       </div>
     );
   }
-
-  const showCreateInline = (isOpen && creating) || (isClosing && closingKey === "create");
 
   return (
     <div className="adminTickets">
@@ -774,10 +365,8 @@ export function EventTicketsPanel(props: Props) {
 
       {saveAllError ? <div className="adminTicketsSaveError">{saveAllError}</div> : null}
 
-      {/* ---------------- Mobile : editor inline ---------------- */}
       {isMobile ? (
         <div className={isOpen || isClosing ? "adminTicketsInlineShell isEditorOpen" : "adminTicketsInlineShell"}>
-          {/* Nouveau ticket: editor tout en haut */}
           {showCreateInline ? (
             <div
               className={[
@@ -798,16 +387,13 @@ export function EventTicketsPanel(props: Props) {
             ) : (
               filtered.map((t) => {
                 const idx = sorted.findIndex((x) => x.clientId === t.clientId);
-
                 const showEditInline =
-                  ((isOpen && !creating && editingId === t.clientId) ||
-                    (isClosing && closingKey === t.clientId));
+                  (isOpen && !creating && editingId === t.clientId) || (isClosing && closingKey === t.clientId);
 
                 return (
                   <div key={t.clientId} className="adminTicketBlock">
                     {renderTicketCard(t, idx)}
 
-                    {/* Modifier: editor juste sous le ticket sélectionné */}
                     {showEditInline ? (
                       <div
                         className={[
@@ -826,7 +412,6 @@ export function EventTicketsPanel(props: Props) {
           </div>
         </div>
       ) : (
-        /* ---------------- Desktop : EditorShell (à droite) ---------------- */
         <EditorShell
           isOpen={isOpen}
           onRequestClose={closeEditor}

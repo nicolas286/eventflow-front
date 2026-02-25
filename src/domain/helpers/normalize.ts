@@ -1,5 +1,3 @@
-import { type DraftField } from "../../features/admin/events/singleEvent/EventRegistrationFormPanel";
-
 
 export function emptyToNull(v: unknown): string | null | undefined {
   if (v === undefined) return undefined;
@@ -71,8 +69,8 @@ export function toRows<T>(value: RowsLike<T>): T[] {
   return [];
 }
 
-export function normalizeContiguousSortOrder(list: DraftField[]) {
-  return list.map((f, idx) => ({ ...f, sortOrder: idx + 1 }));
+export function normalizeContiguousSortOrder<T extends { sortOrder: number }>(list: T[]): T[] {
+  return list.map((x, idx) => ({ ...x, sortOrder: idx + 1 }));
 }
 
 export function toNullableTrimmed(v: string | null | undefined) {
