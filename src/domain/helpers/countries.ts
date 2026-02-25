@@ -32,3 +32,25 @@ export function inferCountryCode(country: string | null | undefined): string | u
   const key = keyifyCountryName(c);
   return COUNTRY_TO_CODE[key] ?? null;
 }
+
+export const CODE_TO_COUNTRY: Record<string, string> = Object.entries(COUNTRY_TO_CODE)
+  .reduce((acc, [labelKey, code]) => {
+    acc[code] = labelKey;
+    return acc;
+  }, {} as Record<string, string>);
+
+function unkeyifyCountryName(key: string) {
+  return key
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (l) => l.toUpperCase());
+}
+
+export function countryCodeToLabel(code: string | null | undefined): string {
+  const c = (code ?? "").trim().toUpperCase();
+  if (!c) return "";
+
+  const key = CODE_TO_COUNTRY[c];
+  if (!key) return "";
+
+  return unkeyifyCountryName(key);
+}

@@ -301,3 +301,62 @@
 .invWrap [data-invoices-view="desktop"] {
   display: block;
 }
+
+/* -------- Checkbox "Assujetti à la TVA" -------- */
+
+.billingTabCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff;
+
+  font-size: 14px;
+  color: #111827;
+  line-height: 1.2;
+
+  cursor: pointer;
+  user-select: none;
+}
+
+.billingTabCheckbox:hover {
+  border-color: #d1d5db;
+  background: #fafafa;
+}
+
+.billingTabCheckbox:focus-within {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+}
+
+.billingTabCheckbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  margin: 0;
+
+  accent-color: #2563eb; /* bleu */
+  cursor: pointer;
+}
+
+.billingTabCheckbox span {
+  display: inline-block;
+}
+
+/* Disabled state */
+.billingTabCheckbox input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+}
+
+.billingTabCheckbox input[type="checkbox"]:disabled + span {
+  opacity: 0.6;
+}
+
+/* Optionnel : si tu veux que toute la "ligne" paraisse disabled quand loading */
+.billingTabCheckbox:has(input[type="checkbox"]:disabled) {
+  opacity: 0.75;
+  cursor: not-allowed;
+  background: #f9fafb;
+}
