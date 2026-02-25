@@ -117,6 +117,19 @@ function textToLines(text: string | null | undefined): string[] {
     .filter(Boolean);
 }
 
+export function optionsToInlineText(options: EventFormFieldOptions | undefined, max = 80): string | null {
+  const labels = toSelectOptions(options)
+    .map((o) => o.label.trim())
+    .filter(Boolean);
+
+  if (labels.length === 0) return null;
+
+  const joined = labels.join(" · ");
+  if (joined.length <= max) return joined;
+
+  return joined.slice(0, Math.max(0, max - 1)).trimEnd() + "…";
+}
+
 export function textToOptions(
   text: string | null | undefined,
   makeValue: (label: string) => string = (label) => label
