@@ -20,6 +20,7 @@ import type { OrganizationBilling, OrganizationBillingPatch } from "../../domain
 import { inferCountryCode } from "../../domain/helpers/countries";
 
 import { InvoicesTab } from "../../features/admin/subscriptions/InvoicesTab";
+import { countryCodeToLabel } from "../../domain/helpers/countries";
 
 import "../../styles/desktop/admin/adminSubscription.desktop.css";
 import "../../styles/mobile/admin/adminSubscription.mobile.css";
@@ -139,23 +140,31 @@ export default function AdminAbonnementPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl: TabKey = isTabKey(searchParams.get("tab")) ? (searchParams.get("tab") as TabKey) : "general";
   const [tab, setTab] = useState<TabKey>(tabFromUrl);
+  const [billingKey, setBillingKey] = useState(0);
 
   useEffect(() => {
-    if (tab !== tabFromUrl) setTab(tabFromUrl);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tabFromUrl]);
+  if (tabFromUrl === "billing") {
+    billingGet.fetchBilling(orgId);
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [tabFromUrl, orgId]);
 
   function setTabAndUrl(next: TabKey) {
-    setTab(next);
-    setSearchParams(
-      (prev) => {
-        const sp = new URLSearchParams(prev);
-        sp.set("tab", next);
-        return sp;
-      },
-      { replace: true }
-    );
+  setTab(next);
+
+  if (next === "billing") {
+    billingGet.fetchBilling(orgId);
   }
+
+  setSearchParams(
+    (prev) => {
+      const sp = new URLSearchParams(prev);
+      sp.set("tab", next);
+      return sp;
+    },
+    { replace: true }
+  );
+}
 
   const { loading: startLoading, error: startError, result, startSubscription, reset } = useStartSubscription({ supabase });
 
@@ -519,6 +528,7 @@ export default function AdminAbonnementPage() {
 
       {tab === "billing" && (
         <BillingTab
+          key={`${orgId}:${billingKey}`}
           mode={pendingPlan ? "required" : "edit"}
           orgId={orgId}
           initial={billingGet.billing ?? null}
@@ -529,6 +539,7 @@ export default function AdminAbonnementPage() {
             if (!updated) return;
 
             await billingGet.fetchBilling(orgId);
+            setBillingKey((k) => k + 1);
 
             const planToContinue = pendingPlan;
             setPendingPlan(null);
@@ -679,55 +690,71 @@ function BillingTab(props: {
 }) {
   const { mode, orgId, initial, loading, error, onSave } = props;
 
-  const [form, setForm] = useState({
-    legalName: "",
-    vatCountryLabel: "",
-    vatNumber: "",
+  function makeInitialForm(initial: OrganizationBilling | null) {
+    return {
+      legalName: initial?.legalName ?? "",
+      vatCountryLabel: countryCodeToLabel(initial?.vatCountryCode),
+      vatNumber: initial?.vatNumber ?? "",
 
-    addressLine1: "",
-    addressLine2: "",
-    postalCode: "",
-    city: "",
-    countryLabel: "Belgique",
+      addressLine1: initial?.addressLine1 ?? "",
+      addressLine2: initial?.addressLine2 ?? "",
+      postalCode: initial?.postalCode ?? "",
+      city: initial?.city ?? "",
+      countryLabel: countryCodeToLabel(initial?.countryCode) || "Belgique",
 
-    billingEmail: "",
-    invoiceReference: "",
-  });
+      billingEmail: initial?.billingEmail ?? "",
+      invoiceReference: initial?.invoiceReference ?? "",
+    };
+  }
+
+  const [form, setForm] = useState(() => makeInitialForm(initial));
+  const [isVatSubject, setIsVatSubject] = useState(() => Boolean(initial?.vatCountryCode || initial?.vatNumber));
+
+  // ✅ évite d’écraser le form si l’utilisateur a déjà commencé à modifier
+  const [isDirty, setIsDirty] = useState(false);
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
+    setIsDirty(true);
     setForm((prev) => ({ ...prev, [key]: value }));
   }
+
+  // ✅ resync quand `initial` arrive / change (fetch async) sans warning “cascading renders”
+  const lastInitRef = useRef<string>("");
+
+  useEffect(() => {
+    if (!initial) return;
+    if (isDirty) return;
+
+    const sig = JSON.stringify({
+      legalName: initial.legalName ?? "",
+      vatCountryCode: initial.vatCountryCode ?? "",
+      vatNumber: initial.vatNumber ?? "",
+      addressLine1: initial.addressLine1 ?? "",
+      addressLine2: initial.addressLine2 ?? "",
+      postalCode: initial.postalCode ?? "",
+      city: initial.city ?? "",
+      countryCode: initial.countryCode ?? "",
+      billingEmail: initial.billingEmail ?? "",
+      invoiceReference: initial.invoiceReference ?? "",
+    });
+
+    if (sig === lastInitRef.current) return;
+    lastInitRef.current = sig;
+
+    // microtask => évite le warning React (setState sync dans effect)
+    queueMicrotask(() => {
+      setForm(makeInitialForm(initial));
+      setIsVatSubject(Boolean(initial.vatCountryCode || initial.vatNumber));
+      setIsDirty(false);
+    });
+  }, [initial, isDirty]);
 
   const vatCountryCode = useMemo(() => {
     const c = inferCountryCode(form.vatCountryLabel);
     return c ? String(c) : null;
   }, [form.vatCountryLabel]);
 
-  const needsVat = Boolean(vatCountryCode);
-
-  useEffect(() => {
-    if (!needsVat && form.vatNumber) set("vatNumber", "");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [needsVat]);
-
-  useEffect(() => {
-    if (!initial) return;
-
-    setForm({
-      legalName: initial.legalName ?? "",
-      vatCountryLabel: initial.vatCountryCode ? initial.vatCountryCode : "",
-      vatNumber: initial.vatNumber ?? "",
-
-      addressLine1: initial.addressLine1 ?? "",
-      addressLine2: initial.addressLine2 ?? "",
-      postalCode: initial.postalCode ?? "",
-      city: initial.city ?? "",
-      countryLabel: initial.countryCode ? initial.countryCode : "Belgique",
-
-      billingEmail: initial.billingEmail ?? "",
-      invoiceReference: initial.invoiceReference ?? "",
-    });
-  }, [initial]);
+  const needsVat = isVatSubject;
 
   const title = mode === "required" ? "Infos de facturation requises" : "Infos de facturation";
   const subtitle =
@@ -736,10 +763,16 @@ function BillingTab(props: {
       : "Consultez et modifiez les informations utilisées sur vos factures.";
 
   const canSave = useMemo(() => {
-    const baseOk = t(form.legalName).length >= 2 && t(form.addressLine1).length >= 2 && t(form.postalCode).length >= 2 && t(form.city).length >= 2;
-    const vatOk = !needsVat || t(form.vatNumber).length >= 6;
+    const baseOk =
+      t(form.legalName).length >= 2 &&
+      t(form.addressLine1).length >= 2 &&
+      t(form.postalCode).length >= 2 &&
+      t(form.city).length >= 2;
+
+    const vatOk = !needsVat || (t(form.vatCountryLabel).length >= 2 && t(form.vatNumber).length >= 6);
+
     return baseOk && vatOk;
-  }, [form.legalName, form.addressLine1, form.postalCode, form.city, form.vatNumber, needsVat]);
+  }, [form.legalName, form.addressLine1, form.postalCode, form.city, form.vatCountryLabel, form.vatNumber, needsVat]);
 
   async function submit() {
     if (!canSave) return;
@@ -748,7 +781,7 @@ function BillingTab(props: {
       orgId,
       legalName: t(form.legalName),
 
-      vatCountryCode: vatCountryCode,
+      vatCountryCode: needsVat ? vatCountryCode : null,
       vatNumber: needsVat ? toNullIfEmpty(form.vatNumber) : null,
 
       addressLine1: t(form.addressLine1),
@@ -764,6 +797,9 @@ function BillingTab(props: {
     };
 
     await onSave(patch);
+
+    // ✅ après save ok, on considère “propre”
+    setIsDirty(false);
   }
 
   return (
@@ -774,23 +810,58 @@ function BillingTab(props: {
 
         <div className="billingTabGrid">
           <div className="billingTabSpan2">
-            <Input label="Raison sociale" value={form.legalName} onChange={(e) => set("legalName", e.target.value)} disabled={loading} required />
-          </div>
-
-          <div>
-            <CountrySelect label="Pays TVA (optionnel)" value={form.vatCountryLabel} onChange={(v) => set("vatCountryLabel", v || "")} required={false} />
-          </div>
-
-          <div>
             <Input
-              label={needsVat ? "Numéro TVA" : "Numéro TVA (optionnel)"}
-              placeholder="Ex: BE0123456789"
-              value={form.vatNumber}
-              onChange={(e) => set("vatNumber", e.target.value)}
-              disabled={loading || !needsVat}
-              required={needsVat}
+              label="Raison sociale"
+              value={form.legalName}
+              onChange={(e) => set("legalName", e.target.value)}
+              disabled={loading}
+              required
             />
           </div>
+
+          <div className="billingTabSpan2">
+            <label className="billingTabCheckbox">
+              <input
+                type="checkbox"
+                checked={isVatSubject}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  setIsVatSubject(next);
+                  setIsDirty(true);
+
+                  if (!next) {
+                    setForm((prev) => ({ ...prev, vatCountryLabel: "", vatNumber: "" }));
+                  }
+                }}
+                disabled={loading}
+              />
+              <span>Assujetti à la TVA</span>
+            </label>
+          </div>
+
+          {isVatSubject ? (
+            <>
+              <div>
+                <CountrySelect
+                  label="Pays TVA"
+                  value={form.vatCountryLabel}
+                  onChange={(v) => set("vatCountryLabel", v || "")}
+                  required
+                />
+              </div>
+
+              <div>
+                <Input
+                  label="Numéro TVA"
+                  placeholder="Ex: BE0123456789"
+                  value={form.vatNumber}
+                  onChange={(e) => set("vatNumber", e.target.value)}
+                  disabled={loading}
+                  required
+                />
+              </div>
+            </>
+          ) : null}
 
           <div className="billingTabSpan2">
             <Input
@@ -814,15 +885,34 @@ function BillingTab(props: {
           </div>
 
           <div>
-            <Input label="Code postal" placeholder="Ex: 5000" value={form.postalCode} onChange={(e) => set("postalCode", e.target.value)} disabled={loading} required />
+            <Input
+              label="Code postal"
+              placeholder="Ex: 5000"
+              value={form.postalCode}
+              onChange={(e) => set("postalCode", e.target.value)}
+              disabled={loading}
+              required
+            />
           </div>
 
           <div>
-            <Input label="Ville" placeholder="Ex: Namur" value={form.city} onChange={(e) => set("city", e.target.value)} disabled={loading} required />
+            <Input
+              label="Ville"
+              placeholder="Ex: Namur"
+              value={form.city}
+              onChange={(e) => set("city", e.target.value)}
+              disabled={loading}
+              required
+            />
           </div>
 
           <div>
-            <CountrySelect label="Pays" value={form.countryLabel} onChange={(v) => set("countryLabel", v || "")} required />
+            <CountrySelect
+              label="Pays"
+              value={form.countryLabel}
+              onChange={(v) => set("countryLabel", v || "")}
+              required
+            />
           </div>
 
           <div>

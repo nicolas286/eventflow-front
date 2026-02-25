@@ -346,7 +346,7 @@ const handleExportXls = useCallback(() => {
 
   const headers = [...fixedCols, ...formCols];
 
-  const rows = localAttendees.map((att) => {
+  const rows = localAttendees.filter((att) => att.status === "confirmed").map((att) => {
     const orderId = String(att.orderId ?? "");
     const meta = orderMetaById.get(orderId);
     const orderRef = meta?.orderNumber ?? orderId.slice(0, 8);
