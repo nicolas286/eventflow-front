@@ -62,20 +62,6 @@ function formatMoney(cents: number, currency: string) {
   }
 }
 
-function centsToEuroNumber(cents: number) {
-  const v = Number.isFinite(cents) ? cents / 100 : 0;
-  // pour garder un input propre
-  return Number(v.toFixed(2));
-}
-
-function euroToCents(raw: string) {
-  const t = String(raw ?? "").trim();
-  if (!t) return 0;
-  const n = Number(t.replace(",", "."));
-  if (!Number.isFinite(n)) return 0;
-  return Math.max(0, Math.round(n * 100));
-}
-
 function clampInt(v: unknown, fallback = 0) {
   const n = typeof v === "number" ? v : Number(String(v ?? ""));
   if (!Number.isFinite(n)) return fallback;
@@ -173,6 +159,15 @@ export function EventTicketsPanel(props: Props) {
   const [isClosing, setIsClosing] = useState(false);
 
   const isSaving = isSavingAll || createLoading || updateLoading || deleteLoading;
+
+  const [priceInput, setPriceInput] = useState("");
+
+  useEffect(() => {
+  if (!editing) return;
+  const euros = (editing.priceCents ?? 0) / 100;
+  setPriceInput(euros === 0 ? "" : euros.toFixed(2).replace(".", ","));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [editing?.id]);
 
   function productToDraft(p: EventProduct): TicketDraft {
     return {
@@ -532,18 +527,47 @@ export function EventTicketsPanel(props: Props) {
         </div>
 
         <div className="adminEventField">
-          <div className="adminEventLabel">Prix (€)</div>
-          <input
-            className="adminEventInput"
-            type="number"
-            min={0}
-            step={0.01}
-            inputMode="decimal"
-            value={centsToEuroNumber(editing.priceCents)}
-            onChange={(e) => setEditing({ ...editing, priceCents: euroToCents(e.target.value) })}
-            disabled={isSaving}
-          />
-        </div>
+            <div className="adminEventLabel">Prix (€)</div>
+            <input
+                className="adminEventInput"
+                type="text"
+                inputMode="decimal"
+                placeholder="0,00"
+                value={priceInput}
+                onChange={(e) => {
+                  let v = e.target.value;
+                  v = v.replace(/\s+/g, "");
+                  v = v.replace(/[^0-9.,]/g, "");
+
+                  const firstSepIndex = v.search(/[.,]/);
+                  if (firstSepIndex !== -1) {
+                    const before = v.slice(0, firstSepIndex + 1);
+                    const after = v.slice(firstSepIndex + 1).replace(/[.,]/g, "");
+                    v = before + after;
+                  }
+
+                  setPriceInput(v);
+                  // pas de setEditing ici
+                }}
+                onBlur={() => {
+                  const raw = priceInput.trim();
+                  if (!raw) {
+                    setEditing((prev) => (prev ? { ...prev, priceCents: 0 } : prev));
+                    return;
+                  }
+
+                  const n = Number(raw.replace(",", "."));
+                  if (Number.isNaN(n) || !Number.isFinite(n)) return;
+
+                  const cents = Math.max(0, Math.round(n * 100));
+                  setEditing((prev) => (prev ? { ...prev, priceCents: cents } : prev));
+
+                  // format visuel propre
+                  setPriceInput((cents / 100).toFixed(2).replace(".", ","));
+                }}
+                disabled={isSaving}
+              />
+          </div>
 
         <div className="adminEventField">
           <div className="adminEventLabel">Devise</div>
