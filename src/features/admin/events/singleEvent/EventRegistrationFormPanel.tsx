@@ -432,7 +432,7 @@ export function EventRegistrationFormPanel(props: Props) {
         <div>
           <div className="adminRegEditorTitle">{creating ? "Nouveau champ" : "Modifier champ"}</div>
           <div className="adminEventHint">
-            Pour <code>select</code>/<code>radio</code> : une option par ligne.
+            Pour <code>liste déroulante</code>/<code>radio</code> : une option par ligne.
           </div>
         </div>
 
@@ -495,6 +495,7 @@ export function EventRegistrationFormPanel(props: Props) {
           <div className="adminEventField adminEventFieldSpan2">
             <div className="adminEventLabel">Options</div>
             <textarea
+              placeholder="Une option par ligne"
               className="adminEventTextarea"
               value={editing.optionsText}
               onChange={(e) => setEditing({ ...editing, optionsText: e.target.value })}
