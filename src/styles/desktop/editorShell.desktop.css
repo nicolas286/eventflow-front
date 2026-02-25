@@ -12,6 +12,14 @@
   --sticky-top: 84px;
 }
 
+.editorCard{
+  background:#fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius:16px;
+  padding: 12px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.05);
+}
+
 /* ✅ IMPORTANT: quand inactif, la colonne droite ne doit JAMAIS bloquer */
 .uiEditorShell.isEditorInactive .uiEditorRight{
   pointer-events: none;
