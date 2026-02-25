@@ -1,0 +1,13 @@
+.editorHeader{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.editorTitle{
+  font-weight:900;
+  font-size:14px;
+  color:#111827;
+}

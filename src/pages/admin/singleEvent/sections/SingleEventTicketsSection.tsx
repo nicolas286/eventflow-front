@@ -4,7 +4,7 @@ import { supabase } from "../../../../gateways/supabase/supabaseClient";
 import "../../../../styles/desktop/admin/adminSingleEvent.tickets.desktop.css";
 import "../../../../styles/mobile/admin/adminSingleEvent.tickets.mobile.css";
 
-import { EventTicketsPanel } from "../../../../features/admin/events/singleEvent/EventTicketsPanel";
+import { EventTicketsPanel } from "../../../../features/admin/events/singleEvent/EventTicketsPanel/EventTicketsPanel";
 import { useCreateEventProduct } from "../../../../features/admin/hooks/useCreateEventProduct";
 import { useDeleteEventProduct } from "../../../../features/admin/hooks/useDeleteEventProduct";
 import { useUpdateEventProduct } from "../../../../features/admin/hooks/useUpdateEventProduct";

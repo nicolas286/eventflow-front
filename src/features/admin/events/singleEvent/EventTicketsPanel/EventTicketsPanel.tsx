@@ -1,15 +1,15 @@
-import type { EventProduct, EventProducts } from "../../../../domain/models/db/db.eventProducts.schema";
-import type { CreateEventProductInput } from "../../../../domain/models/admin/admin.createEventProduct.schema";
-import type { UpdateEventProductPatch } from "../../../../gateways/supabase/repositories/dashboard/updateEventProductRepo";
+import type { EventProduct, EventProducts } from "../../../../../domain/models/db/db.eventProducts.schema";
+import type { CreateEventProductInput } from "../../../../../domain/models/admin/admin.createEventProduct.schema";
+import type { UpdateEventProductPatch } from "../../../../../gateways/supabase/repositories/dashboard/updateEventProductRepo";
 
-import { Button, EditorShell, StickySaveBar, FilterBar } from "../../../../ui/components";
-import { TrashIcon } from "../../../../ui/components/icon/Icons";
-import { Input } from "../../../../ui/components";
-import { useMediaQuery } from "../../../../domain/helpers/ui";
-import { formatMoney } from "../../../../domain/helpers/normalize";
-import { nonNegInt, posInt } from "../../../../domain/helpers/logic";
+import { Button, EditorShell, StickySaveBar, FilterBar } from "../../../../../ui/components";
+import { TrashIcon } from "../../../../../ui/components/icon/Icons";
+import { useMediaQuery } from "../../../../../domain/helpers/ui";
+import { formatMoney } from "../../../../../domain/helpers/normalize";
+import { nonNegInt, posInt } from "../../../../../domain/helpers/logic";
 
-import { useEventTicketsEditor, type TicketDraft } from "../../hooks/useEventTicketsEditor";
+import { useEventTicketsEditor, type TicketDraft } from "../../../hooks/useEventTicketsEditor";
+import { EventTicketEditorNode } from "./EventTicketEditorNode";
 
 type OrderItemLike = {
   eventProductId?: string | null;
@@ -106,122 +106,18 @@ export function EventTicketsPanel(props: Props) {
   const editingId = editing?.id ?? null;
   const showCreateInline = (isOpen && creating) || (isClosing && closingKey === "create");
 
-  const editorNode = editing ? (
-    <div className="adminTicketsEditorCard">
-      <div className="adminTicketsEditorHeader adminTicketsEditorHeaderInline">
-        <div>
-          <div className="adminTicketsEditorTitle">{creating ? "Nouveau ticket" : "Modifier ticket"}</div>
-        </div>
-      </div>
-
-      <div className="adminEventFormGrid adminTicketsEditorFormGrid">
-        <div className="adminEventField">
-          <div className="adminEventLabel">Nom</div>
-          <input
-            className="adminEventInput"
-            value={editing.name}
-            onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-            disabled={isSaving}
-          />
-        </div>
-
-        <div className="adminEventField">
-          <div className="adminEventLabel">Prix (€)</div>
-          <Input
-            format="price"
-            priceLocale="fr"
-            placeholder="0,00"
-            disabled={isSaving}
-            value={(editing.priceCents / 100).toFixed(2).replace(".", ",")}
-            onValueChange={(v) => {
-              if (v.kind !== "priceCommit") return;
-              setEditing((prev) => (prev ? { ...prev, priceCents: v.cents } : prev));
-            }}
-          />
-        </div>
-
-        <div className="adminEventField">
-          <div className="adminEventLabel">Devise</div>
-          <select className="adminEventInput" value={editing.currency} disabled>
-            <option value="EUR">EUR</option>
-          </select>
-        </div>
-
-        <div className="adminEventField">
-          <div className="adminEventLabel">Stock (vide = illimité)</div>
-          <input
-            className="adminEventInput"
-            type="number"
-            value={editing.stockQty ?? ""}
-            onChange={(e) =>
-              setEditing({
-                ...editing,
-                stockQty: e.target.value === "" ? null : nonNegInt(e.target.value),
-              })
-            }
-            disabled={isSaving}
-          />
-        </div>
-
-        <div className="adminEventField">
-          <div className="adminEventLabel">Actif</div>
-          <label className="adminEventToggle">
-            <input
-              type="checkbox"
-              checked={Boolean(editing.isActive)}
-              onChange={(e) => setEditing({ ...editing, isActive: e.target.checked })}
-              disabled={isSaving}
-            />
-            <span>{editing.isActive ? "Actif" : "Inactif"}</span>
-          </label>
-        </div>
-
-        <div className="adminEventField">
-          <div className="adminEventLabel">Crée des participants</div>
-          <label className="adminEventToggle">
-            <input
-              type="checkbox"
-              checked={Boolean(editing.createsAttendees)}
-              onChange={(e) => setEditing({ ...editing, createsAttendees: e.target.checked })}
-              disabled={isSaving}
-            />
-            <span>{editing.createsAttendees ? "Oui" : "Non"}</span>
-          </label>
-        </div>
-
-        <div className="adminEventField">
-          <div className="adminEventLabel">Participants / billet</div>
-          <input
-            className="adminEventInput"
-            type="number"
-            value={editing.attendeesPerUnit}
-            onChange={(e) => setEditing({ ...editing, attendeesPerUnit: posInt(e.target.value) })}
-            disabled={!editing.createsAttendees || isSaving}
-          />
-        </div>
-
-        <div className="adminEventField adminEventFieldSpan2">
-          <div className="adminEventLabel">Description</div>
-          <textarea
-            className="adminEventTextarea"
-            value={editing.description}
-            onChange={(e) => setEditing({ ...editing, description: e.target.value })}
-            disabled={isSaving}
-          />
-        </div>
-      </div>
-
-      <div className="adminTicketsEditorFooter adminTicketsEditorFooterInline">
-        <Button onClick={upsertLocalFromEditor} disabled={!String(editing.name ?? "").trim() || isSaving}>
-          {creating ? "Ajouter (local)" : "Appliquer (local)"}
-        </Button>
-
-        <Button variant="secondary" onClick={closeEditor} disabled={isSaving}>
-          Fermer
-        </Button>
-      </div>
-    </div>
-  ) : null;
+  const editorNode = (
+  <EventTicketEditorNode
+    editing={editing}
+    creating={creating}
+    setEditing={setEditing}
+    isSaving={isSaving}
+    nonNegInt={nonNegInt}
+    posInt={posInt}
+    onApplyLocal={upsertLocalFromEditor}
+    onClose={closeEditor}
+  />
+);
 
   function renderTicketCard(t: TicketDraft, idx: number) {
     const active = Boolean(t.isActive ?? true);

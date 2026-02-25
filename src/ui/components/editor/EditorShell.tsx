@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import Button from "../../components/button/Button";
+import Button from "../button/Button";
 import "../../../styles/desktop/editorShell.desktop.css";
 import "../../../styles/mobile/editorShell.mobile.css";
 
@@ -9,11 +9,10 @@ type Props = {
   isOpen: boolean;
   onRequestClose?: () => void;
 
-  editorWidth?: number; // px
-  editorGap?: number; // px
-  stickyTop?: number; // px
+  editorWidth?: number; 
+  editorGap?: number; 
+  stickyTop?: number; 
 
-  /** sticky = position:sticky ; fixed = position:fixed (robuste si sticky cassé par un parent) */
   mode?: "sticky" | "fixed";
 
   left: React.ReactNode;
@@ -81,7 +80,6 @@ export function EditorShell({
     };
   }, []);
 
-  // ✅ Pour mode="fixed": on calcule le "right offset" pour aligner le panel au bord droit du shell
   useEffect(() => {
     if (mode !== "fixed") return;
 
@@ -108,7 +106,6 @@ export function EditorShell({
     };
   }, [mode]);
 
-  // ✅ "actif" = ouvert OU en train de se fermer (pour garder l’animation)
   const shellActive = isOpen || anim === "closing";
   const showPanel = anim !== "closed";
 
@@ -159,7 +156,7 @@ export function EditorShell({
                 </Button>
               ) : null}
 
-              {right}
+                {right}
             </div>
           </div>
         ) : null}
