@@ -148,7 +148,7 @@ export function EventRegistrationFormPanel(props: Props) {
   }
 
   function buildOptions(fieldType: FieldType, optionsText: string) {
-    if (fieldType === "select" || fieldType === "radio") return parseOptionsLines(optionsText);
+    if (fieldType === "select" /*|| fieldType === "radio"*/) return parseOptionsLines(optionsText);
     return null;
   }
 
@@ -491,7 +491,7 @@ export function EventRegistrationFormPanel(props: Props) {
           </label>
         </div>
 
-        {(editing.fieldType === "select" || editing.fieldType === "radio") && (
+        {(editing.fieldType === "select" /*|| editing.fieldType === "radio"*/) && (
           <div className="adminEventField adminEventFieldSpan2">
             <div className="adminEventLabel">Options</div>
             <textarea
