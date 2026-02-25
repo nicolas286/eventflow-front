@@ -8,6 +8,16 @@ function toFiniteInt(v: unknown, fallback = 0) {
   return Math.trunc(n);
 }
 
+/**
+ * Convertit une valeur inconnue en entier fini (via `toFiniteInt`)
+ * puis la borne entre `min` et `max`.
+ *
+ * Utilitaire défensif côté UI / state :
+ * - évite NaN / undefined / valeurs incohérentes
+ * - garantit toujours un entier utilisable
+ *
+ * ⚠️ La validation métier finale est assurée par Zod / la DB.
+ */
 export function clampInt(
   value: unknown,
   {
@@ -22,6 +32,12 @@ export function clampInt(
   if (n > max) return max;
   return n;
 }
+
+// Convertit une valeur inconnue en entier >= 0, ou 0 si la conversion échoue
+export const nonNegInt = (v: unknown) => clampInt(v, { min: 0, fallback: 0 });
+
+// Convertit une valeur inconnue en entier >= 1, ou 1 si la conversion échoue
+export const posInt = (v: unknown) => clampInt(v, { min: 1, fallback: 1 });
 
 export function computeRemaining<
   T extends {

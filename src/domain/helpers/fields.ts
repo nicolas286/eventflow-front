@@ -171,9 +171,13 @@ export function buildFieldsSignature(fields: EventFormField[]) {
     .join("|");
 }
 
-
 export function getFieldKey(f: { fieldKey?: unknown }) {
   return String(f.fieldKey ?? "").trim();
+}
+
+export function toNullIfEmpty(s: string) {
+  const t = (s ?? "").trim();
+  return t.length ? t : null;
 }
 
 
