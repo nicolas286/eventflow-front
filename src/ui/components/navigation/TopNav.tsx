@@ -69,9 +69,14 @@ export default function TopNav({ org, mode }: TopNavProps) {
     close();
   };
 
-  const goPublic = (close?: () => void) => {
+
+  const openPublicInNewTab = (close?: () => void) => {
     if (loggingOut) return;
-    navigate(getPublicPath(org));
+
+    const path = getPublicPath(org);
+    const fullUrl = `${window.location.origin}${path}`;
+
+    window.open(fullUrl, "_blank", "noopener,noreferrer");
     close?.();
   };
 
@@ -130,8 +135,8 @@ export default function TopNav({ org, mode }: TopNavProps) {
     navigate("/");
   }
 
-  const onLogoClick = () => {
-    goPublic();
+    const onLogoClick = () => {
+    openPublicInNewTab();
   };
 
   return (
@@ -168,7 +173,7 @@ export default function TopNav({ org, mode }: TopNavProps) {
 
               {mode === "admin" ? (
                 <>
-                  <MenuItem label="Voir le profil public" onClick={() => goPublic(close)} />
+                  <MenuItem label="Voir le profil public" onClick={() => openPublicInNewTab(close)} />
                   <MenuItem label="Copier l’adresse du profil public" onClick={() => copyPublicUrl(close)} />
 
                   <MenuDivider />
