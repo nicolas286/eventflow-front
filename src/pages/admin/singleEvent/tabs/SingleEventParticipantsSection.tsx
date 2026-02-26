@@ -26,6 +26,7 @@ import { toRows } from "../../../../domain/helpers/normalize";
 import { getFirst } from "../../../../domain/helpers/logic";
 import { makeLocalAnswers, buildUpdateAttendeeFromForm } from "../../../../domain/helpers/attendeeAnswers";
 import { exportParticipantsXls } from "../../../../features/admin/participants/exportParticipantsXls";
+import { FlexPanel } from "../../../../ui/components/panels/FlexPanel";
 
 type FilterMode = "all" | "order" | `field:${string}`;
 
@@ -356,7 +357,7 @@ export function SingleEventParticipantsSection(props: {
   }, [data, regFields, filteredAttendees, filledFieldsByAttendeeId, computeIdentity]);
 
   return (
-    <div className="adminSingleEventParticipants">
+    <FlexPanel>
       <ConfirmModal
         isOpen={confirmDeleteOrderOpen}
         title="Supprimer la commande ?"
@@ -474,6 +475,6 @@ export function SingleEventParticipantsSection(props: {
               />
             )}
       </div>
-    </div>
+    </FlexPanel>
   );
 }

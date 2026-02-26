@@ -28,7 +28,7 @@ type Props = {
 export default function StickySaveBar({
   show,
   title = "Modifications non sauvegardées",
-  hint = "Pense à enregistrer tes changements pour les appliquer.",
+  hint = "Enregistrez vos changements pour les appliquer.",
   saving = false,
   saveLabel = "Sauvegarder",
   savingLabel = "Sauvegarde…",

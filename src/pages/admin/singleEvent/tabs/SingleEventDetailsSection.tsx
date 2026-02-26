@@ -1,7 +1,8 @@
 import type { UpdateEventFullPatch } from "../../../../domain/models/admin/admin.updateEventFullPatch.schema";
-import { EventDetailsForm } from "../../../../features/admin/events/singleEvent/EventDetailsForm";
 import type { AdminEventDetailEvent } from "../../../../domain/models/admin/admin.eventDetail.schema";
 import type { UploadResult } from "../../../../gateways/supabase/repositories/dashboard/uploadOrgAssets.repo";
+
+import { EventDetailsPanel } from "../../../../features/admin/events/singleEvent/EventDetailsPanel/EventDetailsForm";
 
 export function SingleEventDetailsSection(props: {
   event: AdminEventDetailEvent;
@@ -12,14 +13,12 @@ export function SingleEventDetailsSection(props: {
   const { event, updateError, onConfirm, onUploadBanner } = props;
 
   return (
-    <div className="adminEventSection adminSingleEventDetails">
-      <EventDetailsForm
-        key={event.updatedAt ?? event.id}
-        event={event}
-        onConfirm={onConfirm}
-        onUploadBanner={onUploadBanner}
-      />
-      {updateError && <p style={{ color: "crimson" }}>{updateError}</p>}
-    </div>
+    <EventDetailsPanel
+      key={event.updatedAt ?? event.id}
+      event={event}
+      updateError={updateError}
+      onConfirm={onConfirm}
+      onUploadBanner={onUploadBanner}
+    />
   );
 }
