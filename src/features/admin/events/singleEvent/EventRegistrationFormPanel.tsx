@@ -15,6 +15,7 @@ import { slugKey, normalizeContiguousSortOrder } from "../../../../domain/helper
 import { clampInt, uniqueKey, makeClientId } from "../../../../domain/helpers/logic";
 import { optionsToText, sortFromDB, parseOptionsLines, optionsToInlineText } from "../../../../domain/helpers/fields";
 import { TrashIcon } from "../../../../ui/components/icon/Icons";
+import { FlexPanel } from "../../../../ui/components/panels/FlexPanel";
 
 
 type Props = {
@@ -520,18 +521,15 @@ export function EventRegistrationFormPanel(props: Props) {
 
   const showCreateInline = (isOpen && creating) || (isClosing && closingKey === "create");
 
-  return (
-    <div className="adminRegForm">
-      <div className="adminEventHeaderRow">
-        <div>
-          <h3 className="adminRegTitle">Formulaire d’inscription</h3>
-          <div className="adminEventHint">
-            Gère les champs demandés aux participants.
-            {isDirty ? <span className="adminRegDirtyDot">• Modifications non sauvegardées</span> : null}
-          </div>
-        </div>
+  const subtitle = "Gérez les champs demandés aux participants.";
 
-        <div className="adminEventHeaderActions">
+  return (
+    <FlexPanel
+      title="Formulaire d’inscription"
+      subtitle={subtitle}
+      state={isDirty ? "dirty" : "default"}
+      actions={
+        <>
           <Button onClick={openCreate} disabled={!event?.id || isSaving}>
             Ajouter un champ
           </Button>
@@ -545,17 +543,15 @@ export function EventRegistrationFormPanel(props: Props) {
               Annuler
             </Button>
           ) : null}
-        </div>
-      </div>
-
+        </>
+      }
+    >
       <FilterBar query={query} onQueryChange={setQuery} placeholder="Rechercher un champ…" />
 
       {saveAllError ? <div className="adminRegSaveError">{saveAllError}</div> : null}
 
-      {/* ---------------- Mobile : editor inline ---------------- */}
       {isMobile ? (
         <div className={isOpen || isClosing ? "adminRegInlineShell isEditorOpen" : "adminRegInlineShell"}>
-          {/* Create: editor au-dessus de tout */}
           {showCreateInline ? (
             <div
               className={[
@@ -580,13 +576,17 @@ export function EventRegistrationFormPanel(props: Props) {
                 const active = Boolean(f.isActive ?? true);
                 const required = Boolean(f.isRequired ?? false);
                 const type = String(f.fieldType ?? "text");
-                const optsLine = (type === "select" || type === "radio") ? optionsToInlineText(f.options ?? undefined, 80) : null;
+                const optsLine =
+                  type === "select" || type === "radio"
+                    ? optionsToInlineText(f.options ?? undefined, 80)
+                    : null;
 
                 const animDir = moveAnim[f.clientId];
-                const cardAnimClass = animDir === "up" ? "isMoveUp" : animDir === "down" ? "isMoveDown" : "";
+                const cardAnimClass =
+                  animDir === "up" ? "isMoveUp" : animDir === "down" ? "isMoveDown" : "";
 
                 const showEditInline =
-                  ((isOpen && !creating && editingId === f.clientId) || (isClosing && closingKey === f.clientId));
+                  (isOpen && !creating && editingId === f.clientId) || (isClosing && closingKey === f.clientId);
 
                 return (
                   <div key={f.clientId} className="adminRegBlock">
@@ -595,7 +595,9 @@ export function EventRegistrationFormPanel(props: Props) {
                         <div className="adminRegTitleLine">{f.label}</div>
 
                         <div className="adminRegPills">
-                          <span className={active ? "adminRegPill" : "adminRegPill isOff"}>{active ? "Actif" : "Inactif"}</span>
+                          <span className={active ? "adminRegPill" : "adminRegPill isOff"}>
+                            {active ? "Actif" : "Inactif"}
+                          </span>
                           <span className={required ? "adminRegPill isReq" : "adminRegPill isOpt"}>
                             {required ? "Requis" : "Optionnel"}
                           </span>
@@ -612,11 +614,19 @@ export function EventRegistrationFormPanel(props: Props) {
                           Modifier
                         </Button>
 
-                        <Button onClick={() => toggleLocal(f.clientId, { isRequired: !required })} disabled={isSaving} variant="secondary">
+                        <Button
+                          onClick={() => toggleLocal(f.clientId, { isRequired: !required })}
+                          disabled={isSaving}
+                          variant="secondary"
+                        >
                           {required ? "Rendre optionnel" : "Rendre requis"}
                         </Button>
 
-                        <Button onClick={() => toggleLocal(f.clientId, { isActive: !active })} disabled={isSaving} variant="secondary">
+                        <Button
+                          onClick={() => toggleLocal(f.clientId, { isActive: !active })}
+                          disabled={isSaving}
+                          variant="secondary"
+                        >
                           {active ? "Désactiver" : "Activer"}
                         </Button>
 
@@ -648,12 +658,11 @@ export function EventRegistrationFormPanel(props: Props) {
                           onClick={() => removeLocal(f.clientId)}
                           disabled={isSaving}
                         >
-                          < TrashIcon />
+                          <TrashIcon />
                         </Button>
                       </div>
                     </div>
 
-                    {/* Edit: editor sous le champ cliqué */}
                     {showEditInline ? (
                       <div
                         className={[
@@ -672,7 +681,6 @@ export function EventRegistrationFormPanel(props: Props) {
           </div>
         </div>
       ) : (
-        /* ---------------- Desktop : EditorShell à droite ---------------- */
         <EditorShell
           isOpen={isOpen}
           onRequestClose={closeEditor}
@@ -692,10 +700,14 @@ export function EventRegistrationFormPanel(props: Props) {
                   const active = Boolean(f.isActive ?? true);
                   const required = Boolean(f.isRequired ?? false);
                   const type = String(f.fieldType ?? "text");
-                  const optsLine = (type === "select" || type === "radio") ? optionsToInlineText(f.options ?? undefined, 80) : null;
+                  const optsLine =
+                    type === "select" || type === "radio"
+                      ? optionsToInlineText(f.options ?? undefined, 80)
+                      : null;
 
                   const animDir = moveAnim[f.clientId];
-                  const cardAnimClass = animDir === "up" ? "isMoveUp" : animDir === "down" ? "isMoveDown" : "";
+                  const cardAnimClass =
+                    animDir === "up" ? "isMoveUp" : animDir === "down" ? "isMoveDown" : "";
 
                   return (
                     <div key={f.clientId} className={[active ? "adminRegCard" : "adminRegCard isInactive", cardAnimClass].join(" ")}>
@@ -703,7 +715,9 @@ export function EventRegistrationFormPanel(props: Props) {
                         <div className="adminRegTitleLine">{f.label}</div>
 
                         <div className="adminRegPills">
-                          <span className={active ? "adminRegPill" : "adminRegPill isOff"}>{active ? "Actif" : "Inactif"}</span>
+                          <span className={active ? "adminRegPill" : "adminRegPill isOff"}>
+                            {active ? "Actif" : "Inactif"}
+                          </span>
                           <span className={required ? "adminRegPill isReq" : "adminRegPill isOpt"}>
                             {required ? "Requis" : "Optionnel"}
                           </span>
@@ -720,11 +734,19 @@ export function EventRegistrationFormPanel(props: Props) {
                           Modifier
                         </Button>
 
-                        <Button onClick={() => toggleLocal(f.clientId, { isRequired: !required })} disabled={isSaving} variant="secondary">
+                        <Button
+                          onClick={() => toggleLocal(f.clientId, { isRequired: !required })}
+                          disabled={isSaving}
+                          variant="secondary"
+                        >
                           {required ? "Rendre optionnel" : "Rendre requis"}
                         </Button>
 
-                        <Button onClick={() => toggleLocal(f.clientId, { isActive: !active })} disabled={isSaving} variant="secondary">
+                        <Button
+                          onClick={() => toggleLocal(f.clientId, { isActive: !active })}
+                          disabled={isSaving}
+                          variant="secondary"
+                        >
                           {active ? "Désactiver" : "Activer"}
                         </Button>
 
@@ -756,7 +778,7 @@ export function EventRegistrationFormPanel(props: Props) {
                           onClick={() => removeLocal(f.clientId)}
                           disabled={isSaving}
                         >
-                          < TrashIcon />
+                          <TrashIcon />
                         </Button>
                       </div>
                     </div>
@@ -769,7 +791,13 @@ export function EventRegistrationFormPanel(props: Props) {
         />
       )}
 
-      <StickySaveBar show={isDirty} saving={isSaving} disableSave={!event?.id} onSave={saveAll} onCancel={resetLocalChanges} />
-    </div>
+      <StickySaveBar
+        show={isDirty}
+        saving={isSaving}
+        disableSave={!event?.id}
+        onSave={saveAll}
+        onCancel={resetLocalChanges}
+      />
+    </FlexPanel>
   );
 }

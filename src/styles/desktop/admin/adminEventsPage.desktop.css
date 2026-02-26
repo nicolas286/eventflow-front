@@ -123,13 +123,7 @@
   gap:12px;
 }
 
-.adminEventHeaderRow{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:12px;
-  flex-wrap:wrap;
-}
+
 
 .adminEventHeaderActions{
   display:flex;
@@ -152,12 +146,7 @@
   cursor:not-allowed;
 }
 
-.adminEventHint{
-  margin-top:6px;
-  font-size:12px;
-  color:#6b7280;
-  line-height:1.35;
-}
+
 
 .adminEventAlert{
   padding:10px 12px;
@@ -505,6 +494,7 @@
   align-items:center;
   gap:10px;
   min-width: 0;
+  
 }
 
 .adminStickySaveBarDot{

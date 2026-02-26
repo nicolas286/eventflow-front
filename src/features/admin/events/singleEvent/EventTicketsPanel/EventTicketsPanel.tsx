@@ -10,6 +10,7 @@ import { nonNegInt, posInt } from "../../../../../domain/helpers/logic";
 
 import { useEventTicketsEditor, type TicketDraft } from "../../../hooks/useEventTicketsEditor";
 import { EventTicketEditorNode } from "./EventTicketEditorNode";
+import { FlexPanel } from "../../../../../ui/components/panels/FlexPanel";
 
 type OrderItemLike = {
   eventProductId?: string | null;
@@ -230,32 +231,28 @@ export function EventTicketsPanel(props: Props) {
   }
 
   return (
-    <div className="adminTickets">
-      <div className="adminEventHeaderRow">
-        <div>
-          <h3 className="adminTicketsTitle">Tickets</h3>
-          <div className="adminEventHint">
-            Créez, modifiez, réordonnez, désactivez… puis “Sauvegarder”.
-            {isDirty ? <span className="adminTicketsDirtyDot">• Modifications non sauvegardées</span> : null}
-          </div>
-        </div>
-
-        <div className="adminEventHeaderActions">
-          <Button onClick={openCreate} disabled={!event?.id || isSaving}>
-            Nouveau ticket
-          </Button>
-
-          <Button onClick={saveAll} disabled={!event?.id || !isDirty || isSaving}>
-            {isSavingAll ? "Sauvegarde…" : "Sauvegarder"}
-          </Button>
-
-          {isDirty ? (
-            <Button onClick={resetLocalChanges} disabled={isSaving}>
-              Annuler
+      <FlexPanel
+        title="Tickets"
+        subtitle="Créez et modifiez vos tickets, ajustez leur ordre ou leur disponibilité, puis enregistrez vos modifications."
+        state={isDirty ? "dirty" : "default"}
+        actions={
+          <>
+            <Button onClick={openCreate} disabled={!event?.id || isSaving}>
+              Nouveau ticket
             </Button>
-          ) : null}
-        </div>
-      </div>
+
+            <Button onClick={saveAll} disabled={!event?.id || !isDirty || isSaving}>
+              {isSavingAll ? "Sauvegarde…" : "Sauvegarder"}
+            </Button>
+
+            {isDirty ? (
+              <Button onClick={resetLocalChanges} disabled={isSaving}>
+                Annuler
+              </Button>
+            ) : null}
+          </>
+        }
+      >
 
       <FilterBar query={query} onQueryChange={setQuery} placeholder="Rechercher un ticket…" />
 
@@ -339,6 +336,6 @@ export function EventTicketsPanel(props: Props) {
         onSave={saveAll}
         onCancel={resetLocalChanges}
       />
-    </div>
+    </FlexPanel>
   );
 }

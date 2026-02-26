@@ -4,13 +4,13 @@ import { z } from "zod";
 import {
   updateEventFullPatchSchema,
   type UpdateEventFullPatch,
-} from "../../../../domain/models/admin/admin.updateEventFullPatch.schema";
+} from "../../../../../domain/models/admin/admin.updateEventFullPatch.schema";
 
-import {Button, Input, StickySaveBar } from "../../../../ui/components";
+import { Button,StickySaveBar } from "../../../../../ui/components";
+import { FlexPanel } from "../../../../../ui/components/panels/FlexPanel";
+import { EventDetailsFields } from "./EventDetailsFields";
 
-import type { AdminEventDetailEvent } from "../../../../domain/models/admin/admin.eventDetail.schema";
-import { localDateTimeMinNow } from "../../../../domain/helpers/dateTime";
-
+import type { AdminEventDetailEvent } from "../../../../../domain/models/admin/admin.eventDetail.schema";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -18,17 +18,15 @@ import { localDateTimeMinNow } from "../../../../domain/helpers/dateTime";
 
 type UploadResult = {
   path: string;
-  publicUrl: string; // valeur DB (raw)
-  publicUrlWithBust: string; // valeur UI (cache-bust)
+  publicUrl: string;
+  publicUrlWithBust: string;
 };
 
 type Props = {
   event: AdminEventDetailEvent;
-
+  updateError?: string | null;
   onConfirm: (patch: UpdateEventFullPatch) => Promise<void>;
   onUploadBanner: (file: File) => Promise<UploadResult>;
-
-  onSaved?: (nextEvent: AdminEventDetailEvent) => void;
 };
 
 type FieldErrors = Partial<Record<keyof UpdateEventFullPatch, string>>;
@@ -39,10 +37,7 @@ type Draft = {
   description: string;
   startsAtLocal: string;
   endsAtLocal: string;
-
-  // RAW uniquement (DB: events.banner_url)
   bannerUrlRaw: string;
-
   depositEurosRaw: string;
 };
 
@@ -64,9 +59,9 @@ function isoToLocalInput(iso: string | null | undefined) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours()
-  )}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(
+    d.getMinutes()
+  )}`;
 }
 
 function localInputToIso(local: string) {
@@ -78,6 +73,20 @@ function localInputToIso(local: string) {
 
 function bytesToMb(bytes: number) {
   return Math.round((bytes / (1024 * 1024)) * 10) / 10;
+}
+
+function centsToEuroInput(cents: number) {
+  const v = Number.isFinite(cents) ? cents / 100 : 0;
+  return v.toFixed(2).replace(".", ",");
+}
+
+function euroInputToCents(raw: string) {
+  const t = String(raw ?? "").trim();
+  if (!t) return 0;
+  const normalized = t.replace(",", ".");
+  const n = Number(normalized);
+  if (!Number.isFinite(n)) return null;
+  return Math.max(0, Math.round(n * 100));
 }
 
 function eventToDraft(event: AdminEventDetailEvent): Draft {
@@ -95,34 +104,16 @@ function eventToDraft(event: AdminEventDetailEvent): Draft {
 function withBust(url: string, seed?: string | null) {
   const u = (url ?? "").trim();
   if (!u) return u;
-
   const v = seed ? Date.parse(seed) || Date.now() : Date.now();
   const sep = u.includes("?") ? "&" : "?";
   return `${u}${sep}v=${v}`;
 }
 
-function centsToEuroInput(cents: number) {
-  const v = Number.isFinite(cents) ? cents / 100 : 0;
-  return v.toFixed(2).replace(".", ",");
-}
-
-function euroInputToCents(raw: string) {
-  const t = String(raw ?? "").trim();
-  if (!t) return 0;
-
-  // accepte "12,50" ou "12.50"
-  const normalized = t.replace(",", ".");
-  const n = Number(normalized);
-
-  if (!Number.isFinite(n)) return null; // invalide
-  return Math.max(0, Math.round(n * 100));
-}
-
 /* ------------------------------------------------------------------ */
-/* Component                                                          */
+/* Panel (FlexPanel + actions + form)                                 */
 /* ------------------------------------------------------------------ */
 
-export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
+export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanner }: Props) {
   const [draft, setDraft] = useState<Draft>(() => eventToDraft(event));
 
   const [saving, setSaving] = useState(false);
@@ -130,16 +121,12 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
-  // Banner state
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [localBannerPreview, setLocalBannerPreview] = useState<string | null>(null);
   const [uploadedBannerPreview, setUploadedBannerPreview] = useState<string | null>(null);
-
-  // ✅ pour “Retirer”: on force l’aperçu à montrer le default immédiatement
   const [forceDefaultPreview, setForceDefaultPreview] = useState(false);
 
-  // resync draft quand l’event change
   useEffect(() => {
     setDraft(eventToDraft(event));
 
@@ -154,7 +141,6 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event.id, event.bannerUrlRaw, event.updatedAt]);
 
-  // cleanup blob
   useEffect(() => {
     return () => {
       if (localBannerPreview) URL.revokeObjectURL(localBannerPreview);
@@ -165,39 +151,31 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
   const endsIso = useMemo(() => localInputToIso(draft.endsAtLocal), [draft.endsAtLocal]);
 
   const canSave = Boolean(event.id && draft.title.trim());
+  const canPublish = Boolean(startsIso);
 
-  // ✅ Aperçu bannière (UX instant)
+  const primaryLabel = event.isPublished ? "Enregistrer" : "Publier";
+  const secondaryLabel = event.isPublished ? "Remettre en brouillon" : "Enregistrer le brouillon";
+
+  const isPrimaryDisabled = !canSave || saving || (!event.isPublished && !canPublish);
+
   const bannerPreviewUrl = useMemo(() => {
     if (localBannerPreview) return localBannerPreview;
     if (uploadedBannerPreview) return uploadedBannerPreview;
 
-    if (forceDefaultPreview) {
-      const eff = (event.bannerUrlEffective ?? "").trim();
-      return eff ? withBust(eff, event.updatedAt ?? null) : null;
-    }
-
     const eff = (event.bannerUrlEffective ?? "").trim();
-    return eff ? withBust(eff, event.updatedAt ?? null) : null;
-  }, [
-    localBannerPreview,
-    uploadedBannerPreview,
-    forceDefaultPreview,
-    event.bannerUrlEffective,
-    event.updatedAt,
-  ]);
+    if (!eff) return null;
 
+    if (forceDefaultPreview) return withBust(eff, event.updatedAt ?? null);
+    return withBust(eff, event.updatedAt ?? null);
+  }, [localBannerPreview, uploadedBannerPreview, forceDefaultPreview, event.bannerUrlEffective, event.updatedAt]);
 
-  // ------------------------------------------------------------
-  // Dirty detection (pour StickySaveBar)
-  // ------------------------------------------------------------
+  const hasCustomBannerNow =
+    Boolean(draft.bannerUrlRaw.trim()) || Boolean((event.bannerUrlRaw ?? "").trim());
 
   const isDirty = useMemo(() => {
-    // s'il y a un fichier sélectionné, on considère dirty
     if (bannerFile) return true;
 
     const base = eventToDraft(event);
-
-    // comparaison simple (trim pour éviter faux positifs)
     const same =
       draft.title.trim() === base.title.trim() &&
       draft.location.trim() === base.location.trim() &&
@@ -210,6 +188,7 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
     return !same;
   }, [draft, event, bannerFile]);
 
+  /* Reset local draft + erreurs + previews */
   function resetLocalChanges() {
     setDraft(eventToDraft(event));
 
@@ -227,10 +206,7 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
     }
   }
 
-  /* ------------------------------------------------------------------ */
-  /* Patch builder                                                      */
-  /* ------------------------------------------------------------------ */
-
+  /* Build patch from draft + publish state */
   function buildPatch(nextIsPublished: boolean): UpdateEventFullPatch {
     const patch: UpdateEventFullPatch = {};
 
@@ -261,10 +237,7 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
     return patch;
   }
 
-  /* ------------------------------------------------------------------ */
-  /* Banner actions                                                     */
-  /* ------------------------------------------------------------------ */
-
+  /* Banner picker / preview handling */
   function openBannerPicker() {
     if (fileInputRef.current) fileInputRef.current.value = "";
     fileInputRef.current?.click();
@@ -296,10 +269,7 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
     setDraft((d) => ({ ...d, bannerUrlRaw: "" }));
   }
 
-  /* ------------------------------------------------------------------ */
-  /* Save                                                              */
-  /* ------------------------------------------------------------------ */
-
+  /* Save flow: optional upload + validate + confirm patch */
   async function save(nextIsPublished: boolean) {
     if (!canSave) return;
 
@@ -333,10 +303,7 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
       }
 
       const patch = buildPatch(nextIsPublished);
-
-      if (forcedBannerUrl !== undefined) {
-        patch.bannerUrl = forcedBannerUrl;
-      }
+      if (forcedBannerUrl !== undefined) patch.bannerUrl = forcedBannerUrl;
 
       if (Object.keys(patch).length === 0) {
         setSaving(false);
@@ -361,154 +328,15 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
     }
   }
 
-  /* ------------------------------------------------------------------ */
-  /* UI labels                                                          */
-  /* ------------------------------------------------------------------ */
-
-  const primaryLabel = event.isPublished ? "Enregistrer" : "Publier";
-  const secondaryLabel = event.isPublished ? "Remettre en brouillon" : "Enregistrer le brouillon";
-
-  const canPublish = Boolean(startsIso);
-  const isPrimaryDisabled = !canSave || saving || (!event.isPublished && !canPublish);
-
-  const hasCustomBannerNow =
-    Boolean(draft.bannerUrlRaw.trim()) || Boolean((event.bannerUrlRaw ?? "").trim());
-
-  /* ------------------------------------------------------------------ */
-  /* Render                                                             */
-  /* ------------------------------------------------------------------ */
+  const subtitle = "Modifiez les informations principales de l’événement.";
 
   return (
-    <div className="adminEventDetails">
-      <div className="adminEventHeaderRow">
-        <div>
-          <h3 style={{ margin: 0 }}>Détails</h3>
-          <div className="adminEventHint">Modifiez les informations principales de l’événement.</div>
-        </div>
-      </div>
-
-      {saveError && <div className="adminEventAlert isError">{saveError}</div>}
-      {saveOk && <div className="adminEventAlert isOk">Enregistré</div>}
-
-      <div className="adminEventFormGrid">
-        <div className="adminEventField">
-          <div className="adminEventLabel">Titre</div>
-          <input
-            className="adminEventInput"
-            value={draft.title}
-            onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
-          />
-          {fieldErrors.title && <div className="formError">{fieldErrors.title}</div>}
-        </div>
-
-        <div className="adminEventField">
-          <div className="adminEventLabel">Lieu</div>
-          <input
-            className="adminEventInput"
-            value={draft.location}
-            onChange={(e) => setDraft((d) => ({ ...d, location: e.target.value }))}
-          />
-          {fieldErrors.location && <div className="formError">{fieldErrors.location}</div>}
-        </div>
-
-        <div className="adminEventField adminEventFieldSpan2">
-          <div className="adminEventLabel">Description</div>
-          <textarea
-            className="adminEventTextarea"
-            value={draft.description}
-            onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
-          />
-          {fieldErrors.description && <div className="formError">{fieldErrors.description}</div>}
-        </div>
-
-        {/* Sous Description : gauche = début/fin/acompte | droite = aperçu + boutons */}
-        <div className="adminEventField adminEventLeftCol">
-          <div className="adminEventLabel">Début</div>
-          <input
-            type="datetime-local"
-            className="adminEventInput"
-            min={localDateTimeMinNow()} 
-            value={draft.startsAtLocal}
-            onChange={(e) => setDraft((d) => ({ ...d, startsAtLocal: e.target.value }))}
-          />
-          {fieldErrors.startsAt && <div className="formError">{fieldErrors.startsAt}</div>}
-        </div>
-
-        <div className="adminEventField adminEventBannerSide">
-          <div className="adminEventLabel">Bannière</div>
-
-          {bannerPreviewUrl ? (
-            <img className="adminEventBannerPreviewMini" src={bannerPreviewUrl} alt="Bannière" />
-          ) : (
-            <div className="adminEventEmpty">Aucune bannière</div>
-          )}
-
-          {/* ✅ boutons juste sous l'image */}
-          <div className="adminEventBannerActionsBelow">
-            <Button onClick={openBannerPicker}>
-              {hasCustomBannerNow || bannerFile ? "Remplacer" : "Choisir un fichier"}
-            </Button>
-
-            {hasCustomBannerNow || bannerFile ? <Button onClick={clearBanner}>Retirer</Button> : null}
-          </div>
-
-          {bannerFile ? (
-            <div className="adminEventHint" style={{ margin: 0 }}>
-              Fichier prêt : <strong>{bannerFile.name}</strong>
-            </div>
-          ) : null}
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            style={{ display: "none" }}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              onBannerPicked(file);
-            }}
-          />
-        </div>
-
-        <div className="adminEventField adminEventLeftCol">
-          <div className="adminEventLabel">Fin (optionnel)</div>
-          <input
-            type="datetime-local"
-            min={localDateTimeMinNow()} 
-            className="adminEventInput"
-            value={draft.endsAtLocal}
-            onChange={(e) => setDraft((d) => ({ ...d, endsAtLocal: e.target.value }))}
-          />
-          {fieldErrors.endsAt && <div className="formError">{fieldErrors.endsAt}</div>}
-        </div>
-
-        <div className="adminEventField adminEventLeftCol">
-          <div className="adminEventLabel">Acompte (€)</div>
-            <Input
-              format="price"
-              priceLocale="fr"
-              placeholder="0,00"
-              value={draft.depositEurosRaw}
-              onValueChange={(v) => {
-                if (v.kind === "priceDraft") {
-                  setDraft((d) => ({ ...d, depositEurosRaw: v.raw }));
-                  return;
-                }
-
-                if (v.kind === "priceCommit") {
-                  const formatted = (v.cents / 100).toFixed(2).replace(".", ",");
-                  setDraft((d) => ({ ...d, depositEurosRaw: formatted }));
-                  return;
-                }
-              }}
-            />
-          {fieldErrors.depositCents && <div className="formError">{fieldErrors.depositCents}</div>}
-          <div className="adminEventHint">0 = pas d’acompte.</div>
-        </div>
-
-        {/* Actions */}
-        <div className="adminEventActionsBar">
+    <FlexPanel
+      title="Détails"
+      subtitle={subtitle}
+      state={isDirty ? "dirty" : "default"}
+      actions={
+        <>
           <Button disabled={!canSave || saving} onClick={() => void save(false)}>
             {secondaryLabel}
           </Button>
@@ -516,8 +344,26 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
           <Button disabled={isPrimaryDisabled} onClick={() => void save(true)}>
             {saving ? "Enregistrement…" : primaryLabel}
           </Button>
-        </div>
-      </div>
+        </>
+      }
+    >
+      {updateError ? <p style={{ color: "crimson", margin: 0 }}>{updateError}</p> : null}
+      {saveError ? <div className="adminEventAlert isError">{saveError}</div> : null}
+      {saveOk ? <div className="adminEventAlert isOk">Enregistré</div> : null}
+
+      <EventDetailsFields
+        draft={draft}
+        setDraft={setDraft}
+        fieldErrors={fieldErrors}
+        bannerPreviewUrl={bannerPreviewUrl}
+        bannerFile={bannerFile}
+        hasCustomBannerNow={hasCustomBannerNow}
+        fileInputRef={fileInputRef}
+        openBannerPicker={openBannerPicker}
+        onBannerPicked={onBannerPicked}
+        clearBanner={clearBanner}
+      />
+
       <StickySaveBar
         show={isDirty}
         saving={saving}
@@ -529,6 +375,6 @@ export function EventDetailsForm({ event, onConfirm, onUploadBanner }: Props) {
         saveLabel={event.isPublished ? "Enregistrer" : "Enregistrer le brouillon"}
         savingLabel="Enregistrement…"
       />
-    </div>
+    </FlexPanel>
   );
 }
