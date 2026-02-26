@@ -12,10 +12,10 @@ import type { UpdateEventFullPatch } from "../../../domain/models/admin/admin.up
 import { uploadOrgAssetsRepo } from "../../../gateways/supabase/repositories/dashboard/uploadOrgAssets.repo";
 import Button from "../../../ui/components/button/Button";
 
-import { SingleEventDetailsSection } from "../../../pages/admin/singleEvent/sections/SingleEventDetailsSection";
-import { SingleEventTicketsSection } from "../../../pages/admin/singleEvent/sections/SingleEventTicketsSection";
-import { SingleEventFormSection } from "../../../pages/admin/singleEvent/sections/SingleEventFormSection";
-import { SingleEventParticipantsSection } from "../../../pages/admin/singleEvent/sections/SingleEventParticipantsSection";
+import { SingleEventDetailsSection } from "./tabs/SingleEventDetailsSection";
+import { SingleEventTicketsSection } from "./tabs/SingleEventTicketsSection";
+import { SingleEventFormSection } from "./tabs/SingleEventFormSection";
+import { SingleEventParticipantsSection } from "./tabs/SingleEventParticipantsSection";
 import type { UploadResult } from "../../../gateways/supabase/repositories/dashboard/uploadOrgAssets.repo";
 
 // ✅ Garde ton CSS global existant
@@ -135,12 +135,7 @@ export function AdminSingleEventPage() {
 
   return (
     <div className="adminCard">
-      {/* ✅ Titre = nom de l’événement */}
       <h2 className="adminEventTitle">{headerTitle}</h2>
-
-      {/* ✅ Suppression de la ligne slug/id */}
-      {/* (si tu veux garder l’id pour debug, dis-moi et je te le mets dans un <details> caché) */}
-
       <div className="adminEventTabs">
         <div className="adminEventTabsInner">
           <TabButton active={tab === "details"} onClick={() => setTabAndUrl("details")}>
