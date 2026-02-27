@@ -225,24 +225,3 @@
   }
 }
 
-/* Mobile tweaks */
-@media (max-width: 520px){
-  .adminStickySaveBar{
-    width: 340px;
-  }
-  .adminStickySaveBarLeft{
-    display: flex;
-    flex-flow: row nowrap;
-  }
-  .adminStickySaveBarInner{
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .adminStickySaveBarHint{
-    white-space: normal;
-    max-width: none;
-  }
-  .adminStickySaveBarActions{
-    justify-content: flex-end;
-  }
-}

@@ -368,8 +368,6 @@ export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanne
         show={isDirty}
         saving={saving}
         disableSave={!canSave || saving}
-        title="Modifications non sauvegardées"
-        hint="Enregistre pour appliquer tes changements."
         onSave={() => void save(Boolean(event.isPublished))}
         onCancel={resetLocalChanges}
         saveLabel={event.isPublished ? "Enregistrer" : "Enregistrer le brouillon"}

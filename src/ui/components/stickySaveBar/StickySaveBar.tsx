@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import  Button  from "../button/Button"; // adapte si ton import Button est ailleurs
+import Button from "../button/Button";
+import "./stickySaveBar.css";
 
 type Props = {
   show: boolean;
@@ -16,10 +16,7 @@ type Props = {
   onSave: () => void | Promise<void>;
   onCancel?: () => void;
 
-  /** pulse visuel quand ça apparaît */
   pulseOnShow?: boolean;
-
-  /** pour désactiver le bouton save (ex: eventId manquant) */
   disableSave?: boolean;
 
   className?: string;
@@ -39,24 +36,21 @@ export default function StickySaveBar({
   disableSave = false,
   className = "",
 }: Props) {
-  const [pulse, setPulse] = useState(false);
-
-  useEffect(() => {
-    if (!pulseOnShow) return;
-    if (!show) return;
-
-    setPulse(true);
-    const t = window.setTimeout(() => setPulse(false), 2400);
-    return () => window.clearTimeout(t);
-  }, [show, pulseOnShow]);
-
   if (!show) return null;
 
+  const rootClass = [
+    "adminStickySaveBar",
+    pulseOnShow ? "isPulseOnMount" : "",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <div className={["adminStickySaveBar", pulse ? "isPulseOnce" : "", className].join(" ")}>
+    <div className={rootClass} role="status" aria-live="polite">
       <div className="adminStickySaveBarInner">
         <div className="adminStickySaveBarLeft">
-          <div className="adminStickySaveBarDot" />
+          <div className="adminStickySaveBarDot" aria-hidden="true" />
           <div className="adminStickySaveBarText">
             <div className="adminStickySaveBarTitle">{title}</div>
             {hint ? <div className="adminStickySaveBarHint">{hint}</div> : null}
