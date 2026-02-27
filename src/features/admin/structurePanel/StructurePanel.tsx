@@ -370,7 +370,7 @@ export default function StructurePanel({ orgId, orgInfo, orgProfile, onSaved }: 
         <div className="structurePanel__actions">
           <Button
             variant="primary"
-            label={loading ? "Sauvegarde…" : "Sauvegarder"}
+            label={loading ? "Enregistrement…" : "Enregistrer"}
             onClick={handleSave}
             disabled={!dirty || loading}
           />

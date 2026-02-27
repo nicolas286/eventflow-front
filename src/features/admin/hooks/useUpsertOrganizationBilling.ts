@@ -46,7 +46,7 @@ export function useUpsertOrganizationBilling(params: { supabase: SupabaseClient 
       setState({ loading: false, error: null, updated });
       return updated;
     } catch (e: unknown) {
-      const ne = normalizeError(e, "Impossible de sauvegarder les infos de facturation");
+      const ne = normalizeError(e, "Impossible de Enregistrer les infos de facturation");
       setState({ loading: false, error: ne.message, updated: null });
       return null;
     }

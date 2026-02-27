@@ -938,7 +938,7 @@ function BillingTab(props: {
 
         <div className="billingTabActions">
           <Button variant="primary" disabled={loading || !canSave} onClick={submit}>
-            {loading ? "Sauvegarde…" : "Sauvegarder"}
+            {loading ? "Enregistrement…" : "Enregistrer"}
           </Button>
 
           {mode === "required" ? <div className="billingTabHint">Ces infos seront utilisées pour vos factures EventFlow.</div> : null}
