@@ -147,7 +147,7 @@ export function useSaveOrgInfo(params: { supabase: SupabaseClient }) {
 
       return updated;
     } catch (e: unknown) {
-      const ne = normalizeError(e, "Impossible de sauvegarder le profil");
+      const ne = normalizeError(e, "Impossible d'enregistrer le profil");
       setState({
         loading: false,
         error: ne.message,

@@ -131,7 +131,7 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
       if (!res) {
         // ton hook met déjà error; on ajoute juste un toast
         showToast({
-          title: "Sauvegarde impossible",
+          title: "Enregistrement impossible",
           description: "Vérifiez les champs et réessayez.",
           variant: "error",
           duration: 6000,
@@ -149,7 +149,7 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
         duration: 3500,
       });
     } catch (e) {
-      const err = normalizeError(e, "Impossible de sauvegarder le profil.");
+      const err = normalizeError(e, "Impossible de Enregistrer le profil.");
 
       showToast({
         title: "Erreur",
@@ -342,7 +342,7 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
 
             <Button
               variant="primary"
-              label={loading ? "Sauvegarde…" : "Sauvegarder"}
+              label={loading ? "Enregistrement…" : "Enregistrer"}
               onClick={handleSave}
               disabled={loading || !profile.userId || deleting}
             />

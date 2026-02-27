@@ -86,7 +86,7 @@ export default function BrandingPanel({
   async function handleSave() {
     setAssetError(null);
 
-    // 👇 si free: on empêche d’essayer de sauvegarder un branding “premium”
+    // 👇 si free: on empêche d’essayer de Enregistrer un branding “premium”
     if (isFree) {
       return;
     }
@@ -287,7 +287,7 @@ export default function BrandingPanel({
         <div className="brandingPanel__actions">
           <Button
             variant="primary"
-            label={isFree ? "Disponible en Starter" : loading ? "Sauvegarde…" : "Sauvegarder"}
+            label={isFree ? "Disponible en Starter" : loading ? "Enregistrement…" : "Enregistrer"}
             onClick={handleSave}
             disabled={loading || isFree}
           />

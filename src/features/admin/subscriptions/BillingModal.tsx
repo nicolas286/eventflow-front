@@ -300,7 +300,7 @@ export default function BillingModal(props: Props) {
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <Button
               variant="primary"
-              label={loading ? "Sauvegarde…" : "Sauvegarder"}
+              label={loading ? "Enregistrement…" : "Enregistrer"}
               onClick={submit}
               disabled={loading || !canSave}
             />

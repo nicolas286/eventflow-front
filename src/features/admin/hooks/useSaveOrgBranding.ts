@@ -109,7 +109,7 @@ export function useSaveOrgBranding(params: { supabase: SupabaseClient }) {
 
       return updated;
     } catch (e: unknown) {
-      const ne = normalizeError(e, "Impossible de sauvegarder le branding");
+      const ne = normalizeError(e, "Impossible de Enregistrer le branding");
       setState({
         loading: false,
         error: ne.message,

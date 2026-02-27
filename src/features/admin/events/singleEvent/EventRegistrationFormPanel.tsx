@@ -521,7 +521,7 @@ export function EventRegistrationFormPanel(props: Props) {
 
   const showCreateInline = (isOpen && creating) || (isClosing && closingKey === "create");
 
-  const subtitle = "Gérez les champs demandés aux participants.";
+  const subtitle = "Gérez les informations que les participants devront fournir lors de leur inscription à l’événement.";
 
   return (
     <FlexPanel
@@ -535,7 +535,7 @@ export function EventRegistrationFormPanel(props: Props) {
           </Button>
 
           <Button onClick={saveAll} disabled={!event?.id || !isDirty || isSaving}>
-            {isSavingAll ? "Sauvegarde…" : "Sauvegarder"}
+            {isSavingAll ? "Enregistrement…" : "Enregistrer"}
           </Button>
 
           {isDirty ? (

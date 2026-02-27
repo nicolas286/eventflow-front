@@ -96,7 +96,7 @@ export function useSaveAdminProfile(params: { supabase: SupabaseClient }) {
 
       return mapped;
     } catch (e: unknown) {
-      const ne = normalizeError(e, "Impossible de sauvegarder le profil");
+      const ne = normalizeError(e, "Impossible d'enregistrer le profil");
       setState({
         loading: false,
         error: ne.message,

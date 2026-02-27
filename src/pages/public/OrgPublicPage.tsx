@@ -206,13 +206,17 @@ export function OrgPublicPage() {
 
               {profile.publicEmail ? (
                 <div className="publicMail">
-                  <SendIcon /> {profile.publicEmail}
+                  <a href={`mailto:${profile.publicEmail}`}>
+                    <SendIcon /> {profile.publicEmail}
+                  </a>
                 </div>
               ) : null}
 
               {profile.phone ? (
                 <div className="publicPhone">
-                  <PhoneIcon /> {profile.phone}
+                  <a href={`tel:${profile.phone}`}>
+                    <PhoneIcon /> {profile.phone}
+                  </a>
                 </div>
               ) : null}
 

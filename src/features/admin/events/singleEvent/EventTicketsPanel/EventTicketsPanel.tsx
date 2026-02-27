@@ -242,7 +242,7 @@ export function EventTicketsPanel(props: Props) {
             </Button>
 
             <Button onClick={saveAll} disabled={!event?.id || !isDirty || isSaving}>
-              {isSavingAll ? "Sauvegarde…" : "Sauvegarder"}
+              {isSavingAll ? "Enregistrement…" : "Enregistrer"}
             </Button>
 
             {isDirty ? (

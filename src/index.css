@@ -160,3 +160,34 @@ h1, h2, h3, h4, h5, h6, .heading {
 input, textarea, select, button {
   font: inherit;
 }
+
+a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  font-weight: 600;
+  color: #1f2937; /* ou var(--text-primary) */
+
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+a:hover{
+   color: #2563eb !important;
+}
+
+a svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  opacity: 0.75;
+}
+
+a[href^="mailto:"],
+a[href^="tel:"] {
+  cursor: pointer;
+}
