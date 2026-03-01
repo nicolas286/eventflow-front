@@ -1,18 +1,21 @@
 import { useEffect, useState } from "react";
-import { Button} from "../../ui/components";
+import { Link } from "react-router-dom";
+import { z } from "zod";
+
+import { Button } from "../../ui/components";
 import PasswordInput from "../../ui/components/inputs/PasswordInput";
 import { MessageBox } from "../../ui/components/message/MessageBox";
+import PublicFooter from "../../ui/components/publicFooter/PublicFooter";
+
 import { authRepo } from "../../gateways/supabase/repositories/auth/authRepo";
 import { supabase } from "../../gateways/supabase/supabaseClient";
 import { normalizeError } from "../../domain/errors/errors";
+
 import "../../styles/desktop/auth.desktop.css";
 import "../../styles/mobile/auth.mobile.css";
-import { Link } from "react-router-dom";
 
-import { z } from "zod";
 import { signupSchema } from "../../domain/models/admin/admin.auth.schema";
 import { useLiveForm } from "../../features/public/useLiveZodForm"; // adapte le chemin
-import PublicFooter from "../../ui/components/publicFooter/PublicFooter";
 
 const resetPasswordSchema = z
   .object({
@@ -22,7 +25,7 @@ const resetPasswordSchema = z
   .superRefine((val, ctx) => {
     if (val.password !== val.confirmPassword) {
       ctx.addIssue({
-        code: "custom", 
+        code: "custom",
         path: ["confirmPassword"],
         message: "Les mots de passe ne correspondent pas.",
       });
@@ -31,8 +34,48 @@ const resetPasswordSchema = z
 
 type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
+/** Supabase peut renvoyer des erreurs dans le hash:
+ *  #error=access_denied&error_code=otp_expired&error_description=...
+ */
+function parseSupabaseHashError(): string | null {
+  const hash = window.location.hash || "";
+  if (!hash.startsWith("#")) return null;
+
+  const params = new URLSearchParams(hash.slice(1));
+
+  const error = params.get("error");
+  const errorCode = params.get("error_code");
+  const descRaw = params.get("error_description");
+
+  if (!error && !errorCode && !descRaw) return null;
+
+  // decode safe (hash query-style uses + for space)
+  const desc = descRaw ? decodeURIComponent(descRaw.replace(/\+/g, " ")) : null;
+
+  if (errorCode === "otp_expired") {
+    return "Lien expiré. Recommencez une demande “Mot de passe oublié”.";
+  }
+
+  // access_denied est souvent utilisé pour divers refus (invalid/expired, etc.)
+  if (error === "access_denied" || errorCode === "access_denied") {
+    return "Lien invalide ou expiré. Recommencez une demande “Mot de passe oublié”.";
+  }
+
+  return desc ?? "Lien invalide ou expiré. Recommencez une demande “Mot de passe oublié”.";
+}
+
+function clearHashFromUrl() {
+  // Retire le hash sans recharger la page
+  const clean = window.location.pathname + window.location.search;
+  window.history.replaceState({}, document.title, clean);
+}
+
 export function AdminResetPasswordPage() {
+  // Autorise le reset uniquement si on est réellement dans un flow "recovery"
   const [canReset, setCanReset] = useState(false);
+
+  // Message d’erreur lié au lien de recovery (hash error ou exchangeCode fail)
+  const [recoveryError, setRecoveryError] = useState<string | null>(null);
 
   const live = useLiveForm<ResetPasswordInput>(resetPasswordSchema, {
     password: "",
@@ -50,27 +93,46 @@ export function AdminResetPasswordPage() {
 
     async function bootstrapRecovery() {
       try {
+        // ✅ 0) Reset des états
+        if (!mounted) return;
+        setCanReset(false);
+        setRecoveryError(null);
+
+        // ✅ 1) Traiter les erreurs éventuelles renvoyées dans le hash
+        const hashErr = parseSupabaseHashError();
+        if (hashErr) {
+          if (!mounted) return;
+          setRecoveryError(hashErr);
+          setCanReset(false);
+          clearHashFromUrl(); // évite de garder l’erreur dans l’URL
+          return;
+        }
+
+        // ✅ 2) Autoriser uniquement si on a un code de recovery à échanger
         const url = new URL(window.location.href);
         const code = url.searchParams.get("code");
 
-        if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
-          if (error) throw error;
-        }
+        // Pas de code => on attend éventuellement l'event PASSWORD_RECOVERY
+        if (!code) return;
 
-        const { data } = await supabase.auth.getSession();
+        // Échange code -> session (recovery)
+        const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+        if (error) throw error;
+
         if (!mounted) return;
-
-        if (data.session) setCanReset(true);
+        setCanReset(true);
       } catch {
         if (!mounted) return;
         setCanReset(false);
+        setRecoveryError("Lien invalide ou expiré. Recommencez une demande “Mot de passe oublié”.");
       }
     }
 
     bootstrapRecovery();
 
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      // ✅ 3) Autoriser le reset si Supabase signale explicitement un recovery
+      if (!mounted) return;
       if (event === "PASSWORD_RECOVERY") setCanReset(true);
     });
 
@@ -106,9 +168,17 @@ export function AdminResetPasswordPage() {
       <div className="auth-page">
         <div className="auth-card">
           <MessageBox variant="error">
-            Lien invalide ou expiré. Recommencez une demande “Mot de passe oublié”.
+            {recoveryError ?? "Lien invalide ou expiré. Recommencez une demande “Mot de passe oublié”."}
           </MessageBox>
+
+          <div className="auth-links">
+            <Link to="/admin/login" className="auth-link">
+              Se connecter
+            </Link>
+          </div>
         </div>
+
+        <PublicFooter />
       </div>
     );
   }
@@ -130,6 +200,7 @@ export function AdminResetPasswordPage() {
               setErrorMsg(null);
               setOkMsg(null);
               handleChange("password", e.target.value);
+              // garde confirmPassword “en phase” pour afficher l'erreur si besoin
               if (form.confirmPassword) handleChange("confirmPassword", form.confirmPassword);
             }}
             onBlur={() => handleBlur("password")}
@@ -158,19 +229,19 @@ export function AdminResetPasswordPage() {
           {errorMsg && <MessageBox variant="error">{errorMsg}</MessageBox>}
           {okMsg && <MessageBox variant="success">{okMsg}</MessageBox>}
 
-        <div className="auth-links">
-          <Link to="/admin/login" className="auth-link">
-            Se connecter
-          </Link>
-        </div>
+          <div className="auth-links">
+            <Link to="/admin/login" className="auth-link">
+              Se connecter
+            </Link>
+          </div>
 
           <Button type="submit" variant="primary" disabled={loading}>
             {loading ? "Mise à jour..." : "Mettre à jour"}
           </Button>
         </form>
       </div>
-    <PublicFooter />
-      
+
+      <PublicFooter />
     </div>
   );
 }
