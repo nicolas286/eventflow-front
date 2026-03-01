@@ -1,14 +1,12 @@
 import { useState } from "react";
-import { Button } from "../../ui/components";
-import { Input } from "../../ui/components";
-import { MessageBox } from "../../ui/components/message/MessageBox";
-import { authRepo } from "../../gateways/supabase/repositories/auth/authRepo";
-import { normalizeError } from "../../domain/errors/errors";
-import "../../styles/desktop/auth.desktop.css";
-import "../../styles/mobile/auth.mobile.css";
-import PublicFooter from "../../ui/components/publicFooter/PublicFooter";
-
-
+import { Button } from "@ui/components";
+import { Input } from "@ui/components";
+import { MessageBox } from "@ui/components/message/MessageBox";
+import { authRepo } from "../data/authRepo";
+import { normalizeError } from "@errors/errors";
+import "./auth.desktop.css";
+import "./auth.mobile.css";
+import PublicFooter from "@ui/components/publicFooter/PublicFooter";
 
 export function AdminForgotPasswordPage() {
   const [email, setEmail] = useState("");

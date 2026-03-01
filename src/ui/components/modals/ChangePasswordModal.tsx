@@ -6,7 +6,7 @@ import Button from "../button/Button";
 import PasswordInput from "../inputs/PasswordInput";
 import { MessageBox } from "../message/MessageBox"; // adapte si ton chemin est différent
 
-import { signupSchema } from "../../../domain/models/admin/admin.auth.schema";
+import { signupSchema } from "../../../app/modules/admin/auth/schemas/admin.auth.schema";
 import { useLiveForm } from "../../../features/public/useLiveZodForm"; // adapte le chemin chez toi
 
 type ChangePasswordModalProps = {

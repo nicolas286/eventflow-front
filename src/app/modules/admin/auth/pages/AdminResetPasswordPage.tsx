@@ -2,20 +2,20 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { z } from "zod";
 
-import { Button } from "../../ui/components";
-import PasswordInput from "../../ui/components/inputs/PasswordInput";
-import { MessageBox } from "../../ui/components/message/MessageBox";
-import PublicFooter from "../../ui/components/publicFooter/PublicFooter";
+import { Button } from "@ui/components";
+import PasswordInput from "@ui/components/inputs/PasswordInput";
+import { MessageBox } from "@ui/components/message/MessageBox";
+import PublicFooter from "@ui/components/publicFooter/PublicFooter";
 
-import { authRepo } from "../../gateways/supabase/repositories/auth/authRepo";
-import { supabase } from "../../gateways/supabase/supabaseClient";
-import { normalizeError } from "../../domain/errors/errors";
+import { authRepo } from "../data/authRepo";
+import { supabase } from "@gateways/supabase/supabaseClient";
+import { normalizeError } from "@errors/errors";
 
-import "../../styles/desktop/auth.desktop.css";
-import "../../styles/mobile/auth.mobile.css";
+import "./auth.desktop.css";
+import "./auth.mobile.css";
 
-import { signupSchema } from "../../domain/models/admin/admin.auth.schema";
-import { useLiveForm } from "../../features/public/useLiveZodForm"; // adapte le chemin
+import { signupSchema } from "../schemas/admin.auth.schema";
+import { useLiveForm } from "@features/public/useLiveZodForm";
 
 const resetPasswordSchema = z
   .object({

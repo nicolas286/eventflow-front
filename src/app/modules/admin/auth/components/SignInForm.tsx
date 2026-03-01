@@ -1,15 +1,15 @@
-import "../../../styles/desktop/auth.desktop.css";
-import "../../../styles/mobile/auth.mobile.css";
+import "../pages/auth.desktop.css";
+import "../pages/auth.mobile.css";
 
 import { useState } from "react";
-import { loginSchema, type LoginInput } from "../../../domain/models/admin/admin.auth.schema";
-import { authRepo } from "../../../gateways/supabase/repositories/auth/authRepo";
-import { normalizeError } from "../../../domain/errors/errors";
-import Button from "../button/Button";
-import PasswordInput from "../inputs/PasswordInput";
-import Input from "../inputs/Input";
-import { MessageBox } from "../message/MessageBox";
-import { useLiveForm } from "../../../features/public/useLiveZodForm";
+import { loginSchema, type LoginInput } from "../schemas/admin.auth.schema";
+import { authRepo } from "../data/authRepo";
+import { normalizeError } from "../../../../../domain/errors/errors";
+import Button from "../../../../../ui/components/button/Button";
+import PasswordInput from "../../../../../ui/components/inputs/PasswordInput";
+import Input from "../../../../../ui/components/inputs/Input";
+import { MessageBox } from "../../../../../ui/components/message/MessageBox";
+import { useLiveForm } from "../../../../../features/public/useLiveZodForm";
 
 export function SignInForm() {
   const live = useLiveForm<LoginInput>(loginSchema, {
