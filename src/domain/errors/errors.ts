@@ -100,7 +100,23 @@ function mapRpcMessageToAppCode(msg: string): AppErrorCode | null {
   return null;
 }
 
+function isEmailRateLimitMessage(raw: string): boolean {
+  const m = raw.trim().toLowerCase();
 
+  // Supabase renvoie souvent: "over_email_send_rate_limit"
+  if (m.includes("over_email_send_rate_limit")) return true;
+
+  // variantes fréquentes
+  if (m.includes("email rate limit")) return true;
+  if (m.includes("too many requests") && m.includes("email")) return true;
+  if (m.includes("rate limit") && m.includes("email")) return true;
+
+  return false;
+}
+
+function humanEmailRateLimitMessage(): string {
+  return "Trop de demandes d’email d’affilée. Attends un peu (quelques minutes) puis réessaie.";
+}
 
 function humanBusinessMessage(msg: string): string | null {
   const m = msg.trim();
@@ -114,6 +130,9 @@ function humanBusinessMessage(msg: string): string | null {
 
   if (m === "FORBIDDEN") return "Accès refusé : tu n’as pas les droits nécessaires.";
   if (m === "NOT_AUTHENTICATED") return "Ta session a expiré. Reconnecte-toi.";
+    if (isEmailRateLimitMessage(m)) {
+    return humanEmailRateLimitMessage();
+  }
   if (/Edge Function returned a non-2xx status code/i.test(m)) {
   return "Erreur serveur pendant la réservation. Réessaie dans quelques instants.";
 }
@@ -164,6 +183,9 @@ function mapAuthToAppError(e: SupabaseAuthErrorLike) {
 
   if (code === "user_already_exists" || msg.includes("user already registered")) {
     return { code: "CONFLICT" as const, message: "Un compte existe déjà avec cet email." };
+  }
+    if (code === "over_email_send_rate_limit" || isEmailRateLimitMessage(e.message)) {
+    return { code: "NETWORK" as const, message: humanEmailRateLimitMessage() };
   }
 
   return null;

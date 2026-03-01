@@ -8,6 +8,24 @@
     "types": ["vite/client"],
     "skipLibCheck": true,
 
+    /* ✅ Aliases */
+    "baseUrl": "./src",
+    "paths": {
+      "@app/*": ["app/*"],
+      "@modules/*": ["modules/*"],
+      "@shared/*": ["shared/*"],
+      "@ui/*": ["ui/*"],
+      "@components/*": ["components/*"],
+      "@layouts/*": ["layouts/*"],
+      "@lib/*": ["shared/lib/*"],
+      "@admin-pages/*": ["pages/admin/*"],
+      "@public-pages/*": ["pages/public/*"],
+      "@repositories/*": ["gateways/repositories/*"],
+      "@helpers/*": ["domain/helpers/*"],
+      "@models/*": ["domain/models/*"],
+      "@styles/*": ["styles/*"]
+    },
+
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
