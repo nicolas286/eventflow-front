@@ -7,7 +7,7 @@ import { Button, Input, Badge } from "../../../ui/components";
 import { useToast } from "../../../ui/components/toast/useToast";
 
 import { supabase } from "../../../gateways/supabase/supabaseClient";
-import { authRepo } from "../../../gateways/supabase/repositories/auth/authRepo";
+import { authRepo } from "@app/modules/admin/auth/data/authRepo";
 import { normalizeError } from "../../../domain/errors/errors";
 
 import { useSaveAdminProfile } from "../hooks/useUpdateAdminProfile";

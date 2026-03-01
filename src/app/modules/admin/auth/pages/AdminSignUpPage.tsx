@@ -1,10 +1,10 @@
-import "../../styles/desktop/auth.desktop.css";
-import "../../styles/mobile/auth.mobile.css";
+import "./auth.desktop.css";
+import "./auth.mobile.css";
 
 import { Link } from "react-router-dom";
-import { SignUpForm } from "../../ui/components/forms/SignupForm";
-import { EventFlowLogo } from "../../ui/components/branding/EventFlowLogo";
-import PublicFooter from "../../ui/components/publicFooter/PublicFooter";
+import { SignUpForm } from "@app/modules/admin/auth/components/SignupForm";
+import { EventFlowLogo } from "@ui/components/branding/EventFlowLogo";
+import PublicFooter from "@ui/components/publicFooter/PublicFooter";
 
 export function AdminSignUpPage() {
   return (

@@ -1,8 +1,8 @@
 import type { Session } from "@supabase/supabase-js";
-import { supabase, supabaseSession } from "../../supabaseClient";
-import { normalizeError } from "../../../../domain/errors/errors";
-import { loginSchema, signupSchema } from "../../../../domain/models/admin/admin.auth.schema";
-import type { LoginInput, SignupInput } from "../../../../domain/models/admin/admin.auth.schema";
+import { supabase, supabaseSession } from "@gateways/supabase/supabaseClient";
+import { normalizeError } from "@errors/errors";
+import { loginSchema, signupSchema } from "../schemas/admin.auth.schema";
+import type { LoginInput, SignupInput } from "../schemas/admin.auth.schema";
 
 export type SignUpResult =
   | { status: "CONFIRMATION_REQUIRED" }
