@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session, User, AuthChangeEvent } from "@supabase/supabase-js";
-import { supabase } from "../../gateways/supabase/supabaseClient";
-import { authRepo } from "../../gateways/supabase/repositories/auth/authRepo";
+import { supabase } from "@gateways/supabase/supabaseClient";
+import { authRepo } from "@gateways/supabase/repositories/auth/authRepo";
 import { AuthContext, type AuthContextValue } from "./AuthContext";
-import type { AppError } from "../../domain/errors/errors";
-import { normalizeError } from "../../domain/errors/errors";
+import type { AppError } from "@errors/errors";
+import { normalizeError } from "@errors/errors";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);

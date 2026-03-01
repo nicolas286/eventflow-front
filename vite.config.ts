@@ -18,7 +18,11 @@ export default defineConfig({
       "@repositories": path.resolve(__dirname, "src/gateways/repositories"),
       "@helpers": path.resolve(__dirname, "src/domain/helpers"),
       "@models": path.resolve(__dirname, "src/domain/models"),
-      "@styles": path.resolve(__dirname, "src/styles")
+      "@styles": path.resolve(__dirname, "src/styles"),
+      "@gateways": path.resolve(__dirname, "src/gateways"),
+      "@providers": path.resolve(__dirname, "src/app/providers"),
+      "@features": path.resolve(__dirname, "src/features"),
+      "@errors": path.resolve(__dirname, "src/domain/errors")
     }
   }
 });

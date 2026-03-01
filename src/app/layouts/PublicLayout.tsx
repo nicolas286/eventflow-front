@@ -1,9 +1,9 @@
 import { Outlet, useParams } from "react-router-dom";
-import { supabase } from "../../gateways/supabase/supabaseClient";
-import { usePublicOrgData } from "../../features/admin/hooks/usePublicOrgData";
-import OrgThemeSync from "../../features/theme/OrgThemeSync";
+import { supabase } from "@gateways/supabase/supabaseClient";
+import { usePublicOrgData } from "@features/admin/hooks/usePublicOrgData";
+import OrgThemeSync from "@features/theme/OrgThemeSync";
 
-import "../../styles/desktop/publicLayout.css";
+import "./PublicLayout.css"; 
 
 export function PublicLayout() {
   const { orgSlug } = useParams<{ orgSlug: string }>();

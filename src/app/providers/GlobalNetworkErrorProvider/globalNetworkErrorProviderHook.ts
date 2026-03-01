@@ -1,4 +1,4 @@
-import type { AppError } from "../../domain/errors/errors";
+import type { AppError } from "@errors/errors";
 import { createContext, useContext } from "react";
 
 
