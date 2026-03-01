@@ -1,7 +1,7 @@
 import { Route, Navigate } from "react-router-dom";
 
-import { PublicShellLayout } from "@ui/layouts/PublicShellLayout";
-import { PublicLayout } from "@ui/layouts/PublicLayout";
+import { PublicShellLayout } from "../layouts/PublicShellLayout";
+import { PublicLayout } from "../layouts/PublicLayout";
 
 import { OrgPublicPage } from "@public-pages/OrgPublicPage";
 import { EventTicketsPage } from "@public-pages/EventTicketsPage";

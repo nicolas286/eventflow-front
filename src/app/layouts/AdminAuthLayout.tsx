@@ -1,6 +1,6 @@
 import { Outlet, Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "../../providers/AuthProvider/useAuth";
-import { MessageBox } from "../components/message/MessageBox"; // adapte
+import { useAuth } from "@providers/AuthProvider/useAuth";
+import { MessageBox } from "@ui/components/message/MessageBox";
 
 export function AdminAuthLayout() {
   const { user, loading } = useAuth();

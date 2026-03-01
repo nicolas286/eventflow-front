@@ -23,7 +23,11 @@
       "@repositories/*": ["gateways/repositories/*"],
       "@helpers/*": ["domain/helpers/*"],
       "@models/*": ["domain/models/*"],
-      "@styles/*": ["styles/*"]
+      "@styles/*": ["styles/*"],
+      "@gateways/*": ["gateways/*"],
+      "@providers/*": ["app/providers/*"],
+      "@features/*": ["features/*"],
+      "@errors/*": ["domain/errors/*"]
     },
 
     /* Bundler mode */

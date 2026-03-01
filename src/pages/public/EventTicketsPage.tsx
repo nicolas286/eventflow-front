@@ -7,7 +7,7 @@ import Container from "../../ui/components/container/Container";
 import Card, { CardBody, CardHeader } from "../../ui/components/card/Card";
 import Button from "../../ui/components/button/Button";
 import Badge from "../../ui/components/badge/Badge";
-import { Seo } from "../../ui/layouts/Seo";
+import { Seo } from "@ui/components/seo/Seo";
 
 import { PublicEventHeader } from "./checkout/PublicEventHeader";
 import { loadDraft, saveDraft, formatMoney } from "./checkout/checkoutStore";

@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
-import PublicFooter from "../components/publicFooter/PublicFooter";
-import "../../styles/desktop/publicLayout.css";
+import PublicFooter from "@ui/components/publicFooter/PublicFooter";
+import "./PublicLayout.css";
 
 export function PublicShellLayout() {
   return (

@@ -8,7 +8,7 @@ import Card, { CardBody } from "../../ui/components/card/Card";
 import Button from "../../ui/components/button/Button";
 import Badge from "../../ui/components/badge/Badge";
 import { GlobeIcon, PhoneIcon, SendIcon } from "../../ui/components/icon/Icons";
-import { Seo } from "../../ui/layouts/Seo";
+import { Seo } from "@ui/components/seo/Seo";
 
 import { formatDateTimeHuman, toDayEndISO, toDayStartISO } from "../../domain/helpers/dateTime";
 

@@ -13,8 +13,8 @@ import AdminStructurePage from "@admin-pages/AdminStructurePage";
 import OnboardingWizard from "@admin-pages/OnboardingWizard";
 import { AdminSingleEventPage } from "@admin-pages/singleEvent/AdminSingleEventPage";
 
-import { AdminAuthLayout } from "@ui/layouts/AdminAuthLayout";
-import { AdminLayout } from "@ui/layouts/AdminLayout";
+import { AdminAuthLayout } from "../layouts/AdminAuthLayout";
+import { AdminLayout } from "../layouts/AdminLayout";
 
 export const AdminRoutes = (
   <>
