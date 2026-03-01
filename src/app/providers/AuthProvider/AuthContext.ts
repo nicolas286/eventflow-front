@@ -1,6 +1,6 @@
 import { createContext } from "react";
 import type { Session, User } from "@supabase/supabase-js";
-import type { AppError } from "../../domain/errors/errors";
+import type { AppError } from "@errors/errors";
 
 export type AuthContextValue = {
   user: User | null;
