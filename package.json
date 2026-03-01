@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node -e \"const fs=require('fs'); console.log('PWD', process.cwd()); console.log('src/app exists?', fs.existsSync('src/app')); console.log('src/app files:', fs.existsSync('src/app') ? fs.readdirSync('src/app') : 'NO');\" && tsc -b && vite build",
+    "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
