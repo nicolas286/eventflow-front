@@ -1,7 +1,7 @@
 import { Outlet, useParams } from "react-router-dom";
-import { supabase } from "@gateways/supabase/supabaseClient";
-import { usePublicOrgData } from "@features/admin/hooks/usePublicOrgData";
-import OrgThemeSync from "@features/theme/OrgThemeSync";
+import { supabase } from "@shared/gateways/supabase/supabaseClient";
+import { usePublicOrgData } from "@modules/public/organization/hooks/usePublicOrgData";
+import OrgThemeSync from "@shared/ui/components/theme/OrgThemeSync";
 
 import "./PublicLayout.css"; 
 

@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from "react";
 import type { AppError } from "@errors/errors";
 import { FullScreenMessage } from "@ui/components/FullScreenMessage";
-import { makeNetworkFallbackMessage, GlobalNetworkErrorContext} from "./globalNetworkErrorProviderHook";
+import { makeNetworkFallbackMessage, 
+  GlobalNetworkErrorContext} from "./globalNetworkErrorProviderHook";
 
 
 

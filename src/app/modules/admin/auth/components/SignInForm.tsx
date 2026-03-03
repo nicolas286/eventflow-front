@@ -4,12 +4,13 @@ import "../pages/auth.mobile.css";
 import { useState } from "react";
 import { loginSchema, type LoginInput } from "../schemas/admin.auth.schema";
 import { authRepo } from "../data/authRepo";
-import { normalizeError } from "../../../../../domain/errors/errors";
-import Button from "../../../../../ui/components/button/Button";
-import PasswordInput from "../../../../../ui/components/inputs/PasswordInput";
-import Input from "../../../../../ui/components/inputs/Input";
-import { MessageBox } from "../../../../../ui/components/message/MessageBox";
-import { useLiveForm } from "../../../../../features/public/useLiveZodForm";
+import { normalizeError } from "@errors/errors";
+
+import Button from "@ui/components/button/Button";
+import PasswordInput from "@ui/components/inputs/PasswordInput";
+import Input from "@ui/components/inputs/Input";
+import { MessageBox } from "@ui/components/message/MessageBox";
+import { useLiveForm } from "@shared/hooks/useLiveZodForm";
 
 export function SignInForm() {
   const live = useLiveForm<LoginInput>(loginSchema, {

@@ -3,25 +3,25 @@ import { useNavigate } from "react-router-dom";
 import "../../../styles/desktop/profilePanel.desktop.css";
 import "../../../styles/mobile/profilePanel.mobile.css";
 
-import { Button, Input, Badge } from "../../../ui/components";
-import { useToast } from "../../../ui/components/toast/useToast";
+import { Button, Input, Badge } from "../../../shared/ui/components";
+import { useToast } from "../../../shared/ui/components/toast/useToast";
 
-import { supabase } from "../../../gateways/supabase/supabaseClient";
+import { supabase } from "../../../shared/gateways/supabase/supabaseClient";
 import { authRepo } from "@app/modules/admin/auth/data/authRepo";
-import { normalizeError } from "../../../domain/errors/errors";
+import { normalizeError } from "../../../shared/errors/errors";
 
-import { useSaveAdminProfile } from "../hooks/useUpdateAdminProfile";
-import { useDeleteAccount } from "../hooks/useDeleteAccount";
-import type { AdminProfileForm } from "../../../domain/models/admin/admin.updateAdminProfile.schema";
-import { inferCountryCode } from "../../../domain/helpers/countries";
+import { useSaveAdminProfile } from "@app/modules/admin/profile/hooks/useUpdateAdminProfile";
+import { useDeleteAccount } from "@app/modules/admin/profile/hooks/useDeleteAccount";
+import type { AdminProfileForm } from "@app/modules/admin/profile/schemas/admin.updateAdminProfile.schema";
+import { inferCountryCode } from "../../../shared/helpers/countries";
 
-import CountrySelect from "../../../ui/components/forms/CountrySelect";
-import PhoneInput from "../../../ui/components/forms/PhoneInput";
-import { parseE164, buildE164, COUNTRY_OPTIONS } from "../../../ui/components/forms/countryPhoneData";
+import CountrySelect from "@shared/ui/components/inputs/CountrySelect";
+import PhoneInput from "../../../shared/ui/components/inputs/PhoneInput";
+import { parseE164, buildE164, COUNTRY_OPTIONS } from "../../../shared/ui/components/inputs/countryPhoneData";
 
-import { ConfirmDeleteModal } from "../../../ui/components/modals/ConfirmDeleteModal";
+import { ConfirmDeleteModal } from "../../../shared/ui/components/modals/ConfirmDeleteModal";
 
-import { ChangePasswordModal } from "../../../ui/components/modals/ChangePasswordModal";
+import { ChangePasswordModal } from "../../../shared/ui/components/modals/ChangePasswordModal";
 
 type ProfilePanelProps = {
   profile: AdminProfileForm;
