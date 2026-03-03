@@ -777,3 +777,36 @@
 .adminFormCheckRow{ display:flex; align-items:flex-start; gap:10px; }
 .adminFormCheckbox{ margin-top:2px; }
 .adminFormCheckText{ font-weight:800; font-size:13px; color:#111827; }
+
+.adminExportMenu {
+  position: relative;
+  display: inline-flex;
+}
+
+.adminExportMenuDropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 240px;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--panel-bg, #fff);
+  border: 1px solid rgba(0,0,0,0.12);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  z-index: 50;
+}
+
+.adminExportMenuItem {
+  width: 100%;
+  text-align: left;
+  padding: 10px 10px;
+  border: 0;
+  background: transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.adminExportMenuItem:hover {
+  background: rgba(0,0,0,0.06);
+}

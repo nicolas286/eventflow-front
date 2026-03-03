@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentProps } from "react";
 
 import { supabase } from "@gateways/supabase/supabaseClient";
@@ -349,16 +349,69 @@ export function SingleEventParticipantsSection(props: {
 
   const shellOpen = Boolean(rightPanel);
 
-  /* Exporte un XLS des participants confirmés en respectant les filtres et l’identité calculée. */
-  const handleExportXls = useCallback(() => {
-    exportParticipantsXls({
-      data,
-      regFields,
-      localAttendees: filteredAttendees.filter((a) => a.status === "confirmed"),
-      filledFieldsByAttendeeId,
-      computeIdentityTitle: (attendeeId) => computeIdentity(attendeeId).title ?? "",
-    });
-  }, [data, regFields, filteredAttendees, filledFieldsByAttendeeId, computeIdentity]);
+  /** --- Export XLS dropdown --- */
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement | null>(null);
+
+  const confirmedAttendees = useMemo(() => {
+    return filteredAttendees.filter((a) => a.status === "confirmed");
+  }, [filteredAttendees]);
+
+  const doExportXls = useCallback(
+  async (
+    sortMode: "alpha" | "orderRef",
+    stripeMode: "row" | "order" = "order"
+  ) => {
+    try {
+      await exportParticipantsXls({
+        data,
+        regFields,
+        localAttendees: confirmedAttendees,
+        filledFieldsByAttendeeId,
+        computeIdentityTitle: (attendeeId) =>
+          computeIdentity(attendeeId).title ?? "",
+        sortMode,
+        stripeMode,
+      });
+    } catch (err) {
+      console.error("[participants] export XLS failed", err);
+    }
+  },
+  [
+    data,
+    regFields,
+    confirmedAttendees,
+    filledFieldsByAttendeeId,
+    computeIdentity,
+  ]
+);
+
+  const toggleExportMenu = useCallback(() => {
+    if (confirmedAttendees.length === 0) return;
+    setExportMenuOpen((v) => !v);
+  }, [confirmedAttendees.length]);
+
+  // fermeture clic extérieur + Escape
+  useEffect(() => {
+    if (!exportMenuOpen) return;
+
+    function onMouseDown(e: MouseEvent) {
+      const el = exportMenuRef.current;
+      if (!el) return;
+      if (e.target instanceof Node && !el.contains(e.target)) setExportMenuOpen(false);
+    }
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setExportMenuOpen(false);
+    }
+
+    document.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [exportMenuOpen]);
 
   return (
     <FlexPanel>
@@ -391,13 +444,44 @@ export function SingleEventParticipantsSection(props: {
           </div>
 
           <div className="adminParticipantsHeaderRight">
-            <Button
-              variant="secondary"
-              onClick={handleExportXls}
-              disabled={filteredAttendees.length === 0}
-            >
-              Export XLS
-            </Button>
+            {/* ✅ Export XLS avec dropdown */}
+            <div className="adminExportMenu" ref={exportMenuRef}>
+              <Button
+                variant="secondary"
+                onClick={toggleExportMenu}
+                disabled={confirmedAttendees.length === 0}
+              >
+                Export XLS
+              </Button>
+
+              {exportMenuOpen ? (
+                <div className="adminExportMenuDropdown" role="menu" aria-label="Options export XLS">
+                  <button
+                    type="button"
+                    className="adminExportMenuItem"
+                    role="menuitem"
+                    onClick={() => {
+                      setExportMenuOpen(false);
+                      doExportXls("alpha", "row");
+                    }}
+                  >
+                    Trier par nom (A→Z)
+                  </button>
+
+                  <button
+                    type="button"
+                    className="adminExportMenuItem"
+                    role="menuitem"
+                    onClick={() => {
+                      setExportMenuOpen(false);
+                      doExportXls("orderRef", "order");
+                    }}
+                  >
+                    Trier par commande (réf + index)
+                  </button>
+                </div>
+              ) : null}
+            </div>
 
             <Button variant="primary" onClick={openCreateOrder}>
               + Ajouter une commande
