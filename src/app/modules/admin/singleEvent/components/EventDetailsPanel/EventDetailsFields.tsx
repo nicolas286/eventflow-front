@@ -4,6 +4,7 @@ import { Button, Input } from "@ui/components";
 import { localDateTimeMinNow } from "@helpers/dateTime";
 
 import type { UpdateEventFullPatch } from "../../schemas/admin.updateEventFullPatch.schema";
+import { TextareaWithToolbar } from "@shared/ui/components/inputs/TextAreaWithToolbar";
 
 type FieldErrors = Partial<Record<keyof UpdateEventFullPatch, string>>;
 
@@ -32,6 +33,8 @@ type Props = {
   clearBanner: () => void;
 };
 
+
+
 export function EventDetailsFields(props: Props) {
   const {
     draft,
@@ -45,6 +48,7 @@ export function EventDetailsFields(props: Props) {
     onBannerPicked,
     clearBanner,
   } = props;
+
 
   return (
     <div className="adminEventDetails">
@@ -70,14 +74,16 @@ export function EventDetailsFields(props: Props) {
         </div>
 
         <div className="adminEventField adminEventFieldSpan2">
-          <div className="adminEventLabel">Description</div>
-          <textarea
-            className="adminEventTextarea"
-            value={draft.description}
-            onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
-          />
-          {fieldErrors.description ? <div className="formError">{fieldErrors.description}</div> : null}
-        </div>
+        <TextareaWithToolbar
+          label="Description"
+          value={draft.description}
+          onChange={(next) => setDraft((d) => ({ ...d, description: next }))}
+          error={fieldErrors.description ?? null}
+          textAreaClassName="adminEventTextarea"
+          rows={6}
+          hint="Markdown : **gras**, _italique_, ~~barré~~."
+        />
+      </div>
 
         <div className="adminEventField adminEventLeftCol">
           <div className="adminEventLabel">Début</div>

@@ -1,8 +1,16 @@
-import type { ChangeEventHandler, ReactNode, TextareaHTMLAttributes } from "react";
+import {
+  type ChangeEventHandler,
+  type ReactNode,
+  type TextareaHTMLAttributes,
+  forwardRef,
+} from "react";
+
 import "./textArea.desktop.css";
 
-
-export type TextAreaProps = Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "onChange"> & {
+export type TextAreaProps = Omit<
+  TextareaHTMLAttributes<HTMLTextAreaElement>,
+  "onChange"
+> & {
   label?: ReactNode;
   value?: string | number | readonly string[];
   onChange?: ChangeEventHandler<HTMLTextAreaElement>;
@@ -11,25 +19,35 @@ export type TextAreaProps = Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "o
   textAreaClassName?: string;
 };
 
-export default function TextArea({
-  label,
-  value,
-  onChange,
-  placeholder,
-  className = "",
-  textAreaClassName = "",
-  ...rest
-}: TextAreaProps) {
-  return (
-    <label className={["ui-field", className].filter(Boolean).join(" ")}>
-      {label ? <div className="ui-field__label">{label}</div> : null}
-      <textarea
-        className={["ui-textArea", textAreaClassName].filter(Boolean).join(" ")}
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        {...rest}
-      />
-    </label>
-  );
-}
+const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
+  (
+    {
+      label,
+      value,
+      onChange,
+      placeholder,
+      className = "",
+      textAreaClassName = "",
+      ...rest
+    },
+    ref
+  ) => {
+    return (
+      <label className={["ui-field", className].filter(Boolean).join(" ")}>
+        {label ? <div className="ui-field__label">{label}</div> : null}
+        <textarea
+          ref={ref}   
+          className={["ui-textArea", textAreaClassName]
+            .filter(Boolean)
+            .join(" ")}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          {...rest}
+        />
+      </label>
+    );
+  }
+);
+
+export default TextArea;

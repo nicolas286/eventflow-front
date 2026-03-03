@@ -11,6 +11,7 @@ import { GlobeIcon, PhoneIcon, SendIcon } from "@ui/components/icon/Icons";
 import { Seo } from "@shared/ui/components/seo/Seo";
 
 import { formatDateTimeHuman, toDayEndISO, toDayStartISO } from "@helpers/dateTime";
+import MarkdownText from "@shared/ui/components/markdowntext/MarkdownText";
 
 import type { PublicEventOverview } from "../schemas/public.orgEventsOverview.schema";
 
@@ -186,9 +187,7 @@ export function OrgPublicPage() {
                 </div>
 
                 {profile.description ? (
-                  <div className="publicProse" style={{ whiteSpace: "pre-wrap" }}>
-                    {profile.description}
-                  </div>
+                  <MarkdownText markdown={profile.description} className="publicProse" />
                 ) : (
                   <div className="publicEmpty">Cette organisation n’a pas encore de description.</div>
                 )}

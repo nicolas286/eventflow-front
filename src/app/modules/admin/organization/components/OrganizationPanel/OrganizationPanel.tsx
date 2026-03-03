@@ -3,7 +3,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import "./OrganizationPanel.desktop.css";
 import "./OrganizationPanel.mobile.css";
 
-import { Button, Input, TextArea, Select, Badge } from "@ui/components";
+import { Button, Input, Select, Badge } from "@ui/components";
+import { TextareaWithToolbar } from "@shared/ui/components/inputs/TextAreaWithToolbar";
 
 import { supabase } from "@shared/gateways/supabase/supabaseClient";
 import { useSaveOrgInfo } from "../../hooks/useSaveOrgInfo";
@@ -209,7 +210,7 @@ export default function StructurePanel({ orgId, orgInfo, orgProfile, onSaved }: 
             <div>
               <div className="structurePanel__label">Organisation</div>
               <div className="structurePanel__hint">
-                Le nom impacte le slug public. Si tu changes le nom, l’URL publique change.
+                Le nom impacte le slug public. Si vous changez le nom, l’URL publique change.
               </div>
             </div>
 
@@ -252,12 +253,14 @@ export default function StructurePanel({ orgId, orgInfo, orgProfile, onSaved }: 
           </div>
 
           <div className="structurePanel__field">
-            <TextArea
+            <TextareaWithToolbar
               label="Description"
               value={form.description}
-              onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))}
+              onChange={(next: string) =>
+              setForm((s) => ({ ...s, description: next }))
+            }
               rows={5}
-              placeholder="Décrivez votre organisation…"
+              hint="Markdown : **gras**, _italique_, ~~barré~~."
             />
           </div>
 
