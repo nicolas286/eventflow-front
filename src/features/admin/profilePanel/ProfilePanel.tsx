@@ -10,12 +10,12 @@ import { supabase } from "../../../shared/gateways/supabase/supabaseClient";
 import { authRepo } from "@app/modules/admin/auth/data/authRepo";
 import { normalizeError } from "../../../shared/errors/errors";
 
-import { useSaveAdminProfile } from "../hooks/useUpdateAdminProfile";
-import { useDeleteAccount } from "../hooks/useDeleteAccount";
-import type { AdminProfileForm } from "../../../domain/models/admin/admin.updateAdminProfile.schema";
+import { useSaveAdminProfile } from "@app/modules/admin/profile/hooks/useUpdateAdminProfile";
+import { useDeleteAccount } from "@app/modules/admin/profile/hooks/useDeleteAccount";
+import type { AdminProfileForm } from "@app/modules/admin/profile/schemas/admin.updateAdminProfile.schema";
 import { inferCountryCode } from "../../../shared/helpers/countries";
 
-import CountrySelect from "../../../shared/ui/components/forms/CountrySelect";
+import CountrySelect from "@shared/ui/components/inputs/CountrySelect";
 import PhoneInput from "../../../shared/ui/components/inputs/PhoneInput";
 import { parseE164, buildE164, COUNTRY_OPTIONS } from "../../../shared/ui/components/inputs/countryPhoneData";
 

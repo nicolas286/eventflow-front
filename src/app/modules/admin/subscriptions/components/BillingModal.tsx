@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { Button, Input, Badge } from "@shared/ui/components";
-import CountrySelect from "@ui/components/forms/CountrySelect";
+import CountrySelect from "@shared/ui/components/inputs/CountrySelect";
 
 import type { OrganizationBilling, 
   OrganizationBillingPatch } from "@shared/models/db/db.organizationBilling.schema";
