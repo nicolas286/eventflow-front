@@ -6,12 +6,12 @@ import { Link } from "react-router-dom";
 
 import { signupSchema, type SignupInput } from "../schemas/admin.auth.schema";
 import { authRepo } from "../data/authRepo";
-import { normalizeError } from "../../../../../domain/errors/errors";
-import Button from "../../../../../ui/components/button/Button";
-import Input from "../../../../../ui/components/inputs/Input";
-import PasswordInput from "../../../../../ui/components/inputs/PasswordInput";
-import { MessageBox } from "../../../../../ui/components/message/MessageBox";
-import { useLiveForm } from "../../../../../features/public/useLiveZodForm";
+import { normalizeError } from "@errors/errors";
+import Button from "@ui/components/button/Button";
+import Input from "@ui/components/inputs/Input";
+import PasswordInput from "@ui/components/inputs/PasswordInput";
+import { MessageBox } from "@ui/components/message/MessageBox";
+import { useLiveForm } from "@shared/hooks/useLiveZodForm";
 
 export function SignUpForm() {
   const live = useLiveForm<SignupInput>(signupSchema, {

@@ -1,17 +1,17 @@
 import { Route, Navigate } from "react-router-dom";
 
-import AdminAbonnementPage from "@admin-pages/AdminAbonnementPage";
-import AdminBrandingPage from "@admin-pages/AdminBrandingPage";
-import AdminDashboard from "@admin-pages/AdminDashboard";
-import AdminEventsPage from "@admin-pages/AdminEventsPage";
+import AdminAbonnementPage from "@app/modules/admin/subscriptions/pages/AdminSubscriptionPage";
+import AdminBrandingPage from "@app/modules/admin/branding/pages/AdminBrandingPage";
+import AdminDashboard from "@app/modules/admin/dashboard/components/AdminDashboard";
+import AdminEventsPage from "@app/modules/admin/events/pages/AdminEventsPage";
 import { AdminForgotPasswordPage } from "@app/modules/admin/auth/pages/AdminForgotPasswordPage";
 import { AdminLoginPage } from "@app/modules/admin/auth/pages/AdminLoginPage";
-import AdminProfilPage from "@admin-pages/AdminProfilPage";
+import AdminProfilPage from "@app/modules/admin/profile/pages/AdminProfilPage";
 import { AdminResetPasswordPage } from "@app/modules/admin/auth/pages/AdminResetPasswordPage";
 import { AdminSignUpPage } from "@app/modules/admin/auth/pages/AdminSignUpPage";
-import AdminStructurePage from "@admin-pages/AdminStructurePage";
-import OnboardingWizard from "@admin-pages/OnboardingWizard";
-import { AdminSingleEventPage } from "@admin-pages/singleEvent/AdminSingleEventPage";
+import AdminStructurePage from "@app/modules/admin/organization/pages/AdminOrganizationPage";
+import OnboardingWizard from "@app/modules/admin/onboarding/components/OnboardingWizard";
+import { AdminSingleEventPage } from "@app/modules/admin/singleEvent/pages/AdminSingleEventPage";
 
 import { AdminAuthLayout } from "../layouts/AdminAuthLayout";
 import { AdminLayout } from "../layouts/AdminLayout";

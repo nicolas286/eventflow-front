@@ -15,7 +15,7 @@ import "./auth.desktop.css";
 import "./auth.mobile.css";
 
 import { signupSchema } from "../schemas/admin.auth.schema";
-import { useLiveForm } from "@features/public/useLiveZodForm";
+import { useLiveForm } from "@shared/hooks/useLiveZodForm";
 
 const resetPasswordSchema = z
   .object({
