@@ -1,4 +1,4 @@
-import "./adminStats.desktop.css";
+import "./AdminStats.desktop.css";
 import { Card, CardBody } from "@ui/components";
 import { StatCard } from "./StatCard";
 
