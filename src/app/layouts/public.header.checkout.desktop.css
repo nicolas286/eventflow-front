@@ -3,7 +3,7 @@
 .publicHeaderRow {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: start;
   justify-content: space-between;
   margin-top: 6px;
   padding-top: clamp(26px, 4.5vw, 38px);

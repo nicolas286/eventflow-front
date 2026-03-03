@@ -5,6 +5,8 @@ import { formatDateTimeHuman } from "@helpers/dateTime";
 import "@layouts/publicPages.desktop.css";
 import type { PublicEvent, 
   PublicOrgProfileOverviewForEventPage } from "../../events/schemas/public.eventDetailBySlug.schema";
+import { PinIcon } from "@shared/ui/components/icon/Icons";
+import MarkdownText from "@shared/ui/components/markdowntext/MarkdownText";
 
 type Props = {
   orgSlug: string;
@@ -42,9 +44,16 @@ export function PublicEventHeader({ orgSlug, org, event }: Props) {
       <div className="publicHeaderRow">
         <div className="publicTitleBlock">
           <h1 className="publicTitle">{event.title}</h1>
-          <div className="publicSubtitle">
+          <div className="publicLocation">
+            <PinIcon/>
             {event.location ?? "Lieu à venir"}
           </div>
+          {event.description && (
+          <MarkdownText
+            markdown={event.description}
+            className="publicSubtitle"
+          />
+        )}
         </div>
 
         {(startText || endText) ? (

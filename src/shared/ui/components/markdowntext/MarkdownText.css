@@ -1,0 +1,52 @@
+.markdownText {
+  line-height: 1.6;
+  font-size: 1rem;
+}
+
+/* Paragraphes */
+.markdownText p {
+  margin: 0.5rem 0;
+}
+
+/* Titres */
+.markdownText h1,
+.markdownText h2,
+.markdownText h3,
+.markdownText h4 {
+  margin: 1rem 0 0.5rem;
+  font-weight: 700;
+}
+
+/* Listes */
+.markdownText ul,
+.markdownText ol {
+  margin: 0.5rem 0 0.5rem 1.5rem;
+  padding: 0;
+}
+
+.markdownText li {
+  margin: 0.25rem 0;
+}
+
+/* Liens */
+.markdownText a {
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+/* Séparateur */
+.markdownText hr {
+  margin: 1rem 0;
+  border: none;
+  border-top: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+/* Gras / italique déjà gérés par HTML,
+   mais tu peux custom si besoin */
+.markdownText strong {
+  font-weight: 700;
+}
+
+.markdownText em {
+  font-style: italic;
+}
