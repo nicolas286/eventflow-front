@@ -24,8 +24,8 @@ import {
 } from "@helpers/logic";
 
 import "@app/layouts/publicCheckoutBase.desktop.css";
-import "./eventTicketsPage.desktop.css";
-import "./eventTicketsPage.mobile.css";
+import "./EventTicketsPage.desktop.css";
+import "./EventTicketsPage.mobile.css";
 
 export function EventTicketsPage() {
   const navigate = useNavigate();
