@@ -34,8 +34,8 @@ import { validateFieldValue } from "@shared/helpers/validateFieldValue";
 import { getFieldKey } from "@shared/helpers/fields";
 
 import "@app/layouts/publicCheckoutBase.desktop.css";
-import "./eventAttendeesPage.desktop.css";
-import "./eventAttendeesPage.mobile.css";
+import "./EventAttendeesPage.desktop.css";
+import "./EventAttendeesPage.mobile.css";
 import type { EventFormFieldUI } from "@shared/models/db/db.eventFormFields.schema";
 import { MessageBox } from "@ui/components/message/MessageBox";
 
