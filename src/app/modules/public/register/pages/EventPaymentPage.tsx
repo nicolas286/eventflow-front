@@ -19,7 +19,7 @@ import {
 } from "../helpers/checkoutStore";
 
 import "@app/layouts/publicCheckoutBase.desktop.css";
-import "./eventPaymentPage.desktop.css";
+import "./EventPaymentPage.desktop.css";
 
 import { useRegister } from "../hooks/useRegister";
 
