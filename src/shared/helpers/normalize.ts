@@ -214,3 +214,9 @@ export function normalizeWebsite(input: string | null | undefined): string | nul
 
   return withProtocol.replace(/\/+$/, "");
 }
+
+// Conversion bytes to MB
+
+export function bytesToMb(bytes: number) {
+  return Math.round((bytes / (1024 * 1024)) * 10) / 10;
+}

@@ -6,11 +6,18 @@ import {
   type UpdateEventFullPatch,
 } from "../../schemas/admin.updateEventFullPatch.schema";
 
-import { Button,StickySaveBar } from "@ui/components";
+import { Button, StickySaveBar } from "@ui/components";
 import { FlexPanel } from "@ui/components/panels/FlexPanel";
 import { EventDetailsFields } from "./EventDetailsFields";
 
+import { isoToLocalInput, localInputToIso } from "@shared/helpers/dateTime";
+import { bytesToMb } from "@shared/helpers/normalize";
+import { centsToEuroInput, euroInputToCents } from "@shared/helpers/fields";
+import { withCacheBust } from "@shared/helpers/url";
+
 import type { AdminEventDetailEvent } from "../../schemas/admin.eventDetail.schema";
+import { MessageBox } from "@shared/ui/components/message/MessageBox";
+
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
 /* ------------------------------------------------------------------ */
@@ -53,41 +60,6 @@ function zodErrorsToFieldErrors(err: z.ZodError): FieldErrors {
   return out;
 }
 
-function isoToLocalInput(iso: string | null | undefined) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(
-    d.getMinutes()
-  )}`;
-}
-
-function localInputToIso(local: string) {
-  if (!local) return null;
-  const d = new Date(local);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toISOString();
-}
-
-function bytesToMb(bytes: number) {
-  return Math.round((bytes / (1024 * 1024)) * 10) / 10;
-}
-
-function centsToEuroInput(cents: number) {
-  const v = Number.isFinite(cents) ? cents / 100 : 0;
-  return v.toFixed(2).replace(".", ",");
-}
-
-function euroInputToCents(raw: string) {
-  const t = String(raw ?? "").trim();
-  if (!t) return 0;
-  const normalized = t.replace(",", ".");
-  const n = Number(normalized);
-  if (!Number.isFinite(n)) return null;
-  return Math.max(0, Math.round(n * 100));
-}
-
 function eventToDraft(event: AdminEventDetailEvent): Draft {
   return {
     title: event.title ?? "",
@@ -98,14 +70,6 @@ function eventToDraft(event: AdminEventDetailEvent): Draft {
     bannerUrlRaw: (event.bannerUrlRaw ?? "").trim(),
     depositEurosRaw: centsToEuroInput(event.depositCents ?? 0),
   };
-}
-
-function withBust(url: string, seed?: string | null) {
-  const u = (url ?? "").trim();
-  if (!u) return u;
-  const v = seed ? Date.parse(seed) || Date.now() : Date.now();
-  const sep = u.includes("?") ? "&" : "?";
-  return `${u}${sep}v=${v}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -119,6 +83,9 @@ export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanne
   const [saveOk, setSaveOk] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+
+  // live validation mode: when user is about to publish we enforce "publish" candidate
+  const [liveMode, setLiveMode] = useState<"draft" | "publish">("draft");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
@@ -164,8 +131,8 @@ export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanne
     const eff = (event.bannerUrlEffective ?? "").trim();
     if (!eff) return null;
 
-    if (forceDefaultPreview) return withBust(eff, event.updatedAt ?? null);
-    return withBust(eff, event.updatedAt ?? null);
+    if (forceDefaultPreview) return withCacheBust(eff, event.updatedAt ?? null);
+    return withCacheBust(eff, event.updatedAt ?? null);
   }, [localBannerPreview, uploadedBannerPreview, forceDefaultPreview, event.bannerUrlEffective, event.updatedAt]);
 
   const hasCustomBannerNow =
@@ -194,6 +161,7 @@ export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanne
     setSaveError(null);
     setSaveOk(false);
     setFieldErrors({});
+    setLiveMode("draft");
 
     setBannerFile(null);
     setUploadedBannerPreview(null);
@@ -205,7 +173,7 @@ export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanne
     }
   }
 
-  /* Build patch from draft + publish state */
+  /* Build patch from draft + publish state (DIFF patch, what you actually send) */
   function buildPatch(nextIsPublished: boolean): UpdateEventFullPatch {
     const patch: UpdateEventFullPatch = {};
 
@@ -235,6 +203,44 @@ export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanne
 
     return patch;
   }
+
+  /* Build "candidate patch" for LIVE validation (full values, not diff) */
+  function buildPatchCandidateFromDraft(nextIsPublished: boolean): UpdateEventFullPatch {
+    const s = localInputToIso(draft.startsAtLocal) || null;
+    const e = localInputToIso(draft.endsAtLocal) || null;
+
+    const cents = euroInputToCents(draft.depositEurosRaw);
+
+    return {
+      title: draft.title.trim(),
+      location: draft.location.trim() || null,
+      description: draft.description.trim() || null,
+      bannerUrl: draft.bannerUrlRaw.trim() || null,
+      startsAt: s,
+      endsAt: e,
+      isPublished: nextIsPublished,
+      // If invalid, make zod fail (NaN is not a valid number)
+      depositCents: cents ?? (Number.NaN as unknown as number),
+    };
+  }
+
+  /* LIVE Zod validation (debounced) */
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      const candidate = buildPatchCandidateFromDraft(liveMode === "publish");
+      const parsed = updateEventFullPatchSchema.safeParse(candidate);
+
+      if (parsed.success) {
+        setFieldErrors({});
+        return;
+      }
+
+      setFieldErrors(zodErrorsToFieldErrors(parsed.error));
+    }, 150);
+
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft, liveMode]);
 
   /* Banner picker / preview handling */
   function openBannerPicker() {
@@ -275,7 +281,6 @@ export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanne
     setSaving(true);
     setSaveError(null);
     setSaveOk(false);
-    setFieldErrors({});
 
     try {
       let forcedBannerUrl: string | null | undefined = undefined;
@@ -299,6 +304,15 @@ export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanne
 
         setDraft((d) => ({ ...d, bannerUrlRaw: up.publicUrl }));
         setForceDefaultPreview(false);
+      }
+
+      // Early fail using the same schema (candidate version)
+      const candidate = buildPatchCandidateFromDraft(nextIsPublished);
+      const liveParsed = updateEventFullPatchSchema.safeParse(candidate);
+      if (!liveParsed.success) {
+        setFieldErrors(zodErrorsToFieldErrors(liveParsed.error));
+        setSaving(false);
+        return;
       }
 
       const patch = buildPatch(nextIsPublished);
@@ -336,19 +350,29 @@ export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanne
       state={isDirty ? "dirty" : "default"}
       actions={
         <>
-          <Button disabled={!canSave || saving} onClick={() => void save(false)}>
+          <Button
+            disabled={!canSave || saving}
+            onFocus={() => setLiveMode("draft")}
+            onMouseEnter={() => setLiveMode("draft")}
+            onClick={() => void save(false)}
+          >
             {secondaryLabel}
           </Button>
 
-          <Button disabled={isPrimaryDisabled} onClick={() => void save(true)}>
+          <Button
+            disabled={isPrimaryDisabled}
+            onFocus={() => setLiveMode("publish")}
+            onMouseEnter={() => setLiveMode("publish")}
+            onClick={() => void save(true)}
+          >
             {saving ? "Enregistrement…" : primaryLabel}
           </Button>
         </>
       }
     >
       {updateError ? <p style={{ color: "crimson", margin: 0 }}>{updateError}</p> : null}
-      {saveError ? <div className="adminEventAlert isError">{saveError}</div> : null}
-      {saveOk ? <div className="adminEventAlert isOk">Enregistré</div> : null}
+      {saveError ? <MessageBox variant="error">{saveError}</MessageBox> : null}
+      {saveOk ? <MessageBox variant="success">Enregistré</MessageBox> : null}
 
       <EventDetailsFields
         draft={draft}

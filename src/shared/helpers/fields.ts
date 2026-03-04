@@ -180,4 +180,18 @@ export function toNullIfEmpty(s: string) {
   return t.length ? t : null;
 }
 
+export function centsToEuroInput(cents: number) {
+  const v = Number.isFinite(cents) ? cents / 100 : 0;
+  return v.toFixed(2).replace(".", ",");
+}
+
+export function euroInputToCents(raw: string) {
+  const t = String(raw ?? "").trim();
+  if (!t) return 0;
+  const normalized = t.replace(",", ".");
+  const n = Number(normalized);
+  if (!Number.isFinite(n)) return null;
+  return Math.max(0, Math.round(n * 100));
+}
+
 
