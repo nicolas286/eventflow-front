@@ -1,18 +1,10 @@
 import { Link } from "react-router-dom";
-import { Badge, Button } from "@ui/components";
+import { Badge } from "@ui/components";
 import EventCardActionsMenu from "./EventCardActionsMenu";
 import { getStatusInfo } from "@helpers/status";
 import { formatDateTimeHuman } from "@helpers/dateTime";
 import { safeEventTitle, toDisplayText } from "@shared/helpers/normalize";
 
-import {
-  CloseIcon,
-  EditIcon,
-  TrashIcon,
-  CopyIcon,
-  NotepadIcon,
-  FacebookIcon,
-} from "@ui/components/icon/Icons";
 
 import type { EventOverviewRow } from "../../events/schemas/admin.eventsOverview.schema";
 
