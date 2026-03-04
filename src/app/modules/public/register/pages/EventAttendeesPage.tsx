@@ -360,7 +360,7 @@ export function EventAttendeesPage() {
                                     groupClassName="publicPhoneGroup"
                                     selectStyle={commonStyle}
                                     inputStyle={commonStyle}
-                                    defaultDial="+33"
+                                    defaultDial="+32"
                                   />
                                   {/* PhoneInput n'a pas forcément de onBlur : on touche dès qu'on tente next ou si champ modifié */}
                                   {errorLine}
