@@ -197,18 +197,20 @@ export function normalizeContiguousSortOrder<T extends { sortOrder: number }>(li
    ============================================================ */
 
 /**
- * Normalise un site web:
- * - trim / vide => null
- * - si déjà http(s) => garde
- * - sinon préfixe https://
+ * Normalise une URL de site web entrée par un utilisateur.
+ *
+ * Règles :
+ * - trim + string vide → null
+ * - ajoute https:// si aucun protocole
+ * - supprime les slashs finaux
  */
 export function normalizeWebsite(input: string | null | undefined): string | null {
   const value = toNullableTrimmed(input);
   if (!value) return null;
 
-  if (/^https?:\/\//i.test(value)) {
-    return value;
-  }
+  const withProtocol = /^https?:\/\//i.test(value)
+    ? value
+    : `https://${value}`;
 
-  return `https://${value}`;
+  return withProtocol.replace(/\/+$/, "");
 }

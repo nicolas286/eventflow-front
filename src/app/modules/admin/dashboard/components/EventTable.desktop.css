@@ -85,44 +85,90 @@
 }
 
 /* =========================
-   Actions desktop
+   Actions dropdown
    ========================= */
 
-.eventCard__actions{
-  margin-top:14px;
+.eventCardActions{
+  position:relative;
   display:flex;
-  gap:10px;
-  justify-content:flex-start; /* ✅ tout part à gauche */
-  align-items:center;
+  align-items: end;
+  justify-content: end;
 }
 
-/* Link button */
-.eventCard__actionLink{
-  display:flex;
-}
 
-/* Boutons desktop (comme avant) */
-.eventCard__actions > button,
-.eventCard__actionLink .eventCard__actionBtn{
-  width:40px;
+/* Le bouton "Actions" */
+.eventCardActions__trigger{
   height:40px;
-  padding:0;
+  padding:0 12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:700;
+}
 
+/* Le menu */
+.eventCardActions__menu{
+  position:absolute;
+  right:0;
+  top:calc(100% + 8px);
+  min-width: 240px;
+
+  background:#fff;
+  border:1px solid #e5e7eb;
+  border-radius:12px;
+  box-shadow: 0 10px 20px rgba(16, 24, 40, 0.10);
+
+  padding:6px;
+  z-index:9999;
+}
+
+/* items (boutons et links) */
+.eventCardActions__item{
+  width:100%;
+  display:flex;
+  align-items:center;
+  gap:10px;
+
+  padding:10px 10px;
+  border-radius:10px;
+
+  font-weight:700;
+  font-size:14px;
+
+  background:transparent;
+  border:none;
+  text-align:left;
+  cursor:pointer;
+
+  text-decoration:none;
+  color:inherit;
+}
+
+.eventCardActions__item:hover{
+  background:#f3f4f6;
+}
+
+.eventCardActions__item.isDanger{
+  color:#b91c1c;
+}
+
+.eventCardActions__item.isDanger:hover{
+  background:#fee2e2;
+}
+
+.eventCardActions__item.isDisabled{
+  opacity:0.5;
+  pointer-events:none;
+}
+
+/* icônes */
+.eventCardActions__icon{
   display:flex;
   align-items:center;
   justify-content:center;
 }
 
-/* ✅ IMPORTANT : pousse le bouton danger à droite,
-   donc view + edit restent collés à gauche */
-.eventCard__actions > button.ui-button--danger{
-  margin-left:auto;
-}
-
-/* Icônes : taille lisible */
-.eventCard__actions svg{
-  width:20px;
-  height:20px;
-  min-width:16px;
-  min-height:16px;
+.eventCardActions__icon svg{
+  width:18px;
+  height:18px;
 }

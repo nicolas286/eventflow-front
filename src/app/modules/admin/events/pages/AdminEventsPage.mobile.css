@@ -49,6 +49,10 @@
     margin-top:-6px;
   }
 
+  .eventCardWrap .eventCard {
+    overflow: visible;
+  }
+
   /* Origine d'animation plus naturelle en dessous */
   .adminEventsEditorPanel--inline{
     transform-origin: top center;
