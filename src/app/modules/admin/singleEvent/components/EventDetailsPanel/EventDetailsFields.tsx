@@ -5,6 +5,7 @@ import { localDateTimeMinNow } from "@helpers/dateTime";
 
 import type { UpdateEventFullPatch } from "../../schemas/admin.updateEventFullPatch.schema";
 import { TextareaWithToolbar } from "@shared/ui/components/inputs/TextAreaWithToolbar";
+import { MessageBox } from "@shared/ui/components/message/MessageBox";
 
 type FieldErrors = Partial<Record<keyof UpdateEventFullPatch, string>>;
 
@@ -60,7 +61,7 @@ export function EventDetailsFields(props: Props) {
             value={draft.title}
             onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
           />
-          {fieldErrors.title ? <div className="formError">{fieldErrors.title}</div> : null}
+          {fieldErrors.title ? <MessageBox variant="error">{fieldErrors.title}</MessageBox> : null}
         </div>
 
         <div className="adminEventField">
@@ -70,7 +71,7 @@ export function EventDetailsFields(props: Props) {
             value={draft.location}
             onChange={(e) => setDraft((d) => ({ ...d, location: e.target.value }))}
           />
-          {fieldErrors.location ? <div className="formError">{fieldErrors.location}</div> : null}
+          {fieldErrors.location ? <MessageBox variant="error">{fieldErrors.location}</MessageBox> : null}
         </div>
 
         <div className="adminEventField adminEventFieldSpan2">
@@ -94,7 +95,7 @@ export function EventDetailsFields(props: Props) {
             value={draft.startsAtLocal}
             onChange={(e) => setDraft((d) => ({ ...d, startsAtLocal: e.target.value }))}
           />
-          {fieldErrors.startsAt ? <div className="formError">{fieldErrors.startsAt}</div> : null}
+          {fieldErrors.startsAt ? <MessageBox variant="error">{fieldErrors.startsAt}</MessageBox> : null}
         </div>
 
         <div className="adminEventField adminEventBannerSide">
@@ -142,7 +143,7 @@ export function EventDetailsFields(props: Props) {
             value={draft.endsAtLocal}
             onChange={(e) => setDraft((d) => ({ ...d, endsAtLocal: e.target.value }))}
           />
-          {fieldErrors.endsAt ? <div className="formError">{fieldErrors.endsAt}</div> : null}
+          {fieldErrors.endsAt ? <MessageBox variant="error">{fieldErrors.endsAt}</MessageBox> : null}
         </div>
 
         <div className="adminEventField adminEventLeftCol">
@@ -164,7 +165,7 @@ export function EventDetailsFields(props: Props) {
               }
             }}
           />
-          {fieldErrors.depositCents ? <div className="formError">{fieldErrors.depositCents}</div> : null}
+          {fieldErrors.depositCents ? <MessageBox variant="error">{fieldErrors.depositCents}</MessageBox> : null}
           <div className="adminEventHint">0 = pas d’acompte.</div>
         </div>
       </div>
