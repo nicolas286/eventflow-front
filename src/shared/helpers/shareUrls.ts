@@ -1,7 +1,4 @@
-// src/domain/helpers/shareUrls.ts
-function trimSlashEnd(s: string) {
-  return s.replace(/\/+$/, "");
-}
+import { normalizeWebsite } from "./normalize";
 
 function isLocalOrigin(origin: string) {
   return (
@@ -18,7 +15,7 @@ export function makeShareEventUrl(orgSlug: string, eventSlug: string) {
     envBase ||
     (isLocalOrigin(origin) ? "https://eventflow-staging.netlify.app" : origin);
 
-  const baseUrl = trimSlashEnd(String(base));
+  const baseUrl = normalizeWebsite(String(base));
   return `${baseUrl}/share/o/${encodeURIComponent(orgSlug)}/e/${encodeURIComponent(eventSlug)}`;
 }
 

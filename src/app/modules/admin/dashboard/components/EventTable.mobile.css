@@ -19,62 +19,28 @@
   .eventCard__meta{
     grid-template-columns:1fr;
   }
+}
 
-  /* =========================
-     Actions : 3 boutons STRICTEMENT identiques
-     ========================= */
+@media (max-width:700px){
 
   .eventCard__actions{
-    display:grid;
-    grid-template-columns:repeat(3, 1fr);
-    gap:8px;
+    display:flex;
+    margin-top: 16px;
   }
 
-  /* Chaque slot (Link ou Button) */
-  .eventCard__actions > *{
+  .eventCardActions,
+  .eventCardActions__trigger{
     width:100%;
   }
 
-  /* ✅ Le Link doit occuper la même case que les boutons
-        + reset des styles de <a> pour qu'il se comporte comme un bouton */
-  .eventCard__actionLink{
-    display:block;
-    width:100%;
+  .eventCardActions__trigger{
     height:48px;
-
-    text-decoration:none;
-    color:inherit;
-    line-height:0; /* évite des écarts verticaux liés au inline */
-  }
-
-  /* ✅ Le Button dans le Link remplit exactement la case */
-  .eventCard__actionLink .eventCard__actionBtn{
-    width:100%;
-    height:100%;
-    padding:0;
-
-    display:flex;
-    align-items:center;
     justify-content:center;
   }
 
-  /* Tous les boutons remplissent leur case */
-  .eventCard__actionBtn,
-  .eventCard__actions > button{
-    width:100%;
-    height:100%;
-    padding:0;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-  }
-
-  /* Icônes lisibles et uniformes */
-  .eventCard__actions svg{
-    width:20px;
-    height:20px;
-    min-width:16px;
-    min-height:16px;
+  .eventCardActions__menu{
+    left:0;
+    right:0; /* menu full width sous la carte */
+    min-width: unset;
   }
 }
