@@ -9,7 +9,18 @@ export type FilterMode = "all" | "order" | `field:${string}`;
 
 type OrderRow = EventDetailAdmin["orders"]["rows"][number]; // ✅ row type “source of truth”
 
-type OrderMeta = { orderNumber: string; createdAt?: string };
+export type OrderMeta = {
+  orderNumber: string;
+  createdAt?: string;
+
+  status: OrderRow["status"];
+  currency: string;
+
+  totalCents: number;
+  paidCents: number;
+  dueCents: number;
+};
+
 type FilledField = { key: string; label: string; value: string };
 
 export function useParticipantsViewModel(params: {
@@ -24,18 +35,26 @@ export function useParticipantsViewModel(params: {
 
   /* -------------------- ORDER META -------------------- */
   const orderMetaById = useMemo(() => {
-    const m = new Map<string, OrderMeta>();
+  const m = new Map<string, OrderMeta>();
 
-    for (const o of localOrders) {
-      const id = o.id;
-      m.set(id, {
-        orderNumber: (o.id.slice(0, 8)) as string,
-        createdAt: o.createdAt,
-      });
-    }
+  for (const o of localOrders) {
+    const total = o.totalCents ?? 0;
+    const paid = o.paidCents ?? 0;
+    const due = Math.max(0, total - paid);
 
-    return m;
-  }, [localOrders]);
+    m.set(o.id, {
+      orderNumber: o.id.slice(0, 8),
+      createdAt: o.createdAt,
+      status: o.status,
+      currency: o.currency,
+      totalCents: total,
+      paidCents: paid,
+      dueCents: due,
+    });
+  }
+
+  return m;
+}, [localOrders]);
 
   /* -------------------- ANSWERS BY ATTENDEE (FILLED) -------------------- */
   const filledFieldsByAttendeeId = useMemo(() => {

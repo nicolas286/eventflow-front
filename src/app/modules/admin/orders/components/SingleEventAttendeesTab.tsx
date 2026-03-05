@@ -28,8 +28,7 @@ import { makeLocalAnswers, buildUpdateAttendeeFromForm } from "@helpers/attendee
 import { exportParticipantsXls } from "../helpers/exportParticipantsXls";
 import { FlexPanel } from "@ui/components/panels/FlexPanel";
 
-import "./adminSingleEvent.participants.desktop.css";
-import "./adminSingleEvent.participants.mobile.css"; 
+import "./attendees.css";
 
 
 type FilterMode = "all" | "order" | `field:${string}`;

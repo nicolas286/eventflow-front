@@ -1,0 +1,1194 @@
+/* ===================================================== */
+/* ✅ ADMIN SINGLE EVENT — PARTICIPANTS (DESKTOP FIRST)   */
+/* Rationalisé sans changer l’apparence                  */
+/* ===================================================== */
+
+/* =========================
+   ✅ COMMON ANTI-OVERFLOW
+   ========================= */
+
+.adminParticipants,
+.adminSingleEventParticipants,
+.adminOrdersGrid,
+.adminOrderCard,
+.adminOrderHeader,
+.adminOrderPeople,
+.adminPersonCard,
+.adminPersonTop,
+.adminPersonBadges,
+.adminPersonMeta,
+.adminFieldLine,
+.adminFilledGrid,
+.adminInlineOrderWizard,
+.adminInlineEditorWrap,
+.adminParticipantsHeader,
+.adminParticipantsHeaderRight {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* ✅ anti overflow global section */
+.adminParticipants,
+.adminSingleEventParticipants {
+  overflow-x: visible;
+}
+
+/* Flex/grid children shrink */
+.adminOrderHeader > *,
+.adminPersonTop > * {
+  min-width: 0;
+}
+
+/* =========================
+   Orders grid
+   ========================= */
+
+.adminOrdersGrid {
+  display: grid;
+  gap: 14px;
+}
+
+/* =========================
+   Order card
+   ========================= */
+
+   .adminOrderCard{
+  background:#fff;
+  border:1px solid rgba(0,0,0,0.08);
+  border-radius:18px;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.05);
+  overflow:hidden;
+}
+
+.adminOrderHeader{
+  background: linear-gradient(180deg, rgba(0,0,0,0.025), transparent);
+}
+.adminOrderCard .adminPersonCard{
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+
+  padding: 14px 0;   
+  border-radius: 0;   
+}
+
+.adminOrderCard .adminFilledGrid{
+  border-top: 1px dashed rgba(0,0,0,0.10);
+  padding-top: 12px;
+  margin-top: 10px;
+}
+
+.adminOrderHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.adminOrderTitle {
+  font-weight: 900;
+  letter-spacing: -0.01em;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adminOrderSub {
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.8;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.adminOrderSubLabel {
+  font-weight: 800;
+  opacity: 0.75;
+}
+
+.adminOrderSubDot {
+  opacity: 0.5;
+}
+
+.adminOrderPill {
+  font-size: 12px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  white-space: nowrap;
+  font-weight: 800;
+
+  box-sizing: border-box;
+}
+
+/* --- Right side header actions (pill + button) --- */
+.adminOrderHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.adminOrderHeaderRight .ui-button {
+  max-width: 100%;
+}
+
+.adminOrderPeople{
+  padding: 6px 14px;     /* moins haut */
+  display: grid;
+  gap: 0;                /* plus de gros trous */
+}
+
+.adminOrderPeople > *{
+  min-width:0;
+}
+
+.adminOrderPeople > * + *{
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+
+/* =========================
+   Person card
+   ========================= */
+.adminPersonRow{
+  padding:14px 12px;
+  border-radius:12px;
+  background:rgba(0,0,0,0.02);
+}
+
+.adminPersonRow + .adminPersonRow{
+  border-top: 1px dashed rgba(0,0,0,0.15);
+  margin-top: 14px;
+  padding-top: 14px;
+}
+
+.adminPersonRow:nth-child(even){
+  background: rgba(0,0,0,0.015);
+  border-radius: 12px;
+  padding: 10px 10px;
+}
+
+.adminPersonTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+margin-bottom: 10px;
+}
+
+.adminPersonName {
+  font-weight: 900;
+  letter-spacing: -0.01em;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adminPersonIndex{
+  font-size:14px;
+  padding:3px 6px;
+  border-radius:6px;
+  background:rgba(0,0,0,0.06);
+  margin-left:6px;
+}
+
+.adminPersonSub {
+  margin-top: 2px;
+  font-size: 12px;
+  opacity: 0.75;
+
+  overflow-wrap: anywhere;
+}
+
+.adminPersonBadges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.adminStatusBadge,
+.adminProductBadge {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  white-space: nowrap;
+  font-weight: 800;
+
+  box-sizing: border-box;
+}
+
+/* Status nuances */
+.adminStatusBadge.is-confirmed {
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+.adminStatusBadge.is-reserved {
+  background: rgba(59, 130, 246, 0.14);
+  border-color: rgba(59, 130, 246, 0.25);
+}
+.adminStatusBadge.is-cancelled {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+.adminStatusBadge.is-expired {
+  background: rgba(234, 179, 8, 0.14);
+  border-color: rgba(234, 179, 8, 0.25);
+}
+
+/* (Conservé tel quel même si pas utilisé partout) */
+.adminPersonMeta {
+  margin-top: 10px;
+  display: grid;
+  gap: 6px 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.adminMetaLabel {
+  font-weight: 900;
+  opacity: 0.75;
+}
+
+/* (Conservé tel quel même si pas utilisé partout) */
+.adminRequiredGrid {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.12);
+  padding-top: 10px;
+}
+
+.adminOrderCard .adminFieldLine{
+  background: transparent;
+  border: 0;
+  padding: 0;
+  border-radius: 0;
+}
+
+
+.adminFieldLabel{
+  font-size: 11px;
+  font-weight: 900;
+  opacity: 0.65;
+}
+
+.adminFieldValue{
+  font-size: 13px;
+  font-weight: 950;
+  color: #111827;
+
+  margin-left: 4px;
+  text-align: left;
+  white-space: normal;      
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;  
+  max-width: 100%;
+}
+
+.adminFilledGrid{
+  margin-top: 12px;
+  padding-top: 12px;
+border-top:1px dashed rgba(0,0,0,0.18);
+
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+
+@media (max-width: 720px){
+  .adminFilledGrid{
+    grid-template-columns: 1fr;
+  }
+}
+
+.adminFilledEmpty {
+  font-size: 12px;
+  opacity: 0.7;
+  font-weight: 700;
+}
+
+/* Actions en bas de la card participant */
+.adminPersonActionsBottom {
+  margin-top: 22px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.12);
+  padding-top: 16px;
+
+  flex-wrap: wrap;
+}
+
+/* =========================
+   Participants header
+   ========================= */
+
+.adminParticipantsHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.adminParticipantsHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.adminParticipantsHeaderRight .ui-button {
+  max-width: 100%;
+}
+
+/* Order empty state */
+.adminOrderEmptyPeople {
+  padding: 10px 12px;
+  border: 1px dashed rgba(0, 0, 0, 0.14);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.02);
+  font-size: 12px;
+  font-weight: 800;
+  opacity: 0.75;
+}
+
+.adminPersonExpand{
+  margin-top: 10px;
+  width: 100%;
+  border: 1px dashed rgba(0,0,0,0.14);
+  background: rgba(255,255,255,0.55);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-weight: 900;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.adminChevron{
+  display: inline-block;
+  transform: translateY(-1px);
+  transition: transform 160ms ease;
+  opacity: 0.7;
+}
+
+.adminChevron.isOpen{
+  transform: rotate(180deg) translateY(1px);
+}
+
+/* ============================= */
+/* Inline editor (mobile/inline) */
+/* ============================= */
+
+.adminInlineEditorWrap {
+  margin-top: 10px;
+}
+
+.adminInlineEditorWrap *,
+.adminInlineOrderWizard * {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* animation (ouverture/fermeture) */
+.adminInlineEditorPanel {
+  transform-origin: top center;
+  animation-duration: 180ms;
+  animation-fill-mode: both;
+}
+
+.adminInlineEditorPanel.isOpen {
+  animation-name: adminInlineEditorIn;
+  animation-timing-function: ease-out;
+}
+
+.adminInlineEditorPanel.isClosing {
+  animation-name: adminInlineEditorOut;
+  animation-timing-function: ease-in;
+}
+
+@keyframes adminInlineEditorIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes adminInlineEditorOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.99);
+  }
+}
+
+/* Wizard create order when inline */
+.adminInlineOrderWizard {
+  margin-bottom: 14px;
+}
+
+/* ===================================================== */
+/* ✅ Participants (Single Event) — centered card layout  */
+/* ===================================================== */
+
+.adminParticipants {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.adminParticipantsTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 900;
+  color: #111827;
+}
+
+.adminParticipantsHint {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 800;
+}
+
+.adminParticipantsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.adminParticipantCard {
+  border-radius: 18px;
+  padding: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: linear-gradient(
+    180deg,
+    rgba(var(--primary-bg) / 0.16),
+    rgba(255, 255, 255, 0.98) 58%
+  );
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.05);
+  min-width: 0;
+}
+
+.adminParticipantTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.adminParticipantIdentity {
+  min-width: 0;
+}
+
+.adminParticipantName {
+  font-weight: 1000;
+  color: #111827;
+  font-size: 15px;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.adminParticipantSub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #4b5563;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.adminParticipantPills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.adminParticipantPill {
+  font-size: 12px;
+  font-weight: 900;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.05);
+  border: 1px solid rgba(17, 24, 39, 0.10);
+  color: #111827;
+  white-space: nowrap;
+}
+
+.adminParticipantPill.isStrong {
+  background: rgba(var(--primary-bg) / 0.16);
+  border-color: rgba(var(--primary-bg) / 0.28);
+}
+
+.adminParticipantStats {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.adminParticipantStat {
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+
+.adminParticipantStatLabel {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 800;
+}
+
+.adminParticipantStatValue {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 1000;
+  color: #111827;
+}
+
+.adminParticipantOrders {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.adminParticipantOrder {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  padding: 10px 12px;
+}
+
+.adminParticipantOrderTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.adminParticipantOrderTitle {
+  font-weight: 1000;
+  color: #111827;
+  font-size: 13px;
+}
+
+.adminParticipantOrderMeta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.adminParticipantBadge {
+  font-size: 11px;
+  font-weight: 900;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.06);
+  border: 1px solid rgba(17, 24, 39, 0.10);
+  color: #111827;
+  white-space: nowrap;
+}
+
+.adminParticipantBadge.isPaid {
+  background: rgba(16, 185, 129, 0.10);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: #065f46;
+}
+
+.adminParticipantBadge.isPartial {
+  background: rgba(245, 158, 11, 0.10);
+  border-color: rgba(245, 158, 11, 0.28);
+  color: #7c2d12;
+}
+
+.adminParticipantBadge.isUnpaid {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.22);
+  color: #7f1d1d;
+}
+
+.adminParticipantOrderSub {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #6b7280;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+.adminParticipantOrderAmounts {
+  font-weight: 1000;
+  color: #111827;
+}
+
+.adminParticipantOrderItems {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.adminParticipantOrderItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(17, 24, 39, 0.04);
+  border: 1px solid rgba(17, 24, 39, 0.08);
+}
+
+.adminParticipantOrderItemTitle {
+  font-size: 12px;
+  font-weight: 900;
+  color: #111827;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.adminParticipantOrderItemRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.adminParticipantOrderQty {
+  font-size: 12px;
+  font-weight: 1000;
+  color: #111827;
+}
+
+.adminParticipantOrderPrice {
+  font-size: 12px;
+  font-weight: 900;
+  color: #374151;
+}
+
+.adminParticipantOrdersEmpty,
+.adminParticipantOrderEmpty {
+  font-size: 12px;
+  color: #6b7280;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px dashed rgba(0, 0, 0, 0.18);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+/* ===================================================== */
+/* ✅ Single Event - Participants → centered card layout  */
+/* ===================================================== */
+
+.adminSingleEventParticipants {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px;
+
+  border-radius: 18px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.06);
+}
+
+.adminSingleEventParticipants .adminParticipantsTitle {
+  font-size: 18px;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+}
+
+/* ===================================================== */
+/* ✅ EditorShell sticky fix (si jamais parent interfère) */
+/* ===================================================== */
+
+.adminSingleEventParticipants .uiEditorShell {
+  position: relative;
+}
+
+.adminSingleEventParticipants .uiEditorRight {
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+/* Sécurité : évite qu’un parent casse le sticky */
+.adminSingleEventParticipants .uiEditorPanel {
+  position: sticky;
+  top: var(--sticky-top);
+}
+
+/* ===================================================== */
+/* ✅ Attendee form grid 2 columns (desktop only)         */
+/* ===================================================== */
+
+/* (Conservé tel quel) */
+.adminAttendeeEditorGrid > * {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+.adminAttendeeEditorGrid > * > * {
+  min-width: 0;
+}
+.adminAttendeeEditorGrid > * .adminEventFieldSpan2 {
+  grid-column: 1 / -1;
+}
+
+/* ✅ Rationalisé : une seule définition cohérente */
+.adminAttendeeFieldsGrid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 900px) {
+  .adminAttendeeFieldsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.adminAttendeeFieldItem {
+  min-width: 0;
+}
+
+.adminAttendeeFieldsGrid .adminCO_Field {
+  min-width: 0;
+}
+
+.adminAttendeeFieldsGrid .adminCO_Control {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* =========================
+   Form controls (conservé)
+   ========================= */
+
+.adminFormField {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.adminFormLabel {
+  font-weight: 900;
+  font-size: 12px;
+  color: #111827;
+}
+
+.adminFormReq {
+  opacity: 0.7;
+  font-weight: 900;
+  margin-left: 6px;
+}
+
+.adminFormControl {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: #fff;
+  font-weight: 800;
+  font-size: 13px;
+  outline: none;
+}
+
+.adminFormControl:focus {
+  border-color: rgba(var(--primary-bg) / 0.55);
+  box-shadow: 0 0 0 3px rgba(var(--primary-bg) / 0.14);
+}
+
+.adminFormTextarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+.adminFormCheckRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.adminFormCheckbox {
+  margin-top: 2px;
+}
+
+.adminFormCheckText {
+  font-weight: 800;
+  font-size: 13px;
+  color: #111827;
+}
+
+/* =========================
+   Export menu (conservé)
+   ========================= */
+
+.adminExportMenu {
+  position: relative;
+  display: inline-flex;
+}
+
+.adminExportMenuDropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 240px;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--panel-bg, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 50;
+}
+
+.adminExportMenuItem {
+  width: 100%;
+  text-align: left;
+  padding: 10px 10px;
+  border: 0;
+  background: transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.adminExportMenuItem:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* ===================================================== */
+/* ✅ MOBILE PARTICIPANTS (≤720px)                        */
+/* ===================================================== */
+
+@media (max-width: 720px) {
+  /* ✅ anti overflow global */
+  .adminParticipants,
+  .adminSingleEventParticipants,
+  .adminOrdersGrid,
+  .adminOrderCard,
+  .adminOrderPeople,
+  .adminPersonCard,
+  .adminInlineOrderWizard,
+  .adminInlineEditorWrap {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* =========================
+     HEADER
+     ========================= */
+
+  .adminParticipantsHeader {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .adminParticipantsHeaderRight {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .adminParticipantsHeaderRight .ui-button {
+    width: 100%;
+  }
+
+  /* =========================
+     FILTER BAR (conservé)
+     ========================= */
+
+  .adminParticipantsSearch {
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .adminSearchSelect {
+    flex: 0 0 auto;
+    min-width: 140px;
+    max-width: 45%;
+  }
+
+  .adminSearchInput {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+    max-width: 100%;
+  }
+
+  .adminParticipantsSearch .ui-button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  /* =========================
+     ORDER CARD
+     ========================= */
+
+  .adminOrderHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .adminOrderHeaderRight {
+    width: 100%;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .adminOrderHeaderRight .ui-button {
+    width: 100%;
+  }
+
+  /* =========================
+     PERSON CARD
+     ========================= */
+
+  .adminPersonTop{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+}
+
+.adminPersonTop > div:first-child{
+  flex: 1;
+  min-width: 0;
+}
+
+.adminPersonBadges{
+  flex: 0 0 auto;
+  margin-left: auto;
+  justify-content: flex-end;
+}
+  .adminPersonMeta {
+    grid-template-columns: 1fr;
+  }
+
+  .adminFieldValue {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* =========================================================
+     ✅ FIX MAJEUR : WIZARD AJOUT COMMANDE EN MOBILE
+     ========================================================= */
+
+  .adminInlineOrderWizard {
+    width: 100%;
+    max-width: 100%;
+    margin-top: 14px;
+
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    background: #fff;
+
+    padding: 14px;
+    box-sizing: border-box;
+
+    max-height: 78vh;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ✅ Force les variables du EditorShell interne (même si editorWidth=420) */
+  .adminInlineOrderWizard,
+  .adminInlineOrderWizard .uiEditorShell {
+    --editor-w: 100% !important;
+    --editor-gap: 0px !important;
+  }
+
+  /* ❌ On supprime toute limite artificielle qui casse la mise en page */
+  .adminInlineOrderWizard *,
+  .adminInlineEditorWrap * {
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+
+  /* ✅ Neutralise le layout "2 colonnes" du EditorShell */
+  .adminInlineOrderWizard .uiEditorShell {
+    width: 100% !important;
+    display: block !important;
+  }
+
+  .adminInlineOrderWizard .uiEditorLeft {
+    display: none !important;
+  }
+
+  .adminInlineOrderWizard .uiEditorRight {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .adminInlineOrderWizard .uiEditorPanel {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+
+    padding: 0 !important;
+  }
+
+  .adminInlineOrderWizard .uiEditorPanelInner {
+    padding: 0 !important;
+  }
+
+  /* ✅ Grids du wizard: 1 colonne */
+  .adminInlineOrderWizard .adminEventFormGrid {
+    grid-template-columns: 1fr !important;
+    width: 100% !important;
+  }
+
+  .adminInlineOrderWizard input,
+  .adminInlineOrderWizard select,
+  .adminInlineOrderWizard textarea {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* ✅ Boutons full width */
+  .adminInlineOrderWizard .ui-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* =========================
+   ULTRA SMALL (≤420px)
+   ========================= */
+
+@media (max-width: 420px) {
+  .adminParticipantsSearch {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .adminSearchSelect {
+    flex: 0 1 120px;
+    min-width: 100px;
+    max-width: 44%;
+    padding: 8px 9px;
+    font-size: 11px;
+  }
+
+  .adminSearchInput {
+    flex: 1 1 auto;
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+
+  .adminParticipantsSearch .ui-button {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .adminInlineOrderWizard {
+    padding: 12px;
+    max-height: 76vh;
+  }
+
+  .adminInlineOrderWizard .ui-button {
+    width: 100%;
+  }
+}
+
+.adminOrdersPagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 6px 0 14px;
+  min-width: 0;
+}
+
+.adminOrdersPaginationInfo {
+  font-size: 12px;
+  font-weight: 800;
+  opacity: 0.8;
+  text-align: center;
+  min-width: 0;
+}
+
+.adminOrdersPaginationBottom {
+  margin: 14px 0 0;
+}
+
+@media (max-width: 720px) {
+  .adminOrdersPagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .adminOrdersPagination .ui-button {
+    width: 100%;
+  }
+}
+
+.adminOrderAmountsCompact{
+  margin-top:6px;
+  font-size:12px;
+  font-weight:700;
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  align-items:center;
+  color:#374151;
+}
+
+.adminDot{
+  opacity:0.4;
+}
+
+.adminOrderDue{
+  font-weight:900;
+  color:#111827;
+}
+
+.adminOrderFree{
+  margin-top:6px;
+  font-size:12px;
+  font-weight:900;
+  color:#059669;
+}
