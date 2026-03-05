@@ -89,58 +89,64 @@ export function AdminResetPasswordPage() {
   const [okMsg, setOkMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    let mounted = true;
+  let mounted = true;
 
-    async function bootstrapRecovery() {
-      try {
-        // ✅ 0) Reset des états
-        if (!mounted) return;
-        setCanReset(false);
-        setRecoveryError(null);
+  const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+    if (!mounted) return;
+    if (event === "PASSWORD_RECOVERY") setCanReset(true);
+  });
 
-        // ✅ 1) Traiter les erreurs éventuelles renvoyées dans le hash
-        const hashErr = parseSupabaseHashError();
-        if (hashErr) {
-          if (!mounted) return;
-          setRecoveryError(hashErr);
-          setCanReset(false);
-          clearHashFromUrl(); // évite de garder l’erreur dans l’URL
-          return;
-        }
-
-        // ✅ 2) Autoriser uniquement si on a un code de recovery à échanger
-        const url = new URL(window.location.href);
-        const code = url.searchParams.get("code");
-
-        // Pas de code => on attend éventuellement l'event PASSWORD_RECOVERY
-        if (!code) return;
-
-        // Échange code -> session (recovery)
-        const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
-        if (error) throw error;
-
-        if (!mounted) return;
-        setCanReset(true);
-      } catch {
-        if (!mounted) return;
-        setCanReset(false);
-        setRecoveryError("Lien invalide ou expiré. Recommencez une demande “Mot de passe oublié”.");
-      }
-    }
-
-    bootstrapRecovery();
-
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      // ✅ 3) Autoriser le reset si Supabase signale explicitement un recovery
+  async function bootstrapRecovery() {
+    try {
       if (!mounted) return;
-      if (event === "PASSWORD_RECOVERY") setCanReset(true);
-    });
+      setCanReset(false);
+      setRecoveryError(null);
 
-    return () => {
-      mounted = false;
-      sub.subscription.unsubscribe();
-    };
-  }, []);
+      const hashErr = parseSupabaseHashError();
+      if (hashErr) {
+        if (!mounted) return;
+        setRecoveryError(hashErr);
+        setCanReset(false);
+        clearHashFromUrl();
+        return;
+      }
+
+      // ✅ 1) si une session existe déjà (ex: implicit hash déjà traité), on autorise
+      const { data: sess } = await supabase.auth.getSession();
+      if (!mounted) return;
+      if (sess.session) {
+        setCanReset(true);
+        return;
+      }
+
+      // ✅ 2) sinon, si on est en PKCE avec ?code=..., on échange
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get("code");
+      if (!code) return;
+
+      const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+      if (error) throw error;
+
+      // (optionnel mais recommandé) enlever le code de l'URL pour éviter double-consommation au refresh
+      url.searchParams.delete("code");
+      window.history.replaceState({}, document.title, url.pathname + url.search);
+
+      if (!mounted) return;
+      setCanReset(true);
+    } catch {
+      if (!mounted) return;
+      setCanReset(false);
+      setRecoveryError("Lien invalide ou expiré. Recommencez une demande “Mot de passe oublié”.");
+    }
+  }
+
+  bootstrapRecovery();
+
+  return () => {
+    mounted = false;
+    sub.subscription.unsubscribe();
+  };
+}, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -192,7 +198,7 @@ export function AdminResetPasswordPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
-                      <PasswordConfirmFields
+            <PasswordConfirmFields
               live={{
                 form,
                 fieldErrors,
