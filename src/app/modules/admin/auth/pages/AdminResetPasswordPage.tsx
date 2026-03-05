@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { z } from "zod";
 
 import { Button } from "@ui/components";
-import PasswordInput from "@ui/components/inputs/PasswordInput";
 import { MessageBox } from "@ui/components/message/MessageBox";
 import PublicFooter from "@ui/components/publicFooter/PublicFooter";
 
@@ -193,24 +192,28 @@ export function AdminResetPasswordPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
-          <PasswordConfirmFields
-            live={{
-              form,
-              fieldErrors,
-              handleChange,
-              handleBlur,
-              shouldShowFieldError,
-            }}
-            passwordKey="password"
-            confirmKey="confirmPassword"
-            labels={{ password: "Nouveau mot de passe", confirm: "Confirmer le mot de passe" }}
-            placeholders={{ password: "Nouveau mot de passe", confirm: "Confirmez le mot de passe" }}
-            autoComplete="new-password"
-            onAnyChange={() => {
-              setErrorMsg(null);
-              setOkMsg(null);
-            }}
-          />
+                      <PasswordConfirmFields
+              live={{
+                form,
+                fieldErrors,
+                handleChange,
+                handleBlur,
+                shouldShowFieldError,
+              }}
+              passwordKey="password"
+              confirmKey="confirmPassword"
+              labels={{ password: "Nouveau mot de passe", confirm: "Confirmer le mot de passe" }}
+              placeholders={{ password: "Nouveau mot de passe", confirm: "Confirmez le mot de passe" }}
+              autoComplete="new-password"
+              onAnyChange={() => {
+                setErrorMsg(null);
+                setOkMsg(null);
+              }}
+            />
+
+            {errorMsg && <MessageBox variant="error">{errorMsg}</MessageBox>}
+            {okMsg && <MessageBox variant="success">{okMsg}</MessageBox>}
+
           <div className="auth-links">
             <Link to="/admin/login" className="auth-link">
               Se connecter
