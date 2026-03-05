@@ -16,6 +16,7 @@ import "./auth.mobile.css";
 
 import { signupSchema } from "../schemas/admin.auth.schema";
 import { useLiveForm } from "@shared/hooks/useLiveZodForm";
+import { PasswordConfirmFields } from "../components/PasswordConfirmFields";
 
 const resetPasswordSchema = z
   .object({
@@ -192,43 +193,24 @@ export function AdminResetPasswordPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form">
-          <PasswordInput
-            label="Nouveau mot de passe"
-            placeholder="Nouveau mot de passe"
-            value={form.password}
-            onChange={(e) => {
+          <PasswordConfirmFields
+            live={{
+              form,
+              fieldErrors,
+              handleChange,
+              handleBlur,
+              shouldShowFieldError,
+            }}
+            passwordKey="password"
+            confirmKey="confirmPassword"
+            labels={{ password: "Nouveau mot de passe", confirm: "Confirmer le mot de passe" }}
+            placeholders={{ password: "Nouveau mot de passe", confirm: "Confirmez le mot de passe" }}
+            autoComplete="new-password"
+            onAnyChange={() => {
               setErrorMsg(null);
               setOkMsg(null);
-              handleChange("password", e.target.value);
-              // garde confirmPassword “en phase” pour afficher l'erreur si besoin
-              if (form.confirmPassword) handleChange("confirmPassword", form.confirmPassword);
             }}
-            onBlur={() => handleBlur("password")}
-            autoComplete="new-password"
           />
-          {shouldShowFieldError("password") && fieldErrors.password && (
-            <MessageBox variant="error">{fieldErrors.password}</MessageBox>
-          )}
-
-          <PasswordInput
-            label="Confirmer le mot de passe"
-            placeholder="Confirmez le mot de passe"
-            value={form.confirmPassword}
-            onChange={(e) => {
-              setErrorMsg(null);
-              setOkMsg(null);
-              handleChange("confirmPassword", e.target.value);
-            }}
-            onBlur={() => handleBlur("confirmPassword")}
-            autoComplete="new-password"
-          />
-          {shouldShowFieldError("confirmPassword") && fieldErrors.confirmPassword && (
-            <MessageBox variant="error">{fieldErrors.confirmPassword}</MessageBox>
-          )}
-
-          {errorMsg && <MessageBox variant="error">{errorMsg}</MessageBox>}
-          {okMsg && <MessageBox variant="success">{okMsg}</MessageBox>}
-
           <div className="auth-links">
             <Link to="/admin/login" className="auth-link">
               Se connecter
