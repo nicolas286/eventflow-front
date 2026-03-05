@@ -18,6 +18,7 @@ type Props = {
 
   onCopyLink: (orgSlug: string | undefined, eventSlug: string) => void | Promise<void>;
   onShareFacebook: (orgSlug: string | undefined, eventSlug: string) => void;
+  onShareWhatsapp: (orgSlug: string | undefined, eventSlug: string) => void;
 };
 
 export default function EventCard({
@@ -28,6 +29,7 @@ export default function EventCard({
   onDelete,
   onCopyLink,
   onShareFacebook,
+  onShareWhatsapp,
 }: Props) {
   const s = getStatusInfo(ev.isPublished ? "open" : "draft");
   const canView = !!ev.slug;
@@ -71,6 +73,7 @@ export default function EventCard({
             onToggleInlineEdit={() => onSelect(ev.id)}
             onCopyLink={canView ? () => onCopyLink(orgSlug, ev.slug!) : undefined}
             onShareFacebook={canView ? () => onShareFacebook(orgSlug, ev.slug!) : undefined}
+            onShareWhatsapp={canView ? () => onShareWhatsapp(orgSlug, ev.slug!) : undefined}
             onDelete={() => onDelete(ev.id)}
         />
        </div>
