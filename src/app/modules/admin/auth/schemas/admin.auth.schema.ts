@@ -21,5 +21,21 @@ export const signupSchema = z.object({
   }),
 });
 
+export const signupUiSchema = signupSchema
+  .extend({
+    confirmPassword: z.string().min(1, "Confirmez le mot de passe."),
+  })
+  .superRefine((val, ctx) => {
+    if (val.password !== val.confirmPassword) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["confirmPassword"],
+        message: "Les mots de passe ne correspondent pas.",
+      });
+    }
+  });
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type SignupInput = z.infer<typeof signupSchema>;
+export type SignupUiInput = z.infer<typeof signupUiSchema>;
+

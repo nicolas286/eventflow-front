@@ -4,19 +4,20 @@ import "../pages/auth.mobile.css";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
-import { signupSchema, type SignupInput } from "../schemas/admin.auth.schema";
 import { authRepo } from "../data/authRepo";
 import { normalizeError } from "@errors/errors";
 import Button from "@ui/components/button/Button";
 import Input from "@ui/components/inputs/Input";
-import PasswordInput from "@ui/components/inputs/PasswordInput";
+import { PasswordConfirmFields } from "./PasswordConfirmFields";
+import { signupUiSchema, type SignupUiInput } from "../schemas/admin.auth.schema";
 import { MessageBox } from "@ui/components/message/MessageBox";
 import { useLiveForm } from "@shared/hooks/useLiveZodForm";
 
 export function SignUpForm() {
-  const live = useLiveForm<SignupInput>(signupSchema, {
+   const live = useLiveForm<SignupUiInput>(signupUiSchema, {
     email: "",
     password: "",
+    confirmPassword: "",
     acceptTerms: false,
   });
 
@@ -73,20 +74,24 @@ export function SignUpForm() {
         <MessageBox variant="error">{fieldErrors.email}</MessageBox>
       )}
 
-      <PasswordInput
-        label="Mot de passe"
-        placeholder="Votre mot de passe"
-        value={form.password}
-        onChange={(e) => {
-          setSubmitError(null);
-          handleChange("password", e.target.value);
+       <PasswordConfirmFields
+        live={{
+          form,
+          fieldErrors,
+          handleChange,
+          handleBlur,
+          shouldShowFieldError,
         }}
-        onBlur={() => handleBlur("password")}
-        autoComplete="current-password"
+        passwordKey="password"
+        confirmKey="confirmPassword"
+        labels={{ password: "Mot de passe", confirm: "Confirmer le mot de passe" }}
+        placeholders={{ password: "Votre mot de passe", confirm: "Confirmez le mot de passe" }}
+        autoComplete="new-password"
+        onAnyChange={() => {
+          setSubmitError(null);
+          setSuccessMessage(null);
+        }}
       />
-      {shouldShowFieldError("password") && fieldErrors.password && (
-        <MessageBox variant="error">{fieldErrors.password}</MessageBox>
-      )}
 
       <div className="auth-row">
         <input
