@@ -78,6 +78,24 @@ export default function EventTable({
     window.open(fbUrl, "_blank", "noopener,noreferrer");
   }
 
+  function shareOnWhatsapp(orgSlug?: string, eventSlug?: string) {
+  const shareUrl = getShareEventUrl(orgSlug, eventSlug);
+
+  if (!shareUrl) {
+    showToast({
+      title: "Impossible de partager",
+      description: "Lien indisponible.",
+      variant: "error",
+    });
+    return;
+  }
+
+  const message = `Découvrez cet événement : ${shareUrl}`;
+  const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+
+  window.open(waUrl, "_blank", "noopener,noreferrer");
+}
+
   return (
     <Card>
 
@@ -107,6 +125,7 @@ export default function EventTable({
                   onDelete={onDelete}
                   onCopyLink={copyPublicEventUrl}
                   onShareFacebook={shareOnFacebook}
+                  onShareWhatsapp={shareOnWhatsapp}
                 />
 
                 {renderInlineEditor?.(row)}

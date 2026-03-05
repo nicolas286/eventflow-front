@@ -1,0 +1,18 @@
+.eventCardActions__separator {
+  height: 1px;
+  margin: 10px 8px;
+  background: rgba(0,0,0,0.06);
+}
+
+/* Le wrapper doit être un "point d'ancrage" */
+.eventCardActions {
+  position: relative;
+}
+
+/* Le menu DOIT être positionné + z-index élevé */
+.eventCardActions__menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 9999;
+}

@@ -2,6 +2,8 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@ui/components";
 
+import "./EventCardActionsMenu.css";
+
 import {
   CopyIcon,
   NotepadIcon,
@@ -9,9 +11,11 @@ import {
   EditIcon,
   CloseIcon,
   TrashIcon,
+  WhatsappIcon,
 } from "@ui/components/icon/Icons";
 
 type MenuItem =
+  | { kind: "separator"; key: string }
   | {
       kind: "link";
       key: string;
@@ -39,6 +43,7 @@ type Props = {
   onToggleInlineEdit: () => void;
   onCopyLink?: () => void | Promise<void>;
   onShareFacebook?: () => void;
+  onShareWhatsapp?: () => void;
   onDelete: () => void;
 
   /** optionnel: pour renommer le bouton */
@@ -52,6 +57,7 @@ export default function EventCardActionsMenu({
   onToggleInlineEdit,
   onCopyLink,
   onShareFacebook,
+  onShareWhatsapp,
   onDelete,
   buttonLabel = "Actions",
 }: Props) {
@@ -62,6 +68,7 @@ export default function EventCardActionsMenu({
   const items: MenuItem[] = useMemo(() => {
     const base: MenuItem[] = [];
 
+    // --------- 📄 Consultation ---------
     if (canView && detailsTo) {
       base.push({
         kind: "link",
@@ -72,25 +79,7 @@ export default function EventCardActionsMenu({
       });
     }
 
-    if (canView && onShareFacebook) {
-      base.push({
-        kind: "action",
-        key: "shareFb",
-        label: "Partager sur Facebook",
-        icon: <FacebookIcon />,
-        onClick: onShareFacebook,
-      });
-    }
-
-    if (canView && onCopyLink) {
-      base.push({
-        kind: "action",
-        key: "copyLink",
-        label: "Copier le lien public",
-        icon: <CopyIcon />,
-        onClick: onCopyLink,
-      });
-    }
+    // --------- ✏️ Gestion ---------
 
     base.push({
       kind: "action",
@@ -99,6 +88,45 @@ export default function EventCardActionsMenu({
       icon: isSelected ? <CloseIcon /> : <EditIcon />,
       onClick: onToggleInlineEdit,
     });
+
+
+     // --------- 🔗 Partage ---------
+    const hasShare = canView && (onShareFacebook || onCopyLink);
+    if (hasShare) {
+      if (base.length) base.push({ kind: "separator", key: "sep_before_share" });
+
+      if (onShareFacebook) {
+        base.push({
+          kind: "action",
+          key: "shareFb",
+          label: "Partager sur Facebook",
+          icon: <FacebookIcon />,
+          onClick: onShareFacebook,
+        });
+      }
+
+      if (onShareWhatsapp) {
+      base.push({
+        kind: "action",
+        key: "shareWa",
+        label: "Partager sur WhatsApp",
+        icon: <WhatsappIcon />,
+        onClick: onShareWhatsapp,
+      });
+    }
+
+      if (onCopyLink) {
+        base.push({
+          kind: "action",
+          key: "copyLink",
+          label: "Copier le lien public",
+          icon: <CopyIcon />,
+          onClick: onCopyLink,
+        });
+      }
+    }
+
+      base.push({ kind: "separator", key: "sep_before_delete" });
 
     base.push({
       kind: "action",
@@ -109,8 +137,20 @@ export default function EventCardActionsMenu({
       onClick: onDelete,
     });
 
-    return base;
-  }, [canView, detailsTo, isSelected, onCopyLink, onShareFacebook, onToggleInlineEdit, onDelete]);
+
+    // Nettoyage: éviter séparateurs en tête/fin ou doublons
+    const cleaned: MenuItem[] = [];
+    for (const it of base) {
+      if (it.kind === "separator") {
+        if (cleaned.length === 0) continue;
+        if (cleaned[cleaned.length - 1].kind === "separator") continue;
+      }
+      cleaned.push(it);
+    }
+    if (cleaned.length && cleaned[cleaned.length - 1].kind === "separator") cleaned.pop();
+
+    return cleaned;
+  }, [canView, detailsTo, isSelected, onCopyLink, onShareFacebook, onShareWhatsapp, onToggleInlineEdit, onDelete]);
 
   useEffect(() => {
     function onDocMouseDown(e: MouseEvent) {
@@ -158,6 +198,17 @@ export default function EventCardActionsMenu({
           onClick={(e) => e.stopPropagation()}
         >
           {items.map((it) => {
+            if (it.kind === "separator") {
+              return (
+                <div
+                  key={it.key}
+                  className="eventCardActions__separator"
+                  role="separator"
+                  aria-hidden="true"
+                />
+              );
+            }
+
             const toneClass = it.kind === "action" && it.tone === "danger" ? "isDanger" : "";
 
             if (it.kind === "link") {
