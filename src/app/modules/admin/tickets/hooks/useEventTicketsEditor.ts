@@ -51,6 +51,15 @@ type MoveFx =
     }
   | null;
 
+type SaveAllSummary = {
+  created: number;
+  updated: number;
+  deleted: number;
+  activated: number;
+  deactivated: number;
+  reordered: boolean;
+};
+
 type Params = {
   eventId: string | null;
   products: EventProducts;
@@ -59,6 +68,8 @@ type Params = {
   onUpdate: (input: { productId: string; patch: UpdateEventProductPatch }) => Promise<void>;
   onRemove?: (productId: string) => Promise<void>;
   onChanged?: () => void;
+  onSaveSuccess?: (summary: SaveAllSummary) => void;
+  onSaveError?: (message: string) => void;
 
   createLoading?: boolean;
   updateLoading?: boolean;
@@ -72,12 +83,15 @@ export function useEventTicketsEditor({
   onUpdate,
   onRemove,
   onChanged,
+  onSaveSuccess,
+  onSaveError,
   createLoading = false,
   updateLoading = false,
   deleteLoading = false,
 }: Params) {
   const [draft, setDraft] = useState<TicketDraft[]>([]);
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+  const initialDraftRef = useRef<TicketDraft[]>([]);
 
   const [editing, setEditing] = useState<EditState | null>(null);
   const [creating, setCreating] = useState(false);
@@ -102,8 +116,8 @@ export function useEventTicketsEditor({
 
   function productToDraft(p: EventProduct): TicketDraft {
     return {
-      id: String(p?.id ?? null),
-      clientId: String(p?.id ?? makeClientId()),
+      id: p?.id == null ? null : String(p.id),
+      clientId: p?.id == null ? makeClientId() : String(p.id),
       name: String(p?.name ?? ""),
       description: String(p?.description ?? ""),
       priceCents: nonNegInt(p?.priceCents),
@@ -133,6 +147,7 @@ export function useEventTicketsEditor({
     const next = normalizeContiguousSortOrder(arr.map(productToDraft));
 
     setDraft(next);
+    initialDraftRef.current = next;
     setDeletedIds(new Set());
     setSaveAllError(null);
     lastLoadedSigRef.current = incomingSig;
@@ -279,6 +294,21 @@ export function useEventTicketsEditor({
     markDirty();
   }
 
+  function hasTicketChanged(prev: TicketDraft, next: TicketDraft) {
+    return (
+      prev.name !== next.name ||
+      prev.description !== next.description ||
+      prev.priceCents !== next.priceCents ||
+      prev.stockQty !== next.stockQty ||
+      prev.sortOrder !== next.sortOrder ||
+      prev.createsAttendees !== next.createsAttendees ||
+      prev.attendeesPerUnit !== next.attendeesPerUnit ||
+      prev.isActive !== next.isActive ||
+      prev.isGatekeeper !== next.isGatekeeper ||
+      prev.closeEventWhenSoldOut !== next.closeEventWhenSoldOut
+    );
+  }
+
   function upsertLocalFromEditor() {
     if (!editing) return;
 
@@ -337,10 +367,14 @@ export function useEventTicketsEditor({
   }
 
   function resetLocalChanges() {
-    setIsDirty(false);
-    setSaveAllError(null);
-    lastLoadedSigRef.current = "";
-  }
+  setDraft(initialDraftRef.current);
+  setDeletedIds(new Set());
+  setSaveAllError(null);
+  setIsDirty(false);
+  setEditing(null);
+  setCreating(false);
+  cancelClosingIfAny();
+}
 
   async function saveAll() {
     if (!eventId) return;
@@ -350,14 +384,28 @@ export function useEventTicketsEditor({
     setSaveAllError(null);
 
     try {
+      const initial = initialDraftRef.current;
+
+      const initialById = new Map(
+        initial.filter((t) => t.id).map((t) => [String(t.id), t])
+      );
+
+      const normalized = normalizeContiguousSortOrder(draft);
+
+      let created = 0;
+      let updated = 0;
+      let activated = 0;
+      let deactivated = 0;
+      let reordered = false;
+
+      const deleted = deletedIds.size;
+
       if (onRemove) {
         const toDelete = Array.from(deletedIds);
         for (const id of toDelete) {
           await onRemove(id);
         }
       }
-
-      const normalized = normalizeContiguousSortOrder(draft);
 
       for (const t of normalized) {
         const base: CreateEventProductInput = {
@@ -377,7 +425,25 @@ export function useEventTicketsEditor({
 
         if (!t.id) {
           await onCreate(base);
+          created += 1;
           continue;
+        }
+
+        const prev = initialById.get(String(t.id));
+
+        if (prev) {
+          if (prev.isActive !== t.isActive) {
+            if (t.isActive) activated += 1;
+            else deactivated += 1;
+          }
+
+          if (prev.sortOrder !== t.sortOrder) {
+            reordered = true;
+          }
+
+          if (!hasTicketChanged(prev, t)) {
+            continue;
+          }
         }
 
         const patch: UpdateEventProductPatch = {
@@ -395,17 +461,31 @@ export function useEventTicketsEditor({
         };
 
         await onUpdate({ productId: t.id, patch });
+        updated += 1;
       }
+
+      const summary: SaveAllSummary = {
+        created,
+        updated,
+        deleted,
+        activated,
+        deactivated,
+        reordered,
+      };
 
       setIsDirty(false);
       setDeletedIds(new Set());
+      initialDraftRef.current = normalized;
       onChanged?.();
-    } catch (e: any) {
-      setSaveAllError(e?.message ? String(e.message) : "Erreur inconnue");
+      onSaveSuccess?.(summary);
+    } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : "Erreur inconnue";
+        setSaveAllError(message);
+        onSaveError?.(message); 
     } finally {
       setIsSavingAll(false);
     }
-  }
+}
 
   const sorted = useMemo(() => sortBySortOrder(draft), [draft]);
 
