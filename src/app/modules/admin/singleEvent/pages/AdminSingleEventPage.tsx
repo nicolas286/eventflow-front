@@ -4,7 +4,8 @@ import { useOutletContext, useParams, useSearchParams, useNavigate } from "react
 import type { AdminOutletContext } from "../../dashboard/components/AdminDashboard";
 import { supabase } from "@gateways/supabase/supabaseClient";
 
-import { useAdminSingleEventData } from "../hooks/useAdminSingleEventData";
+import { useAdminSingleEventCoreData } from "../hooks/useAdminSingleEventCoreData";
+import { useAdminSingleEventParticipantsData } from "../hooks/useAdminSingleEventParticipantData";
 import { useUpdateEvent } from "../hooks/useUpdateEvent";
 
 import type { UpdateEventFullPatch } from "../schemas/admin.updateEventFullPatch.schema";
@@ -21,6 +22,7 @@ import type { UploadResult } from "@gateways/supabase/repositories/dashboard/upl
 type TabKey = "details" | "tickets" | "form" | "participants";
 
 const TAB_KEYS: TabKey[] = ["details", "tickets", "form", "participants"];
+
 function isTabKey(v: string | null): v is TabKey {
   return !!v && (TAB_KEYS as string[]).includes(v);
 }
@@ -32,11 +34,13 @@ export function AdminSingleEventPage() {
   const storageRepo = useMemo(() => uploadOrgAssetsRepo(supabase), []);
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const tabFromUrl: TabKey = isTabKey(searchParams.get("tab")) ? (searchParams.get("tab") as TabKey) : "details";
+  const tabFromUrl: TabKey = isTabKey(searchParams.get("tab"))
+    ? (searchParams.get("tab") as TabKey)
+    : "details";
+
   const [tab, setTab] = useState<TabKey>(tabFromUrl);
 
   const navigate = useNavigate();
-
 
   useEffect(() => {
     if (tab !== tabFromUrl) setTab(tabFromUrl);
@@ -55,14 +59,21 @@ export function AdminSingleEventPage() {
     );
   }
 
-  const { loading, error, data, refetch: refetchSingle } = useAdminSingleEventData({
+  const core = useAdminSingleEventCoreData({
     supabase,
     orgId,
     eventSlug,
     ordersLimit: 200,
     ordersOffset: 0,
+  });
+
+  const participants = useAdminSingleEventParticipantsData({
+    supabase,
+    orgId,
+    eventSlug,
     attendeesLimit: 200,
     attendeesOffset: 0,
+    enabled: tab === "participants",
   });
 
   const update = useUpdateEvent({ supabase });
@@ -76,62 +87,79 @@ export function AdminSingleEventPage() {
     );
   }
 
-  const event = data?.event ?? null;
+  const event = core.data?.event ?? null;
 
   const headerTitle = event?.title?.trim()
     ? event.title
-    : loading
+    : core.loading
       ? "Chargement…"
       : "Événement";
 
   async function refreshAll() {
-    if (typeof refetchSingle === "function") await refetchSingle();
-    if (typeof refetchDashboard === "function") await refetchDashboard();
+    if (typeof core.refetch === "function") {
+      await core.refetch();
+    }
+
+    if (tab === "participants" && typeof participants.refetch === "function") {
+      await participants.refetch();
+    }
+
+    if (typeof refetchDashboard === "function") {
+      await refetchDashboard();
+    }
   }
 
   async function handleConfirmFullPatch(patch: UpdateEventFullPatch): Promise<void> {
-  if (!event?.id) return;
+    if (!event?.id) return;
 
-  const next = await update.updateEvent({ eventId: event.id, patch });
-  if (!next) return;
+    const next = await update.updateEvent({ eventId: event.id, patch });
+    if (!next) return;
 
-  const nextSlug = (next.slug ?? "").trim();
-  if (nextSlug && nextSlug !== eventSlug) {
-    const sp = new URLSearchParams(searchParams);
-    navigate(`/admin/events/${nextSlug}?${sp.toString()}`, { replace: true });
-    return; 
+    const nextSlug = (next.slug ?? "").trim();
+    if (nextSlug && nextSlug !== eventSlug) {
+      const sp = new URLSearchParams(searchParams);
+      navigate(`/admin/events/${nextSlug}?${sp.toString()}`, { replace: true });
+      return;
+    }
+
+    await refreshAll();
   }
 
-  await refreshAll();
-}
-
-
   async function uploadEventBanner(file: File): Promise<UploadResult> {
-  if (!orgId) throw new Error("ORG_ID_MISSING");
-  if (!event?.id) throw new Error("EVENT_ID_MISSING");
+    if (!orgId) throw new Error("ORG_ID_MISSING");
+    if (!event?.id) throw new Error("EVENT_ID_MISSING");
 
-  return storageRepo.uploadEventBanner({
-    orgId,
-    eventId: event.id,
-    file,
-  });
-}
+    return storageRepo.uploadEventBanner({
+      orgId,
+      eventId: event.id,
+      file,
+    });
+  }
 
+  const showCoreLoading = core.loading;
+  const showCoreError = core.error;
+
+  const showParticipantsLoading = tab === "participants" && participants.loading;
+  const showParticipantsError = tab === "participants" ? participants.error : null;
 
   return (
     <div className="adminCard">
       <h2 className="adminEventTitle">{headerTitle}</h2>
+
       <div className="adminEventTabs">
         <div className="adminEventTabsInner">
           <TabButton active={tab === "details"} onClick={() => setTabAndUrl("details")}>
             Détails
           </TabButton>
+
           <TabButton active={tab === "tickets"} onClick={() => setTabAndUrl("tickets")}>
             Tickets
           </TabButton>
+
           <TabButton active={tab === "form"} onClick={() => setTabAndUrl("form")}>
             Formulaire d&apos;inscription
           </TabButton>
+
           <TabButton active={tab === "participants"} onClick={() => setTabAndUrl("participants")}>
             Participants
           </TabButton>
@@ -139,10 +167,10 @@ export function AdminSingleEventPage() {
       </div>
 
       <div style={{ marginTop: 16 }}>
-        {loading && <p>Chargement…</p>}
-        {error && <p style={{ color: "crimson" }}>{error}</p>}
+        {showCoreLoading && <p>Chargement…</p>}
+        {showCoreError && <p style={{ color: "crimson" }}>{showCoreError}</p>}
 
-        {!loading && !error && data && event && (
+        {!showCoreLoading && !showCoreError && core.data && event && (
           <>
             {tab === "details" && (
               <SingleEventDetailsSection
@@ -154,13 +182,44 @@ export function AdminSingleEventPage() {
             )}
 
             {tab === "tickets" && (
-              <SingleEventTicketsSection orgId={orgId} event={event} data={data} onChanged={refreshAll} />
+              <SingleEventTicketsSection
+                orgId={orgId}
+                event={event}
+                products={core.data.products}
+                orders={core.data.orders}
+                orderItems={core.data.orderItems}
+                payments={core.data.payments}
+                onChanged={refreshAll}
+              />
             )}
 
-            {tab === "form" && <SingleEventFormSection event={event} data={data} onChanged={refreshAll} />}
+            {tab === "form" && (
+              <SingleEventFormSection
+                event={event}
+                fields={core.data.formFields}
+                onChanged={refreshAll}
+              />
+            )}
 
             {tab === "participants" && (
-              <SingleEventParticipantsSection data={data} onChanged={refreshAll} />
+              <>
+                {showParticipantsLoading && <p>Chargement des participants…</p>}
+                {showParticipantsError && (
+                  <p style={{ color: "crimson" }}>{showParticipantsError}</p>
+                )}
+
+                {!showParticipantsLoading && !showParticipantsError && participants.data && (
+                  <SingleEventParticipantsSection
+                    event={event}
+                    products={core.data.products}
+                    formFields={core.data.formFields}
+                    orders={core.data.orders}
+                    attendees={participants.data.attendees}
+                    attendeeAnswers={participants.data.attendeeAnswers}
+                    onChanged={refreshAll}
+                  />
+                )}
+              </>
             )}
           </>
         )}
