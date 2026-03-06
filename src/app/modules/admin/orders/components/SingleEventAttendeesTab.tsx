@@ -15,31 +15,39 @@ import { useAdminUpdateOrderAttendee } from "../hooks/useUpdateOrderAttendeeAnsw
 import { useDeleteOrder } from "../hooks/useDeleteOrder";
 import { useParticipantsViewModel } from "../hooks/useParticipantsViewModel";
 
-import type { EventDetailAdmin } from "../../singleEvent/schemas/admin.eventDetail.schema";
+import type { AdminEventDetailEvent } from "../../singleEvent/schemas/admin.eventDetail.schema";
 import type { EventFormField } from "@shared/models/db/db.eventFormFields.schema";
-import type { EventProduct } from "@shared/models/db/db.eventProducts.schema";
+import type { EventProducts, EventProduct } from "@shared/models/db/db.eventProducts.schema";
+import type { AttendeesPage } from "../../singleEvent/schemas/admin.eventDetail.schema";
+import type {
+  AttendeeAnswers as AttendeeAnswer,
+  AttendeesAnswers,
+} from "@shared/models/db/db.attendeeAnswers.schema";
+import type { OrdersUI, OrderUI } from "../schemas/admin.ordersSchema";
 import type { Attendee } from "@shared/models/db/db.attendee.schema";
-import type { AttendeeAnswers as AttendeeAnswer } from "@shared/models/db/db.attendeeAnswers.schema";
-import type { OrderUI } from "../schemas/admin.ordersSchema";
+
 
 import { toRows } from "@helpers/normalize";
-import { getFirst } from "@helpers/logic";
 import { makeLocalAnswers, buildUpdateAttendeeFromForm } from "@helpers/attendeeAnswers";
 import { exportParticipantsXls } from "../helpers/exportParticipantsXls";
 import { FlexPanel } from "@ui/components/panels/FlexPanel";
 
 import "./attendees.css";
 
-
 type FilterMode = "all" | "order" | `field:${string}`;
 
 type InlineEditorProps = Omit<ComponentProps<typeof AttendeeEditorPanel>, "layout">;
 
 export function SingleEventParticipantsSection(props: {
-  data: EventDetailAdmin;
+  event: AdminEventDetailEvent;
+  products: EventProducts;
+  formFields: EventFormField[];
+  orders: OrdersUI;
+  attendees: AttendeesPage;
+  attendeeAnswers: AttendeesAnswers;
   onChanged?: () => Promise<void>;
 }) {
-  const { data, onChanged } = props;
+  const { event, products, formFields, orders, attendees, attendeeAnswers, onChanged } = props;
 
   const isMobile = useIsMobile(720);
 
@@ -62,12 +70,12 @@ export function SingleEventParticipantsSection(props: {
   const [confirmDeleteOrderOpen, setConfirmDeleteOrderOpen] = useState(false);
   const [targetOrderId, setTargetOrderId] = useState<string | null>(null);
 
-  const initialAttendees = useMemo(() => data.attendees.rows, [data.attendees.rows]);
+  const initialAttendees = useMemo(() => attendees.rows, [attendees.rows]);
   const initialAnswers = useMemo(
-    () => toRows<AttendeeAnswer>(data.attendeeAnswers),
-    [data.attendeeAnswers]
-  );
-  const initialOrders = useMemo(() => data.orders.rows, [data.orders.rows]);
+  () => toRows<AttendeeAnswer>(attendeeAnswers),
+  [attendeeAnswers]
+);
+  const initialOrders = useMemo(() => orders.rows, [orders.rows]);
 
   const [localAttendees, setLocalAttendees] = useState<Attendee[]>(() => initialAttendees);
   const [localAnswers, setLocalAnswers] = useState<AttendeeAnswer[]>(() => initialAnswers);
@@ -77,12 +85,10 @@ export function SingleEventParticipantsSection(props: {
   useEffect(() => setLocalAnswers(initialAnswers), [initialAnswers]);
   useEffect(() => setLocalOrders(initialOrders), [initialOrders]);
 
-  const regFields = useMemo(() => toRows<EventFormField>(data.formFields), [data.formFields]);
-  const products = useMemo(() => toRows<EventProduct>(data.products), [data.products]);
+  const regFields = useMemo(() => toRows<EventFormField>(formFields), [formFields]);
+  const productsRows = useMemo(() => toRows<EventProduct>(products), [products]);
 
-  const eventId = useMemo(() => {
-    return String(getFirst(data?.event, ["id"]) ?? getFirst(data, ["eventId", "event_id"]) ?? "");
-  }, [data]);
+  const eventId = event.id ?? "";
 
   const {
     orderMetaById,
@@ -99,12 +105,10 @@ export function SingleEventParticipantsSection(props: {
     filterMode,
   });
 
-  /* Ferme le wizard de création de commande (utilisé par le shell et après création). */
   const closeOrderWizard = useCallback(() => {
     setOrderWizardOpen(false);
   }, []);
 
-  /* Ferme l’éditeur participant et reset l’état associé (id/commande/error). */
   const closeAttendeeEditor = useCallback(() => {
     setAttendeeEditorOpen(false);
     setEditingAttendeeId(null);
@@ -112,13 +116,11 @@ export function SingleEventParticipantsSection(props: {
     setEditorError(null);
   }, []);
 
-  /* Ferme le panel actuellement visible (wizard ou éditeur) pour garantir un seul panel actif. */
   const closeActivePanel = useCallback(() => {
     if (orderWizardOpen) closeOrderWizard();
     if (attendeeEditorOpen) closeAttendeeEditor();
   }, [orderWizardOpen, attendeeEditorOpen, closeOrderWizard, closeAttendeeEditor]);
 
-  /* Applique l’ajout d’une commande créée : met à jour le local, filtre sur la commande, ferme le wizard et refresh. */
   const handleCreatedOrder = useCallback(
     async ({ orderId, order }: { orderId: string; order: unknown }) => {
       setLocalOrders((prev) => {
@@ -137,7 +139,6 @@ export function SingleEventParticipantsSection(props: {
     [closeOrderWizard, onChanged]
   );
 
-  /* Ouvre l’éditeur participant en mode édition, en s’assurant de fermer le wizard si ouvert. */
   const openEdit = useCallback(
     (attendeeId: string, orderId: string) => {
       setEditorError(null);
@@ -150,7 +151,6 @@ export function SingleEventParticipantsSection(props: {
     [closeOrderWizard]
   );
 
-  /* Ouvre le wizard de création de commande, en fermant l’éditeur participant si ouvert. */
   const openCreateOrder = useCallback(() => {
     closeAttendeeEditor();
     setOrderWizardOpen(true);
@@ -165,7 +165,6 @@ export function SingleEventParticipantsSection(props: {
     return base;
   }, [editingAttendeeId, filledFieldsByAttendeeId]);
 
-  /* Soumet l’édition d’un participant : update API + mise à jour des réponses locales + fermeture + refresh. */
   const handleSubmitParticipant = useCallback(
     async (value: Record<string, unknown>) => {
       try {
@@ -220,7 +219,6 @@ export function SingleEventParticipantsSection(props: {
     ]
   );
 
-  /* Ouvre la modale de confirmation de suppression d’une commande. */
   const requestDeleteOrder = useCallback(
     (orderId: string) => {
       deleteOrder.reset?.();
@@ -230,7 +228,6 @@ export function SingleEventParticipantsSection(props: {
     [deleteOrder]
   );
 
-  /* Confirme la suppression d’une commande : delete API + purge locals (orders/attendees/answers) + refresh. */
   const confirmDeleteOrder = useCallback(async () => {
     if (!targetOrderId) return;
 
@@ -242,9 +239,7 @@ export function SingleEventParticipantsSection(props: {
     );
 
     setLocalOrders((prev) =>
-      prev.filter(
-        (o) => String(getFirst(o, ["id", "orderId", "order_id"])) !== String(targetOrderId)
-      )
+      prev.filter((o) => String(o.id) !== String(targetOrderId))
     );
     setLocalAttendees((prev) => prev.filter((a) => a.orderId !== targetOrderId));
     setLocalAnswers((prev) => prev.filter((ans) => !attendeeIds.has(ans.attendeeId)));
@@ -269,7 +264,6 @@ export function SingleEventParticipantsSection(props: {
     onChanged,
   ]);
 
-  /* Props partagées pour l’éditeur inline mobile (utilisé par OrdersPeopleList). */
   const inlineEditorProps = useMemo((): InlineEditorProps => {
     return {
       supabase,
@@ -281,7 +275,7 @@ export function SingleEventParticipantsSection(props: {
       onSubmit: handleSubmitParticipant,
       isSaving: updateAttendee.loading || saving,
       error: updateAttendee.error || editorError,
-      products,
+      products: productsRows,
       orderId: editorOrderId,
     };
   }, [
@@ -295,7 +289,7 @@ export function SingleEventParticipantsSection(props: {
     updateAttendee.error,
     saving,
     editorError,
-    products,
+    productsRows,
     editorOrderId,
   ]);
 
@@ -325,7 +319,7 @@ export function SingleEventParticipantsSection(props: {
       editorGap={14}
       left={<div style={{ display: "none" }} />}
       eventId={eventId}
-      products={products}
+      products={productsRows}
       regFields={regFields}
       onCreated={handleCreatedOrder}
     />
@@ -340,7 +334,7 @@ export function SingleEventParticipantsSection(props: {
       onSubmit={handleSubmitParticipant}
       isSaving={updateAttendee.loading || saving}
       error={updateAttendee.error || editorError}
-      products={products}
+      products={productsRows}
       orderId={editorOrderId}
       layout="shell"
     />
@@ -348,7 +342,6 @@ export function SingleEventParticipantsSection(props: {
 
   const shellOpen = Boolean(rightPanel);
 
-  /** --- Export XLS dropdown --- */
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement | null>(null);
 
@@ -357,47 +350,47 @@ export function SingleEventParticipantsSection(props: {
   }, [filteredAttendees]);
 
   const doExportXls = useCallback(
-  async (
-    sortMode: "alpha" | "orderRef",
-    stripeMode: "row" | "order" = "order"
-  ) => {
-    try {
-      await exportParticipantsXls({
-        data,
-        regFields,
-        localAttendees: confirmedAttendees,
-        filledFieldsByAttendeeId,
-        computeIdentityTitle: (attendeeId) =>
-          computeIdentity(attendeeId).title ?? "",
-        sortMode,
-        stripeMode,
-      });
-    } catch (err) {
-      console.error("[participants] export XLS failed", err);
-    }
-  },
-  [
-    data,
-    regFields,
-    confirmedAttendees,
-    filledFieldsByAttendeeId,
-    computeIdentity,
-  ]
-);
+    async (
+      sortMode: "alpha" | "orderRef",
+      stripeMode: "row" | "order" = "order"
+    ) => {
+      try {
+        await exportParticipantsXls({
+          eventTitle: event.title,
+          regFields,
+          localAttendees: confirmedAttendees,
+          filledFieldsByAttendeeId,
+          computeIdentityTitle: (attendeeId) => computeIdentity(attendeeId).title ?? "",
+          sortMode,
+          stripeMode,
+        });
+      } catch (err) {
+        console.error("[participants] export XLS failed", err);
+      }
+    },
+    [
+      event.title,
+      regFields,
+      confirmedAttendees,
+      filledFieldsByAttendeeId,
+      computeIdentity,
+    ]
+  );
 
   const toggleExportMenu = useCallback(() => {
     if (confirmedAttendees.length === 0) return;
     setExportMenuOpen((v) => !v);
   }, [confirmedAttendees.length]);
 
-  // fermeture clic extérieur + Escape
   useEffect(() => {
     if (!exportMenuOpen) return;
 
     function onMouseDown(e: MouseEvent) {
       const el = exportMenuRef.current;
       if (!el) return;
-      if (e.target instanceof Node && !el.contains(e.target)) setExportMenuOpen(false);
+      if (e.target instanceof Node && !el.contains(e.target)) {
+        setExportMenuOpen(false);
+      }
     }
 
     function onKeyDown(e: KeyboardEvent) {
@@ -406,6 +399,7 @@ export function SingleEventParticipantsSection(props: {
 
     document.addEventListener("mousedown", onMouseDown);
     document.addEventListener("keydown", onKeyDown);
+
     return () => {
       document.removeEventListener("mousedown", onMouseDown);
       document.removeEventListener("keydown", onKeyDown);
@@ -443,7 +437,6 @@ export function SingleEventParticipantsSection(props: {
           </div>
 
           <div className="adminParticipantsHeaderRight">
-            {/* ✅ Export XLS avec dropdown */}
             <div className="adminExportMenu" ref={exportMenuRef}>
               <Button
                 variant="secondary"
@@ -523,7 +516,7 @@ export function SingleEventParticipantsSection(props: {
                   editorGap={14}
                   left={<div style={{ display: "none" }} />}
                   eventId={eventId}
-                  products={products}
+                  products={productsRows}
                   regFields={regFields}
                   onCreated={handleCreatedOrder}
                 />
@@ -539,28 +532,28 @@ export function SingleEventParticipantsSection(props: {
             ) : (
               leftContent
             )}
-              </>
-            ) : (
-              <EditorShell
-                isOpen={shellOpen}
-                onRequestClose={closeActivePanel}
-                editorWidth={420}
-                editorGap={14}
-                stickyTop={120}
-                left={
-                  groups.length === 0 ? (
-                    <div className="adminEventEmpty">
-                      {query.trim()
-                        ? "Aucun résultat avec ces filtres."
-                        : "Aucune commande pour le moment."}
-                    </div>
-                  ) : (
-                    leftContent
-                  )
-                }
-                right={rightPanel}
-              />
-            )}
+          </>
+        ) : (
+          <EditorShell
+            isOpen={shellOpen}
+            onRequestClose={closeActivePanel}
+            editorWidth={420}
+            editorGap={14}
+            stickyTop={120}
+            left={
+              groups.length === 0 ? (
+                <div className="adminEventEmpty">
+                  {query.trim()
+                    ? "Aucun résultat avec ces filtres."
+                    : "Aucune commande pour le moment."}
+                </div>
+              ) : (
+                leftContent
+              )
+            }
+            right={rightPanel}
+          />
+        )}
       </div>
     </FlexPanel>
   );

@@ -37,8 +37,7 @@
  */
 
 import ExcelJS from "exceljs";
-import { getFirst, sortAlpha } from "@helpers/logic";
-import type { EventDetailAdmin } from "../../singleEvent/schemas/admin.eventDetail.schema";
+import { sortAlpha } from "@helpers/logic";
 import type { EventFormField } from "@shared/models/db/db.eventFormFields.schema";
 import type { Attendee } from "@shared/models/db/db.attendee.schema";
 import { safeFilename } from "@helpers/normalize";
@@ -46,12 +45,11 @@ import { safeFilename } from "@helpers/normalize";
 const FIXED_COLS = ["Réf commande", "Statut", "Billet", "Index"] as const;
 
 export type ExportParticipantsXlsInput = {
-  data: EventDetailAdmin;
+  eventTitle?: string | null;
   regFields: EventFormField[];
   localAttendees: Attendee[];
   filledFieldsByAttendeeId: Map<string, { key: string; value: unknown }[]>;
   computeIdentityTitle: (attendeeId: string) => string;
-
   sortMode?: "alpha" | "orderRef";
 
   /** alternance par "row" (participant) ou par "order" (commande) */
@@ -85,7 +83,7 @@ function toDisplayValue(v: unknown): string | number {
   if (typeof v === "string") return v;
   if (typeof v === "number") return v;
   if (typeof v === "boolean") return v ? "Oui" : "Non";
-  // objets/arrays -> string safe
+
   try {
     return JSON.stringify(v);
   } catch {
@@ -95,7 +93,7 @@ function toDisplayValue(v: unknown): string | number {
 
 export async function exportParticipantsXls(input: ExportParticipantsXlsInput) {
   const {
-    data,
+    eventTitle,
     regFields,
     localAttendees,
     filledFieldsByAttendeeId,
@@ -104,9 +102,9 @@ export async function exportParticipantsXls(input: ExportParticipantsXlsInput) {
     stripeMode = "order",
   } = input;
 
-  // Colonnes dynamiques + anti-collision
   const formCols: { header: string; key: string }[] = [];
   const used = new Map<string, number>();
+
   for (const f of regFields) {
     const base = (f.label?.trim() ? f.label.trim() : f.fieldKey).trim() || f.fieldKey;
     const count = (used.get(base) ?? 0) + 1;
@@ -136,19 +134,16 @@ export async function exportParticipantsXls(input: ExportParticipantsXlsInput) {
           });
         });
 
-  // workbook
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet("Participants", {
     views: [{ state: "frozen", ySplit: 1 }],
   });
 
-  // couleurs (ARGB)
-  const HEADER_BG = "FF0B2A4A"; // bleu foncé
-  const HEADER_FG = "FFFFFFFF"; // blanc
-  const STRIPE_A = "FFEAF2FF";  // bleu très clair
-  const STRIPE_B = "FFD7E7FF";  // bleu clair (un peu + foncé)
+  const HEADER_BG = "FF0B2A4A";
+  const HEADER_FG = "FFFFFFFF";
+  const STRIPE_A = "FFEAF2FF";
+  const STRIPE_B = "FFD7E7FF";
 
-  // Header row
   const headerRow = ws.addRow(headers);
   headerRow.height = 18;
 
@@ -164,14 +159,12 @@ export async function exportParticipantsXls(input: ExportParticipantsXlsInput) {
     };
   });
 
-  // Largeurs colonnes (proche de ton wch)
   ws.columns = headers.map((h) => ({
     header: h,
     key: h,
     width: Math.min(Math.max(h.length, 14), 38),
   }));
 
-  // Stripes
   let stripeToggle = false;
   let lastOrderRef: string | null = null;
 
@@ -214,13 +207,8 @@ export async function exportParticipantsXls(input: ExportParticipantsXlsInput) {
     });
   }
 
-  const safeEventTitle = safeFilename(
-    getFirst(data?.event, ["title", "name"]) ?? "event",
-    "event",
-    60
-  );
+  const safeEventTitle = safeFilename(eventTitle ?? "event", "event", 60);
 
-  // download (browser)
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

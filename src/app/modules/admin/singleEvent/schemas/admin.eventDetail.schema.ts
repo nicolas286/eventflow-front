@@ -66,6 +66,23 @@ export const eventDetailAdminSchema = z.object({
   attendeeAnswers: attendeesAnswersSchema,
 });
 
+export const eventDetailAdminCoreSchema = z.object({
+  event: adminEventDetailEventSchema,
+  orgBranding: adminEventDetailOrgBrandingSchema,
+  products: eventProductsSchema,
+  formFields: eventFormFieldsSchema,
+  orders: ordersUISchema,
+  orderItems: orderItemsSchema,
+  payments: paymentsUISchema,
+});
+
+export const eventDetailAdminParticipantsSchema = z.object({
+  attendees: attendeesPageSchema,
+  attendeeAnswers: attendeesAnswersSchema,
+});
+
 export type AttendeesPage = z.infer<typeof attendeesPageSchema>;
 export type AdminEventDetailEvent = z.infer<typeof adminEventDetailEventSchema>;
 export type EventDetailAdmin = z.infer<typeof eventDetailAdminSchema>;
+export type EventDetailAdminCore = z.infer<typeof eventDetailAdminCoreSchema>;
+export type EventDetailAdminParticipants = z.infer<typeof eventDetailAdminParticipantsSchema>;

@@ -10,5 +10,5 @@ export const ordersUISchema = z.object({
 })
 
 export type OrderUI = z.infer<typeof orderUISchema>;
-
+export type OrdersUI = z.infer<typeof ordersUISchema>;
 
