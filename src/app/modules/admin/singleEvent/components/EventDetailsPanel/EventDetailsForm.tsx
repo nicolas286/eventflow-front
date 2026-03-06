@@ -17,6 +17,7 @@ import { withCacheBust } from "@shared/helpers/url";
 
 import type { AdminEventDetailEvent } from "../../schemas/admin.eventDetail.schema";
 import { MessageBox } from "@shared/ui/components/message/MessageBox";
+import { useToast } from "@shared/ui/components/toast/useToast";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                              */
@@ -92,6 +93,7 @@ export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanne
   const [localBannerPreview, setLocalBannerPreview] = useState<string | null>(null);
   const [uploadedBannerPreview, setUploadedBannerPreview] = useState<string | null>(null);
   const [forceDefaultPreview, setForceDefaultPreview] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     setDraft(eventToDraft(event));
@@ -276,70 +278,102 @@ export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanne
 
   /* Save flow: optional upload + validate + confirm patch */
   async function save(nextIsPublished: boolean) {
-    if (!canSave) return;
+  if (!canSave) return;
 
-    setSaving(true);
-    setSaveError(null);
-    setSaveOk(false);
+  setSaving(true);
+  setSaveError(null);
+  setSaveOk(false);
 
-    try {
-      let forcedBannerUrl: string | null | undefined = undefined;
+  try {
+    let forcedBannerUrl: string | null | undefined = undefined;
 
-      if (bannerFile) {
-        const max = 4 * 1024 * 1024;
-        if (bannerFile.size > max) {
-          throw new Error(`Bannière trop lourde (${bytesToMb(bannerFile.size)}MB, max 4MB)`);
-        }
-
-        const up = await onUploadBanner(bannerFile);
-
-        forcedBannerUrl = up.publicUrl;
-        setUploadedBannerPreview(up.publicUrlWithBust);
-
-        setBannerFile(null);
-        if (localBannerPreview) {
-          URL.revokeObjectURL(localBannerPreview);
-          setLocalBannerPreview(null);
-        }
-
-        setDraft((d) => ({ ...d, bannerUrlRaw: up.publicUrl }));
-        setForceDefaultPreview(false);
+    if (bannerFile) {
+      const max = 4 * 1024 * 1024;
+      if (bannerFile.size > max) {
+        throw new Error(`Bannière trop lourde (${bytesToMb(bannerFile.size)}MB, max 4MB)`);
       }
 
-      // Early fail using the same schema (candidate version)
-      const candidate = buildPatchCandidateFromDraft(nextIsPublished);
-      const liveParsed = updateEventFullPatchSchema.safeParse(candidate);
-      if (!liveParsed.success) {
-        setFieldErrors(zodErrorsToFieldErrors(liveParsed.error));
-        setSaving(false);
-        return;
+      const up = await onUploadBanner(bannerFile);
+
+      forcedBannerUrl = up.publicUrl;
+      setUploadedBannerPreview(up.publicUrlWithBust);
+
+      setBannerFile(null);
+      if (localBannerPreview) {
+        URL.revokeObjectURL(localBannerPreview);
+        setLocalBannerPreview(null);
       }
 
-      const patch = buildPatch(nextIsPublished);
-      if (forcedBannerUrl !== undefined) patch.bannerUrl = forcedBannerUrl;
-
-      if (Object.keys(patch).length === 0) {
-        setSaving(false);
-        return;
-      }
-
-      const parsed = updateEventFullPatchSchema.safeParse(patch);
-      if (!parsed.success) {
-        setFieldErrors(zodErrorsToFieldErrors(parsed.error));
-        setSaving(false);
-        return;
-      }
-
-      await onConfirm(parsed.data);
-
-      setSaving(false);
-      setSaveOk(true);
-      setTimeout(() => setSaveOk(false), 1200);
-    } catch (e) {
-      setSaving(false);
-      setSaveError(e instanceof Error ? e.message : "Impossible d’enregistrer l’événement");
+      setDraft((d) => ({ ...d, bannerUrlRaw: up.publicUrl }));
+      setForceDefaultPreview(false);
     }
+
+    const candidate = buildPatchCandidateFromDraft(nextIsPublished);
+    const liveParsed = updateEventFullPatchSchema.safeParse(candidate);
+
+    if (!liveParsed.success) {
+      setFieldErrors(zodErrorsToFieldErrors(liveParsed.error));
+      setSaving(false);
+      return;
+    }
+
+    const patch = buildPatch(nextIsPublished);
+    if (forcedBannerUrl !== undefined) patch.bannerUrl = forcedBannerUrl;
+
+    if (Object.keys(patch).length === 0) {
+      setSaving(false);
+      return;
+    }
+
+    const parsed = updateEventFullPatchSchema.safeParse(patch);
+    if (!parsed.success) {
+      setFieldErrors(zodErrorsToFieldErrors(parsed.error));
+      setSaving(false);
+      return;
+    }
+
+    await onConfirm(parsed.data);
+
+    setSaving(false);
+    setSaveOk(true);
+    setTimeout(() => setSaveOk(false), 1200);
+
+    const wasPublished = Boolean(event.isPublished);
+    const isNowPublished = nextIsPublished;
+
+    const toastConfig =
+      !wasPublished && isNowPublished
+        ? {
+            title: "Événement publié",
+            description: "L’événement est maintenant visible publiquement.",
+          }
+        : wasPublished && !isNowPublished
+        ? {
+            title: "Événement remis en brouillon",
+            description: "L’événement n’est plus visible publiquement.",
+          }
+        : {
+            title: "Événement enregistré",
+            description: "Les détails de l’événement ont été enregistrés.",
+          };
+
+    showToast({
+      ...toastConfig,
+      variant: "success",
+      duration: 3500,
+    });
+  } catch (e) {
+    setSaving(false);
+    setSaveError(e instanceof Error ? e.message : "Impossible d’enregistrer l’événement");
+
+    showToast({
+      title: "Enregistrement impossible",
+      description: "Vérifiez les champs et réessayez.",
+      variant: "error",
+      duration: 6000,
+    });
   }
+}
 
   const subtitle = "Modifiez les informations principales de l’événement.";
 
@@ -370,7 +404,7 @@ export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanne
         </>
       }
     >
-      {updateError ? <p style={{ color: "crimson", margin: 0 }}>{updateError}</p> : null}
+      {updateError ? <MessageBox variant="error">{updateError}</MessageBox> : null}
       {saveError ? <MessageBox variant="error">{saveError}</MessageBox> : null}
       {saveOk ? <MessageBox variant="success">Enregistré</MessageBox> : null}
 
