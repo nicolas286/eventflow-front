@@ -144,7 +144,7 @@ export default function ProfilePanel({ profile, setProfile, onSaved }: ProfilePa
 
       showToast({
         title: "Profil enregistré",
-        description: "Vos informations ont été sauvegardées.",
+        description: "Vos informations ont été enregistrées.",
         variant: "success",
         duration: 3500,
       });

@@ -11,6 +11,8 @@ import { nonNegInt, posInt } from "@helpers/logic";
 import { useEventTicketsEditor, type TicketDraft } from "../../hooks/useEventTicketsEditor";
 import { EventTicketEditorNode } from "./EventTicketEditorNode";
 import { FlexPanel } from "@ui/components/panels/FlexPanel";
+import { MessageBox } from "@shared/ui/components/message/MessageBox";
+import { useToast } from "@shared/ui/components/toast/useToast";
 
 type OrderItemLike = {
   eventProductId?: string | null;
@@ -42,6 +44,47 @@ type Props = {
   onChanged?: () => void;
 };
 
+type SaveAllSummary = {
+  created: number;
+  updated: number;
+  deleted: number;
+  activated: number;
+  deactivated: number;
+  reordered: boolean;
+};
+
+function buildTicketsSuccessDescription(summary: SaveAllSummary) {
+  const parts: string[] = [];
+
+  if (summary.created > 0) {
+    parts.push(`${summary.created} créé${summary.created > 1 ? "s" : ""}`);
+  }
+
+  if (summary.updated > 0) {
+    parts.push(`${summary.updated} modifié${summary.updated > 1 ? "s" : ""}`);
+  }
+
+  if (summary.deleted > 0) {
+    parts.push(`${summary.deleted} supprimé${summary.deleted > 1 ? "s" : ""}`);
+  }
+
+  if (summary.activated > 0) {
+    parts.push(`${summary.activated} activé${summary.activated > 1 ? "s" : ""}`);
+  }
+
+  if (summary.deactivated > 0) {
+    parts.push(`${summary.deactivated} désactivé${summary.deactivated > 1 ? "s" : ""}`);
+  }
+
+  if (summary.reordered) {
+    parts.push("ordre mis à jour");
+  }
+
+  return parts.length > 0
+    ? parts.join(" · ")
+    : "Les modifications ont été enregistrées.";
+}
+
 export function EventTicketsPanel(props: Props) {
   const {
     event,
@@ -56,9 +99,9 @@ export function EventTicketsPanel(props: Props) {
   } = props;
 
   const isMobile = useMediaQuery("(max-width: 1050px)");
+  const { showToast } = useToast();
 
   const {
-    // state / derived
     editing,
     creating,
     isDirty,
@@ -73,11 +116,7 @@ export function EventTicketsPanel(props: Props) {
     isFiltering,
     closingKey,
     isClosing,
-
-    // setters
     setEditing,
-
-    // actions
     openCreate,
     openEdit,
     closeEditor,
@@ -87,8 +126,6 @@ export function EventTicketsPanel(props: Props) {
     upsertLocalFromEditor,
     resetLocalChanges,
     saveAll,
-
-    // helpers
     getSoldQty,
     formatStockLine,
   } = useEventTicketsEditor({
@@ -101,6 +138,22 @@ export function EventTicketsPanel(props: Props) {
     createLoading,
     updateLoading,
     deleteLoading,
+    onSaveSuccess: (summary) => {
+      showToast({
+        title: "Tickets enregistrés",
+        description: buildTicketsSuccessDescription(summary),
+        variant: "success",
+        duration: 4000,
+      });
+    },
+    onSaveError: (message) => {
+      showToast({
+        title: "Enregistrement impossible",
+        description: message || "Impossible d’enregistrer les tickets.",
+        variant: "error",
+        duration: 6000,
+      });
+    },
   });
 
   const isOpen = Boolean(editing);
@@ -108,17 +161,17 @@ export function EventTicketsPanel(props: Props) {
   const showCreateInline = (isOpen && creating) || (isClosing && closingKey === "create");
 
   const editorNode = (
-  <EventTicketEditorNode
-    editing={editing}
-    creating={creating}
-    setEditing={setEditing}
-    isSaving={isSaving}
-    nonNegInt={nonNegInt}
-    posInt={posInt}
-    onApplyLocal={upsertLocalFromEditor}
-    onClose={closeEditor}
-  />
-);
+    <EventTicketEditorNode
+      editing={editing}
+      creating={creating}
+      setEditing={setEditing}
+      isSaving={isSaving}
+      nonNegInt={nonNegInt}
+      posInt={posInt}
+      onApplyLocal={upsertLocalFromEditor}
+      onClose={closeEditor}
+    />
+  );
 
   function renderTicketCard(t: TicketDraft, idx: number) {
     const active = Boolean(t.isActive ?? true);
@@ -231,32 +284,31 @@ export function EventTicketsPanel(props: Props) {
   }
 
   return (
-      <FlexPanel
-        title="Tickets"
-        subtitle="Créez et modifiez vos tickets, ajustez leur ordre ou leur disponibilité, puis enregistrez vos modifications."
-        state={isDirty ? "dirty" : "default"}
-        actions={
-          <>
-            <Button onClick={openCreate} disabled={!event?.id || isSaving}>
-              Nouveau ticket
+    <FlexPanel
+      title="Tickets"
+      subtitle="Créez et modifiez vos tickets, ajustez leur ordre ou leur disponibilité, puis enregistrez vos modifications."
+      state={isDirty ? "dirty" : "default"}
+      actions={
+        <>
+          <Button onClick={openCreate} disabled={!event?.id || isSaving}>
+            Nouveau ticket
+          </Button>
+
+          <Button onClick={saveAll} disabled={!event?.id || !isDirty || isSaving}>
+            {isSavingAll ? "Enregistrement…" : "Enregistrer"}
+          </Button>
+
+          {isDirty ? (
+            <Button onClick={resetLocalChanges} disabled={isSaving}>
+              Annuler
             </Button>
-
-            <Button onClick={saveAll} disabled={!event?.id || !isDirty || isSaving}>
-              {isSavingAll ? "Enregistrement…" : "Enregistrer"}
-            </Button>
-
-            {isDirty ? (
-              <Button onClick={resetLocalChanges} disabled={isSaving}>
-                Annuler
-              </Button>
-            ) : null}
-          </>
-        }
-      >
-
+          ) : null}
+        </>
+      }
+    >
       <FilterBar query={query} onQueryChange={setQuery} placeholder="Rechercher un ticket…" />
 
-      {saveAllError ? <div className="adminTicketsSaveError">{saveAllError}</div> : null}
+      {saveAllError ? <MessageBox variant="error">{saveAllError}</MessageBox> : null}
 
       {isMobile ? (
         <div className={isOpen || isClosing ? "adminTicketsInlineShell isEditorOpen" : "adminTicketsInlineShell"}>
