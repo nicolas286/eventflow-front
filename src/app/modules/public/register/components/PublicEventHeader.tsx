@@ -1,12 +1,14 @@
 import { Link } from "react-router-dom";
-import Button from "@ui/components/button/Button";
-import { formatDateTimeHuman } from "@helpers/dateTime";
+import { formatDateTimeHuman, getDurationLabel } from "@helpers/dateTime";
 
 import "@layouts/publicPages.desktop.css";
-import type { PublicEvent, 
-  PublicOrgProfileOverviewForEventPage } from "../../events/schemas/public.eventDetailBySlug.schema";
-import { PinIcon } from "@shared/ui/components/icon/Icons";
+import "./PublicEventHeader.css";
+import type {
+  PublicEvent,
+  PublicOrgProfileOverviewForEventPage,
+} from "../../events/schemas/public.eventDetailBySlug.schema";
 import MarkdownText from "@shared/ui/components/markdowntext/MarkdownText";
+import { CalendarIcon, HourglassIcon, PinIcon } from "@shared/ui/components/icon/Icons";
 
 type Props = {
   orgSlug: string;
@@ -16,9 +18,12 @@ type Props = {
 
 export function PublicEventHeader({ orgSlug, org, event }: Props) {
   const startText = event.startsAt ? formatDateTimeHuman(event.startsAt) : null;
-  const endText = event.endsAt ? formatDateTimeHuman(event.endsAt) : null;
-
+  const durationText = getDurationLabel(event.startsAt, event.endsAt);
   const banner = event.bannerUrl;
+
+  const googleMapsUrl = event.location
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`
+    : null;
 
   return (
     <>
@@ -44,29 +49,52 @@ export function PublicEventHeader({ orgSlug, org, event }: Props) {
       <div className="publicHeaderRow">
         <div className="publicTitleBlock">
           <h1 className="publicTitle">{event.title}</h1>
-          <div className="publicLocation">
-            <PinIcon/>
-            {event.location ?? "Lieu à venir"}
-          </div>
+
+          {(startText || event.location || durationText) ? (
+            <div className="publicMetaCard">
+              {startText ? (
+                <div className="publicMetaItem">
+                  <CalendarIcon />
+                  <span className="publicMetaLabel">Début</span>
+                  <span className="publicMetaValue">{startText}</span>
+                </div>
+              ) : null}
+
+              {event.location && googleMapsUrl ? (
+                <a
+                  href={googleMapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="publicMetaItem publicMetaItemLink"
+                  aria-label={`Ouvrir le lieu dans Google Maps : ${event.location}`}
+                  title="Ouvrir dans Google Maps"
+                >
+                  <PinIcon />
+                  <span className="publicMetaLabel">Lieu</span>
+                  <span className="publicMetaValue">{event.location}</span>
+                </a>
+              ) : null}
+
+              {durationText ? (
+                <div className="publicMetaItem">
+                  <HourglassIcon />
+                  <span className="publicMetaLabel">Durée</span>
+                  <span className="publicMetaValue">{durationText}</span>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           {event.description && (
-          <MarkdownText
-            markdown={event.description}
-            className="publicSubtitle"
-          />
-        )}
+            <MarkdownText
+              markdown={event.description}
+              className="publicSubtitle"
+            />
+          )}
         </div>
 
-        {(startText || endText) ? (
-          <div className="publicDateChip">
-            {startText ? <span>Début : {startText}</span> : null}
-            {endText ? <span>Fin : {endText}</span> : null}
-          </div>
-        ) : null}
-
         <div className="publicActions">
-          <Link to={`/o/${orgSlug}`}>
-            <Button variant="primary" label="Retour" />
-          </Link>
+          <Link to={`/o/${orgSlug}`}>← Retour</Link>
         </div>
       </div>
     </>
