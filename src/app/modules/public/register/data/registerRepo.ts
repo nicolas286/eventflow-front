@@ -7,7 +7,7 @@ import { type RegisterPayload,
 export function createRegisterRepo(supabase: SupabaseClient) {
   return {
     async register(input: RegisterPayload): Promise<RegisterResponse> {
-      const { data, error } = await supabase.functions.invoke("register", { body: input });
+      const { data, error } = await supabase.functions.invoke("register-test-tickets", { body: input });
 
       if (error) throw error;
       if (!data) throw new Error("REGISTER_EMPTY_RESPONSE");
