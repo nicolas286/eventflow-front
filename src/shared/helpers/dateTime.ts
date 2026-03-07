@@ -84,3 +84,23 @@ export function toDayStartISO(d: string) {
 export function toDayEndISO(d: string) {
   return `${d}T23:59:59.999Z`;
 }
+
+/* -------------------------- Duration calculation -------------------------- */
+
+export function getDurationLabel(startsAt?: string | null, endsAt?: string | null) {
+  if (!startsAt || !endsAt) return null;
+
+  const start = new Date(startsAt).getTime();
+  const end = new Date(endsAt).getTime();
+
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
+
+  const diffMs = end - start;
+  const totalMinutes = Math.round(diffMs / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours && minutes) return `${hours}h${minutes.toString().padStart(2, "0")}`;
+  if (hours) return `${hours}h`;
+  return `${minutes} min`;
+}

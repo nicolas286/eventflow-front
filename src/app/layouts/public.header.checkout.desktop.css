@@ -5,7 +5,7 @@
   display: flex;
   align-items: start;
   justify-content: space-between;
-  margin-top: 6px;
+  margin-top: 18px;
   padding-top: clamp(26px, 4.5vw, 38px);
   gap: 12px;
   flex-wrap: wrap;
@@ -22,6 +22,7 @@
   font-weight: 800;
   letter-spacing: -0.02em;
   color: #0f172a;
+  text-align: left;
 }
 
 .publicSubtitle {
