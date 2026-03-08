@@ -16,7 +16,7 @@ import Button from "@ui/components/button/Button";
 import { SingleEventDetailsSection } from "../components/SingleEventDetailsTab";
 import { SingleEventTicketsSection } from "../../tickets/components/SingleEventTicketsSection";
 import { SingleEventFormSection } from "../../forms/components/SingleEventFormTab";
-import { SingleEventParticipantsSection } from "../../orders/components/SingleEventAttendeesTab";
+import { SingleEventParticipantsSection } from "../../orders/components/SingleEventParticipantsSection";
 import type { UploadResult } from "@gateways/supabase/repositories/dashboard/uploadOrgAssets.repo";
 
 type TabKey = "details" | "tickets" | "form" | "participants";
@@ -214,6 +214,7 @@ export function AdminSingleEventPage() {
                     products={core.data.products}
                     formFields={core.data.formFields}
                     orders={core.data.orders}
+                    orderItems={core.data.orderItems}
                     attendees={participants.data.attendees}
                     attendeeAnswers={participants.data.attendeeAnswers}
                     onChanged={refreshAll}

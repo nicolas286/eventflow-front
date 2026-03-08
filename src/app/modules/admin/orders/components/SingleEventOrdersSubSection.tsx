@@ -23,14 +23,13 @@ import type {
   AttendeeAnswers as AttendeeAnswer,
   AttendeesAnswers,
 } from "@shared/models/db/db.attendeeAnswers.schema";
+import type { OrderItem } from "@shared/models/db/db.orderItems.schema";
 import type { OrdersUI, OrderUI } from "../schemas/admin.ordersSchema";
 import type { Attendee } from "@shared/models/db/db.attendee.schema";
-
 
 import { toRows } from "@helpers/normalize";
 import { makeLocalAnswers, buildUpdateAttendeeFromForm } from "@helpers/attendeeAnswers";
 import { exportParticipantsXls } from "../helpers/exportParticipantsXls";
-import { FlexPanel } from "@ui/components/panels/FlexPanel";
 
 import "./attendees.css";
 
@@ -38,17 +37,19 @@ type FilterMode = "all" | "order" | `field:${string}`;
 
 type InlineEditorProps = Omit<ComponentProps<typeof AttendeeEditorPanel>, "layout">;
 
-export function SingleEventParticipantsSection(props: {
+export function SingleEventOrdersSubSection(props: {
   event: AdminEventDetailEvent;
   products: EventProducts;
   formFields: EventFormField[];
   orders: OrdersUI;
+  orderItems: OrderItem[];
   attendees: AttendeesPage;
   attendeeAnswers: AttendeesAnswers;
   onChanged?: () => Promise<void>;
 }) {
-  const { event, products, formFields, orders, attendees, attendeeAnswers, onChanged } = props;
-
+  const { event, products, formFields, orders, attendees, attendeeAnswers, orderItems, onChanged } = props;
+  const productsRows = useMemo(() => toRows<EventProduct>(products), [products]);
+  const orderItemsRows = useMemo(() => toRows(orderItems), [orderItems]);
   const isMobile = useIsMobile(720);
 
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
@@ -72,9 +73,9 @@ export function SingleEventParticipantsSection(props: {
 
   const initialAttendees = useMemo(() => attendees.rows, [attendees.rows]);
   const initialAnswers = useMemo(
-  () => toRows<AttendeeAnswer>(attendeeAnswers),
-  [attendeeAnswers]
-);
+    () => toRows<AttendeeAnswer>(attendeeAnswers),
+    [attendeeAnswers]
+  );
   const initialOrders = useMemo(() => orders.rows, [orders.rows]);
 
   const [localAttendees, setLocalAttendees] = useState<Attendee[]>(() => initialAttendees);
@@ -86,24 +87,25 @@ export function SingleEventParticipantsSection(props: {
   useEffect(() => setLocalOrders(initialOrders), [initialOrders]);
 
   const regFields = useMemo(() => toRows<EventFormField>(formFields), [formFields]);
-  const productsRows = useMemo(() => toRows<EventProduct>(products), [products]);
 
   const eventId = event.id ?? "";
 
   const {
-    orderMetaById,
-    filledFieldsByAttendeeId,
-    fieldOptions,
-    filteredAttendees,
-    groups,
-    computeIdentity,
-  } = useParticipantsViewModel({
-    localAttendees,
-    localAnswers,
-    localOrders,
-    query,
-    filterMode,
-  });
+  orderMetaById,
+  filledFieldsByAttendeeId,
+  fieldOptions,
+  filteredAttendees,
+  groups,
+  computeIdentity,
+} = useParticipantsViewModel({
+  localAttendees,
+  localAnswers,
+  localOrders,
+  localOrderItems: orderItemsRows,
+  productsRows,
+  query,
+  filterMode,
+});
 
   const closeOrderWizard = useCallback(() => {
     setOrderWizardOpen(false);
@@ -407,7 +409,7 @@ export function SingleEventParticipantsSection(props: {
   }, [exportMenuOpen]);
 
   return (
-    <FlexPanel>
+    <>
       <ConfirmModal
         isOpen={confirmDeleteOrderOpen}
         title="Supprimer la commande ?"
@@ -427,103 +429,120 @@ export function SingleEventParticipantsSection(props: {
         Attention : la commande et tous ses participants seront supprimés.
       </ConfirmModal>
 
-      <div className="adminParticipantsCard">
-        <div className="adminParticipantsHeader">
-          <div>
-            <h3 className="adminParticipantsTitle">Commandes</h3>
-            <div className="adminParticipantsHint">
-              {groups.length} commande(s) • {filteredAttendees.length} participant(s)
-            </div>
-          </div>
-
-          <div className="adminParticipantsHeaderRight">
-            <div className="adminExportMenu" ref={exportMenuRef}>
-              <Button
-                variant="secondary"
-                onClick={toggleExportMenu}
-                disabled={confirmedAttendees.length === 0}
-              >
-                Export XLS
-              </Button>
-
-              {exportMenuOpen ? (
-                <div className="adminExportMenuDropdown" role="menu" aria-label="Options export XLS">
-                  <button
-                    type="button"
-                    className="adminExportMenuItem"
-                    role="menuitem"
-                    onClick={() => {
-                      setExportMenuOpen(false);
-                      doExportXls("alpha", "row");
-                    }}
-                  >
-                    Trier par nom (A→Z)
-                  </button>
-
-                  <button
-                    type="button"
-                    className="adminExportMenuItem"
-                    role="menuitem"
-                    onClick={() => {
-                      setExportMenuOpen(false);
-                      doExportXls("orderRef", "order");
-                    }}
-                  >
-                    Trier par commande (réf + index)
-                  </button>
-                </div>
-              ) : null}
-            </div>
-
-            <Button variant="primary" onClick={openCreateOrder}>
-              + Ajouter une commande
-            </Button>
+      <div className="adminParticipantsHeader">
+        <div>
+          <h3 className="adminParticipantsTitle">Commandes</h3>
+          <div className="adminParticipantsHint">
+            {groups.length} commande(s) • {filteredAttendees.length} participant(s)
           </div>
         </div>
 
-        <FilterBar
-          query={query}
-          onQueryChange={setQuery}
-          selectValue={filterMode}
-          onSelectChange={(v) => setFilterMode(v as FilterMode)}
-          placeholder={
-            filterMode === "order"
-              ? "Rechercher par numéro de commande…"
-              : filterMode.startsWith("field:")
-              ? "Rechercher dans le champ sélectionné…"
-              : "Recherche globale…"
-          }
-          selectOptions={[
-            { value: "all", label: "Tous" },
-            { value: "order", label: "Commande" },
-            ...fieldOptions.map((f) => ({
-              value: `field:${f.key}`,
-              label: f.label,
-              group: "Champs participant",
-            })),
-          ]}
-        />
+        <div className="adminParticipantsHeaderRight">
+          <div className="adminExportMenu" ref={exportMenuRef}>
+            <Button
+              variant="secondary"
+              onClick={toggleExportMenu}
+              disabled={confirmedAttendees.length === 0}
+            >
+              Export XLS
+            </Button>
 
-        {isMobile ? (
-          <>
-            {orderWizardOpen ? (
-              <div className="adminInlineOrderWizard">
-                <AdminOrderCreateWizardPanel
-                  isOpen={orderWizardOpen}
-                  onRequestClose={closeOrderWizard}
-                  stickyTop={120}
-                  editorWidth={420}
-                  editorGap={14}
-                  left={<div style={{ display: "none" }} />}
-                  eventId={eventId}
-                  products={productsRows}
-                  regFields={regFields}
-                  onCreated={handleCreatedOrder}
-                />
+            {exportMenuOpen ? (
+              <div className="adminExportMenuDropdown" role="menu" aria-label="Options export XLS">
+                <button
+                  type="button"
+                  className="adminExportMenuItem"
+                  role="menuitem"
+                  onClick={() => {
+                    setExportMenuOpen(false);
+                    void doExportXls("alpha", "row");
+                  }}
+                >
+                  Trier par nom (A→Z)
+                </button>
+
+                <button
+                  type="button"
+                  className="adminExportMenuItem"
+                  role="menuitem"
+                  onClick={() => {
+                    setExportMenuOpen(false);
+                    void doExportXls("orderRef", "order");
+                  }}
+                >
+                  Trier par commande (réf + index)
+                </button>
               </div>
             ) : null}
+          </div>
 
-            {groups.length === 0 ? (
+          <Button variant="primary" onClick={openCreateOrder}>
+            + Ajouter une commande
+          </Button>
+        </div>
+      </div>
+
+      <FilterBar
+        query={query}
+        onQueryChange={setQuery}
+        selectValue={filterMode}
+        onSelectChange={(v) => setFilterMode(v as FilterMode)}
+        placeholder={
+          filterMode === "order"
+            ? "Rechercher par numéro de commande…"
+            : filterMode.startsWith("field:")
+            ? "Rechercher dans le champ sélectionné…"
+            : "Recherche globale…"
+        }
+        selectOptions={[
+          { value: "all", label: "Tous" },
+          { value: "order", label: "Commande" },
+          ...fieldOptions.map((f) => ({
+            value: `field:${f.key}`,
+            label: f.label,
+            group: "Champs participant",
+          })),
+        ]}
+      />
+
+      {isMobile ? (
+        <>
+          {orderWizardOpen ? (
+            <div className="adminInlineOrderWizard">
+              <AdminOrderCreateWizardPanel
+                isOpen={orderWizardOpen}
+                onRequestClose={closeOrderWizard}
+                stickyTop={120}
+                editorWidth={420}
+                editorGap={14}
+                left={<div style={{ display: "none" }} />}
+                eventId={eventId}
+                products={productsRows}
+                regFields={regFields}
+                onCreated={handleCreatedOrder}
+              />
+            </div>
+          ) : null}
+
+          {groups.length === 0 ? (
+            <div className="adminEventEmpty">
+              {query.trim()
+                ? "Aucun résultat avec ces filtres."
+                : "Aucune commande pour le moment."}
+            </div>
+          ) : (
+            leftContent
+          )}
+        </>
+      ) : (
+        <EditorShell
+          isOpen={shellOpen}
+          onRequestClose={closeActivePanel}
+          editorWidth={420}
+          editorGap={14}
+          stickyTop={120}
+          left={
+            groups.length === 0 ? (
               <div className="adminEventEmpty">
                 {query.trim()
                   ? "Aucun résultat avec ces filtres."
@@ -531,30 +550,11 @@ export function SingleEventParticipantsSection(props: {
               </div>
             ) : (
               leftContent
-            )}
-          </>
-        ) : (
-          <EditorShell
-            isOpen={shellOpen}
-            onRequestClose={closeActivePanel}
-            editorWidth={420}
-            editorGap={14}
-            stickyTop={120}
-            left={
-              groups.length === 0 ? (
-                <div className="adminEventEmpty">
-                  {query.trim()
-                    ? "Aucun résultat avec ces filtres."
-                    : "Aucune commande pour le moment."}
-                </div>
-              ) : (
-                leftContent
-              )
-            }
-            right={rightPanel}
-          />
-        )}
-      </div>
-    </FlexPanel>
+            )
+          }
+          right={rightPanel}
+        />
+      )}
+    </>
   );
 }

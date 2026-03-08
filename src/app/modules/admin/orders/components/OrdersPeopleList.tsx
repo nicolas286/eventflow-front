@@ -128,6 +128,8 @@ export function OrdersPeopleList(props: OrdersPeopleListProps) {
           const due = meta?.dueCents ?? Math.max(0, total - paid);
           const currency = meta?.currency ?? "EUR";
           const isFree = total === 0;
+          const nonAttendeeItems = meta?.nonAttendeeItems ?? [];
+          
           return (
             <div key={orderId} className="adminOrderCard">
               <div className="adminOrderHeader">
@@ -197,6 +199,22 @@ export function OrdersPeopleList(props: OrdersPeopleListProps) {
                     </Fragment>
                   );
                 })}
+                {nonAttendeeItems.length > 0 ? (
+                <div className="adminOrderExtraTickets">
+                  <div className="adminOrderExtraTicketsTitle">
+                    Billets sans participant
+                  </div>
+
+                  <div className="adminOrderExtraTicketsList">
+                    {nonAttendeeItems.map((item) => (
+                      <div key={item.id} className="adminOrderExtraTicketRow">
+                        <span className="adminOrderExtraTicketName">{item.name}</span>
+                        <span className="adminOrderExtraTicketQty">× {item.quantity}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               </div>
             </div>
           );
