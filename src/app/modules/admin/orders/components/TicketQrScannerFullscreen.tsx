@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { Html5Qrcode } from "html5-qrcode";
 
 import type { AdminEventTicketRow } from "../../singleEvent/schemas/admin.eventTickets.schema";
+import { createPortal } from "react-dom";
 
 import "./ticketQrScannerFullscreen.css";
 
@@ -53,7 +54,7 @@ export function TicketQrScannerFullscreen({
   open,
   onClose,
   onScanToken,
-  feedbackDurationMs = 1500,
+  feedbackDurationMs = 2500,
 }: TicketQrScannerFullscreenProps) {
   const rawId = useId();
   const scannerId = useMemo(
@@ -291,71 +292,72 @@ export function TicketQrScannerFullscreen({
 
   if (!open) return null;
 
-  return (
-    <div className="ticketQrScannerFs" role="dialog" aria-modal="true" aria-label="Scanner QR code">
-      <div className="ticketQrScannerFs__readerWrap">
-        <div id={scannerId} className="ticketQrScannerFs__reader" />
-      </div>
+return createPortal(
+  <div className="ticketQrScannerFs" role="dialog" aria-modal="true" aria-label="Scanner QR code">
+    <div className="ticketQrScannerFs__readerWrap">
+      <div id={scannerId} className="ticketQrScannerFs__reader" />
+    </div>
 
-      {!feedback ? (
-        <>
-          <div className="ticketQrScannerFs__topBar">
-            <button
-              type="button"
-              className="ticketQrScannerFs__iconBtn"
-              onClick={onClose}
-              aria-label="Fermer le scanner"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className="ticketQrScannerFs__overlay">
-            <div className="ticketQrScannerFs__frame" />
-          </div>
-
-          <div className="ticketQrScannerFs__bottomHud">
-            <div className="ticketQrScannerFs__hint">
-              {starting
-                ? "Ouverture de la caméra…"
-                : cameraError
-                  ? "Caméra indisponible"
-                  : "Cadre le QR code pour valider rapidement"}
-            </div>
-
-            {cameraError ? (
-              <div className="ticketQrScannerFs__cameraError">{cameraError}</div>
-            ) : null}
-          </div>
-        </>
-      ) : (
-        <div
-          className={[
-            "ticketQrScannerFs__feedback",
-            feedback.tone === "success" && "ticketQrScannerFs__feedback--success",
-            feedback.tone === "warning" && "ticketQrScannerFs__feedback--warning",
-            feedback.tone === "error" && "ticketQrScannerFs__feedback--error",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-        >
+    {!feedback ? (
+      <>
+        <div className="ticketQrScannerFs__topBar">
           <button
             type="button"
-            className="ticketQrScannerFs__iconBtn ticketQrScannerFs__feedbackClose"
-            onClick={dismissFeedback}
-            aria-label="Fermer le message"
+            className="ticketQrScannerFs__iconBtn"
+            onClick={onClose}
+            aria-label="Fermer le scanner"
           >
             ✕
           </button>
-
-          <div className="ticketQrScannerFs__feedbackBody">
-            <div className="ticketQrScannerFs__feedbackTitle">{feedback.title}</div>
-            {feedback.subtitle ? (
-              <div className="ticketQrScannerFs__feedbackSubtitle">{feedback.subtitle}</div>
-            ) : null}
-          </div>
         </div>
-      )}
-    </div>
-  );
+
+        <div className="ticketQrScannerFs__overlay">
+          <div className="ticketQrScannerFs__frame" />
+        </div>
+
+        <div className="ticketQrScannerFs__bottomHud">
+          <div className="ticketQrScannerFs__hint">
+            {starting
+              ? "Ouverture de la caméra…"
+              : cameraError
+                ? "Caméra indisponible"
+                : "Cadre le QR code pour valider rapidement"}
+          </div>
+
+          {cameraError ? (
+            <div className="ticketQrScannerFs__cameraError">{cameraError}</div>
+          ) : null}
+        </div>
+      </>
+    ) : (
+      <div
+        className={[
+          "ticketQrScannerFs__feedback",
+          feedback.tone === "success" && "ticketQrScannerFs__feedback--success",
+          feedback.tone === "warning" && "ticketQrScannerFs__feedback--warning",
+          feedback.tone === "error" && "ticketQrScannerFs__feedback--error",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        <button
+          type="button"
+          className="ticketQrScannerFs__iconBtn ticketQrScannerFs__feedbackClose"
+          onClick={dismissFeedback}
+          aria-label="Fermer le message"
+        >
+          ✕
+        </button>
+
+        <div className="ticketQrScannerFs__feedbackBody">
+          <div className="ticketQrScannerFs__feedbackTitle">{feedback.title}</div>
+          {feedback.subtitle ? (
+            <div className="ticketQrScannerFs__feedbackSubtitle">{feedback.subtitle}</div>
+          ) : null}
+        </div>
+      </div>
+    )}
+  </div>,
+  document.body,
+);
 }

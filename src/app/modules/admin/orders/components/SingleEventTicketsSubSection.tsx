@@ -59,44 +59,43 @@ export function SingleEventTicketsSubSection(props: {
     return map;
   }, [tickets]);
 
-  const handleScanToken = useCallback(
-    async (qrTokenRaw: string): Promise<TicketQrScanOutcome> => {
-      const qrToken = qrTokenRaw.trim();
-      const localTicket = ticketsByQrToken.get(qrToken);
+ const handleScanToken = useCallback(
+  async (qrTokenRaw: string): Promise<TicketQrScanOutcome> => {
+    const qrToken = qrTokenRaw.trim();
+    const localTicket = ticketsByQrToken.get(qrToken);
 
-      if (!localTicket) {
-        return { kind: "invalid" };
-      }
+    if (!localTicket) {
+      return { kind: "invalid" };
+    }
 
-      if (localTicket.checkedInAt) {
-        return {
-          kind: "alreadyChecked",
-          ticket: localTicket,
-        };
-      }
-
-      const result = await markTicketByQr.markTicketCheckedInByQr(qrToken);
-
-      if (!result) {
-        return { kind: "invalid" };
-      }
-
-      const updatedTicket: AdminEventTicket = {
-        ...localTicket,
-        status: result.status,
-        checkedInAt: result.checkedInAt,
-      };
-
-      await refetch();
-      await props.onChanged?.();
-
+    if (localTicket.checkedInAt) {
       return {
-        kind: "validated",
-        ticket: updatedTicket,
+        kind: "alreadyChecked",
+        ticket: localTicket,
       };
-    },
-    [ticketsByQrToken, markTicketByQr, refetch, props],
-  );
+    }
+
+    const result = await markTicketByQr.markTicketCheckedInByQr(qrToken);
+
+    if (!result) {
+      return { kind: "invalid" };
+    }
+
+    const updatedTicket: AdminEventTicket = {
+      ...localTicket,
+      status: result.status,
+      checkedInAt: result.checkedInAt,
+    };
+
+    void refetch();
+
+    return {
+      kind: "validated",
+      ticket: updatedTicket,
+    };
+  },
+  [ticketsByQrToken, markTicketByQr, refetch],
+);
 
   const filteredTickets = useMemo(() => {
     let rows = tickets;

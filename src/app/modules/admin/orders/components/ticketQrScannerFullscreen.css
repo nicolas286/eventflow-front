@@ -1,7 +1,7 @@
 .ticketQrScannerFs {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: 999999;
   background: #000;
   overflow: hidden;
 }
@@ -99,7 +99,7 @@
 .ticketQrScannerFs__feedback {
   position: absolute;
   inset: 0;
-  z-index: 50;
+  z-index: 1000000;
   display: grid;
   place-items: center;
   padding: 24px;
