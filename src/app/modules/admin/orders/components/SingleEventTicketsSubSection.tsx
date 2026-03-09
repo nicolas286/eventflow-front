@@ -63,53 +63,48 @@ export function SingleEventTicketsSubSection(props: {
   }, [rawTickets]);
 
   const handleScanToken = useCallback(
-    async (qrTokenRaw: string): Promise<TicketQrScanOutcome> => {
-      const qrToken = qrTokenRaw.trim();
+  async (qrTokenRaw: string): Promise<TicketQrScanOutcome> => {
+    const qrToken = qrTokenRaw.trim();
 
-      try {
-        const result = await markTicketByQr.markTicketCheckedInByQr(qrToken);
+    try {
+      const result = await markTicketByQr.markTicketCheckedInByQr(qrToken);
 
-        if (!result) {
-          return { kind: "invalid" };
-        }
-
-        const localTicket = ticketsByQrToken.get(qrToken);
-
-        if (result.checkedInAt && localTicket?.checkedInAt) {
-          return {
-            kind: "alreadyChecked",
-            ticket: {
-              ...localTicket,
-              status: result.status,
-              checkedInAt: result.checkedInAt,
-            },
-          };
-        }
-
-        const ticket = localTicket
-          ? {
-              ...localTicket,
-              status: result.status,
-              checkedInAt: result.checkedInAt,
-            }
-          : {
-              qrToken,
-              status: result.status,
-              checkedInAt: result.checkedInAt,
-            };
-
-        void refetch();
-
-        return {
-          kind: "validated",
-          ticket: ticket as AdminEventTicket,
-        };
-      } catch {
+      if (!result) {
         return { kind: "invalid" };
       }
-    },
-    [markTicketByQr, ticketsByQrToken, refetch],
-  );
+
+      const localTicket = ticketsByQrToken.get(qrToken);
+
+      const ticket = {
+        ticketId: result.ticketId,
+        orderId: result.orderId,
+        ticketIndex: result.ticketIndex,
+        qrToken: result.qrToken,
+        status: result.status,
+        checkedInAt: result.checkedInAt,
+        checkedInBy: result.checkedInBy,
+        productNameSnapshot: localTicket?.productNameSnapshot,
+      };
+
+      void refetch();
+
+      if (localTicket?.checkedInAt) {
+        return {
+          kind: "alreadyChecked",
+          ticket,
+        };
+      }
+
+      return {
+        kind: "validated",
+        ticket,
+      };
+    } catch {
+      return { kind: "invalid" };
+    }
+  },
+  [markTicketByQr, ticketsByQrToken, refetch],
+);
 
   const displayedTickets = useMemo(() => {
     let rows = rawTickets;
