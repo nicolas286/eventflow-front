@@ -85,7 +85,7 @@ export function useAdminSingleEventParticipantsData(params: {
     orgId,
     eventSlug,
     enabled = true,
-    attendeesLimit = 50,
+    attendeesLimit,
     attendeesOffset = 0,
   } = params;
 
