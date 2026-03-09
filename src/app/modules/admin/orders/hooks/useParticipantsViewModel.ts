@@ -7,7 +7,9 @@ import type { EventDetailAdmin } from "../../singleEvent/schemas/admin.eventDeta
 
 export type FilterMode = "all" | "order" | `field:${string}`;
 
-type OrderRow = EventDetailAdmin["orders"]["rows"][number]; // ✅ row type “source of truth”
+type OrderRow = EventDetailAdmin["orders"]["rows"][number];
+type OrderItemRow = EventDetailAdmin["orderItems"][number];
+type ProductRow = EventDetailAdmin["products"][number];
 
 export type OrderMeta = {
   orderNumber: string;
@@ -19,6 +21,12 @@ export type OrderMeta = {
   totalCents: number;
   paidCents: number;
   dueCents: number;
+
+  nonAttendeeItems?: Array<{
+    id: string;
+    name: string;
+    quantity: number;
+  }>;
 };
 
 type FilledField = { key: string; label: string; value: string };
@@ -26,35 +34,79 @@ type FilledField = { key: string; label: string; value: string };
 export function useParticipantsViewModel(params: {
   localAttendees: Attendee[];
   localAnswers: AttendeeAnswers[];
-  localOrders: OrderRow[]; // ✅ plus de Record
+  localOrders: OrderRow[];
+  localOrderItems: OrderItemRow[];
 
   query: string;
   filterMode: FilterMode;
+  productsRows: ProductRow[];
 }) {
-  const { localAttendees, localAnswers, localOrders, query, filterMode } = params;
+  const {
+    localAttendees,
+    localAnswers,
+    localOrders,
+    localOrderItems,
+    productsRows,
+    query,
+    filterMode,
+  } = params;
 
-  /* -------------------- ORDER META -------------------- */
-  const orderMetaById = useMemo(() => {
-  const m = new Map<string, OrderMeta>();
+  const createsAttendeesByProductId = useMemo(() => {
+  const m = new Map<string, boolean>();
 
-  for (const o of localOrders) {
-    const total = o.totalCents ?? 0;
-    const paid = o.paidCents ?? 0;
-    const due = Math.max(0, total - paid);
-
-    m.set(o.id, {
-      orderNumber: o.id.slice(0, 8),
-      createdAt: o.createdAt,
-      status: o.status,
-      currency: o.currency,
-      totalCents: total,
-      paidCents: paid,
-      dueCents: due,
-    });
+  for (const p of productsRows) {
+    m.set(p.id, Boolean(p.createsAttendees));
   }
 
   return m;
-}, [localOrders]);
+}, [productsRows]);
+
+  /* -------------------- ORDER META -------------------- */
+  const orderMetaById = useMemo(() => {
+    const itemsByOrderId = new Map<string, OrderItemRow[]>();
+
+    for (const item of localOrderItems) {
+      const arr = itemsByOrderId.get(item.orderId) ?? [];
+      arr.push(item);
+      itemsByOrderId.set(item.orderId, arr);
+    }
+
+    const m = new Map<string, OrderMeta>();
+
+    for (const o of localOrders) {
+      const total = o.totalCents ?? 0;
+      const paid = o.paidCents ?? 0;
+      const due = Math.max(0, total - paid);
+
+      const orderItems = itemsByOrderId.get(o.id) ?? [];
+
+      const nonAttendeeItems = orderItems
+        .filter((item) => {
+          const createsAttendees =
+            item.productId ? (createsAttendeesByProductId.get(item.productId) ?? true) : true;
+          const quantity = Number(item.quantity ?? 0);
+          return !createsAttendees && quantity > 0;
+        })
+        .map((item) => ({
+          id: item.id,
+          name: item.productNameSnapshot || "Billet",
+          quantity: Number(item.quantity ?? 0),
+        }));
+
+      m.set(o.id, {
+        orderNumber: o.id.slice(0, 8),
+        createdAt: o.createdAt,
+        status: o.status,
+        currency: o.currency,
+        totalCents: total,
+        paidCents: paid,
+        dueCents: due,
+        nonAttendeeItems,
+      });
+    }
+
+    return m;
+  }, [localOrders, localOrderItems, createsAttendeesByProductId]);
 
   /* -------------------- ANSWERS BY ATTENDEE (FILLED) -------------------- */
   const filledFieldsByAttendeeId = useMemo(() => {
