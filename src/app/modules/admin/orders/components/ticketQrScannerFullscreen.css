@@ -23,35 +23,51 @@
   width: 100%;
   height: 100%;
   background: #000;
+  overflow: hidden;
 }
 
-/* html5-qrcode injecte parfois des wrappers internes */
-.ticketQrScannerFs__reader > div,
-.ticketQrScannerFs__reader video,
-.ticketQrScannerFs__reader canvas {
+/* wrappers injectés par html5-qrcode */
+.ticketQrScannerFs__reader > div {
+  position: absolute !important;
+  inset: 0 !important;
   width: 100% !important;
   height: 100% !important;
-}
-
-.ticketQrScannerFs__reader video,
-.ticketQrScannerFs__reader canvas {
-  object-fit: cover !important;
-}
-
-/* Neutralise autant que possible certains styles internes de la lib */
-.ticketQrScannerFs__reader > div {
   background: #000 !important;
 }
 
+/* vidéo visible */
+.ticketQrScannerFs__reader video {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  z-index: 1 !important;
+  background: #000 !important;
+}
+
+/* canvas utilisé par la lib : on le garde mais on l'empêche de masquer la vidéo */
+.ticketQrScannerFs__reader canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 0 !important;
+  opacity: 0.01 !important;
+  pointer-events: none !important;
+}
+
+/* neutralise quelques éléments internes éventuels */
 .ticketQrScannerFs__reader img {
   display: none !important;
 }
 
 .ticketQrScannerFs__reader #qr-shaded-region {
   border-width: 0 !important;
+  background: transparent !important;
 }
 
-/* Barre du haut */
+/* top bar */
 .ticketQrScannerFs__topBar {
   position: absolute;
   inset: 0 0 auto 0;
@@ -76,7 +92,7 @@
   -webkit-backdrop-filter: blur(8px);
 }
 
-/* Overlay de cadrage */
+/* cadre */
 .ticketQrScannerFs__overlay {
   position: absolute;
   inset: 0;
@@ -85,12 +101,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transform: translateY(-6vh);
+  transform: translateY(-4vh);
 }
 
 .ticketQrScannerFs__frame {
-  width: min(72vw, 52vh);
-  height: min(72vw, 52vh);
+  width: min(78vw, 54vh);
+  height: min(78vw, 54vh);
   border: 3px solid rgba(255, 255, 255, 0.92);
   border-radius: 24px;
   box-shadow:
@@ -98,7 +114,7 @@
     0 0 0 1px rgba(255, 255, 255, 0.15) inset;
 }
 
-/* HUD du bas */
+/* HUD */
 .ticketQrScannerFs__bottomHud {
   position: absolute;
   left: 12px;
@@ -114,7 +130,7 @@
 
 .ticketQrScannerFs__hint,
 .ticketQrScannerFs__cameraError {
-  max-width: min(92vw, 420px);
+  max-width: min(92vw, 460px);
   padding: 10px 14px;
   color: #fff;
   text-align: center;
@@ -136,7 +152,7 @@
   line-height: 1.35;
 }
 
-/* Feedback plein écran */
+/* feedback plein écran */
 .ticketQrScannerFs__feedback {
   position: absolute;
   inset: 0;
@@ -184,15 +200,14 @@
   opacity: 0.98;
 }
 
-/* Ajustements mobile */
 @media (max-width: 640px) {
   .ticketQrScannerFs__overlay {
-    transform: translateY(-4vh);
+    transform: translateY(-3vh);
   }
 
   .ticketQrScannerFs__frame {
-    width: min(78vw, 50vh);
-    height: min(78vw, 50vh);
+    width: min(80vw, 52vh);
+    height: min(80vw, 52vh);
     border-radius: 22px;
   }
 
