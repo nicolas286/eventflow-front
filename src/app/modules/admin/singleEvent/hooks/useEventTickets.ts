@@ -82,7 +82,7 @@ export function useAdminSingleEventTicketsData(params: {
     supabase,
     eventId,
     enabled = true,
-    limit = 50,
+    limit,
     offset = 0,
   } = params;
 

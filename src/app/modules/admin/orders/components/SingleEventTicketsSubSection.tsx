@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { supabase } from "@gateways/supabase/supabaseClient";
 
@@ -7,13 +7,18 @@ import { useAdminSingleEventTicketsData } from "../../singleEvent/hooks/useEvent
 
 import type { AdminEventTicketRow as AdminEventTicket } from "../../singleEvent/schemas/admin.eventTickets.schema";
 import { useMarkTicketCheckedIn } from "../hooks/useMarkTicketCheckedIn";
+import { useMarkTicketCheckedInByQr } from "../hooks/useMarkTicketCheckedInByQr";
+import {
+  TicketQrScannerFullscreen,
+  type TicketQrScanOutcome,
+} from "../components/TicketQrScannerFullscreen";
 
 import "./attendees.css";
 import { MessageBox } from "@shared/ui/components/message/MessageBox";
 
 type FilterMode = "all" | "used" | "unused";
 
-const PAGE_SIZE = 25;
+const DISPLAY_PAGE_SIZE = 25;
 
 function norm(v: unknown) {
   return String(v ?? "").trim().toLowerCase();
@@ -29,62 +34,126 @@ export function SingleEventTicketsSubSection(props: {
   const [query, setQuery] = useState("");
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [pageByEvent, setPageByEvent] = useState<Record<string, number>>({});
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const page = pageByEvent[eventId] ?? 0;
-  const offset = page * PAGE_SIZE;
 
   const { data, loading, error, refetch } = useAdminSingleEventTicketsData({
     supabase,
     eventId,
     enabled: Boolean(eventId),
-    limit: PAGE_SIZE,
-    offset,
   });
 
   const tickets = useMemo(() => data?.tickets?.rows ?? [], [data]);
+
   const markTicket = useMarkTicketCheckedIn({ supabase });
+  const markTicketByQr = useMarkTicketCheckedInByQr({ supabase });
 
-  const filtered = useMemo(() => {
-  let rows = tickets;
+  const ticketsByQrToken = useMemo(() => {
+    const map = new Map<string, AdminEventTicket>();
 
-  if (filterMode === "used") {
-    rows = rows.filter((t) => Boolean(t.checkedInAt));
-  }
-
-  if (filterMode === "unused") {
-    rows = rows.filter((t) => !t.checkedInAt);
-  }
-
-  const q = norm(query);
-
-  if (q) {
-    rows = rows.filter((t) => {
-      const attendeeText = (t.attendeeSummaryLines ?? []).join(" • ");
-
-      return (
-        norm(t.reference).includes(q) ||
-        norm(t.productNameSnapshot).includes(q) ||
-        norm(t.qrToken).includes(q) ||
-        norm(t.buyerEmail).includes(q) ||
-        norm(attendeeText).includes(q)
-      );
-    });
-  }
-
-  return [...rows].sort((a, b) => {
-    const aUsed = Boolean(a.checkedInAt);
-    const bUsed = Boolean(b.checkedInAt);
-
-    if (aUsed !== bUsed) {
-      return aUsed ? 1 : -1; // utilisés à la fin
+    for (const ticket of tickets) {
+      map.set(ticket.qrToken.trim(), ticket);
     }
 
-    return 0;
-  });
-}, [tickets, filterMode, query]);
+    return map;
+  }, [tickets]);
 
-  const canGoPrev = page > 0;
-  const canGoNext = tickets.length === PAGE_SIZE && !query.trim() && filterMode === "all";
+  const handleScanToken = useCallback(
+    async (qrTokenRaw: string): Promise<TicketQrScanOutcome> => {
+      const qrToken = qrTokenRaw.trim();
+      const localTicket = ticketsByQrToken.get(qrToken);
+
+      if (!localTicket) {
+        return { kind: "invalid" };
+      }
+
+      if (localTicket.checkedInAt) {
+        return {
+          kind: "alreadyChecked",
+          ticket: localTicket,
+        };
+      }
+
+      const result = await markTicketByQr.markTicketCheckedInByQr(qrToken);
+
+      if (!result) {
+        return { kind: "invalid" };
+      }
+
+      const updatedTicket: AdminEventTicket = {
+        ...localTicket,
+        status: result.status,
+        checkedInAt: result.checkedInAt,
+      };
+
+      await refetch();
+      await props.onChanged?.();
+
+      return {
+        kind: "validated",
+        ticket: updatedTicket,
+      };
+    },
+    [ticketsByQrToken, markTicketByQr, refetch, props],
+  );
+
+  const filteredTickets = useMemo(() => {
+    let rows = tickets;
+
+    if (filterMode === "used") {
+      rows = rows.filter((t) => Boolean(t.checkedInAt));
+    }
+
+    if (filterMode === "unused") {
+      rows = rows.filter((t) => !t.checkedInAt);
+    }
+
+    const q = norm(query);
+
+    if (q) {
+      rows = rows.filter((t) => {
+        const attendeeText = (t.attendeeSummaryLines ?? []).join(" • ");
+
+        return (
+          norm(t.reference).includes(q) ||
+          norm(t.productNameSnapshot).includes(q) ||
+          norm(t.qrToken).includes(q) ||
+          norm(t.buyerEmail).includes(q) ||
+          norm(attendeeText).includes(q)
+        );
+      });
+    }
+
+    return [...rows].sort((a, b) => {
+      const aUsed = Boolean(a.checkedInAt);
+      const bUsed = Boolean(b.checkedInAt);
+
+      if (aUsed !== bUsed) {
+        return aUsed ? 1 : -1;
+      }
+
+      return 0;
+    });
+  }, [tickets, filterMode, query]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredTickets.length / DISPLAY_PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+
+  const displayedTickets = useMemo(() => {
+    const start = safePage * DISPLAY_PAGE_SIZE;
+    return filteredTickets.slice(start, start + DISPLAY_PAGE_SIZE);
+  }, [filteredTickets, safePage]);
+
+  const canGoPrev = safePage > 0;
+  const canGoNext = safePage < totalPages - 1;
+
+  useEffect(() => {
+    setPageByEvent((prev) => ({
+      ...prev,
+      [eventId]: 0,
+    }));
+  }, [eventId, query, filterMode]);
 
   return (
     <div className="adminTicketsSection">
@@ -92,13 +161,16 @@ export function SingleEventTicketsSubSection(props: {
         <div>
           <h3 className="adminParticipantsTitle">Tickets</h3>
           <div className="adminParticipantsHint">
-            {query.trim() || filterMode !== "all"
-              ? `${filtered.length} billet(s) sur cette page`
-              : `${tickets.length} billet(s) affiché(s)`}
+            {filteredTickets.length} billet(s)
+            {filteredTickets.length !== tickets.length ? ` sur ${tickets.length} au total` : ""}
           </div>
         </div>
 
         <div className="adminParticipantsHeaderRight">
+          <Button variant="secondary" onClick={() => setScannerOpen(true)}>
+            Scanner QR
+          </Button>
+
           <Button variant="secondary" onClick={() => void refetch()}>
             Rafraîchir
           </Button>
@@ -118,11 +190,10 @@ export function SingleEventTicketsSubSection(props: {
         ]}
       />
 
-      {markTicket.error ? (
-  <MessageBox variant="error">{markTicket.error}</MessageBox>
-) : null}
+      {markTicket.error ? <MessageBox variant="error">{markTicket.error}</MessageBox> : null}
+      {markTicketByQr.error ? <MessageBox variant="error">{markTicketByQr.error}</MessageBox> : null}
 
-      {!query.trim() && filterMode === "all" ? (
+      {filteredTickets.length > 0 ? (
         <div className="adminListPager">
           <Button
             variant="secondary"
@@ -138,8 +209,8 @@ export function SingleEventTicketsSubSection(props: {
           </Button>
 
           <div className="adminListPager__label">
-            Page {page + 1}
-            {tickets.length > 0 ? ` — ${tickets.length} ticket(s)` : ""}
+            Page {safePage + 1} / {totalPages}
+            {displayedTickets.length > 0 ? ` — ${displayedTickets.length} ticket(s) affiché(s)` : ""}
           </div>
 
           <Button
@@ -148,7 +219,7 @@ export function SingleEventTicketsSubSection(props: {
             onClick={() =>
               setPageByEvent((prev) => ({
                 ...prev,
-                [eventId]: (prev[eventId] ?? 0) + 1,
+                [eventId]: Math.min(totalPages - 1, (prev[eventId] ?? 0) + 1),
               }))
             }
           >
@@ -161,7 +232,7 @@ export function SingleEventTicketsSubSection(props: {
         <div className="adminEventEmpty">Chargement des billets…</div>
       ) : error ? (
         <div className="adminEventEmpty">{error}</div>
-      ) : filtered.length === 0 ? (
+      ) : filteredTickets.length === 0 ? (
         <div className="adminEventEmpty">
           {query.trim() || filterMode !== "all"
             ? "Aucun résultat avec ces filtres."
@@ -169,16 +240,14 @@ export function SingleEventTicketsSubSection(props: {
         </div>
       ) : (
         <div className="adminTicketsList">
-          {filtered.map((ticket: AdminEventTicket) => {
+          {displayedTickets.map((ticket: AdminEventTicket) => {
             const isUsed = Boolean(ticket.checkedInAt);
             const isInvalid = ticket.status === "invalid";
 
             return (
               <div key={ticket.id} className="adminTicketRow">
                 <div className="adminTicketRowMain">
-                  <div className="adminTicketRowTitle">
-                    {ticket.productNameSnapshot}
-                  </div>
+                  <div className="adminTicketRowTitle">{ticket.productNameSnapshot}</div>
 
                   <div className="adminTicketRowMeta">
                     #{ticket.ticketIndex} • réf {ticket.reference}
@@ -192,9 +261,7 @@ export function SingleEventTicketsSubSection(props: {
                   ) : null}
 
                   {ticket.buyerEmail ? (
-                    <div className="adminTicketRowBuyer">
-                      Acheteur : {ticket.buyerEmail}
-                    </div>
+                    <div className="adminTicketRowBuyer">Acheteur : {ticket.buyerEmail}</div>
                   ) : null}
                 </div>
 
@@ -209,17 +276,17 @@ export function SingleEventTicketsSubSection(props: {
                     )}
 
                     <Button
-                        variant="secondary"
-                        disabled={isUsed || isInvalid || markTicket.loading}
-                        onClick={async () => {
-                            const res = await markTicket.markTicketCheckedIn(ticket.id);
-                            if (!res) return;
-                            await refetch();
-                        }}
-                        >
-                        Marquer comme utilisé
-                        </Button>
-                    
+                      variant="secondary"
+                      disabled={isUsed || isInvalid || markTicket.loading}
+                      onClick={async () => {
+                        const res = await markTicket.markTicketCheckedIn(ticket.id);
+                        if (!res) return;
+                        await refetch();
+                        await props.onChanged?.();
+                      }}
+                    >
+                      Marquer comme utilisé
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -227,6 +294,12 @@ export function SingleEventTicketsSubSection(props: {
           })}
         </div>
       )}
+
+      <TicketQrScannerFullscreen
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScanToken={handleScanToken}
+      />
     </div>
   );
 }
