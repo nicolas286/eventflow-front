@@ -389,6 +389,7 @@ export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanne
             onFocus={() => setLiveMode("draft")}
             onMouseEnter={() => setLiveMode("draft")}
             onClick={() => void save(false)}
+            variant="secondary"
           >
             {secondaryLabel}
           </Button>

@@ -532,7 +532,7 @@ export function EventRegistrationFormPanel(props: Props) {
       state={isDirty ? "dirty" : "default"}
       actions={
         <>
-          <Button onClick={openCreate} disabled={!event?.id || isSaving}>
+          <Button onClick={openCreate} disabled={!event?.id || isSaving} variant="secondary">
             Ajouter un champ
           </Button>
 
@@ -638,7 +638,7 @@ export function EventRegistrationFormPanel(props: Props) {
                           title={isFiltering ? reorderDisabledTitle : undefined}
                           className="adminMoveBtn"
                           aria-label="Monter"
-                          variant="primary"
+                          variant="secondary"
                         >
                           ↑
                         </Button>
@@ -649,7 +649,7 @@ export function EventRegistrationFormPanel(props: Props) {
                           title={isFiltering ? reorderDisabledTitle : undefined}
                           className="adminMoveBtn"
                           aria-label="Descendre"
-                          variant="primary"
+                          variant="secondary"
                         >
                           ↓
                         </Button>
@@ -758,7 +758,7 @@ export function EventRegistrationFormPanel(props: Props) {
                           title={isFiltering ? reorderDisabledTitle : undefined}
                           className="adminMoveBtn"
                           aria-label="Monter"
-                          variant="primary"
+                          variant="secondary"
                         >
                           ↑
                         </Button>
@@ -769,7 +769,7 @@ export function EventRegistrationFormPanel(props: Props) {
                           title={isFiltering ? reorderDisabledTitle : undefined}
                           className="adminMoveBtn"
                           aria-label="Descendre"
-                          variant="primary"
+                          variant="secondary"
                         >
                           ↓
                         </Button>

@@ -252,6 +252,7 @@ export function EventTicketsPanel(props: Props) {
             onClick={() => moveLocal(t.clientId, -1)}
             disabled={isSaving || isFiltering || idx === 0}
             aria-label={isFiltering ? "Réordonnancement désactivé pendant une recherche" : "Monter"}
+            variant="secondary"
           >
             ↑
           </Button>
@@ -266,6 +267,7 @@ export function EventTicketsPanel(props: Props) {
                 : undefined
             }
             aria-label={isFiltering ? "Réordonnancement désactivé pendant une recherche" : "Descendre"}
+            variant="secondary"
           >
             ↓
           </Button>
@@ -290,7 +292,7 @@ export function EventTicketsPanel(props: Props) {
       state={isDirty ? "dirty" : "default"}
       actions={
         <>
-          <Button onClick={openCreate} disabled={!event?.id || isSaving}>
+          <Button onClick={openCreate} disabled={!event?.id || isSaving} variant="secondary">
             Nouveau ticket
           </Button>
 
