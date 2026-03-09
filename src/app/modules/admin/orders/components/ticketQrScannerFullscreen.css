@@ -1,15 +1,10 @@
-.ticketQrScannerFs {
-  position: fixed;
-  inset: 0;
-  z-index: 999999;
-  background: #000;
-  overflow: hidden;
-}
-
+.ticketQrScannerFs,
 .ticketQrScannerFs__readerWrap,
 .ticketQrScannerFs__reader {
-  position: absolute;
+  position: fixed;
   inset: 0;
+  width: 100vw;
+  height: 100dvh;
 }
 
 .ticketQrScannerFs__reader > div,
@@ -51,34 +46,46 @@
   inset: 0;
   z-index: 20;
   pointer-events: none;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 0;
+  transform: translateY(-6vh);
 }
 
 .ticketQrScannerFs__frame {
-  width: min(68vw, 68vh);
-  height: min(68vw, 68vh);
+  width: min(72vw, 52vh);
+  height: min(72vw, 52vh);
   border: 3px solid rgba(255, 255, 255, 0.92);
   border-radius: 24px;
   box-shadow:
-    0 0 0 9999px rgba(0, 0, 0, 0.28),
+    0 0 0 9999px rgba(0, 0, 0, 0.22),
     0 0 0 1px rgba(255, 255, 255, 0.15) inset;
 }
 
 .ticketQrScannerFs__bottomHud {
   position: absolute;
-  left: 0;
-  right: 0;
+  left: 12px;
+  right: 12px;
   bottom: max(16px, env(safe-area-inset-bottom));
   z-index: 25;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 0 16px;
+  justify-content: center;
+  padding: 0;
 }
 
-.ticketQrScannerFs__hint,
+.ticketQrScannerFs__hint {
+  max-width: min(92vw, 420px);
+  padding: 10px 14px;
+  border-radius: 999px;
+  color: #fff;
+  text-align: center;
+  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.42);
+  font-size: 14px;
+  line-height: 1.3;
+}
+
 .ticketQrScannerFs__cameraError {
   max-width: min(92vw, 560px);
   padding: 12px 14px;
