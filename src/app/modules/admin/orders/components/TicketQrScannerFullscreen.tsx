@@ -1,21 +1,31 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 
-import type { AdminEventTicketRow } from "../../singleEvent/schemas/admin.eventTickets.schema";
 import { createPortal } from "react-dom";
 
 import "./ticketQrScannerFullscreen.css";
 
 /* --------- 📦 Types -------- */
 
+export type ScannedTicketPreview = {
+  ticketId: string;
+  orderId: string;
+  ticketIndex: number;
+  qrToken: string;
+  status: string;
+  checkedInAt: string | null;
+  checkedInBy?: string;
+  productNameSnapshot?: string;
+};
+
 export type TicketQrScanOutcome =
   | {
       kind: "validated";
-      ticket: AdminEventTicketRow;
+      ticket: ScannedTicketPreview;
     }
   | {
       kind: "alreadyChecked";
-      ticket: AdminEventTicketRow;
+      ticket: ScannedTicketPreview;
     }
   | {
       kind: "invalid";
@@ -148,7 +158,9 @@ export function TicketQrScannerFullscreen({
           showFeedback({
             tone: "success",
             title: "Ticket validé",
-            subtitle: `${outcome.ticket.productNameSnapshot} · #${outcome.ticket.ticketIndex}`,
+            subtitle: outcome.ticket.productNameSnapshot
+              ? `${outcome.ticket.productNameSnapshot} · #${outcome.ticket.ticketIndex}`
+              : `Ticket #${outcome.ticket.ticketIndex}`,
           });
           return;
         }
