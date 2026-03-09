@@ -1,25 +1,23 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { makeEventDetailAdminCoreRepo } from "../data/makeEventDetailAdminCoreRepo";
-import type { EventDetailAdminCore } from "../schemas/admin.eventDetail.schema";
+import { makeEventAdminOrdersViewRepo } from "../data/makeEventAdminOrdersViewRepo";
+import type { EventAdminOrdersView } from "../schemas/admin.eventOrdersView.schema";
 import { normalizeError } from "@errors/errors";
 
 type State = {
   loading: boolean;
   error: string | null;
-
-  eventId: string | null;
-  data: EventDetailAdminCore | null;
+  data: EventAdminOrdersView | null;
 };
 
-function createAdminSingleEventCoreStore(
+function createAdminSingleEventOrdersViewStore(
   loadFn: () => Promise<Omit<State, "loading" | "error">>,
+  enabled: boolean,
 ) {
   let state: State = {
-    loading: true,
+    loading: enabled,
     error: null,
-    eventId: null,
     data: null,
   };
 
@@ -29,6 +27,12 @@ function createAdminSingleEventCoreStore(
   let started = false;
 
   async function load() {
+    if (!enabled) {
+      state = { ...state, loading: false };
+      emit();
+      return;
+    }
+
     state = { ...state, loading: true, error: null };
     emit();
 
@@ -39,7 +43,7 @@ function createAdminSingleEventCoreStore(
     } catch (e: unknown) {
       const ne = normalizeError(
         e,
-        "Impossible de charger les données principales admin de l’événement",
+        "Impossible de charger les commandes de l’événement",
       );
       state = { ...state, loading: false, error: ne.message };
       emit();
@@ -47,7 +51,7 @@ function createAdminSingleEventCoreStore(
   }
 
   function ensureStarted() {
-    if (started) return;
+    if (started || !enabled) return;
     started = true;
     void load();
   }
@@ -67,44 +71,52 @@ function createAdminSingleEventCoreStore(
   };
 }
 
-export function useAdminSingleEventCoreData(params: {
+export function useAdminSingleEventOrdersViewData(params: {
   supabase: SupabaseClient;
   orgId: string | null | undefined;
   eventSlug: string | null | undefined;
+  enabled?: boolean;
+  ordersLimit?: number;
+  ordersOffset?: number;
 }) {
   const {
     supabase,
     orgId,
     eventSlug,
+    enabled = true,
+    ordersLimit,
+    ordersOffset = 0,
   } = params;
 
-  const detailRepo = useMemo(
-    () => makeEventDetailAdminCoreRepo(supabase),
+  const ordersRepo = useMemo(
+    () => makeEventAdminOrdersViewRepo(supabase),
     [supabase],
   );
 
   const loadFn = useCallback(async () => {
     if (!orgId || !eventSlug) {
-      return { eventId: null, data: null };
+      return { data: null };
     }
 
-    const data = await detailRepo.getEventDetailAdminCore({
+    const data = await ordersRepo.getEventAdminOrdersView({
       orgId,
       eventSlug,
+      ordersLimit,
+      ordersOffset,
     });
 
-    const eventId = data?.event?.id ?? null;
-
-    return { eventId, data };
+    return { data };
   }, [
     orgId,
     eventSlug,
-    detailRepo,
+    ordersRepo,
+    ordersLimit,
+    ordersOffset,
   ]);
 
   const store = useMemo(
-    () => createAdminSingleEventCoreStore(loadFn),
-    [loadFn],
+    () => createAdminSingleEventOrdersViewStore(loadFn, enabled),
+    [loadFn, enabled],
   );
 
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot);

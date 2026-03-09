@@ -14,22 +14,10 @@ import { FlexPanel } from "@ui/components/panels/FlexPanel";
 import { MessageBox } from "@shared/ui/components/message/MessageBox";
 import { useToast } from "@shared/ui/components/toast/useToast";
 
-type OrderItemLike = {
-  eventProductId?: string | null;
-  event_product_id?: string | null;
-  quantity?: number | null;
-  unitPriceCents?: number | null;
-  unit_price_cents?: number | null;
-  priceCents?: number | null;
-};
-
 type Props = {
   orgId: string;
   event: { id: string } | null;
   products: EventProducts;
-  orders: unknown[];
-  orderItems: OrderItemLike[];
-  payments: unknown[];
 
   onCreate: (input: CreateEventProductInput) => Promise<void>;
   onUpdate: (input: { productId: string; patch: UpdateEventProductPatch }) => Promise<void>;

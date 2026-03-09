@@ -12,7 +12,7 @@ import { ordersUISchema } from "../../orders/schemas/admin.ordersSchema";
 
 /**
  * RPC: get_event_detail_admin
- * Retour:
+ * Retour historique:
  * {
  *  event,
  *  orgBranding,
@@ -21,16 +21,16 @@ import { ordersUISchema } from "../../orders/schemas/admin.ordersSchema";
  *  orders: {limit, offset, rows},
  *  orderItems,
  *  payments,
- *  attendees: {limit, offset, rows},
+ *  attendees: {limit, offset, total, rows},
  *  attendeeAnswers
  * }
  */
 
 export const adminEventDetailEventSchema = eventSchema
   .omit({
-    bannerUrl: true, 
+    bannerUrl: true,
     createdAt: true,
-    orgId: true, 
+    orgId: true,
   })
   .extend({
     bannerUrlRaw: z.string().nullable(),
@@ -44,10 +44,10 @@ export const adminEventDetailOrgBrandingSchema = z.object({
 
 export const eventFormFieldsSchema = z.array(eventFormFieldSchema);
 
-
 export const attendeesPageSchema = z.object({
   limit: z.number().int().min(1).max(1000),
   offset: z.number().int().min(0),
+  total: z.number().int().min(0),
   rows: attendeesSchema,
 });
 
@@ -71,9 +71,6 @@ export const eventDetailAdminCoreSchema = z.object({
   orgBranding: adminEventDetailOrgBrandingSchema,
   products: eventProductsSchema,
   formFields: eventFormFieldsSchema,
-  orders: ordersUISchema,
-  orderItems: orderItemsSchema,
-  payments: paymentsUISchema,
 });
 
 export const eventDetailAdminParticipantsSchema = z.object({

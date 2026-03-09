@@ -26,7 +26,7 @@ export function makeEventTicketsAdminRepo(supabase: SupabaseClient) {
     ): Promise<GetEventTicketsAdminResponse> {
       const candidate: GetEventTicketsAdminInput = {
         p_event_id: params.eventId,
-        p_limit: params.limit ?? 3,
+        p_limit: params.limit ?? 50,
         p_offset: params.offset ?? 0,
       };
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { supabase } from "@gateways/supabase/supabaseClient";
 
@@ -18,7 +18,7 @@ import { MessageBox } from "@shared/ui/components/message/MessageBox";
 
 type FilterMode = "all" | "used" | "unused";
 
-const DISPLAY_PAGE_SIZE = 25;
+const PAGE_SIZE = 25;
 
 function norm(v: unknown) {
   return String(v ?? "").trim().toLowerCase();
@@ -33,18 +33,21 @@ export function SingleEventTicketsSubSection(props: {
 
   const [query, setQuery] = useState("");
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
-  const [pageByEvent, setPageByEvent] = useState<Record<string, number>>({});
+  const [page, setPage] = useState(0);
   const [scannerOpen, setScannerOpen] = useState(false);
 
-  const page = pageByEvent[eventId] ?? 0;
+  const offset = page * PAGE_SIZE;
 
   const { data, loading, error, refetch } = useAdminSingleEventTicketsData({
     supabase,
     eventId,
     enabled: Boolean(eventId),
+    limit: PAGE_SIZE,
+    offset,
   });
 
-  const tickets = useMemo(() => data?.tickets?.rows ?? [], [data]);
+  const rawTickets = useMemo(() => data?.tickets?.rows ?? [], [data]);
+  const totalTickets = data?.tickets?.total ?? 0;
 
   const markTicket = useMarkTicketCheckedIn({ supabase });
   const markTicketByQr = useMarkTicketCheckedInByQr({ supabase });
@@ -52,64 +55,64 @@ export function SingleEventTicketsSubSection(props: {
   const ticketsByQrToken = useMemo(() => {
     const map = new Map<string, AdminEventTicket>();
 
-    for (const ticket of tickets) {
+    for (const ticket of rawTickets) {
       map.set(ticket.qrToken.trim(), ticket);
     }
 
     return map;
-  }, [tickets]);
+  }, [rawTickets]);
 
- const handleScanToken = useCallback(
-  async (qrTokenRaw: string): Promise<TicketQrScanOutcome> => {
-    const qrToken = qrTokenRaw.trim();
+  const handleScanToken = useCallback(
+    async (qrTokenRaw: string): Promise<TicketQrScanOutcome> => {
+      const qrToken = qrTokenRaw.trim();
 
-    try {
-      const result = await markTicketByQr.markTicketCheckedInByQr(qrToken);
+      try {
+        const result = await markTicketByQr.markTicketCheckedInByQr(qrToken);
 
-      if (!result) {
+        if (!result) {
+          return { kind: "invalid" };
+        }
+
+        const localTicket = ticketsByQrToken.get(qrToken);
+
+        if (result.checkedInAt && localTicket?.checkedInAt) {
+          return {
+            kind: "alreadyChecked",
+            ticket: {
+              ...localTicket,
+              status: result.status,
+              checkedInAt: result.checkedInAt,
+            },
+          };
+        }
+
+        const ticket = localTicket
+          ? {
+              ...localTicket,
+              status: result.status,
+              checkedInAt: result.checkedInAt,
+            }
+          : {
+              qrToken,
+              status: result.status,
+              checkedInAt: result.checkedInAt,
+            };
+
+        void refetch();
+
+        return {
+          kind: "validated",
+          ticket: ticket as AdminEventTicket,
+        };
+      } catch {
         return { kind: "invalid" };
       }
+    },
+    [markTicketByQr, ticketsByQrToken, refetch],
+  );
 
-      const localTicket = ticketsByQrToken.get(qrToken);
-
-      if (result.checkedInAt && localTicket?.checkedInAt) {
-        return {
-          kind: "alreadyChecked",
-          ticket: {
-            ...localTicket,
-            status: result.status,
-            checkedInAt: result.checkedInAt,
-          },
-        };
-      }
-
-      const ticket = localTicket
-        ? {
-            ...localTicket,
-            status: result.status,
-            checkedInAt: result.checkedInAt,
-          }
-        : {
-            qrToken,
-            status: result.status,
-            checkedInAt: result.checkedInAt,
-          };
-
-      void refetch();
-
-      return {
-        kind: "validated",
-        ticket: ticket as AdminEventTicket,
-      };
-    } catch (e) {
-      return { kind: "invalid" };
-    }
-  },
-  [markTicketByQr, ticketsByQrToken, refetch],
-);
-
-  const filteredTickets = useMemo(() => {
-    let rows = tickets;
+  const displayedTickets = useMemo(() => {
+    let rows = rawTickets;
 
     if (filterMode === "used") {
       rows = rows.filter((t) => Boolean(t.checkedInAt));
@@ -145,25 +148,13 @@ export function SingleEventTicketsSubSection(props: {
 
       return 0;
     });
-  }, [tickets, filterMode, query]);
+  }, [rawTickets, filterMode, query]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredTickets.length / DISPLAY_PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(totalTickets / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
-
-  const displayedTickets = useMemo(() => {
-    const start = safePage * DISPLAY_PAGE_SIZE;
-    return filteredTickets.slice(start, start + DISPLAY_PAGE_SIZE);
-  }, [filteredTickets, safePage]);
 
   const canGoPrev = safePage > 0;
   const canGoNext = safePage < totalPages - 1;
-
-  useEffect(() => {
-    setPageByEvent((prev) => ({
-      ...prev,
-      [eventId]: 0,
-    }));
-  }, [eventId, query, filterMode]);
 
   return (
     <div className="adminTicketsSection">
@@ -171,8 +162,9 @@ export function SingleEventTicketsSubSection(props: {
         <div>
           <h3 className="adminParticipantsTitle">Tickets</h3>
           <div className="adminParticipantsHint">
-            {filteredTickets.length} billet(s)
-            {filteredTickets.length !== tickets.length ? ` sur ${tickets.length} au total` : ""}
+            {query.trim() || filterMode !== "all"
+              ? `${displayedTickets.length} billet(s) sur cette page — ${totalTickets} au total`
+              : `${totalTickets} billet(s) au total`}
           </div>
         </div>
 
@@ -189,9 +181,15 @@ export function SingleEventTicketsSubSection(props: {
 
       <FilterBar
         query={query}
-        onQueryChange={setQuery}
+        onQueryChange={(value) => {
+          setQuery(value);
+          setPage(0);
+        }}
         selectValue={filterMode}
-        onSelectChange={(v) => setFilterMode(v as FilterMode)}
+        onSelectChange={(value) => {
+          setFilterMode(value as FilterMode);
+          setPage(0);
+        }}
         placeholder="Rechercher un billet…"
         selectOptions={[
           { value: "all", label: "Tous" },
@@ -203,35 +201,27 @@ export function SingleEventTicketsSubSection(props: {
       {markTicket.error ? <MessageBox variant="error">{markTicket.error}</MessageBox> : null}
       {markTicketByQr.error ? <MessageBox variant="error">{markTicketByQr.error}</MessageBox> : null}
 
-      {filteredTickets.length > 0 ? (
+      {totalTickets > 0 ? (
         <div className="adminListPager">
           <Button
             variant="secondary"
             disabled={!canGoPrev || loading}
-            onClick={() =>
-              setPageByEvent((prev) => ({
-                ...prev,
-                [eventId]: Math.max(0, (prev[eventId] ?? 0) - 1),
-              }))
-            }
+            onClick={() => setPage((prev) => Math.max(0, prev - 1))}
           >
             Précédent
           </Button>
 
           <div className="adminListPager__label">
             Page {safePage + 1} / {totalPages}
-            {displayedTickets.length > 0 ? ` — ${displayedTickets.length} ticket(s) affiché(s)` : ""}
+            {displayedTickets.length > 0
+              ? ` — ${displayedTickets.length} ticket(s) affiché(s)`
+              : ""}
           </div>
 
           <Button
             variant="secondary"
             disabled={!canGoNext || loading}
-            onClick={() =>
-              setPageByEvent((prev) => ({
-                ...prev,
-                [eventId]: Math.min(totalPages - 1, (prev[eventId] ?? 0) + 1),
-              }))
-            }
+            onClick={() => setPage((prev) => Math.min(totalPages - 1, prev + 1))}
           >
             Suivant
           </Button>
@@ -242,10 +232,10 @@ export function SingleEventTicketsSubSection(props: {
         <div className="adminEventEmpty">Chargement des billets…</div>
       ) : error ? (
         <div className="adminEventEmpty">{error}</div>
-      ) : filteredTickets.length === 0 ? (
+      ) : displayedTickets.length === 0 ? (
         <div className="adminEventEmpty">
           {query.trim() || filterMode !== "all"
-            ? "Aucun résultat avec ces filtres."
+            ? "Aucun résultat avec ces filtres sur cette page."
             : "Aucun billet pour le moment."}
         </div>
       ) : (
