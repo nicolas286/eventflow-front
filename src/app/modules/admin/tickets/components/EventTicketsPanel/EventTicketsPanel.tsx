@@ -14,22 +14,10 @@ import { FlexPanel } from "@ui/components/panels/FlexPanel";
 import { MessageBox } from "@shared/ui/components/message/MessageBox";
 import { useToast } from "@shared/ui/components/toast/useToast";
 
-type OrderItemLike = {
-  eventProductId?: string | null;
-  event_product_id?: string | null;
-  quantity?: number | null;
-  unitPriceCents?: number | null;
-  unit_price_cents?: number | null;
-  priceCents?: number | null;
-};
-
 type Props = {
   orgId: string;
   event: { id: string } | null;
   products: EventProducts;
-  orders: unknown[];
-  orderItems: OrderItemLike[];
-  payments: unknown[];
 
   onCreate: (input: CreateEventProductInput) => Promise<void>;
   onUpdate: (input: { productId: string; patch: UpdateEventProductPatch }) => Promise<void>;
@@ -252,6 +240,7 @@ export function EventTicketsPanel(props: Props) {
             onClick={() => moveLocal(t.clientId, -1)}
             disabled={isSaving || isFiltering || idx === 0}
             aria-label={isFiltering ? "Réordonnancement désactivé pendant une recherche" : "Monter"}
+            variant="secondary"
           >
             ↑
           </Button>
@@ -266,6 +255,7 @@ export function EventTicketsPanel(props: Props) {
                 : undefined
             }
             aria-label={isFiltering ? "Réordonnancement désactivé pendant une recherche" : "Descendre"}
+            variant="secondary"
           >
             ↓
           </Button>
@@ -290,7 +280,7 @@ export function EventTicketsPanel(props: Props) {
       state={isDirty ? "dirty" : "default"}
       actions={
         <>
-          <Button onClick={openCreate} disabled={!event?.id || isSaving}>
+          <Button onClick={openCreate} disabled={!event?.id || isSaving} variant="secondary">
             Nouveau ticket
           </Button>
 

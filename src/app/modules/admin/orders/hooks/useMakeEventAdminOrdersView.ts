@@ -1,17 +1,17 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { makeEventDetailAdminParticipantsRepo } from "../data/makeEventDetailAdminParticipantsRepo";
-import type { EventDetailAdminParticipants } from "../schemas/admin.eventDetail.schema";
+import { makeEventAdminOrdersViewRepo } from "../data/makeEventAdminOrdersViewRepo";
+import type { EventAdminOrdersView } from "../schemas/admin.eventOrdersView.schema";
 import { normalizeError } from "@errors/errors";
 
 type State = {
   loading: boolean;
   error: string | null;
-  data: EventDetailAdminParticipants | null;
+  data: EventAdminOrdersView | null;
 };
 
-function createAdminSingleEventParticipantsStore(
+function createAdminSingleEventOrdersViewStore(
   loadFn: () => Promise<Omit<State, "loading" | "error">>,
   enabled: boolean,
 ) {
@@ -43,7 +43,7 @@ function createAdminSingleEventParticipantsStore(
     } catch (e: unknown) {
       const ne = normalizeError(
         e,
-        "Impossible de charger les participants de l’événement",
+        "Impossible de charger les commandes de l’événement",
       );
       state = { ...state, loading: false, error: ne.message };
       emit();
@@ -71,26 +71,25 @@ function createAdminSingleEventParticipantsStore(
   };
 }
 
-export function useAdminSingleEventParticipantsData(params: {
+export function useAdminSingleEventOrdersViewData(params: {
   supabase: SupabaseClient;
   orgId: string | null | undefined;
   eventSlug: string | null | undefined;
   enabled?: boolean;
-
-  attendeesLimit?: number;
-  attendeesOffset?: number;
+  ordersLimit?: number;
+  ordersOffset?: number;
 }) {
   const {
     supabase,
     orgId,
     eventSlug,
     enabled = true,
-    attendeesLimit,
-    attendeesOffset = 0,
+    ordersLimit,
+    ordersOffset = 0,
   } = params;
 
-  const detailRepo = useMemo(
-    () => makeEventDetailAdminParticipantsRepo(supabase),
+  const ordersRepo = useMemo(
+    () => makeEventAdminOrdersViewRepo(supabase),
     [supabase],
   );
 
@@ -99,24 +98,24 @@ export function useAdminSingleEventParticipantsData(params: {
       return { data: null };
     }
 
-    const data = await detailRepo.getEventDetailAdminParticipants({
+    const data = await ordersRepo.getEventAdminOrdersView({
       orgId,
       eventSlug,
-      attendeesLimit,
-      attendeesOffset,
+      ordersLimit,
+      ordersOffset,
     });
 
     return { data };
   }, [
     orgId,
     eventSlug,
-    detailRepo,
-    attendeesLimit,
-    attendeesOffset,
+    ordersRepo,
+    ordersLimit,
+    ordersOffset,
   ]);
 
   const store = useMemo(
-    () => createAdminSingleEventParticipantsStore(loadFn, enabled),
+    () => createAdminSingleEventOrdersViewStore(loadFn, enabled),
     [loadFn, enabled],
   );
 

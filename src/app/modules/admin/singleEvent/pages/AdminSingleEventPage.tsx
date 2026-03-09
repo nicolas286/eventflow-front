@@ -5,7 +5,6 @@ import type { AdminOutletContext } from "../../dashboard/components/AdminDashboa
 import { supabase } from "@gateways/supabase/supabaseClient";
 
 import { useAdminSingleEventCoreData } from "../hooks/useAdminSingleEventCoreData";
-import { useAdminSingleEventParticipantsData } from "../hooks/useAdminSingleEventParticipantData";
 import { useUpdateEvent } from "../hooks/useUpdateEvent";
 
 import type { UpdateEventFullPatch } from "../schemas/admin.updateEventFullPatch.schema";
@@ -63,17 +62,6 @@ export function AdminSingleEventPage() {
     supabase,
     orgId,
     eventSlug,
-    ordersLimit: 200,
-    ordersOffset: 0,
-  });
-
-  const participants = useAdminSingleEventParticipantsData({
-    supabase,
-    orgId,
-    eventSlug,
-    attendeesLimit: 200,
-    attendeesOffset: 0,
-    enabled: tab === "participants",
   });
 
   const update = useUpdateEvent({ supabase });
@@ -98,10 +86,6 @@ export function AdminSingleEventPage() {
   async function refreshAll() {
     if (typeof core.refetch === "function") {
       await core.refetch();
-    }
-
-    if (tab === "participants" && typeof participants.refetch === "function") {
-      await participants.refetch();
     }
 
     if (typeof refetchDashboard === "function") {
@@ -138,9 +122,6 @@ export function AdminSingleEventPage() {
 
   const showCoreLoading = core.loading;
   const showCoreError = core.error;
-
-  const showParticipantsLoading = tab === "participants" && participants.loading;
-  const showParticipantsError = tab === "participants" ? participants.error : null;
 
   return (
     <div className="adminCard">
@@ -186,9 +167,6 @@ export function AdminSingleEventPage() {
                 orgId={orgId}
                 event={event}
                 products={core.data.products}
-                orders={core.data.orders}
-                orderItems={core.data.orderItems}
-                payments={core.data.payments}
                 onChanged={refreshAll}
               />
             )}
@@ -202,25 +180,14 @@ export function AdminSingleEventPage() {
             )}
 
             {tab === "participants" && (
-              <>
-                {showParticipantsLoading && <p>Chargement des participants…</p>}
-                {showParticipantsError && (
-                  <p style={{ color: "crimson" }}>{showParticipantsError}</p>
-                )}
-
-                {!showParticipantsLoading && !showParticipantsError && participants.data && (
-                  <SingleEventParticipantsSection
-                    event={event}
-                    products={core.data.products}
-                    formFields={core.data.formFields}
-                    orders={core.data.orders}
-                    orderItems={core.data.orderItems}
-                    attendees={participants.data.attendees}
-                    attendeeAnswers={participants.data.attendeeAnswers}
-                    onChanged={refreshAll}
-                  />
-                )}
-              </>
+              <SingleEventParticipantsSection
+                orgId={orgId}
+                eventSlug={eventSlug}
+                event={event}
+                products={core.data.products}
+                formFields={core.data.formFields}
+                onChanged={refreshAll}
+              />
             )}
           </>
         )}

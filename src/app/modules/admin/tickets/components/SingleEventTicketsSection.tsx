@@ -11,9 +11,6 @@ import { useUpdateEventProduct } from "../../products/hooks/useUpdateEventProduc
 
 import type { AdminEventDetailEvent } from "../../singleEvent/schemas/admin.eventDetail.schema";
 import type { EventProducts } from "@shared/models/db/db.eventProducts.schema";
-import type { OrdersUI } from "../../orders/schemas/admin.ordersSchema";
-import type { OrderItems } from "@shared/models/db/db.orderItems.schema";
-import type { PaymentsUI } from "@shared/models/db/db.payment.schema";
 
 import { toRows } from "@helpers/normalize";
 
@@ -21,21 +18,15 @@ export function SingleEventTicketsSection(props: {
   orgId: string;
   event: AdminEventDetailEvent;
   products: EventProducts;
-  orders: OrdersUI;
-  orderItems: OrderItems;
-  payments: PaymentsUI;
   onChanged: () => Promise<void>;
 }) {
-  const { orgId, event, products, orders, orderItems, payments, onChanged } = props;
+  const { orgId, event, products, onChanged } = props;
 
   const createProduct = useCreateEventProduct({ supabase });
   const updateProduct = useUpdateEventProduct({ supabase });
   const removeProduct = useDeleteEventProduct({ supabase });
 
   const productsRows = useMemo(() => toRows(products), [products]);
-  const ordersRows = useMemo(() => toRows(orders), [orders]);
-  const orderItemsRows = useMemo(() => toRows(orderItems), [orderItems]);
-  const paymentsRows = useMemo(() => toRows(payments), [payments]);
 
   return (
     <div className="adminEventSection adminSingleEventTickets">
@@ -43,9 +34,6 @@ export function SingleEventTicketsSection(props: {
         orgId={orgId}
         event={event}
         products={productsRows}
-        orders={ordersRows}
-        orderItems={orderItemsRows}
-        payments={paymentsRows}
         createLoading={createProduct.loading}
         createError={createProduct.error}
         updateLoading={updateProduct.loading}

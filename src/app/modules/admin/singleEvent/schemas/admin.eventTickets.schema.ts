@@ -49,6 +49,7 @@ export const adminEventTicketsPayloadSchema = z
   .object({
     limit: z.number().int().min(1).max(1000),
     offset: z.number().int().min(0),
+    total: z.number().int().min(0),
     rows: z.array(adminEventTicketRowSchema),
   })
   .strict();

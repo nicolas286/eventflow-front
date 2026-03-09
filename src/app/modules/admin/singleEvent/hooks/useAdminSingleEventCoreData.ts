@@ -71,16 +71,11 @@ export function useAdminSingleEventCoreData(params: {
   supabase: SupabaseClient;
   orgId: string | null | undefined;
   eventSlug: string | null | undefined;
-
-  ordersLimit?: number;
-  ordersOffset?: number;
 }) {
   const {
     supabase,
     orgId,
     eventSlug,
-    ordersLimit = 50,
-    ordersOffset = 0,
   } = params;
 
   const detailRepo = useMemo(
@@ -96,8 +91,6 @@ export function useAdminSingleEventCoreData(params: {
     const data = await detailRepo.getEventDetailAdminCore({
       orgId,
       eventSlug,
-      ordersLimit,
-      ordersOffset,
     });
 
     const eventId = data?.event?.id ?? null;
@@ -107,8 +100,6 @@ export function useAdminSingleEventCoreData(params: {
     orgId,
     eventSlug,
     detailRepo,
-    ordersLimit,
-    ordersOffset,
   ]);
 
   const store = useMemo(

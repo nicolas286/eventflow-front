@@ -1,10 +1,12 @@
 import { z } from "zod";
 
-export const getEventDetailAdminCoreRpcArgsSchema = z
+export const getEventAdminOrdersViewRpcArgsSchema = z
   .object({
     p_event_id: z.string().uuid().optional(),
     p_org_id: z.string().uuid().optional(),
     p_event_slug: z.string().min(1).optional(),
+    p_orders_limit: z.number().int().min(1).max(1000),
+    p_orders_offset: z.number().int().min(0),
   })
   .refine(
     (v) =>
@@ -17,6 +19,6 @@ export const getEventDetailAdminCoreRpcArgsSchema = z
     },
   );
 
-export type GetEventDetailAdminCoreRpcArgs = z.infer<
-  typeof getEventDetailAdminCoreRpcArgsSchema
+export type GetEventAdminOrdersViewRpcArgs = z.infer<
+  typeof getEventAdminOrdersViewRpcArgsSchema
 >;

@@ -1,44 +1,82 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
+import { supabase } from "@gateways/supabase/supabaseClient";
 import { FlexPanel } from "@ui/components/panels/FlexPanel";
 
 import { SingleEventOrdersSubSection } from "./SingleEventOrdersSubSection";
 import { SingleEventTicketsSubSection } from "./SingleEventTicketsSubSection";
 
+import { useAdminSingleEventOrdersViewData } from "../hooks/useMakeEventAdminOrdersView";
+
 import type { AdminEventDetailEvent } from "../../singleEvent/schemas/admin.eventDetail.schema";
 import type { EventFormField } from "@shared/models/db/db.eventFormFields.schema";
 import type { EventProducts } from "@shared/models/db/db.eventProducts.schema";
-import type { AttendeesPage } from "../../singleEvent/schemas/admin.eventDetail.schema";
-import type { AttendeesAnswers } from "@shared/models/db/db.attendeeAnswers.schema";
-import type { OrdersUI } from "../schemas/admin.ordersSchema";
 
 import "./attendees.css";
-import type { OrderItem } from "@shared/models/db/db.orderItems.schema";
 
 type SubView = "orders" | "tickets";
 
+const ORDERS_PAGE_SIZE = 50;
+
 export function SingleEventParticipantsSection(props: {
+  orgId: string | null | undefined;
+  eventSlug: string;
   event: AdminEventDetailEvent;
   products: EventProducts;
   formFields: EventFormField[];
-  orders: OrdersUI;
-  orderItems: OrderItem[]
-  attendees: AttendeesPage;
-  attendeeAnswers: AttendeesAnswers;
   onChanged?: () => Promise<void>;
 }) {
   const {
+    orgId,
+    eventSlug,
     event,
     products,
     formFields,
-    orders,
-    orderItems,
-    attendees,
-    attendeeAnswers,
     onChanged,
   } = props;
 
   const [subView, setSubView] = useState<SubView>("orders");
+  const [ordersPage, setOrdersPage] = useState(0);
+
+  const ordersOffset = ordersPage * ORDERS_PAGE_SIZE;
+
+  const ordersEnabled = subView === "orders" && Boolean(orgId) && Boolean(eventSlug);
+
+  const {
+    data: ordersViewData,
+    loading: ordersViewLoading,
+    error: ordersViewError,
+    refetch: refetchOrdersView,
+  } = useAdminSingleEventOrdersViewData({
+    supabase,
+    orgId,
+    eventSlug,
+    ordersLimit: ORDERS_PAGE_SIZE,
+    ordersOffset,
+    enabled: ordersEnabled,
+  });
+
+  const orders = ordersViewData?.orders ?? null;
+  const orderItems = ordersViewData?.orderItems ?? null;
+  const attendees = ordersViewData?.attendees ?? null;
+  const attendeeAnswers = ordersViewData?.attendeeAnswers ?? null;
+
+  const totalOrders = orders?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalOrders / ORDERS_PAGE_SIZE));
+  const safePage = Math.min(ordersPage, totalPages - 1);
+
+  const wrappedOnChanged = useMemo(() => {
+    if (!onChanged) {
+      return async () => {
+        await refetchOrdersView();
+      };
+    }
+
+    return async () => {
+      await onChanged();
+      await refetchOrdersView();
+    };
+  }, [onChanged, refetchOrdersView]);
 
   return (
     <FlexPanel>
@@ -75,16 +113,27 @@ export function SingleEventParticipantsSection(props: {
         </div>
 
         {subView === "orders" ? (
-          <SingleEventOrdersSubSection
-            event={event}
-            products={products}
-            formFields={formFields}
-            orders={orders}
-            orderItems={orderItems}
-            attendees={attendees}
-            attendeeAnswers={attendeeAnswers}
-            onChanged={onChanged}
-          />
+          ordersViewLoading ? (
+            <div className="adminEventEmpty">Chargement des commandes…</div>
+          ) : ordersViewError ? (
+            <div className="adminEventEmpty">{ordersViewError}</div>
+          ) : orders && orderItems && attendees && attendeeAnswers ? (
+            <SingleEventOrdersSubSection
+              event={event}
+              products={products}
+              formFields={formFields}
+              orders={orders}
+              orderItems={orderItems}
+              attendees={attendees}
+              attendeeAnswers={attendeeAnswers}
+              ordersPage={safePage}
+              ordersPageSize={ORDERS_PAGE_SIZE}
+              onOrdersPageChange={setOrdersPage}
+              onChanged={wrappedOnChanged}
+            />
+          ) : (
+            <div className="adminEventEmpty">Impossible de charger les commandes.</div>
+          )
         ) : (
           <SingleEventTicketsSubSection
             eventId={event.id ?? ""}
