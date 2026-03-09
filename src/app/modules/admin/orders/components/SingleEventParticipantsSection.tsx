@@ -16,7 +16,7 @@ import "./attendees.css";
 
 type SubView = "orders" | "tickets";
 
-const ORDERS_PAGE_SIZE = 5;
+const ORDERS_PAGE_SIZE = 50;
 
 export function SingleEventParticipantsSection(props: {
   orgId: string | null | undefined;
