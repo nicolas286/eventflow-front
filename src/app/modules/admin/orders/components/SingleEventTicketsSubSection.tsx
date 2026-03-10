@@ -62,7 +62,7 @@ export function SingleEventTicketsSubSection(props: {
     return map;
   }, [rawTickets]);
 
-  const handleScanToken = useCallback(
+ const handleScanToken = useCallback(
   async (qrTokenRaw: string): Promise<TicketQrScanOutcome> => {
     const qrToken = qrTokenRaw.trim();
 
@@ -88,17 +88,9 @@ export function SingleEventTicketsSubSection(props: {
 
       void refetch();
 
-      if (localTicket?.checkedInAt) {
-        return {
-          kind: "alreadyChecked",
-          ticket,
-        };
-      }
-
-      return {
-        kind: "validated",
-        ticket,
-      };
+      return result.outcome === "already_checked"
+        ? { kind: "alreadyChecked", ticket }
+        : { kind: "validated", ticket };
     } catch {
       return { kind: "invalid" };
     }

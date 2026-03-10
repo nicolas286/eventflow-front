@@ -7,6 +7,7 @@ const isoDateSchema = z.string().datetime({ offset: true });
 export const ticketCheckInResponseSchema = z
   .object({
     ok: z.literal(true),
+    outcome: z.literal("validated").or(z.literal("already_checked")),
     ticketId: z.uuid(),
     eventId: z.uuid(),
     orderId: z.uuid(),
