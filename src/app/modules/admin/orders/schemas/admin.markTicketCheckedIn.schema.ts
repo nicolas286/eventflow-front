@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /* --------- 📦 shared response -------- */
 
-const isoDateSchema = z.string().datetime({ offset: true });
+const isoDateSchema = z.string().min(1);
 
 export const ticketCheckInResponseSchema = z
   .object({
