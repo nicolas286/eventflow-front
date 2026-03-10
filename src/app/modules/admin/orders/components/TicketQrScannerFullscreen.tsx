@@ -225,14 +225,14 @@ export function TicketQrScannerFullscreen({
 
       try {
         await scanner.start(
-          { facingMode: { exact: "environment" } },
+          { facingMode: "environment" },
           {
-            fps: 12,
+            fps: 15,
             qrbox: (vw, vh) => {
-              const size = Math.floor(Math.min(vw, vh) * 0.68);
+              const size = Math.floor(Math.min(vw, vh) * 0.82);
               return { width: size, height: size };
             },
-            aspectRatio: window.innerWidth / Math.max(window.innerHeight, 1),
+            disableFlip: false,
           },
           (decodedText) => {
             void handleDecoded(decodedText);
