@@ -29,6 +29,10 @@ export type TicketQrScanOutcome =
     }
   | {
       kind: "invalid";
+    }
+  | {
+      kind: "error";
+      message: string;
     };
 
 type FeedbackState =
@@ -172,6 +176,15 @@ export function TicketQrScannerFullscreen({
             tone: "warning",
             title: "Déjà scanné",
             subtitle: formatted ? `Déjà validé le ${formatted}` : "Ce ticket a déjà été utilisé",
+          });
+          return;
+        }
+
+        if (outcome.kind === "error") {
+          showFeedback({
+            tone: "error",
+            title: "Erreur de validation",
+            subtitle: outcome.message,
           });
           return;
         }

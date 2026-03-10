@@ -62,16 +62,12 @@ export function SingleEventTicketsSubSection(props: {
     return map;
   }, [rawTickets]);
 
- const handleScanToken = useCallback(
+const handleScanToken = useCallback(
   async (qrTokenRaw: string): Promise<TicketQrScanOutcome> => {
     const qrToken = qrTokenRaw.trim();
 
     try {
       const result = await markTicketByQr.markTicketCheckedInByQr(qrToken);
-
-      if (!result) {
-        return { kind: "invalid" };
-      }
 
       const localTicket = ticketsByQrToken.get(qrToken);
 
@@ -82,7 +78,7 @@ export function SingleEventTicketsSubSection(props: {
         qrToken: result.qrToken,
         status: result.status,
         checkedInAt: result.checkedInAt,
-        checkedInBy: result.checkedInBy,
+        checkedInBy: result.checkedInBy ?? undefined,
         productNameSnapshot: localTicket?.productNameSnapshot,
       };
 
@@ -91,8 +87,12 @@ export function SingleEventTicketsSubSection(props: {
       return result.outcome === "already_checked"
         ? { kind: "alreadyChecked", ticket }
         : { kind: "validated", ticket };
-    } catch {
-      return { kind: "invalid" };
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Erreur inconnue";
+      return {
+        kind: "error",
+        message,
+      };
     }
   },
   [markTicketByQr, ticketsByQrToken, refetch],

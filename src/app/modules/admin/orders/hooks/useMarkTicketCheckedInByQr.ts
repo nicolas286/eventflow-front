@@ -15,23 +15,23 @@ export function useMarkTicketCheckedInByQr(params: { supabase: SupabaseClient })
   const [error, setError] = useState<string | null>(null);
 
   const markTicketCheckedInByQr = useCallback(
-    async (qrToken: string): Promise<MarkTicketCheckedInByQrResponse | null> => {
-      try {
-        setLoading(true);
-        setError(null);
+  async (qrToken: string): Promise<MarkTicketCheckedInByQrResponse> => {
+    try {
+      setLoading(true);
+      setError(null);
 
-        const data = await repo.markTicketCheckedInByQr({ qrToken });
-        return data;
-      } catch (e: unknown) {
-          const ne = normalizeError(e, "Impossible de valider le ticket via le QR code");
-          setError(ne.message);
-          throw e;
-      } finally {
-        setLoading(false);
-      }
-    },
-    [repo],
-  );
+      const data = await repo.markTicketCheckedInByQr({ qrToken });
+      return data;
+    } catch (e: unknown) {
+      const ne = normalizeError(e, "Impossible de valider le ticket via le QR code");
+      setError(ne.message);
+      throw new Error(ne.message);
+    } finally {
+      setLoading(false);
+    }
+  },
+  [repo],
+);
 
   const reset = useCallback(() => {
     setError(null);
