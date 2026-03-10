@@ -64,42 +64,41 @@ export function SingleEventTicketsSubSection(props: {
 
   const ticketsByQrTokenRef = useRef(ticketsByQrToken);
 
-    useEffect(() => {
-      ticketsByQrTokenRef.current = ticketsByQrToken;
-    }, [ticketsByQrToken]);
+  useEffect(() => {
+    ticketsByQrTokenRef.current = ticketsByQrToken;
+  }, [ticketsByQrToken]);
 
-const handleScanToken = useCallback(
-  async (qrTokenRaw: string): Promise<TicketQrScanOutcome> => {
-    const qrToken = qrTokenRaw.trim();
+  const handleScanToken = useCallback(
+    async (qrTokenRaw: string): Promise<TicketQrScanOutcome> => {
+      const qrToken = qrTokenRaw.trim();
 
-    try {
-      const result = await markTicketByQr.markTicketCheckedInByQr(qrToken);
+      try {
+        const result = await markTicketByQr.markTicketCheckedInByQr(qrToken);
+        const localTicket = ticketsByQrTokenRef.current.get(qrToken);
 
-      const localTicket = ticketsByQrTokenRef.current.get(qrToken);
+        const ticket = {
+          ticketId: result.ticketId,
+          orderId: result.orderId,
+          ticketIndex: result.ticketIndex,
+          qrToken: result.qrToken,
+          status: result.status,
+          checkedInAt: result.checkedInAt,
+          checkedInBy: result.checkedInBy ?? undefined,
+          productNameSnapshot: localTicket?.productNameSnapshot,
+        };
 
-      const ticket = {
-        ticketId: result.ticketId,
-        orderId: result.orderId,
-        ticketIndex: result.ticketIndex,
-        qrToken: result.qrToken,
-        status: result.status,
-        checkedInAt: result.checkedInAt,
-        checkedInBy: result.checkedInBy ?? undefined,
-        productNameSnapshot: localTicket?.productNameSnapshot,
-      };
+        void refetch();
 
-      void refetch();
-
-      return result.outcome === "already_checked"
-        ? { kind: "alreadyChecked", ticket }
-        : { kind: "validated", ticket };
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "Erreur inconnue";
-      return { kind: "error", message };
-    }
-  },
-  [markTicketByQr, refetch],
-);
+        return result.outcome === "already_checked"
+          ? { kind: "alreadyChecked", ticket }
+          : { kind: "validated", ticket };
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "Erreur inconnue";
+        return { kind: "error", message };
+      }
+    },
+    [markTicketByQr, refetch],
+  );
 
   const displayedTickets = useMemo(() => {
     let rows = rawTickets;
@@ -203,9 +202,7 @@ const handleScanToken = useCallback(
 
           <div className="adminListPager__label">
             Page {safePage + 1} / {totalPages}
-            {displayedTickets.length > 0
-              ? ` — ${displayedTickets.length} ticket(s) affiché(s)`
-              : ""}
+            {displayedTickets.length > 0 ? ` — ${displayedTickets.length} ticket(s) affiché(s)` : ""}
           </div>
 
           <Button
