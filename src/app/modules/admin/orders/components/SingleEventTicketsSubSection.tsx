@@ -64,7 +64,7 @@ export function SingleEventTicketsSubSection(props: {
 
 const handleScanToken = useCallback(
   async (qrTokenRaw: string): Promise<TicketQrScanOutcome> => {
-    const qrToken = qrTokenRaw.replace(/\s+/g, "").trim();
+    const qrToken = qrTokenRaw.trim();
 
     try {
       const result = await markTicketByQr.markTicketCheckedInByQr(qrToken);
@@ -89,10 +89,9 @@ const handleScanToken = useCallback(
         : { kind: "validated", ticket };
     } catch (e) {
       const message = e instanceof Error ? e.message : "Erreur inconnue";
-
       return {
         kind: "error",
-        message: `${message} — scan="${qrToken}"`,
+        message,
       };
     }
   },
