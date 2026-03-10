@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { supabase } from "@gateways/supabase/supabaseClient";
 
@@ -62,6 +62,12 @@ export function SingleEventTicketsSubSection(props: {
     return map;
   }, [rawTickets]);
 
+  const ticketsByQrTokenRef = useRef(ticketsByQrToken);
+
+    useEffect(() => {
+      ticketsByQrTokenRef.current = ticketsByQrToken;
+    }, [ticketsByQrToken]);
+
 const handleScanToken = useCallback(
   async (qrTokenRaw: string): Promise<TicketQrScanOutcome> => {
     const qrToken = qrTokenRaw.trim();
@@ -69,7 +75,7 @@ const handleScanToken = useCallback(
     try {
       const result = await markTicketByQr.markTicketCheckedInByQr(qrToken);
 
-      const localTicket = ticketsByQrToken.get(qrToken);
+      const localTicket = ticketsByQrTokenRef.current.get(qrToken);
 
       const ticket = {
         ticketId: result.ticketId,
@@ -89,13 +95,10 @@ const handleScanToken = useCallback(
         : { kind: "validated", ticket };
     } catch (e) {
       const message = e instanceof Error ? e.message : "Erreur inconnue";
-      return {
-        kind: "error",
-        message,
-      };
+      return { kind: "error", message };
     }
   },
-  [markTicketByQr, ticketsByQrToken, refetch],
+  [markTicketByQr, refetch],
 );
 
   const displayedTickets = useMemo(() => {
