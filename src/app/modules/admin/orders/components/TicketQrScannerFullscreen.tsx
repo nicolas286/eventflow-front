@@ -139,9 +139,21 @@ export function TicketQrScannerFullscreen({
     scannerRef.current = null;
   }, []);
 
+  const lastScannedRef = useRef<{ token: string; at: number } | null>(null);
+
   const handleDecoded = useCallback(
     async (decodedText: string) => {
+      
       const qrToken = decodedText.trim();
+
+      const now = Date.now();
+      const last = lastScannedRef.current;
+
+      if (last && last.token === qrToken && now - last.at < 3000) {
+        return;
+      }
+
+lastScannedRef.current = { token: qrToken, at: now };
 
       if (!qrToken || processingRef.current) return;
 
