@@ -80,6 +80,8 @@ export function TicketQrScannerFullscreen({
   const mountedRef = useRef(false);
   const processingRef = useRef(false);
   const timerRef = useRef<number | null>(null);
+  const lockedTokenRef = useRef<string | null>(null);
+  const outcomeEpochRef = useRef(0);
 
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
@@ -104,9 +106,10 @@ export function TicketQrScannerFullscreen({
   }, []);
 
   const dismissFeedback = useCallback(() => {
-    clearTimer();
-    resumeScanner();
-  }, [clearTimer, resumeScanner]);
+  clearTimer();
+  outcomeEpochRef.current += 1;
+  resumeScanner();
+}, [clearTimer, resumeScanner]);
 
   const showFeedback = useCallback(
     (next: NonNullable<FeedbackState>) => {
@@ -139,85 +142,85 @@ export function TicketQrScannerFullscreen({
     scannerRef.current = null;
   }, []);
 
-  const lastScannedRef = useRef<{ token: string; at: number } | null>(null);
 
   const handleDecoded = useCallback(
-    async (decodedText: string) => {
-      
-      const qrToken = decodedText.trim();
+  async (decodedText: string) => {
+    const qrToken = decodedText.trim();
 
-      const now = Date.now();
-      const last = lastScannedRef.current;
+    if (!qrToken || processingRef.current) return;
 
-      if (last && last.token === qrToken && now - last.at < 3000) {
+    // Ignore le même token tant que le scanner reste ouvert
+    if (lockedTokenRef.current === qrToken) {
+      return;
+    }
+
+    processingRef.current = true;
+    lockedTokenRef.current = qrToken;
+
+    // Permet d'ignorer les vieux retours async après dismiss/close
+    const epochAtStart = outcomeEpochRef.current;
+
+    try {
+      try {
+        scannerRef.current?.pause(true);
+      } catch {
+        // ignore
+      }
+
+      const outcome = await onScanToken(qrToken);
+
+      if (!mountedRef.current) return;
+      if (epochAtStart !== outcomeEpochRef.current) return;
+
+      if (outcome.kind === "validated") {
+        showFeedback({
+          tone: "success",
+          title: "Ticket validé",
+          subtitle: outcome.ticket.productNameSnapshot
+            ? `${outcome.ticket.productNameSnapshot} · #${outcome.ticket.ticketIndex}`
+            : `Ticket #${outcome.ticket.ticketIndex}`,
+        });
         return;
       }
 
-lastScannedRef.current = { token: qrToken, at: now };
-
-      if (!qrToken || processingRef.current) return;
-
-      processingRef.current = true;
-
-      try {
-        try {
-          scannerRef.current?.pause(true);
-        } catch {
-          // ignore
-        }
-
-        const outcome = await onScanToken(qrToken);
-
-        if (!mountedRef.current) return;
-
-        if (outcome.kind === "validated") {
-          showFeedback({
-            tone: "success",
-            title: "Ticket validé",
-            subtitle: outcome.ticket.productNameSnapshot
-              ? `${outcome.ticket.productNameSnapshot} · #${outcome.ticket.ticketIndex}`
-              : `Ticket #${outcome.ticket.ticketIndex}`,
-          });
-          return;
-        }
-
-        if (outcome.kind === "alreadyChecked") {
-          const formatted = formatCheckedInAt(outcome.ticket.checkedInAt);
-
-          showFeedback({
-            tone: "warning",
-            title: "Déjà scanné",
-            subtitle: formatted ? `Déjà validé le ${formatted}` : "Ce ticket a déjà été utilisé",
-          });
-          return;
-        }
-
-        if (outcome.kind === "error") {
-          showFeedback({
-            tone: "error",
-            title: "Erreur de validation",
-            subtitle: outcome.message,
-          });
-          return;
-        }
+      if (outcome.kind === "alreadyChecked") {
+        const formatted = formatCheckedInAt(outcome.ticket.checkedInAt);
 
         showFeedback({
-          tone: "error",
-          title: "Ticket invalide",
-          subtitle: "QR code inconnu pour cet événement",
+          tone: "warning",
+          title: "Déjà scanné",
+          subtitle: formatted ? `Déjà validé le ${formatted}` : "Ce ticket a déjà été utilisé",
         });
-      } catch {
-        if (!mountedRef.current) return;
-
-        showFeedback({
-          tone: "error",
-          title: "Ticket invalide",
-          subtitle: "Impossible de traiter ce QR code",
-        });
+        return;
       }
-    },
-    [onScanToken, showFeedback],
-  );
+
+      if (outcome.kind === "error") {
+        showFeedback({
+          tone: "error",
+          title: "Erreur de validation",
+          subtitle: outcome.message,
+        });
+        return;
+      }
+
+      showFeedback({
+        tone: "error",
+        title: "Ticket invalide",
+        subtitle: "QR code inconnu pour cet événement",
+      });
+    } catch {
+      if (!mountedRef.current) return;
+      if (epochAtStart !== outcomeEpochRef.current) return;
+
+      showFeedback({
+        tone: "error",
+        title: "Ticket invalide",
+        subtitle: "Impossible de traiter ce QR code",
+      });
+    }
+  },
+  [onScanToken, showFeedback],
+);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -228,13 +231,15 @@ lastScannedRef.current = { token: qrToken, at: now };
 
   useEffect(() => {
     if (!open) {
-      clearTimer();
-      setFeedback(null);
-      setCameraError(null);
-      processingRef.current = false;
-      void stopScanner();
-      return;
-    }
+    clearTimer();
+    setFeedback(null);
+    setCameraError(null);
+    processingRef.current = false;
+    lockedTokenRef.current = null;
+    outcomeEpochRef.current += 1;
+    void stopScanner();
+    return;
+}
 
     let cancelled = false;
 
@@ -320,11 +325,13 @@ lastScannedRef.current = { token: qrToken, at: now };
     void boot();
 
     return () => {
-      cancelled = true;
-      clearTimer();
-      processingRef.current = false;
-      void stopScanner();
-    };
+  cancelled = true;
+  clearTimer();
+  processingRef.current = false;
+  lockedTokenRef.current = null;
+  outcomeEpochRef.current += 1;
+  void stopScanner();
+};
   }, [open, scannerId, handleDecoded, stopScanner, clearTimer]);
 
   if (!open) return null;
