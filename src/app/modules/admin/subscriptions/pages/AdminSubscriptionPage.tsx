@@ -131,6 +131,7 @@ export default function AdminAbonnementPage() {
 
   const billingGet = useMakeOrganizationBilling({ supabase });
   const billingUpsert = useUpsertOrganizationBilling({ supabase });
+  const [promoCode, setPromoCode] = useState("");
 
   const [pendingPlan, setPendingPlan] = useState<PlanKey | null>(null);
 
@@ -317,7 +318,11 @@ export default function AdminAbonnementPage() {
     const okBilling = await ensureBillingOrGoToTab(target);
     if (!okBilling) return;
 
-    const res = await startSubscription({ orgId, plan: target });
+    const res = await startSubscription({
+          orgId,
+          plan: target,
+          promoCode: promoCode.trim() ? promoCode.trim() : null,
+        });
 
     if (!res) {
       showToast({ title: "Impossible de démarrer l’abonnement", description: "Réessayez dans quelques instants.", variant: "error", duration: 6000 });
@@ -400,6 +405,12 @@ export default function AdminAbonnementPage() {
                     <Badge>{planLabel}</Badge>
                     <Badge>{org.status}</Badge>
                   </div>
+                  {sub?.discountPercent ? (
+                    <div className="adminSub__mutedLine">
+                      Tarif fondateur actif : <b>-{sub.discountPercent}%</b>
+                      {sub.billingPriceValue ? <> • {sub.billingPriceValue} € / mois</> : null}
+                    </div>
+                  ) : null}
                   <div className="adminSub__line">
                     Démarré le <span className="adminSub__valueStrong">{startedAtLabel ?? "—"}</span>
                   </div>
@@ -451,6 +462,30 @@ export default function AdminAbonnementPage() {
           </Card>
 
           <div className="adminSub__spacer" />
+
+          <div className="adminSub__spacer" />
+
+          <Card>
+            <CardHeader
+              title="Offre de lancement"
+              subtitle="Si vous disposez d’un code early adopter, saisissez-le avant de choisir un plan."
+            />
+            <CardBody>
+              <div className="adminSub__promoRow">
+                <Input
+                  label="Code promo"
+                  placeholder="Code promo"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                  disabled={anyLoading}
+                />
+              </div>
+
+              <div className="adminSub__mutedLine">
+                Le code sera appliqué si l’offre est valide au moment du démarrage de l’abonnement.
+              </div>
+            </CardBody>
+          </Card>
 
           <Card>
             <CardHeader
@@ -548,7 +583,11 @@ export default function AdminAbonnementPage() {
             setPendingPlan(null);
 
             if (planToContinue && canStartSubscription(planToContinue)) {
-              const res = await startSubscription({ orgId, plan: planToContinue });
+              const res = await startSubscription({
+                orgId,
+                plan: planToContinue,
+                promoCode: promoCode.trim() ? promoCode.trim() : null,
+              });
 
               if (!res) {
                 showToast({ title: "Impossible de démarrer l’abonnement", description: "Réessayez dans quelques instants.", variant: "error", duration: 6000 });
@@ -562,6 +601,7 @@ export default function AdminAbonnementPage() {
 
               if ("action" in res && res.action === "checkout") {
                 showToast({ title: "Redirection vers Mollie", description: "Finalisez le paiement, puis revenez sur cette page.", variant: "info", duration: 4000 });
+                
                 window.location.href = res.checkoutUrl;
                 return;
               }
