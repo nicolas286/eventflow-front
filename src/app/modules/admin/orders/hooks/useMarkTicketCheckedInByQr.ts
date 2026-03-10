@@ -23,9 +23,9 @@ export function useMarkTicketCheckedInByQr(params: { supabase: SupabaseClient })
         const data = await repo.markTicketCheckedInByQr({ qrToken });
         return data;
       } catch (e: unknown) {
-        const ne = normalizeError(e, "Impossible de valider le ticket via le QR code");
-        setError(ne.message);
-        return null;
+          const ne = normalizeError(e, "Impossible de valider le ticket via le QR code");
+          setError(ne.message);
+          throw e;
       } finally {
         setLoading(false);
       }
