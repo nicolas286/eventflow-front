@@ -81,7 +81,10 @@ export function TicketQrScannerFullscreen({
   const timerRef = useRef<number | null>(null);
   const lockedTokenRef = useRef<string | null>(null);
   const outcomeEpochRef = useRef(0);
+
   const onScanTokenRef = useRef(onScanToken);
+  const handleDecodedRef = useRef<(decodedText: string) => void>(() => {});
+  const showFeedbackRef = useRef<(next: NonNullable<FeedbackState>) => void>(() => {});
 
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
@@ -127,6 +130,10 @@ export function TicketQrScannerFullscreen({
     [clearTimer, feedbackDurationMs, resumeScanner],
   );
 
+  useEffect(() => {
+    showFeedbackRef.current = showFeedback;
+  }, [showFeedback]);
+
   const stopScanner = useCallback(async () => {
     const scanner = scannerRef.current;
     if (!scanner) return;
@@ -146,8 +153,8 @@ export function TicketQrScannerFullscreen({
     scannerRef.current = null;
   }, []);
 
-  const handleDecoded = useCallback(
-    async (decodedText: string) => {
+  useEffect(() => {
+    handleDecodedRef.current = async (decodedText: string) => {
       const qrToken = decodedText.trim();
 
       if (!qrToken || processingRef.current) return;
@@ -174,7 +181,7 @@ export function TicketQrScannerFullscreen({
         if (epochAtStart !== outcomeEpochRef.current) return;
 
         if (outcome.kind === "validated") {
-          showFeedback({
+          showFeedbackRef.current({
             tone: "success",
             title: "Ticket validé",
             subtitle: outcome.ticket.productNameSnapshot
@@ -187,7 +194,7 @@ export function TicketQrScannerFullscreen({
         if (outcome.kind === "alreadyChecked") {
           const formatted = formatCheckedInAt(outcome.ticket.checkedInAt);
 
-          showFeedback({
+          showFeedbackRef.current({
             tone: "warning",
             title: "Déjà scanné",
             subtitle: formatted ? `Déjà validé le ${formatted}` : "Ce ticket a déjà été utilisé",
@@ -196,7 +203,7 @@ export function TicketQrScannerFullscreen({
         }
 
         if (outcome.kind === "error") {
-          showFeedback({
+          showFeedbackRef.current({
             tone: "error",
             title: "Erreur de validation",
             subtitle: outcome.message,
@@ -204,7 +211,7 @@ export function TicketQrScannerFullscreen({
           return;
         }
 
-        showFeedback({
+        showFeedbackRef.current({
           tone: "error",
           title: "Ticket invalide",
           subtitle: "QR code inconnu pour cet événement",
@@ -213,15 +220,14 @@ export function TicketQrScannerFullscreen({
         if (!mountedRef.current) return;
         if (epochAtStart !== outcomeEpochRef.current) return;
 
-        showFeedback({
+        showFeedbackRef.current({
           tone: "error",
           title: "Ticket invalide",
           subtitle: "Impossible de traiter ce QR code",
         });
       }
-    },
-    [showFeedback],
-  );
+    };
+  }, []);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -267,10 +273,10 @@ export function TicketQrScannerFullscreen({
             disableFlip: false,
           },
           (decodedText) => {
-            void handleDecoded(decodedText);
+            void handleDecodedRef.current(decodedText);
           },
           () => {
-            // ignore scan frame errors
+            // ignore
           },
         );
       } catch {
@@ -285,7 +291,7 @@ export function TicketQrScannerFullscreen({
               },
             },
             (decodedText) => {
-              void handleDecoded(decodedText);
+              void handleDecodedRef.current(decodedText);
             },
             () => {
               // ignore
@@ -299,10 +305,10 @@ export function TicketQrScannerFullscreen({
                 : "Impossible d’ouvrir la caméra. Vérifie les permissions du navigateur.",
             );
           }
-        } finally {
-          if (!cancelled && mountedRef.current) {
-            setStarting(false);
-          }
+        }
+      } finally {
+        if (!cancelled && mountedRef.current) {
+          setStarting(false);
         }
       }
 
@@ -320,8 +326,6 @@ export function TicketQrScannerFullscreen({
         if (scannerRef.current === scanner) {
           scannerRef.current = null;
         }
-      } else if (mountedRef.current) {
-        setStarting(false);
       }
     }
 
@@ -336,7 +340,7 @@ export function TicketQrScannerFullscreen({
       outcomeEpochRef.current += 1;
       void stopScanner();
     };
-  }, [open, scannerId, handleDecoded, stopScanner, clearTimer]);
+  }, [open, scannerId, clearTimer, stopScanner]);
 
   if (!open) return null;
 
