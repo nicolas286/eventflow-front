@@ -12,6 +12,7 @@ import {
 
 export type MarkTicketCheckedInParams = {
   ticketId: string;
+  eventId: string;
 };
 
 export function markTicketCheckedInRepo(supabase: SupabaseClient) {
@@ -21,6 +22,7 @@ export function markTicketCheckedInRepo(supabase: SupabaseClient) {
     ): Promise<MarkTicketCheckedInResponse> {
       const candidate: MarkTicketCheckedInInput = {
         p_ticket_id: params.ticketId,
+        p_event_id: params.eventId,
       };
 
       const payload = markTicketCheckedInInputSchema.parse(candidate);

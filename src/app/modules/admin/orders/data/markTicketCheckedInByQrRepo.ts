@@ -12,6 +12,7 @@ import {
 
 export type MarkTicketCheckedInByQrParams = {
   qrToken: string;
+  eventId: string;
 };
 
 export function markTicketCheckedInByQrRepo(supabase: SupabaseClient) {
@@ -21,6 +22,7 @@ export function markTicketCheckedInByQrRepo(supabase: SupabaseClient) {
     ): Promise<MarkTicketCheckedInByQrResponse> {
       const candidate: MarkTicketCheckedInByQrInput = {
         p_qr_token: params.qrToken,
+        p_event_id: params.eventId,
       };
 
       const payload = markTicketCheckedInByQrInputSchema.parse(candidate);

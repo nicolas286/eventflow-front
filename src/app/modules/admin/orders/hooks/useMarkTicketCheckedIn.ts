@@ -15,17 +15,17 @@ export function useMarkTicketCheckedIn(params: { supabase: SupabaseClient }) {
   const [error, setError] = useState<string | null>(null);
 
   const markTicketCheckedIn = useCallback(
-    async (ticketId: string): Promise<MarkTicketCheckedInResponse | null> => {
+    async (ticketId: string, eventId: string): Promise<MarkTicketCheckedInResponse | null> => {
       try {
         setLoading(true);
         setError(null);
 
-        const data = await repo.markTicketCheckedIn({ ticketId });
+        const data = await repo.markTicketCheckedIn({ ticketId, eventId });
         return data;
       } catch (e: unknown) {
         const ne = normalizeError(e, "Impossible de marquer le ticket comme utilisé");
         setError(ne.message);
-        return null;
+        throw new Error(ne.message);
       } finally {
         setLoading(false);
       }

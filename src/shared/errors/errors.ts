@@ -91,9 +91,12 @@ function mapRpcMessageToAppCode(msg: string): AppErrorCode | null {
   if (m === "FORBIDDEN" || /FORBIDDEN/i.test(m)) return "FORBIDDEN";
   if (m === "NOT_FOUND" || /NOT_FOUND/i.test(m)) return "NOT_FOUND";
 
-  // ✅ couvre PLAN_LIMIT:, PLAN_LIMIT, PLAN_LIMIT_REACHED, PLAN_LIMIT_...
-  if (/^PLAN_LIMIT\b/i.test(m)) return "FORBIDDEN";
+  if (m === "EVENT_MISMATCH") return "VALIDATION";
+  if (m === "TICKET_NOT_FOUND") return "NOT_FOUND";
+  if (m === "TICKET_CANCELLED") return "VALIDATION";
+  if (m === "TICKET_INVALID") return "VALIDATION";
 
+  if (/^PLAN_LIMIT\b/i.test(m)) return "FORBIDDEN";
   if (/VALIDATION_ERROR/i.test(m) || /VALIDATION\b/i.test(m)) return "VALIDATION";
   if (/CONFLICT/i.test(m)) return "CONFLICT";
 
@@ -130,12 +133,18 @@ function humanBusinessMessage(msg: string): string | null {
 
   if (m === "FORBIDDEN") return "Accès refusé : tu n’as pas les droits nécessaires.";
   if (m === "NOT_AUTHENTICATED") return "Ta session a expiré. Reconnecte-toi.";
-    if (isEmailRateLimitMessage(m)) {
+  if (m === "EVENT_MISMATCH") return "Ce ticket n’est pas lié à cet événement.";
+  if (m === "TICKET_NOT_FOUND") return "Ticket introuvable.";
+  if (m === "TICKET_CANCELLED") return "Ce ticket a été annulé.";
+  if (m === "TICKET_INVALID") return "Ce ticket est invalide.";
+
+  if (isEmailRateLimitMessage(m)) {
     return humanEmailRateLimitMessage();
   }
+
   if (/Edge Function returned a non-2xx status code/i.test(m)) {
-  return "Erreur serveur pendant la réservation. Réessaie dans quelques instants.";
-}
+    return "Erreur serveur pendant la réservation. Réessaie dans quelques instants.";
+  }
 
   return null;
 }
