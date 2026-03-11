@@ -88,7 +88,6 @@ export function SingleEventTicketsSubSection(props: {
         };
 
         void refetch();
-        void props.onChanged?.();
 
         return result.outcome === "already_checked"
           ? { kind: "alreadyChecked", ticket }
