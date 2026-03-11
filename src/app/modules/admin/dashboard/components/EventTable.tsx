@@ -112,14 +112,13 @@ export default function EventTable({
           )}
 
           {events.map((row) => {
-            const ev = row.event;
 
             return (
-              <div key={ev.id} className="eventCardWrap">
+              <div key={row.event.id} className="eventCardWrap">
 
                 <EventCard
-                  ev={ev}
-                  isSelected={ev.id === editingId}
+                  row={row}
+                  isSelected={row.event.id === editingId}
                   orgSlug={orgSlug}
                   onSelect={onSelect}
                   onDelete={onDelete}

@@ -5,11 +5,17 @@ import { getStatusInfo } from "@helpers/status";
 import { formatDateTimeHuman } from "@helpers/dateTime";
 import { safeEventTitle, toDisplayText } from "@shared/helpers/normalize";
 
-
 import type { EventOverviewRow } from "../../events/schemas/admin.eventsOverview.schema";
+import { CoinsIcon, QrIcon, UsersIcon } from "@shared/ui/components/icon/Icons";
+import { useNavigate } from "react-router-dom";
+import Button from "@ui/components/button/Button";
+import { formatMoney } from "@app/modules/public/register/helpers/checkoutStore";
+
+import "./EventCard.css";
+
 
 type Props = {
-  ev: EventOverviewRow["event"];
+  row: EventOverviewRow;
   isSelected: boolean;
   orgSlug?: string;
 
@@ -22,7 +28,7 @@ type Props = {
 };
 
 export default function EventCard({
-  ev,
+  row,
   isSelected,
   orgSlug,
   onSelect,
@@ -31,9 +37,15 @@ export default function EventCard({
   onShareFacebook,
   onShareWhatsapp,
 }: Props) {
+  const { event: ev, ordersCount, paidCents } = row;
   const s = getStatusInfo(ev.isPublished ? "open" : "draft");
   const canView = !!ev.slug;
   const detailsTo = canView ? `/admin/events/${ev.slug}` : undefined;
+  const navigate = useNavigate();
+
+  const qrScannerTo = canView
+    ? `/admin/events/${ev.slug}?tab=participants&subTab=participantsTab=tickets&openScanner=1`
+    : undefined;
 
   return (
     <div className={`eventCard ${isSelected ? "isSelected" : ""}`}>
@@ -65,18 +77,44 @@ export default function EventCard({
         </div>
       </div>
 
+      <div className="eventCard__stats">
+        <span className="eventCard__stat">
+         <UsersIcon/> {ordersCount} commande{ordersCount > 1 ? "s" : ""}
+        </span>
+
+        {paidCents > 0 && (
+          <span className="eventCard__stat">
+          <CoinsIcon/> {formatMoney(paidCents, "€")}
+          </span>
+        )}
+      </div>
+
       <div className="eventCard__actions">
+        {qrScannerTo && (
+         <Button
+            variant="secondary"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`${qrScannerTo}`);
+            }}
+            title="Ouvrir le scanner QR pour cet événement"
+          >
+            <QrIcon/>
+          </Button>
+        
+        )}
+
         <EventCardActionsMenu
-            canView={canView}
-            detailsTo={detailsTo}
-            isSelected={isSelected}
-            onToggleInlineEdit={() => onSelect(ev.id)}
-            onCopyLink={canView ? () => onCopyLink(orgSlug, ev.slug!) : undefined}
-            onShareFacebook={canView ? () => onShareFacebook(orgSlug, ev.slug!) : undefined}
-            onShareWhatsapp={canView ? () => onShareWhatsapp(orgSlug, ev.slug!) : undefined}
-            onDelete={() => onDelete(ev.id)}
+          canView={canView}
+          detailsTo={detailsTo}
+          isSelected={isSelected}
+          onToggleInlineEdit={() => onSelect(ev.id)}
+          onCopyLink={canView ? () => onCopyLink(orgSlug, ev.slug!) : undefined}
+          onShareFacebook={canView ? () => onShareFacebook(orgSlug, ev.slug!) : undefined}
+          onShareWhatsapp={canView ? () => onShareWhatsapp(orgSlug, ev.slug!) : undefined}
+          onDelete={() => onDelete(ev.id)}
         />
-       </div>
+      </div>
     </div>
   );
 }

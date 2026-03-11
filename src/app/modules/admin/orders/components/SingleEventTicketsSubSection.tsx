@@ -28,13 +28,30 @@ export function SingleEventTicketsSubSection(props: {
   eventId: string;
   eventTitle: string;
   onChanged?: () => Promise<void>;
+
+  autoOpenScanner?: boolean;
+  onScannerAutoOpened?: () => void;
 }) {
-  const { eventId } = props;
+  const {
+    eventId,
+    onChanged,
+    autoOpenScanner,
+    onScannerAutoOpened,
+  } = props;
 
   const [query, setQuery] = useState("");
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [page, setPage] = useState(0);
-  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(() => Boolean(autoOpenScanner));
+  const autoOpenConsumedRef = useRef(false);
+
+useEffect(() => {
+  if (!autoOpenScanner) return;
+  if (autoOpenConsumedRef.current) return;
+
+  autoOpenConsumedRef.current = true;
+  onScannerAutoOpened?.();
+}, [autoOpenScanner, onScannerAutoOpened]);
 
   const offset = page * PAGE_SIZE;
 
@@ -97,7 +114,7 @@ export function SingleEventTicketsSubSection(props: {
         return { kind: "error", message };
       }
     },
-    [eventId, markTicketByQr, refetch, props],
+    [eventId, markTicketByQr, refetch],
   );
 
   const displayedTickets = useMemo(() => {
@@ -269,7 +286,7 @@ export function SingleEventTicketsSubSection(props: {
                         const res = await markTicket.markTicketCheckedIn(ticket.id, eventId);
                         if (!res) return;
                         await refetch();
-                        await props.onChanged?.();
+                        await onChanged?.();
                       }}
                     >
                       Marquer comme utilisé

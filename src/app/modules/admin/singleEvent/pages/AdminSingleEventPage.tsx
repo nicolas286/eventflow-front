@@ -19,11 +19,17 @@ import { SingleEventParticipantsSection } from "../../orders/components/SingleEv
 import type { UploadResult } from "@gateways/supabase/repositories/dashboard/uploadOrgAssets.repo";
 
 type TabKey = "details" | "tickets" | "form" | "participants";
+export type ParticipantsTabKey = "participants" | "tickets";
 
 const TAB_KEYS: TabKey[] = ["details", "tickets", "form", "participants"];
+const PARTICIPANTS_TAB_KEYS: ParticipantsTabKey[] = ["participants", "tickets"];
 
 function isTabKey(v: string | null): v is TabKey {
   return !!v && (TAB_KEYS as string[]).includes(v);
+}
+
+function isParticipantsTabKey(v: string | null): v is ParticipantsTabKey {
+  return !!v && (PARTICIPANTS_TAB_KEYS as string[]).includes(v);
 }
 
 export function AdminSingleEventPage() {
@@ -33,13 +39,19 @@ export function AdminSingleEventPage() {
   const storageRepo = useMemo(() => uploadOrgAssetsRepo(supabase), []);
 
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+
   const tabFromUrl: TabKey = isTabKey(searchParams.get("tab"))
     ? (searchParams.get("tab") as TabKey)
     : "details";
 
-  const [tab, setTab] = useState<TabKey>(tabFromUrl);
+  const participantsTabFromUrl: ParticipantsTabKey = isParticipantsTabKey(searchParams.get("participantsTab"))
+    ? (searchParams.get("participantsTab") as ParticipantsTabKey)
+    : "participants";
 
-  const navigate = useNavigate();
+  const shouldOpenScanner = searchParams.get("openScanner") === "1";
+
+  const [tab, setTab] = useState<TabKey>(tabFromUrl);
 
   useEffect(() => {
     if (tab !== tabFromUrl) setTab(tabFromUrl);
@@ -120,6 +132,17 @@ export function AdminSingleEventPage() {
     });
   }
 
+  function handleScannerConsumed() {
+    setSearchParams(
+      (prev) => {
+        const sp = new URLSearchParams(prev);
+        sp.delete("openScanner");
+        return sp;
+      },
+      { replace: true }
+    );
+  }
+
   const showCoreLoading = core.loading;
   const showCoreError = core.error;
 
@@ -181,12 +204,16 @@ export function AdminSingleEventPage() {
 
             {tab === "participants" && (
               <SingleEventParticipantsSection
+                key={`${eventSlug}-${shouldOpenScanner ? "scanner" : participantsTabFromUrl}`}
                 orgId={orgId}
                 eventSlug={eventSlug}
                 event={event}
                 products={core.data.products}
                 formFields={core.data.formFields}
                 onChanged={refreshAll}
+                initialTab={shouldOpenScanner ? "tickets" : participantsTabFromUrl}
+                autoOpenScanner={shouldOpenScanner}
+                onScannerAutoOpened={handleScannerConsumed}
               />
             )}
           </>
