@@ -44,8 +44,12 @@ export default function EventCard({
   const navigate = useNavigate();
 
   const qrScannerTo = canView
-    ? `/admin/events/${ev.slug}?tab=participants&subTab=participantsTab=tickets&openScanner=1`
-    : undefined;
+  ? `/admin/events/${ev.slug}?${new URLSearchParams({
+      tab: "participants",
+      participantsTab: "tickets",
+      openScanner: "1",
+    }).toString()}`
+  : undefined;
 
   return (
     <div className={`eventCard ${isSelected ? "isSelected" : ""}`}>
