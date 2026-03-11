@@ -26,6 +26,7 @@ export type TicketCheckInResponse = z.infer<typeof ticketCheckInResponseSchema>;
 export const markTicketCheckedInInputSchema = z
   .object({
     p_ticket_id: z.uuid(),
+    p_event_id: z.uuid(),
   })
   .strict();
 
@@ -42,6 +43,7 @@ export type MarkTicketCheckedInResponse = TicketCheckInResponse;
 export const markTicketCheckedInByQrInputSchema = z
   .object({
     p_qr_token: z.string().trim().min(1, "Le token QR est requis."),
+    p_event_id: z.uuid(),
   })
   .strict();
 

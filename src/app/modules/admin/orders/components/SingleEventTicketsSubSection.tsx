@@ -73,7 +73,7 @@ export function SingleEventTicketsSubSection(props: {
       const qrToken = qrTokenRaw.trim();
 
       try {
-        const result = await markTicketByQr.markTicketCheckedInByQr(qrToken);
+        const result = await markTicketByQr.markTicketCheckedInByQr(qrToken, eventId);
         const localTicket = ticketsByQrTokenRef.current.get(qrToken);
 
         const ticket = {
@@ -88,6 +88,7 @@ export function SingleEventTicketsSubSection(props: {
         };
 
         void refetch();
+        void props.onChanged?.();
 
         return result.outcome === "already_checked"
           ? { kind: "alreadyChecked", ticket }
@@ -97,7 +98,7 @@ export function SingleEventTicketsSubSection(props: {
         return { kind: "error", message };
       }
     },
-    [markTicketByQr, refetch],
+    [eventId, markTicketByQr, refetch, props],
   );
 
   const displayedTickets = useMemo(() => {
@@ -266,7 +267,7 @@ export function SingleEventTicketsSubSection(props: {
                       variant="secondary"
                       disabled={isUsed || isInvalid || markTicket.loading}
                       onClick={async () => {
-                        const res = await markTicket.markTicketCheckedIn(ticket.id);
+                        const res = await markTicket.markTicketCheckedIn(ticket.id, eventId);
                         if (!res) return;
                         await refetch();
                         await props.onChanged?.();
