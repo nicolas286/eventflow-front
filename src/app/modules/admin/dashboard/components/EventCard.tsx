@@ -6,13 +6,16 @@ import { formatDateTimeHuman } from "@helpers/dateTime";
 import { safeEventTitle, toDisplayText } from "@shared/helpers/normalize";
 
 import type { EventOverviewRow } from "../../events/schemas/admin.eventsOverview.schema";
-import { QrIcon } from "@shared/ui/components/icon/Icons";
+import { CoinsIcon, QrIcon, UsersIcon } from "@shared/ui/components/icon/Icons";
 import { useNavigate } from "react-router-dom";
 import Button from "@ui/components/button/Button";
+import { formatMoney } from "@app/modules/public/register/helpers/checkoutStore";
+
+import "./EventCard.css";
 
 
 type Props = {
-  ev: EventOverviewRow["event"];
+  row: EventOverviewRow;
   isSelected: boolean;
   orgSlug?: string;
 
@@ -25,7 +28,7 @@ type Props = {
 };
 
 export default function EventCard({
-  ev,
+  row,
   isSelected,
   orgSlug,
   onSelect,
@@ -34,6 +37,7 @@ export default function EventCard({
   onShareFacebook,
   onShareWhatsapp,
 }: Props) {
+  const { event: ev, ordersCount, paidCents } = row;
   const s = getStatusInfo(ev.isPublished ? "open" : "draft");
   const canView = !!ev.slug;
   const detailsTo = canView ? `/admin/events/${ev.slug}` : undefined;
@@ -71,6 +75,18 @@ export default function EventCard({
           <span className="eventCard__label">Lieu</span>
           <span className="eventCard__value">{toDisplayText(ev.location)}</span>
         </div>
+      </div>
+
+      <div className="eventCard__stats">
+        <span className="eventCard__stat">
+         <UsersIcon/> {ordersCount} commande{ordersCount > 1 ? "s" : ""}
+        </span>
+
+        {paidCents > 0 && (
+          <span className="eventCard__stat">
+          <CoinsIcon/> {formatMoney(paidCents, "€")}
+          </span>
+        )}
       </div>
 
       <div className="eventCard__actions">
