@@ -12,6 +12,7 @@ import {
   CloseIcon,
   TrashIcon,
   WhatsappIcon,
+  DotsIcon,
 } from "@ui/components/icon/Icons";
 
 type MenuItem =
@@ -186,6 +187,7 @@ export default function EventCardActionsMenu({
         aria-controls={menuId}
         title="Ouvrir les actions"
       >
+        <DotsIcon />
         {buttonLabel}
       </Button>
 

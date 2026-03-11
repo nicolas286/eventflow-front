@@ -5,8 +5,11 @@ import { getStatusInfo } from "@helpers/status";
 import { formatDateTimeHuman } from "@helpers/dateTime";
 import { safeEventTitle, toDisplayText } from "@shared/helpers/normalize";
 
-
 import type { EventOverviewRow } from "../../events/schemas/admin.eventsOverview.schema";
+import { QrIcon } from "@shared/ui/components/icon/Icons";
+import { useNavigate } from "react-router-dom";
+import Button from "@ui/components/button/Button";
+
 
 type Props = {
   ev: EventOverviewRow["event"];
@@ -34,6 +37,11 @@ export default function EventCard({
   const s = getStatusInfo(ev.isPublished ? "open" : "draft");
   const canView = !!ev.slug;
   const detailsTo = canView ? `/admin/events/${ev.slug}` : undefined;
+  const navigate = useNavigate();
+
+  const qrScannerTo = canView
+    ? `/admin/events/${ev.slug}?tab=participants&subTab=participantsTab=tickets&openScanner=1`
+    : undefined;
 
   return (
     <div className={`eventCard ${isSelected ? "isSelected" : ""}`}>
@@ -66,17 +74,31 @@ export default function EventCard({
       </div>
 
       <div className="eventCard__actions">
+        {qrScannerTo && (
+         <Button
+            variant="secondary"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`${qrScannerTo}`);
+            }}
+            title="Ouvrir le scanner QR pour cet événement"
+          >
+            <QrIcon/>
+          </Button>
+        
+        )}
+
         <EventCardActionsMenu
-            canView={canView}
-            detailsTo={detailsTo}
-            isSelected={isSelected}
-            onToggleInlineEdit={() => onSelect(ev.id)}
-            onCopyLink={canView ? () => onCopyLink(orgSlug, ev.slug!) : undefined}
-            onShareFacebook={canView ? () => onShareFacebook(orgSlug, ev.slug!) : undefined}
-            onShareWhatsapp={canView ? () => onShareWhatsapp(orgSlug, ev.slug!) : undefined}
-            onDelete={() => onDelete(ev.id)}
+          canView={canView}
+          detailsTo={detailsTo}
+          isSelected={isSelected}
+          onToggleInlineEdit={() => onSelect(ev.id)}
+          onCopyLink={canView ? () => onCopyLink(orgSlug, ev.slug!) : undefined}
+          onShareFacebook={canView ? () => onShareFacebook(orgSlug, ev.slug!) : undefined}
+          onShareWhatsapp={canView ? () => onShareWhatsapp(orgSlug, ev.slug!) : undefined}
+          onDelete={() => onDelete(ev.id)}
         />
-       </div>
+      </div>
     </div>
   );
 }

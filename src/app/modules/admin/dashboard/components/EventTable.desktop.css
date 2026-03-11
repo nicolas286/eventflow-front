@@ -51,6 +51,13 @@
   -webkit-box-orient:vertical;
 }
 
+.eventCard__actions{
+  display:flex;
+  align-items:flex-end;
+  justify-content:flex-end;
+  gap:8px;
+}
+
 /* =========================
    Meta : DATE puis LIEU en colonne
    ========================= */
@@ -98,8 +105,7 @@
 
 /* Le bouton "Actions" */
 .eventCardActions__trigger{
-  height:40px;
-  padding:0 12px;
+
   display:flex;
   align-items:center;
   justify-content:center;

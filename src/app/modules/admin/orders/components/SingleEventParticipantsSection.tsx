@@ -13,6 +13,7 @@ import type { EventFormField } from "@shared/models/db/db.eventFormFields.schema
 import type { EventProducts } from "@shared/models/db/db.eventProducts.schema";
 
 import "./attendees.css";
+import type { ParticipantsTabKey } from "../../singleEvent/pages/AdminSingleEventPage";
 
 type SubView = "orders" | "tickets";
 
@@ -25,6 +26,9 @@ export function SingleEventParticipantsSection(props: {
   products: EventProducts;
   formFields: EventFormField[];
   onChanged?: () => Promise<void>;
+  initialTab?: ParticipantsTabKey;
+  autoOpenScanner?: boolean;
+  onScannerAutoOpened?: () => void;
 }) {
   const {
     orgId,
@@ -33,13 +37,21 @@ export function SingleEventParticipantsSection(props: {
     products,
     formFields,
     onChanged,
+    initialTab,
+    autoOpenScanner,
+    onScannerAutoOpened,
   } = props;
 
-  const [subView, setSubView] = useState<SubView>("orders");
+  const [manualSubView, setManualSubView] = useState<SubView | null>(null);
   const [ordersPage, setOrdersPage] = useState(0);
 
-  const ordersOffset = ordersPage * ORDERS_PAGE_SIZE;
+  const defaultSubView: SubView =
+    autoOpenScanner || initialTab === "tickets" ? "tickets" : "orders";
 
+  const subView: SubView = manualSubView ?? defaultSubView;
+
+
+  const ordersOffset = ordersPage * ORDERS_PAGE_SIZE;
   const ordersEnabled = subView === "orders" && Boolean(orgId) && Boolean(eventSlug);
 
   const {
@@ -96,7 +108,7 @@ export function SingleEventParticipantsSection(props: {
             role="tab"
             aria-selected={subView === "orders"}
             className={subView === "orders" ? "adminSubtab isActive" : "adminSubtab"}
-            onClick={() => setSubView("orders")}
+            onClick={() => setManualSubView("orders")}
           >
             Commandes
           </button>
@@ -106,7 +118,7 @@ export function SingleEventParticipantsSection(props: {
             role="tab"
             aria-selected={subView === "tickets"}
             className={subView === "tickets" ? "adminSubtab isActive" : "adminSubtab"}
-            onClick={() => setSubView("tickets")}
+            onClick={() => setManualSubView("tickets")}
           >
             Tickets
           </button>
@@ -139,6 +151,8 @@ export function SingleEventParticipantsSection(props: {
             eventId={event.id ?? ""}
             eventTitle={event.title ?? "Événement"}
             onChanged={onChanged}
+            autoOpenScanner={autoOpenScanner}
+            onScannerAutoOpened={onScannerAutoOpened}
           />
         )}
       </div>
