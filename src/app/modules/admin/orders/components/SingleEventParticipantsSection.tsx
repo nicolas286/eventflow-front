@@ -17,7 +17,7 @@ import type { ParticipantsTabKey } from "../../singleEvent/pages/AdminSingleEven
 
 type SubView = "orders" | "tickets";
 
-const ORDERS_PAGE_SIZE = 50;
+const ORDERS_PAGE_SIZE = 25;
 
 export function SingleEventParticipantsSection(props: {
   orgId: string | null | undefined;
@@ -131,6 +131,7 @@ export function SingleEventParticipantsSection(props: {
             <div className="adminEventEmpty">{ordersViewError}</div>
           ) : orders && orderItems && attendees && attendeeAnswers ? (
             <SingleEventOrdersSubSection
+              orgId={orgId}
               event={event}
               products={products}
               formFields={formFields}
