@@ -14,6 +14,7 @@ import { OrdersPeopleList } from "./OrdersPeopleList";
 import { useAdminUpdateOrderAttendee } from "../hooks/useUpdateOrderAttendeeAnswers";
 import { useDeleteOrder } from "../hooks/useDeleteOrder";
 import { useParticipantsViewModel } from "../hooks/useParticipantsViewModel";
+import { useSearchEventAdminOrdersViewData } from "../hooks/useSearchEventOrdersView";
 
 import type { AdminEventDetailEvent } from "../../singleEvent/schemas/admin.eventDetail.schema";
 import type { EventFormField } from "@shared/models/db/db.eventFormFields.schema";
@@ -36,6 +37,7 @@ type FilterMode = "all" | "order" | `field:${string}`;
 type InlineEditorProps = Omit<ComponentProps<typeof AttendeeEditorPanel>, "layout">;
 
 export function SingleEventOrdersSubSection(props: {
+  orgId: string | null | undefined;
   event: AdminEventDetailEvent;
   products: EventProducts;
   formFields: EventFormField[];
@@ -49,6 +51,7 @@ export function SingleEventOrdersSubSection(props: {
   onChanged?: () => Promise<void>;
 }) {
   const {
+    orgId,
     event,
     products,
     formFields,
@@ -63,7 +66,7 @@ export function SingleEventOrdersSubSection(props: {
   } = props;
 
   const productsRows = useMemo(() => toRows<EventProduct>(products), [products]);
-  const orderItemsRows = useMemo(() => toRows(orderItems), [orderItems]);
+  const baseOrderItemsRows = useMemo(() => toRows(orderItems), [orderItems]);
   const isMobile = useIsMobile(720);
 
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
@@ -85,12 +88,53 @@ export function SingleEventOrdersSubSection(props: {
   const [confirmDeleteOrderOpen, setConfirmDeleteOrderOpen] = useState(false);
   const [targetOrderId, setTargetOrderId] = useState<string | null>(null);
 
-  const initialAttendees = useMemo(() => attendees, [attendees]);
-  const initialAnswers = useMemo(
-    () => toRows<AttendeeAnswer>(attendeeAnswers),
-    [attendeeAnswers],
+  const regFields = useMemo(() => toRows<EventFormField>(formFields), [formFields]);
+
+  const trimmedQuery = query.trim();
+  const isSearchMode = trimmedQuery.length > 0;
+  const eventSlug = event.slug ?? null;
+  const eventId = event.id ?? "";
+
+  const searchView = useSearchEventAdminOrdersViewData({
+    supabase,
+    orgId: orgId,
+    eventSlug,
+    query: trimmedQuery,
+    filterMode,
+    ordersLimit: ordersPageSize,
+    ordersOffset: ordersPage * ordersPageSize,
+    enabled: isSearchMode,
+  });
+
+  const activeData = isSearchMode ? searchView.data : null;
+  const activeLoading = isSearchMode ? searchView.loading : false;
+  const activeError = isSearchMode ? searchView.error : null;
+
+  const activeOrders: OrdersUI = isSearchMode
+    ? (activeData?.orders ?? { limit: ordersPageSize, offset: ordersPage * ordersPageSize, total: 0, rows: [] })
+    : orders;
+
+  const activeOrderItems: OrderItem[] = isSearchMode
+    ? toRows<OrderItem>(activeData?.orderItems ?? [])
+    : baseOrderItemsRows;
+
+  const initialAttendees = useMemo(
+    () => (isSearchMode ? toRows<Attendee>(activeData?.attendees ?? []) : attendees),
+    [isSearchMode, activeData?.attendees, attendees],
   );
-  const initialOrders = useMemo(() => orders.rows, [orders.rows]);
+
+  const initialAnswers = useMemo(
+    () =>
+      isSearchMode
+        ? toRows<AttendeeAnswer>(activeData?.attendeeAnswers ?? [])
+        : toRows<AttendeeAnswer>(attendeeAnswers),
+    [isSearchMode, activeData?.attendeeAnswers, attendeeAnswers],
+  );
+
+  const initialOrders = useMemo(
+    () => (isSearchMode ? activeOrders.rows : orders.rows),
+    [isSearchMode, activeOrders.rows, orders.rows],
+  );
 
   const [localAttendees, setLocalAttendees] = useState<Attendee[]>(() => initialAttendees);
   const [localAnswers, setLocalAnswers] = useState<AttendeeAnswer[]>(() => initialAnswers);
@@ -99,10 +143,6 @@ export function SingleEventOrdersSubSection(props: {
   useEffect(() => setLocalAttendees(initialAttendees), [initialAttendees]);
   useEffect(() => setLocalAnswers(initialAnswers), [initialAnswers]);
   useEffect(() => setLocalOrders(initialOrders), [initialOrders]);
-
-  const regFields = useMemo(() => toRows<EventFormField>(formFields), [formFields]);
-
-  const eventId = event.id ?? "";
 
   const {
     orderMetaById,
@@ -115,17 +155,33 @@ export function SingleEventOrdersSubSection(props: {
     localAttendees,
     localAnswers,
     localOrders,
-    localOrderItems: orderItemsRows,
+    localOrderItems: activeOrderItems,
     productsRows,
-    query,
-    filterMode,
+    query: isSearchMode ? "" : query,
+    filterMode: isSearchMode ? "all" : filterMode,
   });
 
-  const totalOrders = orders.total ?? 0;
+  const totalOrders = activeOrders.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalOrders / ordersPageSize));
   const safePage = Math.min(ordersPage, totalPages - 1);
   const canGoPrev = safePage > 0;
   const canGoNext = safePage < totalPages - 1;
+
+  const handleQueryChange = useCallback(
+  (nextQuery: string) => {
+    setQuery(nextQuery);
+    onOrdersPageChange(0);
+  },
+  [onOrdersPageChange],
+);
+
+  const handleFilterModeChange = useCallback(
+    (nextValue: string) => {
+      setFilterMode(nextValue as FilterMode);
+      onOrdersPageChange(0);
+    },
+    [onOrdersPageChange],
+  );
 
   const closeOrderWizard = useCallback(() => {
     setOrderWizardOpen(false);
@@ -260,9 +316,7 @@ export function SingleEventOrdersSubSection(props: {
       localAttendees.filter((a) => a.orderId === targetOrderId).map((a) => a.id),
     );
 
-    setLocalOrders((prev) =>
-      prev.filter((o) => String(o.id) !== String(targetOrderId)),
-    );
+    setLocalOrders((prev) => prev.filter((o) => String(o.id) !== String(targetOrderId)));
     setLocalAttendees((prev) => prev.filter((a) => a.orderId !== targetOrderId));
     setLocalAnswers((prev) => prev.filter((ans) => !attendeeIds.has(ans.attendeeId)));
 
@@ -454,9 +508,11 @@ export function SingleEventOrdersSubSection(props: {
           <h3 className="adminParticipantsTitle">Commandes</h3>
           <div className="adminParticipantsHint">
             {groups.length} commande(s) • {filteredAttendees.length} participant(s)
-            {query.trim() || filterMode !== "all"
-              ? ` sur cette page • ${totalOrders} commande(s) au total`
-              : ` • ${totalOrders} commande(s) au total`}
+            {isSearchMode
+              ? ` sur l’ensemble de l’événement • ${totalOrders} commande(s) trouvée(s)`
+              : query.trim() || filterMode !== "all"
+                ? ` sur cette page • ${totalOrders} commande(s) au total`
+                : ` • ${totalOrders} commande(s) au total`}
           </div>
         </div>
 
@@ -467,7 +523,7 @@ export function SingleEventOrdersSubSection(props: {
               onClick={toggleExportMenu}
               disabled={confirmedAttendees.length === 0}
             >
-              Export XLS (page)
+              {isSearchMode ? "Export XLS (résultats)" : "Export XLS (page)"}
             </Button>
 
             {exportMenuOpen ? (
@@ -507,15 +563,15 @@ export function SingleEventOrdersSubSection(props: {
 
       <FilterBar
         query={query}
-        onQueryChange={setQuery}
+        onQueryChange={handleQueryChange}
         selectValue={filterMode}
-        onSelectChange={(v) => setFilterMode(v as FilterMode)}
+        onSelectChange={handleFilterModeChange}
         placeholder={
           filterMode === "order"
             ? "Rechercher par numéro de commande…"
             : filterMode.startsWith("field:")
               ? "Rechercher dans le champ sélectionné…"
-              : "Recherche globale (sur cette page)…"
+              : "Recherche globale sur tout l’événement…"
         }
         selectOptions={[
           { value: "all", label: "Tous" },
@@ -528,7 +584,13 @@ export function SingleEventOrdersSubSection(props: {
         ]}
       />
 
-      {totalOrders > 0 ? (
+      {activeLoading ? (
+        <div className="adminEventEmpty">
+          Recherche des commandes…
+        </div>
+      ) : activeError ? (
+        <div className="adminEventEmpty">{activeError}</div>
+      ) : totalOrders > 0 ? (
         <div className="adminListPager">
           <Button
             variant="secondary"
@@ -571,11 +633,15 @@ export function SingleEventOrdersSubSection(props: {
             </div>
           ) : null}
 
-          {groups.length === 0 ? (
+          {activeLoading ? (
+            <div className="adminEventEmpty">Recherche des commandes…</div>
+          ) : groups.length === 0 ? (
             <div className="adminEventEmpty">
-              {query.trim()
-                ? "Aucun résultat avec ces filtres sur cette page."
-                : "Aucune commande pour le moment sur cette page."}
+              {isSearchMode
+                ? "Aucun résultat sur l’ensemble de l’événement."
+                : query.trim()
+                  ? "Aucun résultat avec ces filtres sur cette page."
+                  : "Aucune commande pour le moment sur cette page."}
             </div>
           ) : (
             leftContent
@@ -589,11 +655,15 @@ export function SingleEventOrdersSubSection(props: {
           editorGap={14}
           stickyTop={120}
           left={
-            groups.length === 0 ? (
+            activeLoading ? (
+              <div className="adminEventEmpty">Recherche des commandes…</div>
+            ) : groups.length === 0 ? (
               <div className="adminEventEmpty">
-                {query.trim()
-                  ? "Aucun résultat avec ces filtres sur cette page."
-                  : "Aucune commande pour le moment sur cette page."}
+                {isSearchMode
+                  ? "Aucun résultat sur l’ensemble de l’événement."
+                  : query.trim()
+                    ? "Aucun résultat avec ces filtres sur cette page."
+                    : "Aucune commande pour le moment sur cette page."}
               </div>
             ) : (
               leftContent

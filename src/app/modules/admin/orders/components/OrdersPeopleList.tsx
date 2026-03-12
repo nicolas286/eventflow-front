@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react";
-import { Fragment, useMemo, useRef, useState } from "react";
+import { Fragment, useRef } from "react";
 
 import { Button } from "@ui/components";
 import { PersonCard } from "./PersonCard";
@@ -16,7 +16,7 @@ type AttendeeEditorProps = ComponentProps<typeof AttendeeEditorPanel>;
 
 type OrdersPeopleListProps = {
   groups: Array<[orderId: string, people: Attendee[]]>;
-   orderMetaById: Map<string, OrderMeta>;
+  orderMetaById: Map<string, OrderMeta>;
   filledFieldsByAttendeeId: Map<string, FilledField[]>;
   computeIdentity: (attendeeId: string) => Identity;
 
@@ -35,13 +35,7 @@ type OrdersPeopleListProps = {
   >;
 
   onOpenEdit: (attendeeId: string, orderId: string) => void;
-
-  pageSize?: number; // default 10
 };
-
-function clamp(n: number, min: number, max: number) {
-  return Math.min(Math.max(n, min), max);
-}
 
 export function OrdersPeopleList(props: OrdersPeopleListProps) {
   const {
@@ -57,68 +51,16 @@ export function OrdersPeopleList(props: OrdersPeopleListProps) {
     editingAttendeeId,
     inlineEditorProps,
     onOpenEdit,
-    pageSize = 10,
   } = props;
 
   const topRef = useRef<HTMLDivElement | null>(null);
-
-  // 0-based page index
-  const [pageIndex, setPageIndex] = useState(0);
-
-  const pageCount = Math.max(1, Math.ceil(groups.length / pageSize));
-
-  // pageIndex clamped "virtuellement" (sans setState)
-  const safePageIndex = useMemo(() => clamp(pageIndex, 0, pageCount - 1), [pageIndex, pageCount]);
-
-  const page = safePageIndex + 1;
-
-  const pagedGroups = useMemo(() => {
-    const start = safePageIndex * pageSize;
-    return groups.slice(start, start + pageSize);
-  }, [groups, safePageIndex, pageSize]);
-
-  const canPrev = safePageIndex > 0;
-  const canNext = safePageIndex < pageCount - 1;
-
-  function goToPageIndex(nextIndex: number) {
-    const clampedIndex = clamp(nextIndex, 0, pageCount - 1);
-    setPageIndex(clampedIndex);
-
-    requestAnimationFrame(() => {
-      topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }
 
   return (
     <>
       <div ref={topRef} />
 
-      {pageCount > 1 ? (
-        <div className="adminOrdersPagination">
-          <Button
-            variant="secondary"
-            onClick={() => goToPageIndex(safePageIndex - 1)}
-            disabled={!canPrev}
-          >
-            Précédent
-          </Button>
-
-          <div className="adminOrdersPaginationInfo">
-            Page <b>{page}</b> / {pageCount} — <span>{groups.length}</span> commandes
-          </div>
-
-          <Button
-            variant="secondary"
-            onClick={() => goToPageIndex(safePageIndex + 1)}
-            disabled={!canNext}
-          >
-            Suivant
-          </Button>
-        </div>
-      ) : null}
-
       <div className="adminOrdersGrid">
-        {pagedGroups.map(([orderId, people]) => {
+        {groups.map(([orderId, people]) => {
           const meta = orderMetaById.get(orderId);
           const orderNumber = meta?.orderNumber ?? orderId.slice(0, 8);
           const isDeletingThisOrder = deleteOrderLoading && targetOrderId === orderId;
@@ -129,13 +71,14 @@ export function OrdersPeopleList(props: OrdersPeopleListProps) {
           const currency = meta?.currency ?? "EUR";
           const isFree = total === 0;
           const nonAttendeeItems = meta?.nonAttendeeItems ?? [];
-          
+
           return (
             <div key={orderId} className="adminOrderCard">
               <div className="adminOrderHeader">
                 <div>
                   <div className="adminOrderTitle">Commande {orderNumber}</div>
                   <div className="adminOrderSub">Créée le {formatDateTime(meta?.createdAt)}</div>
+
                   {isFree ? (
                     <div className="adminOrderFree">Gratuit</div>
                   ) : (
@@ -157,7 +100,7 @@ export function OrdersPeopleList(props: OrdersPeopleListProps) {
                       </span>
                     </div>
                   )}
-                  </div>
+                </div>
 
                 <div className="adminOrderHeaderRight">
                   <span className="adminOrderPill">
@@ -182,13 +125,13 @@ export function OrdersPeopleList(props: OrdersPeopleListProps) {
 
                   return (
                     <Fragment key={att.id}>
-                        <div className="adminPersonRow">
-                      <PersonCard
-                        att={att}
-                        identity={identity}
-                        filled={filled}
-                        onEdit={() => onOpenEdit(att.id, orderId)}
-                      />
+                      <div className="adminPersonRow">
+                        <PersonCard
+                          att={att}
+                          identity={identity}
+                          filled={filled}
+                          onEdit={() => onOpenEdit(att.id, orderId)}
+                        />
                       </div>
 
                       {showInlineEditor ? (
@@ -199,51 +142,28 @@ export function OrdersPeopleList(props: OrdersPeopleListProps) {
                     </Fragment>
                   );
                 })}
-                {nonAttendeeItems.length > 0 ? (
-                <div className="adminOrderExtraTickets">
-                  <div className="adminOrderExtraTicketsTitle">
-                    Billets sans participant
-                  </div>
 
-                  <div className="adminOrderExtraTicketsList">
-                    {nonAttendeeItems.map((item) => (
-                      <div key={item.id} className="adminOrderExtraTicketRow">
-                        <span className="adminOrderExtraTicketName">{item.name}</span>
-                        <span className="adminOrderExtraTicketQty">× {item.quantity}</span>
-                      </div>
-                    ))}
+                {nonAttendeeItems.length > 0 ? (
+                  <div className="adminOrderExtraTickets">
+                    <div className="adminOrderExtraTicketsTitle">
+                      Billets sans participant
+                    </div>
+
+                    <div className="adminOrderExtraTicketsList">
+                      {nonAttendeeItems.map((item) => (
+                        <div key={item.id} className="adminOrderExtraTicketRow">
+                          <span className="adminOrderExtraTicketName">{item.name}</span>
+                          <span className="adminOrderExtraTicketQty">× {item.quantity}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ) : null}
+                ) : null}
               </div>
             </div>
           );
         })}
       </div>
-
-      {pageCount > 1 ? (
-        <div className="adminOrdersPagination adminOrdersPaginationBottom">
-          <Button
-            variant="secondary"
-            onClick={() => goToPageIndex(safePageIndex - 1)}
-            disabled={!canPrev}
-          >
-            Précédent
-          </Button>
-
-          <div className="adminOrdersPaginationInfo">
-            Page <b>{page}</b> / {pageCount}
-          </div>
-
-          <Button
-            variant="secondary"
-            onClick={() => goToPageIndex(safePageIndex + 1)}
-            disabled={!canNext}
-          >
-            Suivant
-          </Button>
-        </div>
-      ) : null}
     </>
   );
 }
