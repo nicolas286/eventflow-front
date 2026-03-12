@@ -4,6 +4,7 @@ import { supabase } from "@gateways/supabase/supabaseClient";
 
 import { Button, FilterBar } from "@ui/components";
 import { useAdminSingleEventTicketsData } from "../../singleEvent/hooks/useEventTickets";
+import { useSearchEventAdminTicketsData } from "../hooks/useSearchEventTicketsView";
 
 import type { AdminEventTicketRow as AdminEventTicket } from "../../singleEvent/schemas/admin.eventTickets.schema";
 import { useMarkTicketCheckedIn } from "../hooks/useMarkTicketCheckedIn";
@@ -20,15 +21,11 @@ type FilterMode = "all" | "used" | "unused";
 
 const PAGE_SIZE = 25;
 
-function norm(v: unknown) {
-  return String(v ?? "").trim().toLowerCase();
-}
 
 export function SingleEventTicketsSubSection(props: {
   eventId: string;
   eventTitle: string;
   onChanged?: () => Promise<void>;
-
   autoOpenScanner?: boolean;
   onScannerAutoOpened?: () => void;
 }) {
@@ -45,26 +42,42 @@ export function SingleEventTicketsSubSection(props: {
   const [scannerOpen, setScannerOpen] = useState(() => Boolean(autoOpenScanner));
   const autoOpenConsumedRef = useRef(false);
 
-useEffect(() => {
-  if (!autoOpenScanner) return;
-  if (autoOpenConsumedRef.current) return;
+  useEffect(() => {
+    if (!autoOpenScanner) return;
+    if (autoOpenConsumedRef.current) return;
 
-  autoOpenConsumedRef.current = true;
-  onScannerAutoOpened?.();
-}, [autoOpenScanner, onScannerAutoOpened]);
+    autoOpenConsumedRef.current = true;
+    onScannerAutoOpened?.();
+  }, [autoOpenScanner, onScannerAutoOpened]);
 
+  const trimmedQuery = query.trim();
+  const isSearchMode = trimmedQuery.length > 0;
   const offset = page * PAGE_SIZE;
 
-  const { data, loading, error, refetch } = useAdminSingleEventTicketsData({
+  const normalView = useAdminSingleEventTicketsData({
     supabase,
     eventId,
-    enabled: Boolean(eventId),
+    enabled: Boolean(eventId) && !isSearchMode,
     limit: PAGE_SIZE,
     offset,
   });
 
-  const rawTickets = useMemo(() => data?.tickets?.rows ?? [], [data]);
-  const totalTickets = data?.tickets?.total ?? 0;
+  const searchView = useSearchEventAdminTicketsData({
+    supabase,
+    eventId,
+    query: trimmedQuery,
+    enabled: Boolean(eventId) && isSearchMode,
+    limit: PAGE_SIZE,
+    offset,
+  });
+
+  const activeData = isSearchMode ? searchView.data : normalView.data;
+  const activeLoading = isSearchMode ? searchView.loading : normalView.loading;
+  const activeError = isSearchMode ? searchView.error : normalView.error;
+  const activeRefetch = isSearchMode ? searchView.refetch : normalView.refetch;
+
+  const rawTickets = useMemo(() => activeData?.tickets?.rows ?? [], [activeData]);
+  const totalTickets = activeData?.tickets?.total ?? 0;
 
   const markTicket = useMarkTicketCheckedIn({ supabase });
   const markTicketByQr = useMarkTicketCheckedInByQr({ supabase });
@@ -104,7 +117,7 @@ useEffect(() => {
           productNameSnapshot: localTicket?.productNameSnapshot,
         };
 
-        void refetch();
+        void activeRefetch();
 
         return result.outcome === "already_checked"
           ? { kind: "alreadyChecked", ticket }
@@ -114,7 +127,7 @@ useEffect(() => {
         return { kind: "error", message };
       }
     },
-    [eventId, markTicketByQr, refetch],
+    [eventId, markTicketByQr, activeRefetch],
   );
 
   const displayedTickets = useMemo(() => {
@@ -128,22 +141,6 @@ useEffect(() => {
       rows = rows.filter((t) => !t.checkedInAt);
     }
 
-    const q = norm(query);
-
-    if (q) {
-      rows = rows.filter((t) => {
-        const attendeeText = (t.attendeeSummaryLines ?? []).join(" • ");
-
-        return (
-          norm(t.reference).includes(q) ||
-          norm(t.productNameSnapshot).includes(q) ||
-          norm(t.qrToken).includes(q) ||
-          norm(t.buyerEmail).includes(q) ||
-          norm(attendeeText).includes(q)
-        );
-      });
-    }
-
     return [...rows].sort((a, b) => {
       const aUsed = Boolean(a.checkedInAt);
       const bUsed = Boolean(b.checkedInAt);
@@ -154,7 +151,7 @@ useEffect(() => {
 
       return 0;
     });
-  }, [rawTickets, filterMode, query]);
+  }, [rawTickets, filterMode]);
 
   const totalPages = Math.max(1, Math.ceil(totalTickets / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
@@ -162,15 +159,27 @@ useEffect(() => {
   const canGoPrev = safePage > 0;
   const canGoNext = safePage < totalPages - 1;
 
+  const handleQueryChange = useCallback((value: string) => {
+    setQuery(value);
+    setPage(0);
+  }, []);
+
+  const handleFilterChange = useCallback((value: string) => {
+    setFilterMode(value as FilterMode);
+    setPage(0);
+  }, []);
+
   return (
     <div className="adminTicketsSection">
       <div className="adminParticipantsHeader">
         <div>
           <h3 className="adminParticipantsTitle">Tickets</h3>
           <div className="adminParticipantsHint">
-            {query.trim() || filterMode !== "all"
-              ? `${displayedTickets.length} billet(s) sur cette page — ${totalTickets} au total`
-              : `${totalTickets} billet(s) au total`}
+            {isSearchMode
+              ? `${displayedTickets.length} billet(s) trouvé(s) sur cette page — ${totalTickets} au total`
+              : filterMode !== "all"
+                ? `${displayedTickets.length} billet(s) sur cette page — ${totalTickets} au total`
+                : `${totalTickets} billet(s) au total`}
           </div>
         </div>
 
@@ -179,7 +188,7 @@ useEffect(() => {
             Scanner QR
           </Button>
 
-          <Button variant="secondary" onClick={() => void refetch()}>
+          <Button variant="secondary" onClick={() => void activeRefetch()}>
             Rafraîchir
           </Button>
         </div>
@@ -187,16 +196,10 @@ useEffect(() => {
 
       <FilterBar
         query={query}
-        onQueryChange={(value) => {
-          setQuery(value);
-          setPage(0);
-        }}
+        onQueryChange={handleQueryChange}
         selectValue={filterMode}
-        onSelectChange={(value) => {
-          setFilterMode(value as FilterMode);
-          setPage(0);
-        }}
-        placeholder="Rechercher un billet…"
+        onSelectChange={handleFilterChange}
+        placeholder="Rechercher un billet sur tout l’événement…"
         selectOptions={[
           { value: "all", label: "Tous" },
           { value: "unused", label: "Non utilisés" },
@@ -211,7 +214,7 @@ useEffect(() => {
         <div className="adminListPager">
           <Button
             variant="secondary"
-            disabled={!canGoPrev || loading}
+            disabled={!canGoPrev || activeLoading}
             onClick={() => setPage((prev) => Math.max(0, prev - 1))}
           >
             Précédent
@@ -224,7 +227,7 @@ useEffect(() => {
 
           <Button
             variant="secondary"
-            disabled={!canGoNext || loading}
+            disabled={!canGoNext || activeLoading}
             onClick={() => setPage((prev) => Math.min(totalPages - 1, prev + 1))}
           >
             Suivant
@@ -232,15 +235,19 @@ useEffect(() => {
         </div>
       ) : null}
 
-      {loading ? (
-        <div className="adminEventEmpty">Chargement des billets…</div>
-      ) : error ? (
-        <div className="adminEventEmpty">{error}</div>
+      {activeLoading ? (
+        <div className="adminEventEmpty">
+          {isSearchMode ? "Recherche des billets…" : "Chargement des billets…"}
+        </div>
+      ) : activeError ? (
+        <div className="adminEventEmpty">{activeError}</div>
       ) : displayedTickets.length === 0 ? (
         <div className="adminEventEmpty">
-          {query.trim() || filterMode !== "all"
-            ? "Aucun résultat avec ces filtres sur cette page."
-            : "Aucun billet pour le moment."}
+          {isSearchMode
+            ? "Aucun résultat sur l’ensemble de l’événement."
+            : filterMode !== "all"
+              ? "Aucun résultat avec ces filtres sur cette page."
+              : "Aucun billet pour le moment."}
         </div>
       ) : (
         <div className="adminTicketsList">
@@ -285,7 +292,7 @@ useEffect(() => {
                       onClick={async () => {
                         const res = await markTicket.markTicketCheckedIn(ticket.id, eventId);
                         if (!res) return;
-                        await refetch();
+                        await activeRefetch();
                         await onChanged?.();
                       }}
                     >
