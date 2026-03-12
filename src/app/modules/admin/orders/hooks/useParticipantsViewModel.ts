@@ -14,14 +14,11 @@ type ProductRow = EventDetailAdmin["products"][number];
 export type OrderMeta = {
   orderNumber: string;
   createdAt?: string;
-
   status: OrderRow["status"];
   currency: string;
-
   totalCents: number;
   paidCents: number;
   dueCents: number;
-
   nonAttendeeItems?: Array<{
     id: string;
     name: string;
@@ -31,16 +28,17 @@ export type OrderMeta = {
 
 type FilledField = { key: string; label: string; value: string };
 
-export function useParticipantsViewModel(params: {
+export type BuildParticipantsViewModelParams = {
   localAttendees: Attendee[];
   localAnswers: AttendeeAnswers[];
   localOrders: OrderRow[];
   localOrderItems: OrderItemRow[];
-
   query: string;
   filterMode: FilterMode;
   productsRows: ProductRow[];
-}) {
+};
+
+export function buildParticipantsViewModel(params: BuildParticipantsViewModelParams) {
   const {
     localAttendees,
     localAnswers,
@@ -51,199 +49,177 @@ export function useParticipantsViewModel(params: {
     filterMode,
   } = params;
 
-  const createsAttendeesByProductId = useMemo(() => {
-  const m = new Map<string, boolean>();
+  const createsAttendeesByProductId = new Map<string, boolean>();
 
   for (const p of productsRows) {
-    m.set(p.id, Boolean(p.createsAttendees));
+    createsAttendeesByProductId.set(p.id, Boolean(p.createsAttendees));
   }
 
-  return m;
-}, [productsRows]);
-
   /* -------------------- ORDER META -------------------- */
-  const orderMetaById = useMemo(() => {
-    const itemsByOrderId = new Map<string, OrderItemRow[]>();
+  const itemsByOrderId = new Map<string, OrderItemRow[]>();
 
-    for (const item of localOrderItems) {
-      const arr = itemsByOrderId.get(item.orderId) ?? [];
-      arr.push(item);
-      itemsByOrderId.set(item.orderId, arr);
-    }
+  for (const item of localOrderItems) {
+    const arr = itemsByOrderId.get(item.orderId) ?? [];
+    arr.push(item);
+    itemsByOrderId.set(item.orderId, arr);
+  }
 
-    const m = new Map<string, OrderMeta>();
+  const orderMetaById = new Map<string, OrderMeta>();
 
-    for (const o of localOrders) {
-      const total = o.totalCents ?? 0;
-      const paid = o.paidCents ?? 0;
-      const due = Math.max(0, total - paid);
+  for (const o of localOrders) {
+    const total = o.totalCents ?? 0;
+    const paid = o.paidCents ?? 0;
+    const due = Math.max(0, total - paid);
 
-      const orderItems = itemsByOrderId.get(o.id) ?? [];
+    const orderItems = itemsByOrderId.get(o.id) ?? [];
 
-      const nonAttendeeItems = orderItems
-        .filter((item) => {
-          const createsAttendees =
-            item.productId ? (createsAttendeesByProductId.get(item.productId) ?? true) : true;
-          const quantity = Number(item.quantity ?? 0);
-          return !createsAttendees && quantity > 0;
-        })
-        .map((item) => ({
-          id: item.id,
-          name: item.productNameSnapshot || "Billet",
-          quantity: Number(item.quantity ?? 0),
-        }));
+    const nonAttendeeItems = orderItems
+      .filter((item) => {
+        const createsAttendees =
+          item.productId ? (createsAttendeesByProductId.get(item.productId) ?? true) : true;
+        const quantity = Number(item.quantity ?? 0);
+        return !createsAttendees && quantity > 0;
+      })
+      .map((item) => ({
+        id: item.id,
+        name: item.productNameSnapshot || "Billet",
+        quantity: Number(item.quantity ?? 0),
+      }));
 
-      m.set(o.id, {
-        orderNumber: o.id.slice(0, 8),
-        createdAt: o.createdAt,
-        status: o.status,
-        currency: o.currency,
-        totalCents: total,
-        paidCents: paid,
-        dueCents: due,
-        nonAttendeeItems,
-      });
-    }
-
-    return m;
-  }, [localOrders, localOrderItems, createsAttendeesByProductId]);
+    orderMetaById.set(o.id, {
+      orderNumber: o.id.slice(0, 8),
+      createdAt: o.createdAt,
+      status: o.status,
+      currency: o.currency,
+      totalCents: total,
+      paidCents: paid,
+      dueCents: due,
+      nonAttendeeItems,
+    });
+  }
 
   /* -------------------- ANSWERS BY ATTENDEE (FILLED) -------------------- */
-  const filledFieldsByAttendeeId = useMemo(() => {
-    const map = new Map<string, FilledField[]>();
+  const filledFieldsByAttendeeId = new Map<string, FilledField[]>();
 
-    for (const a of localAnswers) {
-      if (!isFilled(a.value)) continue;
+  for (const a of localAnswers) {
+    if (!isFilled(a.value)) continue;
 
-      const arr = map.get(a.attendeeId) ?? [];
-      arr.push({
-        key: a.fieldKeySnapshot,
-        label: a.fieldLabelSnapshot,
-        value: String(a.value),
-      });
-      map.set(a.attendeeId, arr);
-    }
+    const arr = filledFieldsByAttendeeId.get(a.attendeeId) ?? [];
+    arr.push({
+      key: a.fieldKeySnapshot,
+      label: a.fieldLabelSnapshot,
+      value: String(a.value),
+    });
+    filledFieldsByAttendeeId.set(a.attendeeId, arr);
+  }
 
-    for (const [id, arr] of map.entries()) {
-      const uniq = new Map<string, FilledField>();
-      for (const f of arr) uniq.set(f.key, f);
+  for (const [id, arr] of filledFieldsByAttendeeId.entries()) {
+    const uniq = new Map<string, FilledField>();
+    for (const f of arr) uniq.set(f.key, f);
 
-      const list = Array.from(uniq.values());
-      list.sort((x, y) => x.label.localeCompare(y.label));
-      map.set(id, list);
-    }
-
-    return map;
-  }, [localAnswers]);
+    const list = Array.from(uniq.values());
+    list.sort((x, y) => x.label.localeCompare(y.label));
+    filledFieldsByAttendeeId.set(id, list);
+  }
 
   /* -------------------- FIELDS OPTIONS -------------------- */
-  const fieldOptions = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const a of localAnswers) {
-      const key = a.fieldKeySnapshot;
-      const label = a.fieldLabelSnapshot || key;
-      if (!key) continue;
-      if (!m.has(key)) m.set(key, label);
-    }
-    const arr = Array.from(m.entries()).map(([key, label]) => ({ key, label }));
-    arr.sort((x, y) => x.label.localeCompare(y.label));
-    return arr;
-  }, [localAnswers]);
+  const fieldsMap = new Map<string, string>();
+
+  for (const a of localAnswers) {
+    const key = a.fieldKeySnapshot;
+    const label = a.fieldLabelSnapshot || key;
+    if (!key) continue;
+    if (!fieldsMap.has(key)) fieldsMap.set(key, label);
+  }
+
+  const fieldOptions = Array.from(fieldsMap.entries())
+    .map(([key, label]) => ({ key, label }))
+    .sort((x, y) => x.label.localeCompare(y.label));
 
   /* -------------------- IDENTITY -------------------- */
-  const computeIdentity = useMemo(() => {
-    return (attendeeId: string) => {
-      const fields = filledFieldsByAttendeeId.get(attendeeId) ?? [];
-      const getVal = (...keys: string[]) => fields.find((f) => keys.includes(f.key))?.value ?? "";
+  const computeIdentity = (attendeeId: string) => {
+    const fields = filledFieldsByAttendeeId.get(attendeeId) ?? [];
+    const getVal = (...keys: string[]) => fields.find((f) => keys.includes(f.key))?.value ?? "";
 
-      const full = `${getVal("firstName", "prenom", "first_name")} ${getVal("lastName", "nom", "last_name")}`.trim();
-      const email = getVal("email");
+    const full = `${getVal("firstName", "prenom", "first_name")} ${getVal("lastName", "nom", "last_name")}`.trim();
+    const email = getVal("email");
 
-      return {
-        title: full || email || "Participant",
-        subtitle: full && email ? email : "",
-      };
+    return {
+      title: full || email || "Participant",
+      subtitle: full && email ? email : "",
     };
-  }, [filledFieldsByAttendeeId]);
+  };
 
   /* -------------------- FILTERED ATTENDEES -------------------- */
-  const filteredAttendees = useMemo(() => {
-    const q = normalizeText(query);
-    if (!q) return localAttendees;
+  const q = normalizeText(query);
 
-    const mode = filterMode;
+  const filteredAttendees = !q
+    ? localAttendees
+    : localAttendees.filter((att) => {
+        const matchOrder = (orderId: string) => {
+          const orderNum = orderMetaById.get(orderId)?.orderNumber ?? "";
+          return normalizeText(orderNum).includes(q);
+        };
 
-    const matchOrder = (orderId: string) => {
-      const orderNum = orderMetaById.get(orderId)?.orderNumber ?? "";
-      return normalizeText(orderNum).includes(q);
-    };
+        const matchAnyField = (attendeeId: string) => {
+          const fields = filledFieldsByAttendeeId.get(attendeeId) ?? [];
+          return fields.some((f) => normalizeText(f.value).includes(q));
+        };
 
-    const matchAnyField = (attendeeId: string) => {
-      const fields = filledFieldsByAttendeeId.get(attendeeId) ?? [];
-      return fields.some((f) => normalizeText(f.value).includes(q));
-    };
+        const matchFieldKey = (attendeeId: string, key: string) => {
+          const fields = filledFieldsByAttendeeId.get(attendeeId) ?? [];
+          const found = fields.find((f) => f.key === key);
+          return found ? normalizeText(found.value).includes(q) : false;
+        };
 
-    const matchFieldKey = (attendeeId: string, key: string) => {
-      const fields = filledFieldsByAttendeeId.get(attendeeId) ?? [];
-      const found = fields.find((f) => f.key === key);
-      return found ? normalizeText(found.value).includes(q) : false;
-    };
+        if (filterMode === "order") return matchOrder(att.orderId);
 
-    return localAttendees.filter((att) => {
-      if (mode === "order") return matchOrder(att.orderId);
+        if (filterMode.startsWith("field:")) {
+          const key = filterMode.slice("field:".length);
+          return key ? matchFieldKey(att.id, key) : false;
+        }
 
-      if (mode.startsWith("field:")) {
-        const key = mode.slice("field:".length);
-        return key ? matchFieldKey(att.id, key) : false;
-      }
-
-      return matchOrder(att.orderId) || matchAnyField(att.id);
-    });
-  }, [localAttendees, query, filterMode, orderMetaById, filledFieldsByAttendeeId]);
+        return matchOrder(att.orderId) || matchAnyField(att.id);
+      });
 
   /* -------------------- GROUPS BY ORDER -------------------- */
-  const groups = useMemo(() => {
-    const byOrder = new Map<string, Attendee[]>();
-    for (const a of filteredAttendees) {
-      const arr = byOrder.get(a.orderId) ?? [];
-      arr.push(a);
-      byOrder.set(a.orderId, arr);
-    }
+  const byOrder = new Map<string, Attendee[]>();
 
-    const q = normalizeText(query);
-    const mode = filterMode;
+  for (const a of filteredAttendees) {
+    const arr = byOrder.get(a.orderId) ?? [];
+    arr.push(a);
+    byOrder.set(a.orderId, arr);
+  }
 
-    const orderMatchesQuery = (orderId: string) => {
-      const orderNum = orderMetaById.get(orderId)?.orderNumber ?? "";
-      return normalizeText(orderNum).includes(q);
-    };
+  const orderMatchesQuery = (orderId: string) => {
+    const orderNum = orderMetaById.get(orderId)?.orderNumber ?? "";
+    return normalizeText(orderNum).includes(q);
+  };
 
-    const shouldShowOrder = (orderId: string) => {
-      if (!q) return true;
-      if (mode === "order") return orderMatchesQuery(orderId);
-      if (mode.startsWith("field:")) return (byOrder.get(orderId) ?? []).length > 0;
-      return orderMatchesQuery(orderId) || (byOrder.get(orderId) ?? []).length > 0;
-    };
+  const shouldShowOrder = (orderId: string) => {
+    if (!q) return true;
+    if (filterMode === "order") return orderMatchesQuery(orderId);
+    if (filterMode.startsWith("field:")) return (byOrder.get(orderId) ?? []).length > 0;
+    return orderMatchesQuery(orderId) || (byOrder.get(orderId) ?? []).length > 0;
+  };
 
-    const visibleOrders = localOrders
-      .map((o) => ({ orderId: o.id, createdAt: o.createdAt ?? "" }))
-      .filter((x) => x.orderId)
-      .filter((x) => shouldShowOrder(x.orderId));
+  const visibleOrders = localOrders
+    .map((o) => ({ orderId: o.id, createdAt: o.createdAt ?? "" }))
+    .filter((x) => x.orderId)
+    .filter((x) => shouldShowOrder(x.orderId));
 
-    visibleOrders.sort((a, b) => {
-      if (b.createdAt !== a.createdAt) return b.createdAt.localeCompare(a.createdAt);
-      return b.orderId.localeCompare(a.orderId);
-    });
+  visibleOrders.sort((a, b) => {
+    if (b.createdAt !== a.createdAt) return b.createdAt.localeCompare(a.createdAt);
+    return b.orderId.localeCompare(a.orderId);
+  });
 
-    const out: Array<[string, Attendee[]]> = [];
-    for (const o of visibleOrders) {
-      const arr = byOrder.get(o.orderId) ?? [];
-      arr.sort((x, y) => (x.attendeeIndex ?? 0) - (y.attendeeIndex ?? 0));
-      out.push([o.orderId, arr]);
-    }
+  const groups: Array<[string, Attendee[]]> = [];
 
-    return out;
-  }, [filteredAttendees, localOrders, orderMetaById, query, filterMode]);
+  for (const o of visibleOrders) {
+    const arr = byOrder.get(o.orderId) ?? [];
+    arr.sort((x, y) => (x.attendeeIndex ?? 0) - (y.attendeeIndex ?? 0));
+    groups.push([o.orderId, arr]);
+  }
 
   return {
     orderMetaById,
@@ -253,4 +229,30 @@ export function useParticipantsViewModel(params: {
     groups,
     computeIdentity,
   };
+}
+
+export function useParticipantsViewModel(params: BuildParticipantsViewModelParams) {
+  const {
+    localAttendees,
+    localAnswers,
+    localOrders,
+    localOrderItems,
+    query,
+    filterMode,
+    productsRows,
+  } = params;
+
+  return useMemo(
+    () =>
+      buildParticipantsViewModel({
+        localAttendees,
+        localAnswers,
+        localOrders,
+        localOrderItems,
+        query,
+        filterMode,
+        productsRows,
+      }),
+    [localAttendees, localAnswers, localOrders, localOrderItems, query, filterMode, productsRows],
+  );
 }

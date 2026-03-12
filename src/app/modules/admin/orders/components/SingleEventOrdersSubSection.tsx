@@ -13,7 +13,10 @@ import { OrdersPeopleList } from "./OrdersPeopleList";
 
 import { useAdminUpdateOrderAttendee } from "../hooks/useUpdateOrderAttendeeAnswers";
 import { useDeleteOrder } from "../hooks/useDeleteOrder";
-import { useParticipantsViewModel } from "../hooks/useParticipantsViewModel";
+import { useParticipantsViewModel,
+  buildParticipantsViewModel
+ } from "../hooks/useParticipantsViewModel";
+ import { makeEventParticipantsExportRepo } from "../data/makeEventParticipantsExportRepo";
 import { useSearchEventAdminOrdersViewData } from "../hooks/useSearchEventOrdersView";
 
 import type { AdminEventDetailEvent } from "../../singleEvent/schemas/admin.eventDetail.schema";
@@ -68,6 +71,7 @@ export function SingleEventOrdersSubSection(props: {
   const productsRows = useMemo(() => toRows<EventProduct>(products), [products]);
   const baseOrderItemsRows = useMemo(() => toRows(orderItems), [orderItems]);
   const isMobile = useIsMobile(720);
+  const exportRepo = useMemo(() => makeEventParticipantsExportRepo(supabase), []);
 
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [query, setQuery] = useState("");
@@ -421,42 +425,70 @@ export function SingleEventOrdersSubSection(props: {
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement | null>(null);
 
-  const confirmedAttendees = useMemo(() => {
-    return filteredAttendees.filter((a) => a.status === "confirmed");
-  }, [filteredAttendees]);
-
   const doExportXls = useCallback(
-    async (
-      sortMode: "alpha" | "orderRef",
-      stripeMode: "row" | "order" = "order",
-    ) => {
-      try {
-        await exportParticipantsXls({
-          eventTitle: event.title,
-          regFields,
-          localAttendees: confirmedAttendees,
-          filledFieldsByAttendeeId,
-          computeIdentityTitle: (attendeeId) => computeIdentity(attendeeId).title ?? "",
-          sortMode,
-          stripeMode,
-        });
-      } catch (err) {
-        console.error("[participants] export XLS failed", err);
-      }
-    },
-    [
-      event.title,
-      regFields,
-      confirmedAttendees,
-      filledFieldsByAttendeeId,
-      computeIdentity,
-    ],
-  );
+  async (
+    sortMode: "alpha" | "orderRef",
+    stripeMode: "row" | "order" = "order",
+  ) => {
+    try {
+      const exportData =
+        eventSlug && orgId
+          ? await exportRepo.getEventParticipantsExportData({
+              orgId,
+              eventSlug,
+              confirmedOnly: true,
+            })
+          : await exportRepo.getEventParticipantsExportData({
+              eventId,
+              confirmedOnly: true,
+            });
+
+      const exportOrders = toRows<OrderUI>(exportData.orders.rows ?? []);
+      const exportOrderItems = toRows<OrderItem>(exportData.orderItems ?? []);
+      const exportAttendees = toRows<Attendee>(exportData.attendees ?? []);
+      const exportAnswers = toRows<AttendeeAnswer>(exportData.attendeeAnswers ?? []);
+
+      const exportVm = buildParticipantsViewModel({
+        localAttendees: exportAttendees,
+        localAnswers: exportAnswers,
+        localOrders: exportOrders,
+        localOrderItems: exportOrderItems,
+        productsRows,
+        query: "",
+        filterMode: "all",
+      });
+
+      await exportParticipantsXls({
+        eventTitle: event.title,
+        regFields,
+        localAttendees: exportAttendees,
+        filledFieldsByAttendeeId: exportVm.filledFieldsByAttendeeId,
+        computeIdentityTitle: (attendeeId) => exportVm.computeIdentity(attendeeId).title ?? "",
+        sortMode,
+        stripeMode,
+      });
+    } catch (err) {
+      console.error("[participants] export XLS failed", err);
+    }
+  },
+  [
+    event.title,
+    eventId,
+    eventSlug,
+    orgId,
+    regFields,
+    productsRows,
+    exportRepo,
+  ],
+);
+
+  const canExportXls = totalOrders > 0;
+
 
   const toggleExportMenu = useCallback(() => {
-    if (confirmedAttendees.length === 0) return;
-    setExportMenuOpen((v) => !v);
-  }, [confirmedAttendees.length]);
+  if (!canExportXls) return;
+  setExportMenuOpen((v) => !v);
+}, [canExportXls]);
 
   useEffect(() => {
     if (!exportMenuOpen) return;
@@ -481,6 +513,7 @@ export function SingleEventOrdersSubSection(props: {
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [exportMenuOpen]);
+
 
   return (
     <>
@@ -521,9 +554,9 @@ export function SingleEventOrdersSubSection(props: {
             <Button
               variant="secondary"
               onClick={toggleExportMenu}
-              disabled={confirmedAttendees.length === 0}
+              disabled={!canExportXls}
             >
-              {isSearchMode ? "Export XLS (résultats)" : "Export XLS (page)"}
+              {isSearchMode ? "Export XLS (résultats)" : "Export XLS (événement)"}
             </Button>
 
             {exportMenuOpen ? (
