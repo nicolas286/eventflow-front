@@ -4,11 +4,12 @@
   justify-content: space-between;
   gap: 14px;
   flex-wrap: wrap;
+  padding: 32px 0 32px 0;
 }
 
 .publicBrand {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 14px;
   min-width: 0;
   width: 100%;
@@ -47,7 +48,6 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding-top:8%;
 }
 .publicOrgPage .publicActions{
   display: grid !important;
