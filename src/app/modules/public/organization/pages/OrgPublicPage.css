@@ -1,5 +1,3 @@
-/* src/styles/public/partials/public.org.events.css */
-
 /* =========================================================
    OrgPublicPage – Events grid + cards with banner
    - Desktop: 2 colonnes
@@ -157,5 +155,90 @@
   }
   .publicOrgEventCard:hover .publicOrgEventBanner {
     transform: scale(1.02);
+  }
+}
+
+
+
+@media (max-width: 920px) {
+  .publicEventsToolbarRow {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .publicToolbarActions {
+    justify-content: stretch;
+  }
+}
+
+@media (max-width: 860px) {
+  .publicOrgEventsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .publicOrgEventBanner {
+    height: 180px;
+  }
+
+  .publicOrgEventFooter {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 860px) {
+
+  /* Bouton visible uniquement en mobile */
+  .publicMobileFiltersToggle {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  /* Reset desktop-only */
+  .publicDesktopOnly {
+    display: none;
+  }
+
+  /* Toolbar row cachée par défaut */
+  .publicEventsToolbarRow {
+    display: none;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  /* Quand ouverte */
+  .publicEventsToolbar.isMobileOpen .publicEventsToolbarRow {
+    display: grid;
+  }
+
+  /* Inputs full width */
+  .publicField {
+    width: 100%;
+  }
+
+  .publicInput,
+  .publicSelect {
+    width: 100%;
+  }
+}
+
+@media (max-width: 860px) {
+  .publicOrgEventActions {
+    gap: 8px;
+  }
+
+  /* ✅ compacter les boutons icônes */
+  .publicOrgEventActions .ui-button {
+    height: 34px;
+    padding: 0 10px;
+    min-width: 34px;
+    border-radius: 12px;
+  }
+
+  /* ✅ icônes légèrement plus petites */
+  .publicOrgEventActions .ui-button svg {
+    width: 16px;
+    height: 16px;
   }
 }
