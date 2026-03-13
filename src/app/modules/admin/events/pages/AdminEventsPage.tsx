@@ -21,8 +21,10 @@ import { supabase } from "@gateways/supabase/supabaseClient";
 import { useCreateEvent } from "../../singleEvent/hooks/useCreateEvent";
 import { useUpdateEvent } from "../../singleEvent/hooks/useUpdateEvent";
 import { useDeleteEvent } from "../../singleEvent/hooks/useDeleteEvent";
+import { useDuplicateEvent } from "../../singleEvent/hooks/useDuplicateEvent";
 import { PlusIcon } from "@ui/components/icon/Icons";
 import { AdminNotices } from "../../notices/components/AdminNotices";
+import { MessageBox } from "@shared/ui/components/message/MessageBox";
 
 type EditableEventFields = Partial<
   Pick<EventOverviewRow["event"], "title" | "isPublished" | "startsAt" | "endsAt">
@@ -38,6 +40,13 @@ export default function AdminEventsPage() {
   const { events, orgId, bootstrap, refetch } = useOutletContext<AdminOutletContext>();
 
   const { createEvent, loading: creating, error: createError, reset: resetCreate } = useCreateEvent({ supabase });
+
+    const {
+  duplicateEvent: doDuplicate,
+  loading: duplicating,
+  error: duplicateError,
+  reset: resetDuplicate,
+} = useDuplicateEvent({ supabase });
 
   const { updateEvent: doUpdate, loading: saving, error: saveError, reset: resetSave } = useUpdateEvent({ supabase });
 
@@ -121,6 +130,24 @@ export default function AdminEventsPage() {
     navigate(`/admin/events/${created.slug}`);
   };
 
+
+
+const duplicateEvent = async (row: EventOverviewRow) => {
+  if (duplicating) return;
+
+  resetDuplicate();
+
+  const duplicated = await doDuplicate({
+    sourceEventId: row.event.id,
+    title: `${row.event.title} (copie)`,
+  });
+
+  if (!duplicated) return;
+
+  await refetch();
+  navigate(`/admin/events/${duplicated.slug}`);
+};
+
   const isEditorVisible = !!selectedRow;
 
   return (
@@ -154,9 +181,11 @@ export default function AdminEventsPage() {
             </div>
           </div>
 
-          {(createError || saveError || deleteError) && (
-            <div className="adminAllEventsError">{createError ?? saveError ?? deleteError}</div>
-          )}
+          {(createError || saveError || deleteError || duplicateError) && (
+          <MessageBox variant="error">
+            {createError ?? saveError ?? deleteError ?? duplicateError}
+          </MessageBox>
+        )}
 
           <EditorShell
             isOpen={Boolean(selectedRow)}
@@ -173,6 +202,7 @@ export default function AdminEventsPage() {
                 editingId={editingId}
                 onSelect={select}
                 onDelete={deleteEvent}
+                onDuplicate={duplicateEvent}
                 renderInlineEditor={(row) => {
                   if (!selectedRow) return null;
                   if (selectedRow.event.id !== row.event.id) return null;

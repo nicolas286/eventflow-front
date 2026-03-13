@@ -14,6 +14,7 @@ type EventTableProps = {
   editingId?: string;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
+  onDuplicate: (row: EventOverviewRow) => void | Promise<void>;
   orgSlug?: string;
 
   renderInlineEditor?: (row: EventOverviewRow) => React.ReactNode;
@@ -24,6 +25,7 @@ export default function EventTable({
   editingId,
   onSelect,
   onDelete,
+  onDuplicate,
   renderInlineEditor,
   orgSlug,
 }: EventTableProps) {
@@ -122,6 +124,7 @@ export default function EventTable({
                   orgSlug={orgSlug}
                   onSelect={onSelect}
                   onDelete={onDelete}
+                  onDuplicate={onDuplicate}
                   onCopyLink={copyPublicEventUrl}
                   onShareFacebook={shareOnFacebook}
                   onShareWhatsapp={shareOnWhatsapp}
