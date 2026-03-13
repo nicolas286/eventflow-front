@@ -21,6 +21,7 @@ type Props = {
 
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
+  onDuplicate: (row: EventOverviewRow) => void | Promise<void>;
 
   onCopyLink: (orgSlug: string | undefined, eventSlug: string) => void | Promise<void>;
   onShareFacebook: (orgSlug: string | undefined, eventSlug: string) => void;
@@ -33,6 +34,7 @@ export default function EventCard({
   orgSlug,
   onSelect,
   onDelete,
+  onDuplicate,
   onCopyLink,
   onShareFacebook,
   onShareWhatsapp,
@@ -109,15 +111,16 @@ export default function EventCard({
         )}
 
         <EventCardActionsMenu
-          canView={canView}
-          detailsTo={detailsTo}
-          isSelected={isSelected}
-          onToggleInlineEdit={() => onSelect(ev.id)}
-          onCopyLink={canView ? () => onCopyLink(orgSlug, ev.slug!) : undefined}
-          onShareFacebook={canView ? () => onShareFacebook(orgSlug, ev.slug!) : undefined}
-          onShareWhatsapp={canView ? () => onShareWhatsapp(orgSlug, ev.slug!) : undefined}
-          onDelete={() => onDelete(ev.id)}
-        />
+        canView={canView}
+        detailsTo={detailsTo}
+        isSelected={isSelected}
+        onToggleInlineEdit={() => onSelect(ev.id)}
+        onDuplicate={() => onDuplicate(row)}
+        onCopyLink={canView ? () => onCopyLink(orgSlug, ev.slug!) : undefined}
+        onShareFacebook={canView ? () => onShareFacebook(orgSlug, ev.slug!) : undefined}
+        onShareWhatsapp={canView ? () => onShareWhatsapp(orgSlug, ev.slug!) : undefined}
+        onDelete={() => onDelete(ev.id)}
+      />
       </div>
     </div>
   );

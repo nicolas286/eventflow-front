@@ -43,11 +43,11 @@ type Props = {
 
   onToggleInlineEdit: () => void;
   onCopyLink?: () => void | Promise<void>;
+  onDuplicate: () => void | Promise<void>;
   onShareFacebook?: () => void;
   onShareWhatsapp?: () => void;
   onDelete: () => void;
 
-  /** optionnel: pour renommer le bouton */
   buttonLabel?: string;
 };
 
@@ -57,6 +57,7 @@ export default function EventCardActionsMenu({
   isSelected,
   onToggleInlineEdit,
   onCopyLink,
+  onDuplicate,
   onShareFacebook,
   onShareWhatsapp,
   onDelete,
@@ -69,7 +70,7 @@ export default function EventCardActionsMenu({
   const items: MenuItem[] = useMemo(() => {
     const base: MenuItem[] = [];
 
-    // --------- 📄 Consultation ---------
+    /* --------- 📄 Consultation --------- */
     if (canView && detailsTo) {
       base.push({
         kind: "link",
@@ -80,8 +81,7 @@ export default function EventCardActionsMenu({
       });
     }
 
-    // --------- ✏️ Gestion ---------
-
+    /* --------- ✏️ Gestion --------- */
     base.push({
       kind: "action",
       key: "toggleEdit",
@@ -90,11 +90,21 @@ export default function EventCardActionsMenu({
       onClick: onToggleInlineEdit,
     });
 
+    base.push({
+      kind: "action",
+      key: "duplicate",
+      label: "Dupliquer l’événement",
+      icon: <CopyIcon />,
+      onClick: onDuplicate,
+    });
 
-     // --------- 🔗 Partage ---------
-    const hasShare = canView && (onShareFacebook || onCopyLink);
+    /* --------- 🔗 Partage --------- */
+    const hasShare = canView && (onShareFacebook || onShareWhatsapp || onCopyLink);
+
     if (hasShare) {
-      if (base.length) base.push({ kind: "separator", key: "sep_before_share" });
+      if (base.length) {
+        base.push({ kind: "separator", key: "sep_before_share" });
+      }
 
       if (onShareFacebook) {
         base.push({
@@ -107,14 +117,14 @@ export default function EventCardActionsMenu({
       }
 
       if (onShareWhatsapp) {
-      base.push({
-        kind: "action",
-        key: "shareWa",
-        label: "Partager sur WhatsApp",
-        icon: <WhatsappIcon />,
-        onClick: onShareWhatsapp,
-      });
-    }
+        base.push({
+          kind: "action",
+          key: "shareWa",
+          label: "Partager sur WhatsApp",
+          icon: <WhatsappIcon />,
+          onClick: onShareWhatsapp,
+        });
+      }
 
       if (onCopyLink) {
         base.push({
@@ -127,7 +137,9 @@ export default function EventCardActionsMenu({
       }
     }
 
+    if (base.length) {
       base.push({ kind: "separator", key: "sep_before_delete" });
+    }
 
     base.push({
       kind: "action",
@@ -138,9 +150,8 @@ export default function EventCardActionsMenu({
       onClick: onDelete,
     });
 
-
-    // Nettoyage: éviter séparateurs en tête/fin ou doublons
     const cleaned: MenuItem[] = [];
+
     for (const it of base) {
       if (it.kind === "separator") {
         if (cleaned.length === 0) continue;
@@ -148,16 +159,31 @@ export default function EventCardActionsMenu({
       }
       cleaned.push(it);
     }
-    if (cleaned.length && cleaned[cleaned.length - 1].kind === "separator") cleaned.pop();
+
+    if (cleaned.length && cleaned[cleaned.length - 1].kind === "separator") {
+      cleaned.pop();
+    }
 
     return cleaned;
-  }, [canView, detailsTo, isSelected, onCopyLink, onShareFacebook, onShareWhatsapp, onToggleInlineEdit, onDelete]);
+  }, [
+    canView,
+    detailsTo,
+    isSelected,
+    onToggleInlineEdit,
+    onDuplicate,
+    onShareFacebook,
+    onShareWhatsapp,
+    onCopyLink,
+    onDelete,
+  ]);
 
   useEffect(() => {
     function onDocMouseDown(e: MouseEvent) {
       if (!open) return;
       const target = e.target as Node;
-      if (rootRef.current && !rootRef.current.contains(target)) setOpen(false);
+      if (rootRef.current && !rootRef.current.contains(target)) {
+        setOpen(false);
+      }
     }
 
     function onDocKeyDown(e: KeyboardEvent) {
@@ -167,6 +193,7 @@ export default function EventCardActionsMenu({
 
     document.addEventListener("mousedown", onDocMouseDown);
     document.addEventListener("keydown", onDocKeyDown);
+
     return () => {
       document.removeEventListener("mousedown", onDocMouseDown);
       document.removeEventListener("keydown", onDocKeyDown);
@@ -211,7 +238,8 @@ export default function EventCardActionsMenu({
               );
             }
 
-            const toneClass = it.kind === "action" && it.tone === "danger" ? "isDanger" : "";
+            const toneClass =
+              it.kind === "action" && it.tone === "danger" ? "isDanger" : "";
 
             if (it.kind === "link") {
               return (
@@ -240,7 +268,6 @@ export default function EventCardActionsMenu({
                 onClick={() => {
                   const r = it.onClick();
                   setOpen(false);
-                  // si action async, on laisse tourner sans bloquer l'UI
                   void r;
                 }}
               >
