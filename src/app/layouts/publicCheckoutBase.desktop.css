@@ -1,11 +1,9 @@
 @import "./public.base.desktop.css";
-@import "./public.hero.desktop.css";
 @import "./public.banner.desktop.css";
 @import "./public.header.checkout.desktop.css";
 
 /* src/styles/mobile/publicCheckoutBase.mobile.css */
 /* LIGHT MODE ONLY */
 
-@import "./public.hero.mobile.css";
 @import "./public.header.checkout.mobile.css";
 @import "./public.banner.mobile.css";

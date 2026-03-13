@@ -1,24 +1,20 @@
-/* src/styles/public/partials/public.hero.css */
-
-/* ---------- Hero (Org page) ---------- */
-
 .publicHero {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
   flex-wrap: wrap;
+  padding: 32px 0 32px 0;
 }
 
 .publicBrand {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 14px;
   min-width: 0;
   width: 100%;
 }
 
-/* logo org */
 .publicLogo {
   width: clamp(200px, 14vw, 300px);
   height: clamp(200px, 14vw, 300px);
@@ -29,9 +25,6 @@
   box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12);
 }
 
-/* =========================================================
-   ✅ OrgPublicPage – EXACTEMENT ce que tu demandes
-   ========================================================= */
 
 .publicOrgPage .publicHero {
   justify-content: flex-start;
@@ -39,17 +32,14 @@
   gap: clamp(22px, 4vw, 40px);
 }
 
-/* Logo : plus grand + léger décalage vers la droite */
 .publicOrgPage .publicLogo {
   width: clamp(230px, 19vw, 340px);
   height: clamp(230px, 19vw, 340px);
   flex-shrink: 0;
 
-  /* logo un peu plus à droite */
   margin-left: clamp(12px, 2.2vw, 26px);
 }
 
-/* Colonne droite : texte + boutons */
 .publicOrgPage .publicOrgHeroRight {
   flex: 1;
   min-width: 0;
@@ -58,10 +48,7 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding-top:8%;
 }
-
-/* Barre contacts: gauche | centre | droite */
 .publicOrgPage .publicActions{
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
@@ -71,7 +58,6 @@
   column-gap: clamp(22px, 4vw, 70px) !important;
 }
 
-/* mail gauche */
 .publicOrgPage .publicActions .publicMail{
   justify-self: start;
   display: inline-flex;
@@ -81,17 +67,15 @@
   white-space: nowrap;
 }
 
-/* téléphone vrai centre */
 .publicOrgPage .publicActions .publicPhone{
   justify-self: center;
   display: inline-flex;
   align-items: center;
   gap: 10px;
   white-space: nowrap;
-  padding: 0 14px; /* respiration */
+  padding: 0 14px; 
 }
 
-/* site droite */
 .publicOrgPage .publicActions .publicSite{
   justify-self: end;
   display: inline-flex;
@@ -129,4 +113,62 @@
   margin-top: 10px;                 
   padding: 0 clamp(10px, 2vw, 24px);
   max-width: 70ch;                  
+}
+
+
+@media (max-width: 860px) {
+  .publicOrgPage .publicBrand {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .publicOrgPage .publicLogo {
+    width: clamp(180px, 50vw, 240px);
+    height: clamp(180px, 50vw, 240px);
+    margin-left: 0;
+  }
+
+  .publicOrgPage .publicOrgHeroRight {
+    width: 100%;
+
+    padding-top: 0 !important;
+
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+
+    justify-content: flex-start;
+    align-items: center;
+
+    margin-top: 16px;
+  }
+
+  .publicOrgPage .publicOrgHeroRight .publicActions {
+    justify-content: center;
+    width: 100%;
+    margin-top: 12px;
+  }
+
+  .publicOrgPage .publicActions{
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .publicOrgPage .publicMail,
+  .publicOrgPage .publicPhone,
+  .publicOrgPage .publicSite{
+    justify-self: unset;
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .publicOrgPage .publicSite a{
+    justify-content: center;
+    text-align: center;
+    word-break: break-word;
+  }
 }

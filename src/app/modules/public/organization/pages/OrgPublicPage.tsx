@@ -7,13 +7,14 @@ import Container from "@ui/components/container/Container";
 import Card, { CardBody } from "@ui/components/card/Card";
 import Button from "@ui/components/button/Button";
 import Badge from "@ui/components/badge/Badge";
-import { GlobeIcon, PhoneIcon, SendIcon } from "@ui/components/icon/Icons";
 import { Seo } from "@shared/ui/components/seo/Seo";
+import { PublicOrgHero } from "../components/hero/PublicOrgHero";
 
 import { formatDateTimeHuman, toDayEndISO, toDayStartISO } from "@helpers/dateTime";
-import MarkdownText from "@shared/ui/components/markdowntext/MarkdownText";
 
 import type { PublicEventOverview } from "../schemas/public.orgEventsOverview.schema";
+
+import "./OrgPublicPage.css";
 
 type SortKey = "date" | "name";
 type SortDir = "asc" | "desc";
@@ -151,12 +152,10 @@ export function OrgPublicPage() {
     );
   }
 
-  const displayName = profile.displayName ?? org.name;
-
   const baseUrl = import.meta.env.VITE_PUBLIC_BASE_URL; 
   const url = `${baseUrl}/o/${orgSlug}`;
 
-  const title = `${displayName} – Eventflow, la billetterie sans commission`;
+  const title = `${profile.displayName} – Eventflow, la billetterie sans commission`;
   const desc = "Réservez vos billets";
 
 
@@ -173,60 +172,14 @@ export function OrgPublicPage() {
         />
     <div className="publicPage publicOrgPage">
       <Container>
-        <div className="publicSurface">
-          {/* HERO */}
-          <div className="publicHero">
-            <div className="publicBrand">
-              {profile.logoUrl ? (
-                <img src={profile.logoUrl} alt={displayName} className="publicLogo" />
-              ) : null}
 
-              <div className="publicOrgHeroRight">
-                <div className="publicTitleBlock">
-                  <h1 className="publicTitle">{displayName}</h1>
-                </div>
-
-                {profile.description ? (
-                  <MarkdownText markdown={profile.description} className="publicProse" />
-                ) : (
-                  <div className="publicEmpty">Cette organisation n’a pas encore de description.</div>
-                )}
-
-
-                </div>
-            </div>
-          </div>
-          
-
-          <div className="publicDivider" />
-            <div className="publicActions">
-
-              {profile.publicEmail ? (
-                <div className="publicMail">
-                  <a href={`mailto:${profile.publicEmail}`}>
-                    <SendIcon /> {profile.publicEmail}
-                  </a>
-                </div>
-              ) : null}
-
-              {profile.phone ? (
-                <div className="publicPhone">
-                  <a href={`tel:${profile.phone}`}>
-                    <PhoneIcon /> {profile.phone}
-                  </a>
-                </div>
-              ) : null}
-
-              {profile.website ? (
-                <div className="publicSite">
-                  <a href={profile.website} target="_blank" rel="noreferrer">
-                    <GlobeIcon /> {profile.website}
-                  </a>
-                </div>
-              ) : null}
-
-            </div>
-        </div>
+        <PublicOrgHero
+          logoUrl={profile.logoUrl}
+          displayName={profile.displayName}
+          description={profile.description}
+          publicEmail={profile.publicEmail}
+          phone={profile.phone}
+          website={profile.website}/>
 
         {/* Filtres + tri */}
         <div className={`publicEventsToolbar ${mobileFiltersOpen ? "isMobileOpen" : ""}`}>
