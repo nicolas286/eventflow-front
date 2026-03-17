@@ -106,20 +106,32 @@ export function AdminSingleEventPage() {
   }
 
   async function handleConfirmFullPatch(patch: UpdateEventFullPatch): Promise<void> {
-    if (!event?.id) return;
+  if (!event?.id) return;
 
-    const next = await update.updateEvent({ eventId: event.id, patch });
-    if (!next) return;
+  const normalizedPatch: UpdateEventFullPatch = {
+    ...patch,
+    endsAt:
+      typeof patch.endsAt === "string" && patch.endsAt.trim() === ""
+        ? null
+        : patch.endsAt,
+  };
 
-    const nextSlug = (next.slug ?? "").trim();
-    if (nextSlug && nextSlug !== eventSlug) {
-      const sp = new URLSearchParams(searchParams);
-      navigate(`/admin/events/${nextSlug}?${sp.toString()}`, { replace: true });
-      return;
-    }
+  const next = await update.updateEvent({
+    eventId: event.id,
+    patch: normalizedPatch,
+  });
 
-    await refreshAll();
+  if (!next) return;
+
+  const nextSlug = (next.slug ?? "").trim();
+  if (nextSlug && nextSlug !== eventSlug) {
+    const sp = new URLSearchParams(searchParams);
+    navigate(`/admin/events/${nextSlug}?${sp.toString()}`, { replace: true });
+    return;
   }
+
+  await refreshAll();
+}
 
   async function uploadEventBanner(file: File): Promise<UploadResult> {
     if (!orgId) throw new Error("ORG_ID_MISSING");
