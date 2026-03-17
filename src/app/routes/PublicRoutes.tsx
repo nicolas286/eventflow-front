@@ -12,6 +12,7 @@ import { WidgetOrgPage } from "@app/modules/public/widget/pages/WidgetOrgPage";
 import { WidgetTicketsPage } from "@app/modules/public/widget/pages/WidgetTicketsPage";
 import { WidgetAttendeesPage } from "@app/modules/public/widget/pages/WidgetAttendeesPage";
 import { WidgetPaymentPage } from "@app/modules/public/widget/pages/WidgetPaymentPage";
+import WidgetConfirmationPage from "@app/modules/public/widget/pages/WidgetConfirmationPage";
 import LegalPage from "@shared/pages/Legal";
 import PrivacyPage from "@shared/pages/Privacy";
 import TermsPage from "@shared/pages/TermsPage";
@@ -37,5 +38,7 @@ export const PublicRoutes = (
     <Route path="/widget/o/:orgSlug/e/:eventSlug/billets" element={<WidgetTicketsPage />} />
     <Route path="/widget/o/:orgSlug/e/:eventSlug/participants" element={<WidgetAttendeesPage />} />
     <Route path="/widget/o/:orgSlug/e/:eventSlug/paiement" element={<WidgetPaymentPage />} />
+    <Route path="/widget/o/:orgSlug/e/:eventSlug/confirmation" element={<WidgetConfirmationPage />}
+/>
   </>
 );

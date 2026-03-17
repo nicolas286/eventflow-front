@@ -1,0 +1,30 @@
+.widgetConfirmationCard {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  background: var(--widget-card);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 24px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
+}
+
+.widgetConfirmationPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.widgetConfirmationSubtitle {
+  margin: 8px 0;
+  opacity: 0.9;
+}
+
+.widgetConfirmationSection {
+  margin-top: 22px;
+}
