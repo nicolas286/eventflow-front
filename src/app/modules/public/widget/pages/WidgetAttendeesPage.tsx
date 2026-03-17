@@ -35,6 +35,7 @@ import { validateFieldValue } from "@shared/helpers/validateFieldValue";
 import { getFieldKey } from "@shared/helpers/fields";
 
 import "./WidgetAttendeesPage.css";
+import { useWidgetAutoResize } from "../hooks/useWidgetAutoResize";
 
 /* ---------------- Types ---------------- */
 
@@ -100,6 +101,7 @@ export function WidgetAttendeesPage() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [attTouched, setAttTouched] = useState<TouchedMap>({});
   const [attemptedNext, setAttemptedNext] = useState(false);
+  useWidgetAutoResize();
 
   useEffect(() => {
     if (!orgSlug || !eventSlug) return;
