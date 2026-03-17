@@ -7,7 +7,7 @@ import { Button } from "@shared/ui/components";
 import { useLocation } from "react-router-dom";
 
 import "./WidgetOrgPage.css";
-import { useWidgetAutoResize } from "../hooks/useWidgetAutiResize";
+import { useWidgetAutoResize } from "../hooks/useWidgetAutoResize";
 
 export function WidgetOrgPage() {
   const { orgSlug } = useParams<{ orgSlug: string }>();

@@ -5,7 +5,7 @@ import { supabase } from "@gateways/supabase/supabaseClient";
 import { usePublicEventDetail } from "../../events/hooks/usePublicEventDetail";
 import { useWidgetTheme } from "../hooks/useWidgetTheme";
 import { useLocation } from "react-router-dom";
-import { useWidgetAutoResize } from "../hooks/useWidgetAutiResize";
+import { useWidgetAutoResize } from "../hooks/useWidgetAutoResize";
 
 import { Button } from "@shared/ui/components";
 

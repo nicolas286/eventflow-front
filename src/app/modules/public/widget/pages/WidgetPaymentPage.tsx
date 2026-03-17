@@ -8,7 +8,7 @@ import { useWidgetTheme } from "../hooks/useWidgetTheme";
 import { Button } from "@shared/ui/components";
 import { Turnstile, type TurnstileRef } from "@ui/components/Turnstile";
 import { MessageBox } from "@ui/components/message/MessageBox";
-import { useWidgetAutoResize } from "../hooks/useWidgetAutiResize";
+import { useWidgetAutoResize } from "../hooks/useWidgetAutoResize";
 
 import {
   clearDraft,

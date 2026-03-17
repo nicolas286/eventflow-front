@@ -35,7 +35,7 @@ import { validateFieldValue } from "@shared/helpers/validateFieldValue";
 import { getFieldKey } from "@shared/helpers/fields";
 
 import "./WidgetAttendeesPage.css";
-import { useWidgetAutoResize } from "../hooks/useWidgetAutiResize";
+import { useWidgetAutoResize } from "../hooks/useWidgetAutoResize";
 
 /* ---------------- Types ---------------- */
 

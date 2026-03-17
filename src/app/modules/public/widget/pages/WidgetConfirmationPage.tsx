@@ -7,7 +7,7 @@ import { formatMoney } from "../../register/helpers/checkoutStore";
 import { MessageBox } from "@ui/components/message/MessageBox";
 
 import "./WidgetConfirmationPage.css";
-import { useWidgetAutoResize } from "../hooks/useWidgetAutiResize";
+import { useWidgetAutoResize } from "../hooks/useWidgetAutoResize";
 
 type WidgetConfirmationData = {
   orderId: string;
