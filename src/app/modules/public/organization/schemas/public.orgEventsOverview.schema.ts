@@ -1,14 +1,18 @@
 import { z } from "zod";
 import { eventSchema } from "@shared/models/db/db.event.schema";
 
-export const publicEventOverviewSchema = eventSchema.omit({
-  orgId: true,
-  description: true,
-  isPublished: true,
-  createdAt: true,
-  updatedAt: true,
-  depositCents: true
-});
+export const publicEventOverviewSchema = eventSchema
+  .omit({
+    orgId: true,
+    description: true,
+    isPublished: true,
+    createdAt: true,
+    updatedAt: true,
+    depositCents: true,
+  })
+  .extend({
+    isSoldOut: z.boolean().default(false),
+  });
 
 export const publicOrgEventsOverviewSchema = z.object({
   orgSlug: z.string().min(3, "Le slug est trop court").max(80, "Le slug est trop long"),

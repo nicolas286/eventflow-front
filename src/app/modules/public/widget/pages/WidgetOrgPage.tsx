@@ -69,33 +69,41 @@ const upcomingEvents = useMemo(() => {
   ) : (
     <div className="widgetEventsGrid">
       {upcomingEvents.map((e) => (
-        <div
-            key={e.id}
-            className="widgetEventCard"
-            onClick={() =>
-                navigate(`/widget/o/${orgSlug}/e/${e.slug}/billets${search}`)
-            }
-            >
-          <div className="widgetEventTitle">{e.title}</div>
+  <div
+    key={e.id}
+    className="widgetEventCard"
+    onClick={() =>
+      navigate(`/widget/o/${orgSlug}/e/${e.slug}/billets${search}`)
+    }
+  >
+    <div className="widgetEventTitle">{e.title}</div>
 
-          {e.startsAt && (
-            <div style={{ fontSize: 13, opacity: 0.7 }}>
-              {new Date(e.startsAt).toLocaleString("fr-BE", {
-                dateStyle: "medium",
-                timeStyle: "short",
-                })}
-            </div>
-          )}
+    {e.startsAt && (
+      <div style={{ fontSize: 13, opacity: 0.7 }}>
+        {new Date(e.startsAt).toLocaleString("fr-BE", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })}
+      </div>
+    )}
 
-          <Button
-            label="Billets"
-            onClick={(ev) => {
-              ev.stopPropagation();
-              navigate(`/widget/o/${orgSlug}/e/${e.slug}/billets${search}`)
-            }}
-          />
-        </div>
-      ))}
+    {e.isSoldOut ? (
+      <div style={{ fontSize: 13, fontWeight: 600, marginTop: 6 }}>
+        Complet
+      </div>
+    ) : null}
+
+    <Button
+  label={e.isSoldOut ? "Complet" : "Billets"}
+  disabled={e.isSoldOut}
+  onClick={(ev) => {
+    ev.stopPropagation();
+    if (e.isSoldOut) return;
+    navigate(`/widget/o/${orgSlug}/e/${e.slug}/billets${search}`);
+  }}
+/>
+  </div>
+))}
       
     </div>
 
