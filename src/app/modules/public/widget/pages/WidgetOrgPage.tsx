@@ -7,6 +7,7 @@ import { Button } from "@shared/ui/components";
 import { useLocation } from "react-router-dom";
 
 import "./WidgetOrgPage.css";
+import { useWidgetAutoResize } from "../hooks/useWidgetAutiResize";
 
 export function WidgetOrgPage() {
   const { orgSlug } = useParams<{ orgSlug: string }>();
@@ -14,6 +15,7 @@ export function WidgetOrgPage() {
   const [nowTs] = useState(() => Date.now());
   const theme = useWidgetTheme();
   const { search } = useLocation();
+  useWidgetAutoResize();
 
   const { loading, error, profile, events } = usePublicOrgData({
     supabase,

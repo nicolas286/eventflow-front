@@ -8,6 +8,7 @@ import { useWidgetTheme } from "../hooks/useWidgetTheme";
 import { Button } from "@shared/ui/components";
 import { Turnstile, type TurnstileRef } from "@ui/components/Turnstile";
 import { MessageBox } from "@ui/components/message/MessageBox";
+import { useWidgetAutoResize } from "../hooks/useWidgetAutiResize";
 
 import {
   clearDraft,
@@ -37,6 +38,8 @@ export function WidgetPaymentPage() {
   const navigate = useNavigate();
   const { search } = useLocation();
   const theme = useWidgetTheme();
+  useWidgetAutoResize();
+  
 
   const { orgSlug: orgSlugParam, eventSlug: eventSlugParam } = useParams<{
     orgSlug: string;

@@ -7,6 +7,7 @@ import { formatMoney } from "../../register/helpers/checkoutStore";
 import { MessageBox } from "@ui/components/message/MessageBox";
 
 import "./WidgetConfirmationPage.css";
+import { useWidgetAutoResize } from "../hooks/useWidgetAutiResize";
 
 type WidgetConfirmationData = {
   orderId: string;
@@ -98,6 +99,7 @@ export function WidgetConfirmationPage() {
   const { search } = useLocation();
   const [searchParams] = useSearchParams();
   const theme = useWidgetTheme();
+  useWidgetAutoResize();
 
   const { orgSlug, eventSlug } = useParams<{
     orgSlug: string;
