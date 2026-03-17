@@ -250,6 +250,7 @@ export function WidgetConfirmationPage() {
 
   return (
     <div
+    id="eventflow-widget-root"
       className="widgetRoot"
       style={
         {

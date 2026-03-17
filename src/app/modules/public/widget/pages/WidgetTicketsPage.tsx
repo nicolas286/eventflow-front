@@ -112,6 +112,7 @@ export function WidgetTicketsPage() {
 
   return (
     <div
+    id="eventflow-widget-root"
   className="widgetRoot"
   style={{
     "--widget-bg": theme.bg,
