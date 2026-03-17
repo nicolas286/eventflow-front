@@ -93,6 +93,9 @@ export const registerPayloadSchema = z
 
     // ton edge le rend obligatoire
     turnstileToken: z.string().trim().min(1).max(5000),
+
+    widgetReturnUrl: z.string().min(1).max(200).optional(),
+    checkOutSource: z.enum(["widget", "public"]).optional(),
   })
   .strict()
   .superRefine((body, ctx) => {

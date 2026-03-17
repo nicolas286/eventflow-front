@@ -194,6 +194,7 @@ export function EventPaymentPage() {
       attendees: buildAttendeesPayload(),
       buyerEmail: buyerEmail.trim(),
       turnstileToken: withToken,
+      checkoutSource: "public", 
     };
 
     return register(payload as any);
