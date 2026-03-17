@@ -37,7 +37,6 @@ export function WidgetPaymentPage() {
   const navigate = useNavigate();
   const { search } = useLocation();
   const theme = useWidgetTheme();
-  const searchParams = useMemo(() => new URLSearchParams(search), [search]);
 
   const { orgSlug: orgSlugParam, eventSlug: eventSlugParam } = useParams<{
     orgSlug: string;
