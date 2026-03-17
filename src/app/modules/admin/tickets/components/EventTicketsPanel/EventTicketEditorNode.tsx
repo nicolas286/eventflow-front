@@ -12,6 +12,8 @@ type Props<EditState extends {
   createsAttendees: boolean;
   attendeesPerUnit: number;
   description: string;
+  isGatekeeper: boolean;
+  closeEventWhenSoldOut: boolean;
 }> = {
   editing: EditState | null;
   creating: boolean;
@@ -20,8 +22,8 @@ type Props<EditState extends {
   nonNegInt: (v: string) => number;
   posInt: (v: string) => number;
 
-  onApplyLocal: () => void;   // upsertLocalFromEditor
-  onClose: () => void;        // closeEditor
+  onApplyLocal: () => void;
+  onClose: () => void;
 };
 
 export function EventTicketEditorNode<EditState extends {
@@ -33,6 +35,8 @@ export function EventTicketEditorNode<EditState extends {
   createsAttendees: boolean;
   attendeesPerUnit: number;
   description: string;
+  isGatekeeper: boolean;
+  closeEventWhenSoldOut: boolean;
 }>({
   editing,
   creating,
@@ -118,6 +122,7 @@ export function EventTicketEditorNode<EditState extends {
         </label>
       ),
     },
+  
     {
       key: "createsAttendees",
       label: "Crée des participants",
@@ -135,6 +140,56 @@ export function EventTicketEditorNode<EditState extends {
         </label>
       ),
     },
+{
+  key: "isGatekeeper",
+  label: "Produit obligatoire pour réserver",
+  element: (
+    <label className="adminEventToggle">
+      <input
+        type="checkbox"
+        checked={editing.isGatekeeper}
+        onChange={(e) =>
+          setEditing((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  isGatekeeper: e.target.checked,
+                  // si on désactive le produit obligatoire
+                  // on désactive aussi la fermeture auto
+                  closeEventWhenSoldOut: e.target.checked
+                    ? prev.closeEventWhenSoldOut
+                    : false,
+                }
+              : prev
+          )
+        }
+        disabled={isSaving}
+      />
+      <span>{editing.isGatekeeper ? "Oui" : "Non"}</span>
+    </label>
+  ),
+},
+{
+  key: "closeEventWhenSoldOut",
+  label: "Clore l’événement si stock épuisé",
+  element: (
+    <label className="adminEventToggle">
+      <input
+        type="checkbox"
+        checked={editing.closeEventWhenSoldOut}
+        onChange={(e) =>
+          setEditing((prev) =>
+            prev
+              ? { ...prev, closeEventWhenSoldOut: e.target.checked }
+              : prev
+          )
+        }
+        disabled={!editing.isGatekeeper || isSaving}
+      />
+      <span>{editing.closeEventWhenSoldOut ? "Oui" : "Non"}</span>
+    </label>
+  ),
+},
     {
       key: "attendeesPerUnit",
       label: "Participants / billet",

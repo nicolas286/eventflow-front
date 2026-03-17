@@ -283,12 +283,14 @@ export function OrgPublicPage() {
               const endText = e.endsAt ? formatDateTimeHuman(e.endsAt) : null;
 
               const state = getEventState(e, nowTs);
-              const badge =
-                state === "upcoming" ? (
-                  <Badge tone="info" label="À venir" />
-                ) : state === "ongoing" ? (
-                  <Badge tone="success" label="En cours" />
-                ) : null;
+
+              const badge = e.isSoldOut ? (
+                <Badge tone="danger" label="Complet" />
+              ) : state === "upcoming" ? (
+                <Badge tone="info" label="À venir" />
+              ) : state === "ongoing" ? (
+                <Badge tone="success" label="En cours" />
+              ) : null;
 
               return (
                 <Card key={e.id} className="publicOrgEventCard">
@@ -321,10 +323,10 @@ export function OrgPublicPage() {
                         <Link to={`/o/${orgSlug}/e/${e.slug}`}>
                           <Button
                             variant="primary"
-                            title="Voir l’événement"
-                            aria-label="Voir l’événement"
+                            title={e.isSoldOut ? "Événement complet" : "Voir l’événement"}
+                            aria-label={e.isSoldOut ? "Événement complet" : "Voir l’événement"}
                           >
-                            Billets
+                            {e.isSoldOut ? "Complet" : "Billets"}
                           </Button>
                         </Link>
 
