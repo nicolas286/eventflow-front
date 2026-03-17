@@ -52,6 +52,11 @@ export function WidgetPaymentPage() {
     eventSlug,
   });
 
+  const widgetReturnUrl = useMemo(() => {
+  if (!orgSlug || !eventSlug) return null;
+  return `${window.location.origin}/widget/o/${orgSlug}/e/${eventSlug}/confirmation${search}`;
+}, [orgSlug, eventSlug, search]);
+
   const [tick, setTick] = useState(0);
 
   const draft = useMemo(() => {
@@ -166,21 +171,23 @@ export function WidgetPaymentPage() {
   }
 
   async function doRegister(withToken: string) {
-    const items = picked.map(({ p, qty }) => ({
-      eventProductId: p.id,
-      quantity: qty,
-    }));
+  const items = picked.map(({ p, qty }) => ({
+    eventProductId: p.id,
+    quantity: qty,
+  }));
 
-    const payload = {
-      eventId: event.id,
-      items,
-      attendees: buildAttendeesPayload(),
-      buyerEmail: buyerEmail.trim(),
-      turnstileToken: withToken,
-    };
+  const payload = {
+    eventId: event.id,
+    items,
+    attendees: buildAttendeesPayload(),
+    buyerEmail: buyerEmail.trim(),
+    turnstileToken: withToken,
+    widgetReturnUrl,
+    checkoutSource: "widget", 
+  };
 
-    return register(payload as any);
-  }
+  return register(payload as any);
+}
 
   async function pay() {
     if (!orgSlug || !eventSlug) return;
