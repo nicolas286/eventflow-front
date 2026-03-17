@@ -4,7 +4,6 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { supabase } from "@gateways/supabase/supabaseClient";
 import { usePublicEventDetail } from "../../events/hooks/usePublicEventDetail";
 import { useWidgetTheme } from "../hooks/useWidgetTheme";
-import { getSafeReturnUrl } from "../helpers/getSafeReturnUrl";
 
 import { Button } from "@shared/ui/components";
 import { Turnstile, type TurnstileRef } from "@ui/components/Turnstile";
@@ -39,8 +38,6 @@ export function WidgetPaymentPage() {
   const { search } = useLocation();
   const theme = useWidgetTheme();
   const searchParams = useMemo(() => new URLSearchParams(search), [search]);
-  const returnUrl = searchParams.get("returnUrl")?.trim() || null;
-  const safeReturnUrl = useMemo(() => getSafeReturnUrl(returnUrl), [returnUrl]);
 
   const { orgSlug: orgSlugParam, eventSlug: eventSlugParam } = useParams<{
     orgSlug: string;
