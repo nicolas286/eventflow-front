@@ -1,14 +1,18 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
-function getWidgetHeight() {
-  return Math.max(
-    document.documentElement.scrollHeight,
-    document.body.scrollHeight,
-    document.documentElement.offsetHeight,
-    document.body.offsetHeight,
-    document.documentElement.clientHeight,
-    document.body.clientHeight
+function getWidgetContentHeight() {
+  const root = document.getElementById("eventflow-widget-root");
+
+  if (root) {
+    return Math.ceil(root.getBoundingClientRect().height);
+  }
+
+  return Math.ceil(
+    Math.max(
+      document.documentElement.scrollHeight,
+      document.body.scrollHeight
+    )
   );
 }
 
@@ -17,7 +21,7 @@ export function useWidgetAutoResize() {
 
   useEffect(() => {
     function postHeight() {
-      const height = getWidgetHeight();
+      const height = getWidgetContentHeight();
 
       console.log("[widget] resize ->", height);
 
@@ -32,27 +36,27 @@ export function useWidgetAutoResize() {
 
     postHeight();
 
-    const t1 = window.setTimeout(postHeight, 60);
-    const t2 = window.setTimeout(postHeight, 250);
-    const t3 = window.setTimeout(postHeight, 700);
+    const t1 = window.setTimeout(postHeight, 50);
+    const t2 = window.setTimeout(postHeight, 180);
+    const t3 = window.setTimeout(postHeight, 500);
 
     const observer = new ResizeObserver(() => {
       postHeight();
     });
 
-    observer.observe(document.body);
-    observer.observe(document.documentElement);
+    const root = document.getElementById("eventflow-widget-root");
+    if (root) observer.observe(root);
 
-    window.addEventListener("load", postHeight);
     window.addEventListener("resize", postHeight);
+    window.addEventListener("load", postHeight);
 
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
       observer.disconnect();
-      window.removeEventListener("load", postHeight);
       window.removeEventListener("resize", postHeight);
+      window.removeEventListener("load", postHeight);
     };
   }, [location.pathname, location.search]);
 }

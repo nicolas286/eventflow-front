@@ -308,6 +308,7 @@ export function WidgetPaymentPage() {
 
   return (
     <div
+    id="eventflow-widget-root"
       className="widgetRoot"
       style={
         {
