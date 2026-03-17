@@ -1,0 +1,220 @@
+import { useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+
+import { supabase } from "@gateways/supabase/supabaseClient";
+import { usePublicEventDetail } from "../../events/hooks/usePublicEventDetail";
+import { useWidgetTheme } from "../hooks/useWidgetTheme";
+import { useLocation } from "react-router-dom";
+
+import { Button } from "@shared/ui/components";
+
+import {
+  loadDraft,
+  saveDraft,
+  formatMoney,
+} from "../../register/helpers/checkoutStore";
+
+import {
+  computeRemaining,
+  computeTotalCents,
+  computeNextQty,
+  quantitiesToItems,
+  resolveCurrency,
+  sortBySortOrder,
+  sumItemQuantities,
+  resolveMaxQty,
+} from "@helpers/logic";
+
+import "./WidgetTicketsPage.css";
+
+export function WidgetTicketsPage() {
+  const navigate = useNavigate();
+  const theme = useWidgetTheme();
+
+  const MAX_TICKETS = 4;
+
+
+  const { orgSlug, eventSlug } = useParams<{
+    orgSlug: string;
+    eventSlug: string;
+  }>();
+
+  const { loading, error, data } = usePublicEventDetail({
+    supabase,
+    orgSlug,
+    eventSlug,
+  });
+
+  const [tick, setTick] = useState(0);
+  const { search } = useLocation();
+
+  const draft = useMemo(() => {
+    if (!orgSlug || !eventSlug) return null;
+    void tick;
+    return loadDraft(orgSlug, eventSlug);
+  }, [orgSlug, eventSlug, tick]);
+
+  if (loading || !orgSlug || !eventSlug) {
+    return <div className="widgetRoot">Chargement…</div>;
+  }
+
+  if (error) {
+    return <div className="widgetRoot">Erreur : {error}</div>;
+  }
+
+  if (!data?.event) {
+    return <div className="widgetRoot">Événement introuvable</div>;
+  }
+
+  const { event, products } = data;
+
+  const quantities = draft?.quantities ?? {};
+
+  const sortedProducts = sortBySortOrder(products);
+  const visibleProducts = sortedProducts.slice(0, MAX_TICKETS);
+
+
+  const items = quantitiesToItems(quantities);
+  const totalTickets = sumItemQuantities(items);
+
+  const totalCents = computeTotalCents(items, sortedProducts);
+  const currency = resolveCurrency(sortedProducts);
+
+  function updateQty(productId: string, nextQty: number) {
+    if (!draft) return;
+
+    const p = sortedProducts.find((x) => x.id === productId);
+    if (!p) return;
+
+    const remaining = computeRemaining(p);
+    const q = computeNextQty(nextQty, remaining);
+
+    const next = {
+      ...draft,
+      quantities: { ...draft.quantities, [productId]: q },
+      attendees: [],
+      acceptedTerms: false,
+    };
+
+    saveDraft(next);
+    setTick((x) => x + 1);
+  }
+
+  function goNext() {
+    navigate(`/widget/o/${orgSlug}/e/${eventSlug}/participants${search}`);
+  }
+
+  function goBack() {
+  navigate(`/widget/o/${orgSlug}${search}`);
+  }
+
+  return (
+    <div
+  className="widgetRoot"
+  style={{
+    "--widget-bg": theme.bg,
+    "--widget-card": theme.card,
+    "--widget-text": theme.text,
+    "--widget-button": theme.button,
+  } as React.CSSProperties}
+>
+      <div className="widgetHeader">
+      <Button
+        variant="ghost"
+        label="← Retour"
+        onClick={goBack}
+      />
+
+      <h2>{event.title}</h2>
+    </div>
+
+      <div className="widgetEventsGrid">
+        {visibleProducts.map((p) => {
+  const qty = Number(quantities[p.id] ?? 0) || 0;
+
+  const remaining = computeRemaining(p);
+  const soldOut = remaining === 0 && remaining != null;
+
+  const maxQty = resolveMaxQty(remaining);
+
+  const moneyCurrency = p.currency ?? currency;
+
+  return (
+    <div
+      key={p.id}
+      className={`widgetEventCard ${soldOut ? "isSoldOut" : ""}`}
+    >
+      <div className="widgetEventTitle">{p.name}</div>
+
+      <div style={{ fontSize: 13, opacity: 0.7 }}>
+        {formatMoney(p.priceCents, moneyCurrency)}
+      </div>
+
+      {p.description && (
+        <div className="widgetTicketDesc">
+          {p.description}
+        </div>
+      )}
+
+      <div className="widgetQtyBlock">
+        <Button
+          label="−"
+          onClick={() => updateQty(p.id, qty - 1)}
+          disabled={qty <= 0}
+        />
+
+        <input
+          type="number"
+          min={0}
+          max={maxQty}
+          value={qty}
+          onChange={(e) => updateQty(p.id, Number(e.target.value))}
+        />
+
+        <Button
+          label="+"
+          onClick={() => updateQty(p.id, qty + 1)}
+          disabled={soldOut || qty >= maxQty}
+        />
+      </div>
+    </div>
+  );
+})}
+      </div>
+
+      {sortedProducts.length > MAX_TICKETS && (
+    <div className="widgetMoreEvents">
+      <Button
+        variant="secondary"
+        label="Voir tous les billets"
+        onClick={() =>
+          window.open(`/o/${orgSlug}/e/${eventSlug}/billets`, "_blank")
+        }
+      />
+    </div>
+  )}
+
+      <div className="widgetRecap">
+        <div>
+          {totalTickets} billet(s) · {formatMoney(totalCents, currency)}
+        </div>
+
+        <Button
+          label="Continuer"
+          onClick={goNext}
+          disabled={totalTickets <= 0}
+        />
+      </div>
+      <div className="widgetFooter">
+  Billetterie par{" "}
+  <a
+    href="https://useeventflow.eu"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    Eventflow
+  </a>
+</div>
+    </div>
+  );
+}
