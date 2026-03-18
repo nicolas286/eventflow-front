@@ -31,6 +31,7 @@ import "./WidgetTicketsPage.css";
 import { WidgetFooter } from "../components/WidgetFooter/WidgetFooter";
 import { WidgetRoot } from "../components/WidgetRoot/WidgetRoot";
 import { WidgetGrid } from "../components/WidgetGrid/WidgetGrid";
+import { WidgetTicketCard } from "../components/WidgetTicketCard/WidgetTicketCard";
 
 export function WidgetTicketsPage() {
   const navigate = useNavigate();
@@ -38,7 +39,6 @@ export function WidgetTicketsPage() {
   useWidgetAutoResize();
 
   const MAX_TICKETS = 4;
-
 
   const { orgSlug, eventSlug } = useParams<{
     orgSlug: string;
@@ -75,14 +75,10 @@ export function WidgetTicketsPage() {
   const { event, products } = data;
 
   const quantities = draft?.quantities ?? {};
-
   const sortedProducts = sortBySortOrder(products);
   const visibleProducts = sortedProducts.slice(0, MAX_TICKETS);
-
-
   const items = quantitiesToItems(quantities);
   const totalTickets = sumItemQuantities(items);
-
   const totalCents = computeTotalCents(items, sortedProducts);
   const currency = resolveCurrency(sortedProducts);
 
@@ -121,72 +117,36 @@ export function WidgetTicketsPage() {
 
       <WidgetGrid>
         {visibleProducts.map((p) => {
-  const qty = Number(quantities[p.id] ?? 0) || 0;
+          const qty = Number(quantities[p.id] ?? 0) || 0;
+          const remaining = computeRemaining(p);
+          const soldOut = remaining === 0 && remaining != null;
+          const maxQty = resolveMaxQty(remaining);
+          const moneyCurrency = p.currency ?? currency;
 
-  const remaining = computeRemaining(p);
-  const soldOut = remaining === 0 && remaining != null;
-
-  const maxQty = resolveMaxQty(remaining);
-
-  const moneyCurrency = p.currency ?? currency;
-
-  return (
-    <div
-      key={p.id}
-      className={`widgetEventCard ${soldOut ? "isSoldOut" : ""}`}
-    >
-      <div className="widgetEventTitle">{p.name}</div>
-
-      <div style={{ fontSize: 13, opacity: 0.7 }}>
-        {formatMoney(p.priceCents, moneyCurrency)}
-      </div>
-
-      {p.description && (
-        <div className="widgetTicketDesc">
-          {p.description}
-        </div>
-      )}
-
-      <div className="widgetQtyBlock">
-        <Button
-        className="widgetButton"
-          label="−"
-          onClick={() => updateQty(p.id, qty - 1)}
-          disabled={qty <= 0}
-        />
-
-        <input
-          type="number"
-          min={0}
-          max={maxQty}
-          value={qty}
-          onChange={(e) => updateQty(p.id, Number(e.target.value))}
-        />
-
-        <Button
-        className="widgetButton"
-          label="+"
-          onClick={() => updateQty(p.id, qty + 1)}
-          disabled={soldOut || qty >= maxQty}
-        />
-      </div>
-    </div>
-  );
-})}
+          return (
+            <WidgetTicketCard
+              product={p}
+              soldOut={soldOut}
+              currency={moneyCurrency}
+              qty={qty}
+              maxQty={maxQty}
+              updateQty={updateQty}/>
+              );
+        })}
       </WidgetGrid>
 
       {sortedProducts.length > MAX_TICKETS && (
-    <div className="widgetMoreEvents">
-      <Button
-      className="widgetButton"
-        variant="secondary"
-        label="Voir tous les billets"
-        onClick={() =>
-          window.open(`/o/${orgSlug}/e/${eventSlug}/billets`, "_blank")
-        }
-      />
-    </div>
-  )}
+      <div className="widgetMoreEvents">
+        <Button
+        className="widgetButton"
+          variant="secondary"
+          label="Voir tous les billets"
+          onClick={() =>
+            window.open(`/o/${orgSlug}/e/${eventSlug}/billets`, "_blank")
+          }
+        />
+      </div>
+      )}
 
       <div className="widgetRecap">
         <div>
@@ -194,7 +154,7 @@ export function WidgetTicketsPage() {
         </div>
 
         <Button
-        className="widgetButton"
+          className="widgetButton"
           label="Continuer"
           onClick={goNext}
           disabled={totalTickets <= 0}

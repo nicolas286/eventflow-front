@@ -1,0 +1,58 @@
+import type { PublicEventProduct } from "@app/modules/public/events/schemas/public.eventDetailBySlug.schema";
+import { formatMoney } from "@shared/helpers/normalize";
+import { Button } from "@shared/ui/components";
+import "./WidgetTicketCard.css";
+
+type Props = {
+    product: PublicEventProduct;
+    soldOut: boolean;
+    currency: string;
+    qty: number;
+    maxQty: number;
+    updateQty: (productId: string, qty: number) => void;
+}
+
+export function WidgetTicketCard({product, soldOut, currency, qty, maxQty, updateQty} : Props){
+    return (
+    <div
+    key={product.id}
+    className={`widgetEventCard ${soldOut ? "isSoldOut" : ""}`}
+    >
+        <div className="widgetEventTitle">{product.name}</div>
+
+        <div style={{ fontSize: 13, opacity: 0.7 }}>
+        {formatMoney(product.priceCents, currency)}
+        </div>
+
+        {product.description && (
+        <div className="widgetTicketDesc">
+            {product.description}
+        </div>
+        )}
+
+        <div className="widgetQtyBlock">
+            <Button
+            className="widgetButton"
+                label="−"
+                onClick={() => updateQty(product.id, qty - 1)}
+                disabled={qty <= 0}
+            />
+
+            <input
+                type="number"
+                min={0}
+                max={maxQty}
+                value={qty}
+                onChange={(e) => updateQty(product.id, Number(e.target.value))}
+            />
+
+            <Button
+            className="widgetButton"
+                label="+"
+                onClick={() => updateQty(product.id, qty + 1)}
+                disabled={soldOut || qty >= maxQty}
+            />
+        </div>
+    </div>
+    )
+}
