@@ -320,7 +320,7 @@ export function WidgetPaymentPage() {
       }
     >
       <div className="widgetHeader">
-        <Button variant="ghost" label="← Retour" onClick={goBack} disabled={registering || pendingPay} />
+        <Button className="widgetButton" variant="ghost" label="← Retour" onClick={goBack} disabled={registering || pendingPay} />
       </div>
 
       <h2>{event.title}</h2>
@@ -433,8 +433,9 @@ export function WidgetPaymentPage() {
       )}
 
       <div className="widgetRecap widgetRecapActions">
-        <Button variant="secondary" label="Retour" onClick={goBack} disabled={registering || pendingPay} />
+        <Button className="widgetButton" variant="secondary" label="Retour" onClick={goBack} disabled={registering || pendingPay} />
         <Button
+        className="widgetButton"
           label={
             totalCents === 0
               ? registering || pendingPay

@@ -312,7 +312,7 @@ export function WidgetConfirmationPage() {
         </div>
 
         <div className="widgetRecap widgetRecapActions">
-          <Button variant="secondary" label="Retour aux événements" onClick={goBackToEvents} />
+          <Button className="widgetButton" variant="secondary" label="Retour aux événements" onClick={goBackToEvents} />
         </div>
       </div>
 
