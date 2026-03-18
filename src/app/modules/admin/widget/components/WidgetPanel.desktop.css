@@ -1,0 +1,120 @@
+.widgetPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.widgetPanel__grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.widgetPanel__locked {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.widgetPanel__labelRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.widgetPanel__label {
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.widgetPanel__help {
+  margin-top: 4px;
+  color: rgba(15, 23, 42, 0.72);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.widgetPanel__miniActions {
+  display: flex;
+  gap: 8px;
+}
+
+.widgetPanel__colorGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.widgetPanel__colorField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.widgetPanel__previewCard,
+.widgetPanel__codeCard {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 18px;
+  padding: 16px;
+  background: #fff;
+}
+
+.widgetPanel__previewWrap {
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #f8fafc;
+}
+
+.widgetPanel__iframe {
+  width: 100%;
+  min-height: 540px;
+  border: 0;
+  display: block;
+}
+
+.widgetPanel__empty {
+  padding: 24px;
+  color: rgba(15, 23, 42, 0.72);
+  font-size: 14px;
+}
+
+.widgetPanel__code {
+  width: 100%;
+  min-height: 90px;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  padding: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+  background: #f8fafc;
+}
+
+.widgetPanel__code--lg {
+  min-height: 200px;
+}
+
+.widgetPanel__status {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (max-width: 980px) {
+  .widgetPanel__grid2 {
+    grid-template-columns: 1fr;
+  }
+
+  .widgetPanel__colorGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .widgetPanel__iframe {
+    min-height: 460px;
+  }
+}

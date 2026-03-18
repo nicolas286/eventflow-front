@@ -15,6 +15,7 @@ import { AdminSingleEventPage } from "@app/modules/admin/singleEvent/pages/Admin
 
 import { AdminAuthLayout } from "../layouts/AdminAuthLayout";
 import { AdminLayout } from "../layouts/AdminLayout";
+import AdminWidgetPage from "@app/modules/admin/widget/pages/AdminWidgetPage";
 
 export const AdminRoutes = (
   <>
@@ -32,6 +33,7 @@ export const AdminRoutes = (
         <Route index element={<Navigate to="events" replace />} />
         <Route path="events" element={<AdminEventsPage />} />
         <Route path="events/:eventSlug" element={<AdminSingleEventPage />} />
+        <Route path="widget" element={<AdminWidgetPage/>}/>
         <Route path="branding" element={<AdminBrandingPage />} />
         <Route path="structure" element={<AdminStructurePage />} />
         <Route path="profil" element={<AdminProfilPage />} />

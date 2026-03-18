@@ -94,6 +94,7 @@ const upcomingEvents = useMemo(() => {
     ) : null}
 
     <Button
+  className="widgetButton"
   label={e.isSoldOut ? "Complet" : "Billets"}
   disabled={e.isSoldOut}
   onClick={(ev) => {

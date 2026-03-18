@@ -13,6 +13,10 @@ export const publicOrganizationProfileSchema = organizationProfileSchema.omit({
   createdAt: true,
   updatedAt: true, 
   emailReminderDaysBefore: true,
+  widgetBg: true,
+  widgetButton: true,
+  widgetCard: true,
+  widgetText: true,
 });
 
 export const publicOrgBySlugSchema = z.object({
