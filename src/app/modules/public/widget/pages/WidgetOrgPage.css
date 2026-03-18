@@ -77,3 +77,17 @@
 .widgetFooter a:hover {
   text-decoration: underline;
 }
+
+.widgetRoot .widgetButton {
+  background: var(--widget-button);
+  border-color: var(--widget-button);
+  color: #fff;
+}
+
+.widgetRoot .widgetButton:hover {
+  filter: brightness(0.95);
+}
+
+.widgetRoot .widgetButton:disabled {
+  opacity: 0.6;
+}

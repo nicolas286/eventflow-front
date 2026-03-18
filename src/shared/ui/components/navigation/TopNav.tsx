@@ -15,7 +15,7 @@ export type OrgInfo = {
 };
 
 export type TopNavMode = "public" | "admin";
-export type AdminNavKey = "event" | "branding" | "structure" | "profil" | "abonnement";
+export type AdminNavKey = "event" | "branding" | "widget" | "structure" | "profil" | "abonnement";
 
 export type TopNavProps = {
   org?: OrgInfo | null;
@@ -30,6 +30,7 @@ const adminKeyToPath: Record<AdminNavKey, string> = {
   structure: "/admin/structure",
   profil: "/admin/profil",
   abonnement: "/admin/abonnement",
+  widget: "/admin/widget"
 };
 
 function slugify(input: string) {
@@ -179,6 +180,7 @@ export default function TopNav({ org, mode }: TopNavProps) {
                   <MenuDivider />
 
                   <MenuItem label="Mes événements" onClick={() => go("event", close)} />
+                  <MenuItem label="Billetterie sur mon site" onClick={() => go("widget", close)} />
                   <MenuItem label="Apparence" onClick={() => go("branding", close)} />
                   <MenuItem label="Profil d'organisateur" onClick={() => go("structure", close)} />
                   <MenuItem label="Profil personnel" onClick={() => go("profil", close)} />
