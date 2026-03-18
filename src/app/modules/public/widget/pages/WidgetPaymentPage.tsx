@@ -9,6 +9,7 @@ import { Button } from "@shared/ui/components";
 import { Turnstile, type TurnstileRef } from "@ui/components/Turnstile";
 import { MessageBox } from "@ui/components/message/MessageBox";
 import { useWidgetAutoResize } from "../hooks/useWidgetAutoResize";
+import { WidgetHeader } from "../components/WidgetHeader/WidgetHeader";
 
 import {
   clearDraft,
@@ -21,6 +22,8 @@ import {
 import { useRegister } from "../../register/hooks/useRegister";
 
 import "./WidgetPaymentPage.css";
+import { WidgetFooter } from "../components/WidgetFooter/WidgetFooter";
+import { WidgetRoot } from "../components/WidgetRoot/WidgetRoot";
 
 function ensureDraft(orgSlug: string, eventSlug: string): CheckoutDraft {
   const d = loadDraft(orgSlug, eventSlug) as CheckoutDraft;
@@ -307,23 +310,9 @@ export function WidgetPaymentPage() {
     buyerEmail.trim().length > 0;
 
   return (
-    <div
-    id="eventflow-widget-root"
-      className="widgetRoot"
-      style={
-        {
-          "--widget-bg": theme.bg,
-          "--widget-card": theme.card,
-          "--widget-text": theme.text,
-          "--widget-button": theme.button,
-        } as React.CSSProperties
-      }
-    >
-      <div className="widgetHeader">
-        <Button className="widgetButton" variant="ghost" label="← Retour" onClick={goBack} disabled={registering || pendingPay} />
-      </div>
-
-      <h2>{event.title}</h2>
+    <WidgetRoot theme={theme}>
+      <WidgetHeader left={<Button className="widgetButton" variant="ghost" label="← Retour" onClick={goBack} />}
+        title={event.title}/>
 
       {picked.length === 0 ? (
         <div className="widgetEmpty">Aucun billet sélectionné. Reviens à l’étape billets.</div>
@@ -450,13 +439,8 @@ export function WidgetPaymentPage() {
         />
       </div>
 
-      <div className="widgetFooter">
-        Billetterie par{" "}
-        <a href="https://useeventflow.eu" target="_blank" rel="noopener noreferrer">
-          Eventflow
-        </a>
-      </div>
-    </div>
+      <WidgetFooter/>
+    </WidgetRoot>
   );
 }
 

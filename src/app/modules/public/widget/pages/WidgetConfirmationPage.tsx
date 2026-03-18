@@ -8,6 +8,8 @@ import { MessageBox } from "@ui/components/message/MessageBox";
 
 import "./WidgetConfirmationPage.css";
 import { useWidgetAutoResize } from "../hooks/useWidgetAutoResize";
+import { WidgetFooter } from "../components/WidgetFooter/WidgetFooter";
+import { WidgetRoot } from "../components/WidgetRoot/WidgetRoot";
 
 type WidgetConfirmationData = {
   orderId: string;
@@ -249,18 +251,7 @@ export function WidgetConfirmationPage() {
   const isSuccess = isSuccessStatus(resolvedData.status);
 
   return (
-    <div
-    id="eventflow-widget-root"
-      className="widgetRoot"
-      style={
-        {
-          "--widget-bg": theme.bg,
-          "--widget-card": theme.card,
-          "--widget-text": theme.text,
-          "--widget-button": theme.button,
-        } as React.CSSProperties
-      }
-    >
+    <WidgetRoot theme={theme}>
       <div className="widgetConfirmationCard">
         <div className="widgetConfirmationPill">
           {isSuccess ? "Réservation confirmée ✅" : "Commande enregistrée"}
@@ -316,13 +307,8 @@ export function WidgetConfirmationPage() {
         </div>
       </div>
 
-      <div className="widgetFooter">
-        Billetterie par{" "}
-        <a href="https://useeventflow.eu" target="_blank" rel="noopener noreferrer">
-          Eventflow
-        </a>
-      </div>
-    </div>
+      <WidgetFooter/>
+    </WidgetRoot>
   );
 }
 

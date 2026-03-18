@@ -15,6 +15,7 @@ import { loadDraft, saveDraft } from "../../register/helpers/checkoutStore";
 import type { PublicFormField as Field } from "../../events/schemas/public.eventDetailBySlug.schema";
 import type { EventProduct } from "@shared/models/db/db.eventProducts.schema";
 import type { EventFormFieldUI } from "@shared/models/db/db.eventFormFields.schema";
+import { WidgetRoot } from "../components/WidgetRoot/WidgetRoot";
 
 import {
   isBirthDateField,
@@ -36,6 +37,8 @@ import { getFieldKey } from "@shared/helpers/fields";
 
 import "./WidgetAttendeesPage.css";
 import { useWidgetAutoResize } from "../hooks/useWidgetAutoResize";
+import { WidgetFooter } from "../components/WidgetFooter/WidgetFooter";
+import { WidgetHeader } from "../components/WidgetHeader/WidgetHeader";
 
 /* ---------------- Types ---------------- */
 
@@ -250,23 +253,11 @@ export function WidgetAttendeesPage() {
   const { event } = data;
 
   return (
-    <div
-    id="eventflow-widget-root"
-      className="widgetRoot"
-      style={
-        {
-          "--widget-bg": theme.bg,
-          "--widget-card": theme.card,
-          "--widget-text": theme.text,
-          "--widget-button": theme.button,
-        } as React.CSSProperties
-      }
-    >
-      <div className="widgetHeader">
-        <Button className="widgetButton" variant="ghost" label="← Retour" onClick={goBack} />
-      </div>
+    <WidgetRoot theme={theme}>
+      <WidgetHeader left={<Button className="widgetButton" variant="ghost" label="← Retour" onClick={goBack} />}
+        title={event.title}/>
 
-      <h2>{event.title}</h2>
+      
 
       {totalSelected <= 0 ? (
         <div className="widgetEmpty">Aucun billet sélectionné. Reviens à l’étape billets.</div>
@@ -470,13 +461,8 @@ export function WidgetAttendeesPage() {
         <Button className="widgetButton" label="Continuer" onClick={goNext} disabled={totalSelected <= 0 || !allValid} />
       </div>
 
-      <div className="widgetFooter">
-        Billetterie par{" "}
-        <a href="https://useeventflow.eu" target="_blank" rel="noopener noreferrer">
-          Eventflow
-        </a>
-      </div>
-    </div>
+      <WidgetFooter/>
+    </WidgetRoot>
   );
 }
 

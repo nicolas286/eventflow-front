@@ -8,6 +8,11 @@ import { useLocation } from "react-router-dom";
 
 import "./WidgetOrgPage.css";
 import { useWidgetAutoResize } from "../hooks/useWidgetAutoResize";
+import { WidgetFooter } from "../components/WidgetFooter/WidgetFooter";
+import { WidgetRoot } from "../components/WidgetRoot/WidgetRoot";
+import { WidgetHeader } from "../components/WidgetHeader/WidgetHeader";
+import { WidgetGrid } from "../components/WidgetGrid/WidgetGrid";
+import { WidgetEventCard } from "../components/WidgetCard/WidgetEventCard";
 
 export function WidgetOrgPage() {
   const { orgSlug } = useParams<{ orgSlug: string }>();
@@ -52,87 +57,37 @@ const upcomingEvents = useMemo(() => {
 
 
   return (
-    <div
-    id="eventflow-widget-root"
-  className="widgetRoot"
-  style={{
-    "--widget-bg": theme.bg,
-    "--widget-card": theme.card,
-    "--widget-text": theme.text,
-    "--widget-button": theme.button,
-  } as React.CSSProperties}
->
-  <h2>Prochains événements de {profile.displayName}</h2>
+    <WidgetRoot theme={theme}>
+      <WidgetHeader title={`Prochains événements de ${profile.displayName}`}/>
 
-  {upcomingEvents.length === 0 ? (
-    <p>Aucun événement</p>
-  ) : (
-    <div className="widgetEventsGrid">
-      {upcomingEvents.map((e) => (
-  <div
-    key={e.id}
-    className="widgetEventCard"
-    onClick={() =>
-      navigate(`/widget/o/${orgSlug}/e/${e.slug}/billets${search}`)
-    }
-  >
-    <div className="widgetEventTitle">{e.title}</div>
+      {upcomingEvents.length === 0 ? (
+        <p>Aucun événement</p>
+      ) : (
+        <WidgetGrid>
+          {upcomingEvents.map((e) => (
+          <WidgetEventCard
+            key={e.id}
+            event={e}
+            onClick={() =>
+          navigate(`/widget/o/${orgSlug}/e/${e.slug}/billets${search}`)
+          }/>
+        ))} 
+        </WidgetGrid> 
+      )}
 
-    {e.startsAt && (
-      <div style={{ fontSize: 13, opacity: 0.7 }}>
-        {new Date(e.startsAt).toLocaleString("fr-BE", {
-          dateStyle: "medium",
-          timeStyle: "short",
-        })}
+      {events && events.length > MAX_EVENTS && (
+      <div className="widgetMoreEvents">
+        <Button
+        className="widgetButton"
+          variant="secondary"
+          label="Voir tous les événements"
+          onClick={() =>
+            window.open(`/o/${orgSlug}`, "_blank", "noopener,noreferrer")
+          }
+        />
       </div>
-    )}
-
-    {e.isSoldOut ? (
-      <div style={{ fontSize: 13, fontWeight: 600, marginTop: 6 }}>
-        Complet
-      </div>
-    ) : null}
-
-    <Button
-  className="widgetButton"
-  label={e.isSoldOut ? "Complet" : "Billets"}
-  disabled={e.isSoldOut}
-  onClick={(ev) => {
-    ev.stopPropagation();
-    if (e.isSoldOut) return;
-    navigate(`/widget/o/${orgSlug}/e/${e.slug}/billets${search}`);
-  }}
-/>
-  </div>
-))}
-      
-    </div>
-
-    
-  )}
-
-  {events && events.length > MAX_EVENTS && (
-  <div className="widgetMoreEvents">
-    <Button
-    className="widgetButton"
-      variant="secondary"
-      label="Voir tous les événements"
-      onClick={() =>
-        window.open(`/o/${orgSlug}`, "_blank")
-      }
-    />
-  </div>
-)}
-<div className="widgetFooter">
-  Billetterie par{" "}
-  <a
-    href="https://useeventflow.eu"
-    target="_blank"
-    rel="noopener noreferrer"
-  >
-    Eventflow
-  </a>
-</div>
-</div>
+      )}
+    <WidgetFooter/>
+  </WidgetRoot>
   );
 }

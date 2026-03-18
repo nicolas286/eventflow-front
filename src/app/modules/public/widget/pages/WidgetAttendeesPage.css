@@ -1,15 +1,4 @@
-.widgetHeader {
-  display: flex;
-  justify-content: flex-start;
-  margin-bottom: 8px;
-}
 
-.widgetRoot h2 {
-  text-align: center;
-  margin: 4px 0 22px;
-  font-size: 22px;
-  line-height: 1.2;
-}
 
 .widgetAttendeeCard {
   width: 100%;
@@ -117,23 +106,7 @@
   margin-right: auto;
 }
 
-.widgetFooter {
-  margin-top: 22px;
-  font-size: 12px;
-  opacity: 0.72;
-  text-align: center;
-}
-
-.widgetFooter a {
-  color: var(--widget-text);
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.widgetFooter a:hover {
-  text-decoration: underline;
-}
-
+ 
 @media (max-width: 720px) {
   .widgetRoot h2 {
     font-size: 20px;

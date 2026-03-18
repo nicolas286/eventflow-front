@@ -8,6 +8,7 @@ import { useLocation } from "react-router-dom";
 import { useWidgetAutoResize } from "../hooks/useWidgetAutoResize";
 
 import { Button } from "@shared/ui/components";
+import { WidgetHeader } from "../components/WidgetHeader/WidgetHeader";
 
 import {
   loadDraft,
@@ -27,6 +28,9 @@ import {
 } from "@helpers/logic";
 
 import "./WidgetTicketsPage.css";
+import { WidgetFooter } from "../components/WidgetFooter/WidgetFooter";
+import { WidgetRoot } from "../components/WidgetRoot/WidgetRoot";
+import { WidgetGrid } from "../components/WidgetGrid/WidgetGrid";
 
 export function WidgetTicketsPage() {
   const navigate = useNavigate();
@@ -111,28 +115,11 @@ export function WidgetTicketsPage() {
   }
 
   return (
-    <div
-    id="eventflow-widget-root"
-  className="widgetRoot"
-  style={{
-    "--widget-bg": theme.bg,
-    "--widget-card": theme.card,
-    "--widget-text": theme.text,
-    "--widget-button": theme.button,
-  } as React.CSSProperties}
->
-      <div className="widgetHeader">
-      <Button
-      className="widgetButton"
-        variant="ghost"
-        label="← Retour"
-        onClick={goBack}
-      />
+    <WidgetRoot theme={theme}>
+      <WidgetHeader left={<Button className="widgetButton" variant="ghost" label="← Retour" onClick={goBack} />}
+        title={event.title}/>
 
-      <h2>{event.title}</h2>
-    </div>
-
-      <div className="widgetEventsGrid">
+      <WidgetGrid>
         {visibleProducts.map((p) => {
   const qty = Number(quantities[p.id] ?? 0) || 0;
 
@@ -186,7 +173,7 @@ export function WidgetTicketsPage() {
     </div>
   );
 })}
-      </div>
+      </WidgetGrid>
 
       {sortedProducts.length > MAX_TICKETS && (
     <div className="widgetMoreEvents">
@@ -213,16 +200,7 @@ export function WidgetTicketsPage() {
           disabled={totalTickets <= 0}
         />
       </div>
-      <div className="widgetFooter">
-  Billetterie par{" "}
-  <a
-    href="https://useeventflow.eu"
-    target="_blank"
-    rel="noopener noreferrer"
-  >
-    Eventflow
-  </a>
-</div>
-    </div>
+      <WidgetFooter/>
+    </WidgetRoot>
   );
 }

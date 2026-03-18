@@ -1,6 +1,13 @@
 import { useSearchParams } from "react-router-dom";
 
-export function useWidgetTheme() {
+export type WidgetTheme = {
+  bg: string;
+  card: string;
+  text: string;
+  button: string; 
+}
+
+export function useWidgetTheme() : WidgetTheme {
   const [params] = useSearchParams();
 
   return {
