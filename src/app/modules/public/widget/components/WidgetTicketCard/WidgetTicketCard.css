@@ -1,0 +1,61 @@
+
+.widgetTicketCard {
+  background: var(--widget-card);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.widgetTicketTitle {
+  font-weight: 700;
+}
+
+.widgetTicketPrice {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.widgetTicketDesc {
+      display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 13px;
+  opacity: 0.8;
+  margin-bottom: 10px;
+}
+
+.widgetQtyBlock {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.widgetQtyBlock input {
+  width: 60px;
+  text-align: center;
+}
+
+.widgetRecap {
+  margin-top: 26px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.widgetQtyBlock {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: auto;
+}
+
+.widgetQtyBlock input {
+  width: 60px;
+  text-align: center;
+}
+
+.widgetTicketDesc {
+  font-size: 13px;
+  opacity: 0.8;
+}

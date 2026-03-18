@@ -12,7 +12,7 @@ import { WidgetFooter } from "../components/WidgetFooter/WidgetFooter";
 import { WidgetRoot } from "../components/WidgetRoot/WidgetRoot";
 import { WidgetHeader } from "../components/WidgetHeader/WidgetHeader";
 import { WidgetGrid } from "../components/WidgetGrid/WidgetGrid";
-import { WidgetEventCard } from "../components/WidgetCard/WidgetEventCard";
+import { WidgetEventCard } from "../components/WidgetEventCard/WidgetEventCard";
 
 export function WidgetOrgPage() {
   const { orgSlug } = useParams<{ orgSlug: string }>();
