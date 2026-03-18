@@ -1,0 +1,15 @@
+.widgetHeader {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.widgetHeader h2 {
+  margin: 0;
+}
+
+.widgetHeader .widgetButton {
+  position: absolute;
+  left: 0;
+}

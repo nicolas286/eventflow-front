@@ -1,0 +1,16 @@
+.widgetFooter {
+  margin-top: 26px;
+  font-size: 12px;
+  opacity: 0.7;
+  text-align: center;
+}
+
+.widgetFooter a {
+  color: var(--widget-text);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.widgetFooter a:hover {
+  text-decoration: underline;
+}
