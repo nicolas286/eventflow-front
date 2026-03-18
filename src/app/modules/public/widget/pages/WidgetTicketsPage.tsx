@@ -123,6 +123,7 @@ export function WidgetTicketsPage() {
 >
       <div className="widgetHeader">
       <Button
+      className="widgetButton"
         variant="ghost"
         label="← Retour"
         onClick={goBack}
@@ -161,6 +162,7 @@ export function WidgetTicketsPage() {
 
       <div className="widgetQtyBlock">
         <Button
+        className="widgetButton"
           label="−"
           onClick={() => updateQty(p.id, qty - 1)}
           disabled={qty <= 0}
@@ -175,6 +177,7 @@ export function WidgetTicketsPage() {
         />
 
         <Button
+        className="widgetButton"
           label="+"
           onClick={() => updateQty(p.id, qty + 1)}
           disabled={soldOut || qty >= maxQty}
@@ -188,6 +191,7 @@ export function WidgetTicketsPage() {
       {sortedProducts.length > MAX_TICKETS && (
     <div className="widgetMoreEvents">
       <Button
+      className="widgetButton"
         variant="secondary"
         label="Voir tous les billets"
         onClick={() =>
@@ -203,6 +207,7 @@ export function WidgetTicketsPage() {
         </div>
 
         <Button
+        className="widgetButton"
           label="Continuer"
           onClick={goNext}
           disabled={totalTickets <= 0}

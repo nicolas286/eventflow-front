@@ -114,6 +114,7 @@ const upcomingEvents = useMemo(() => {
   {events && events.length > MAX_EVENTS && (
   <div className="widgetMoreEvents">
     <Button
+    className="widgetButton"
       variant="secondary"
       label="Voir tous les événements"
       onClick={() =>

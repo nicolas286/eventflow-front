@@ -263,7 +263,7 @@ export function WidgetAttendeesPage() {
       }
     >
       <div className="widgetHeader">
-        <Button variant="ghost" label="← Retour" onClick={goBack} />
+        <Button className="widgetButton" variant="ghost" label="← Retour" onClick={goBack} />
       </div>
 
       <h2>{event.title}</h2>
