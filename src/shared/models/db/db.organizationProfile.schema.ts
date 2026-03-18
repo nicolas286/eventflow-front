@@ -5,7 +5,8 @@ const widgetColorSchema = z
   .min(4, "Couleur trop courte")
   .max(20, "Couleur trop longue")
   .regex(/^#/, "La couleur doit commencer par #")
-  .nullable();
+  .nullable()
+  .optional();
 
 export const organizationProfileSchema = z.object({
   orgId: z.uuid(),
