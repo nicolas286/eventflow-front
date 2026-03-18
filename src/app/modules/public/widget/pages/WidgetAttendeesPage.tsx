@@ -466,8 +466,8 @@ export function WidgetAttendeesPage() {
       )}
 
       <div className="widgetRecap widgetRecapActions">
-        <Button variant="secondary" label="Retour" onClick={goBack} />
-        <Button label="Continuer" onClick={goNext} disabled={totalSelected <= 0 || !allValid} />
+        <Button className="widgetButton" variant="secondary" label="Retour" onClick={goBack} />
+        <Button className="widgetButton" label="Continuer" onClick={goNext} disabled={totalSelected <= 0 || !allValid} />
       </div>
 
       <div className="widgetFooter">
