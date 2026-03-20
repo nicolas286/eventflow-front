@@ -40,13 +40,29 @@ export default function WidgetPanel({
 const iframeCode = useMemo(() => {
   if (!widgetUrl) return "";
 
-  return `<div style="border-radius:24px;overflow:hidden;background:#fff;">
+  return `<div
+  style="
+    border-radius:24px;
+    overflow:hidden;
+    background:${bg};
+    box-shadow:0 20px 50px rgba(0,0,0,0.12);
+    border:1px solid rgba(0,0,0,0.08);
+  "
+>
   <iframe
     id="eventflowWidgetFrame"
     src="${widgetUrl}"
     title="Billetterie Eventflow"
     loading="lazy"
-    style="display:block;width:100%;height:700px;border:0;background:transparent;"
+    style="
+      display:block;
+      width:100%;
+      height:700px;
+      border:0;
+      background:${bg};
+      transition:height 0.2s ease;
+      transform:translateY(1px);
+    "
   ></iframe>
 </div>
 <script>
@@ -63,7 +79,7 @@ const iframeCode = useMemo(() => {
     iframe.style.height = nextHeight + "px";
   });
 </script>`;
-}, [widgetUrl]);
+}, [widgetUrl, bg]);
 
   async function copy(label: string, value: string) {
     try {
