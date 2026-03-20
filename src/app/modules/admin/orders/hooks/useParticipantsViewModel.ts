@@ -4,6 +4,7 @@ import { isFilled } from "@helpers/fields";
 import type { Attendee } from "@shared/models/db/db.attendee.schema";
 import type { AttendeeAnswers } from "@shared/models/db/db.attendeeAnswers.schema";
 import type { EventDetailAdmin } from "../../singleEvent/schemas/admin.eventDetail.schema";
+import type { EventFormField } from "@shared/models/db/db.eventFormFields.schema";
 
 export type FilterMode = "all" | "order" | `field:${string}`;
 
@@ -26,7 +27,14 @@ export type OrderMeta = {
   }>;
 };
 
-type FilledField = { key: string; label: string; value: string };
+type FilledField = {
+  key: string;
+  label: string;
+  value: string;
+  groupId?: string | null;
+  fieldType?: string | null;
+  sortOrder?: number;
+};
 
 export type BuildParticipantsViewModelParams = {
   localAttendees: Attendee[];
@@ -36,7 +44,25 @@ export type BuildParticipantsViewModelParams = {
   query: string;
   filterMode: FilterMode;
   productsRows: ProductRow[];
+  regFields: EventFormField[];
 };
+
+function stringifyAnswerValue(value: unknown): string {
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (typeof value === "number") return String(value);
+  if (typeof value === "string") return value;
+  if (value == null) return "";
+
+  if (Array.isArray(value)) {
+    return value.map((v) => String(v ?? "")).filter(Boolean).join(", ");
+  }
+
+  try {
+    return String(value);
+  } catch {
+    return "";
+  }
+}
 
 export function buildParticipantsViewModel(params: BuildParticipantsViewModelParams) {
   const {
@@ -45,6 +71,7 @@ export function buildParticipantsViewModel(params: BuildParticipantsViewModelPar
     localOrders,
     localOrderItems,
     productsRows,
+    regFields,
     query,
     filterMode,
   } = params;
@@ -53,6 +80,13 @@ export function buildParticipantsViewModel(params: BuildParticipantsViewModelPar
 
   for (const p of productsRows) {
     createsAttendeesByProductId.set(p.id, Boolean(p.createsAttendees));
+  }
+
+  const regFieldByKey = new Map<string, EventFormField>();
+  for (const f of regFields) {
+    const key = String(f.fieldKey ?? "").trim();
+    if (!key) continue;
+    regFieldByKey.set(key, f);
   }
 
   /* -------------------- ORDER META -------------------- */
@@ -104,11 +138,19 @@ export function buildParticipantsViewModel(params: BuildParticipantsViewModelPar
   for (const a of localAnswers) {
     if (!isFilled(a.value)) continue;
 
+    const key = String(a.fieldKeySnapshot ?? "").trim();
+    if (!key) continue;
+
+    const regField = regFieldByKey.get(key);
+
     const arr = filledFieldsByAttendeeId.get(a.attendeeId) ?? [];
     arr.push({
-      key: a.fieldKeySnapshot,
-      label: a.fieldLabelSnapshot,
-      value: String(a.value),
+      key,
+      label: regField?.label ?? a.fieldLabelSnapshot ?? key,
+      value: stringifyAnswerValue(a.value),
+      groupId: regField?.groupId ?? null,
+      fieldType: regField?.fieldType ?? null,
+      sortOrder: regField?.sortOrder ?? 0,
     });
     filledFieldsByAttendeeId.set(a.attendeeId, arr);
   }
@@ -118,15 +160,27 @@ export function buildParticipantsViewModel(params: BuildParticipantsViewModelPar
     for (const f of arr) uniq.set(f.key, f);
 
     const list = Array.from(uniq.values());
-    list.sort((x, y) => x.label.localeCompare(y.label));
+    list.sort((x, y) => {
+      const byOrder = (x.sortOrder ?? 0) - (y.sortOrder ?? 0);
+      if (byOrder !== 0) return byOrder;
+      return x.label.localeCompare(y.label);
+    });
+
     filledFieldsByAttendeeId.set(id, list);
   }
 
   /* -------------------- FIELDS OPTIONS -------------------- */
   const fieldsMap = new Map<string, string>();
 
+  for (const f of regFields) {
+    const key = String(f.fieldKey ?? "").trim();
+    const label = String(f.label ?? "").trim() || key;
+    if (!key) continue;
+    if (!fieldsMap.has(key)) fieldsMap.set(key, label);
+  }
+
   for (const a of localAnswers) {
-    const key = a.fieldKeySnapshot;
+    const key = String(a.fieldKeySnapshot ?? "").trim();
     const label = a.fieldLabelSnapshot || key;
     if (!key) continue;
     if (!fieldsMap.has(key)) fieldsMap.set(key, label);
@@ -240,6 +294,7 @@ export function useParticipantsViewModel(params: BuildParticipantsViewModelParam
     query,
     filterMode,
     productsRows,
+    regFields,
   } = params;
 
   return useMemo(
@@ -252,7 +307,8 @@ export function useParticipantsViewModel(params: BuildParticipantsViewModelParam
         query,
         filterMode,
         productsRows,
+        regFields,
       }),
-    [localAttendees, localAnswers, localOrders, localOrderItems, query, filterMode, productsRows],
+    [localAttendees, localAnswers, localOrders, localOrderItems, query, filterMode, productsRows, regFields],
   );
 }

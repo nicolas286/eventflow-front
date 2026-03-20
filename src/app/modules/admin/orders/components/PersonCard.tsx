@@ -6,10 +6,19 @@ import { toDisplayText } from "@helpers/normalize";
 import type { Attendee } from "@shared/models/db/db.attendee.schema";
 import type { FilledField, Identity } from "./OrdersPeopleList";
 
+import "./PersonCard.css";
+
+type FilledFieldGroupSection = {
+  id: string | null;
+  label: string | null;
+  fields: FilledField[];
+};
+
 type PersonCardProps = {
   att: Attendee;
   identity: Identity;
   filled: FilledField[];
+  filledGrouped?: FilledFieldGroupSection[];
   onEdit: () => void;
   footer?: ReactNode;
 };
@@ -23,19 +32,65 @@ const STATUS_LABEL: Record<string, string> = {
 
 const DEFAULT_VISIBLE_FIELDS = 10;
 
-export function PersonCard({ att, identity, filled, onEdit, footer }: PersonCardProps) {
+function isTruthyCheckboxValue(value: string) {
+  return value === "true" || value === "Oui";
+}
+
+function isFalsyCheckboxValue(value: string) {
+  return value === "false" || value === "Non";
+}
+
+export function PersonCard({
+  att,
+  identity,
+  filled,
+  filledGrouped,
+  onEdit,
+  footer,
+}: PersonCardProps) {
   const [expanded, setExpanded] = useState(false);
 
+  const flatFields = useMemo(() => {
+    if (filledGrouped && filledGrouped.length > 0) {
+      return filledGrouped.flatMap((section) => section.fields);
+    }
+    return filled;
+  }, [filled, filledGrouped]);
+
   const limit = DEFAULT_VISIBLE_FIELDS;
-  const hasMore = filled.length > limit;
+  const hasMore = flatFields.length > limit;
+
+  const visibleCount = !hasMore ? flatFields.length : expanded ? flatFields.length : limit;
+
+  const visibleGrouped = useMemo(() => {
+    if (!filledGrouped || filledGrouped.length === 0) return null;
+
+    let remaining = visibleCount;
+
+    return filledGrouped
+      .map((section) => {
+        if (remaining <= 0) {
+          return { ...section, fields: [] };
+        }
+
+        const nextFields = section.fields.slice(0, remaining);
+        remaining -= nextFields.length;
+
+        return {
+          ...section,
+          fields: nextFields,
+        };
+      })
+      .filter((section) => section.fields.length > 0);
+  }, [filledGrouped, visibleCount]);
 
   const visibleFields = useMemo(() => {
+    if (visibleGrouped) return [];
     if (!hasMore) return filled;
     return expanded ? filled : filled.slice(0, limit);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filled, expanded, hasMore]);
+  }, [filled, expanded, hasMore, visibleGrouped]);
 
-  const hiddenCount = hasMore ? filled.length - limit : 0;
+  const hiddenCount = hasMore ? flatFields.length - visibleCount : 0;
 
   return (
     <div className={`adminPersonCard ${expanded ? "isExpanded" : ""}`}>
@@ -55,18 +110,80 @@ export function PersonCard({ att, identity, filled, onEdit, footer }: PersonCard
         </div>
       </div>
 
-      <div className="adminFilledGrid">
-        {visibleFields.length > 0 ? (
-          visibleFields.map((f) => (
-            <div key={f.key} className="adminFieldLine">
-              <span className="adminFieldLabel">{f.label}</span>
-              <span className="adminFieldValue">{toDisplayText(f.value)}</span>
+      {visibleGrouped && visibleGrouped.length > 0 ? (
+        <div className="adminFilledGroups">
+          {visibleGrouped.map((section) => (
+            <div
+              key={section.id ?? "ungrouped"}
+              className="adminFilledGroupSection"
+            >
+              {section.label ? (
+                <div className="adminFilledGroupTitle">{section.label}</div>
+              ) : null}
+
+              <div className="adminFilledGrid">
+                {section.fields.map((f) => {
+                  const isCheckbox = f.fieldType === "checkbox";
+                  const displayValue = toDisplayText(f.value);
+
+                  return (
+                    <div key={f.key} className="adminFieldLine">
+                      <span className="adminFieldLabel">{f.label}</span>
+
+                      {isCheckbox ? (
+                        <span
+                          className={[
+                            "adminFieldValue",
+                            "adminFieldValueBool",
+                            isTruthyCheckboxValue(String(f.value)) ? "isYes" : "",
+                            isFalsyCheckboxValue(String(f.value)) ? "isNo" : "",
+                          ].join(" ")}
+                        >
+                          {displayValue}
+                        </span>
+                      ) : (
+                        <span className="adminFieldValue">{displayValue}</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          ))
-        ) : (
-          <div className="adminFilledEmpty">Aucun champ rempli.</div>
-        )}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="adminFilledGrid">
+          {visibleFields.length > 0 ? (
+            visibleFields.map((f) => {
+              const isCheckbox = f.fieldType === "checkbox";
+              const displayValue = toDisplayText(f.value);
+
+              return (
+                <div key={f.key} className="adminFieldLine">
+                  <span className="adminFieldLabel">{f.label}</span>
+
+                  {isCheckbox ? (
+                    <span
+                      className={[
+                        "adminFieldValue",
+                        "adminFieldValueBool",
+                        isTruthyCheckboxValue(String(f.value)) ? "isYes" : "",
+                        isFalsyCheckboxValue(String(f.value)) ? "isNo" : "",
+                      ].join(" ")}
+                    >
+                      {displayValue}
+                    </span>
+                  ) : (
+                    <span className="adminFieldValue">{displayValue}</span>
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            <div className="adminFilledEmpty">Aucun champ rempli.</div>
+          )}
+        </div>
+      )}
 
       {hasMore ? (
         <button
