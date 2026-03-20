@@ -1,11 +1,15 @@
 .widgetRoot {
   background: var(--widget-bg);
   color: var(--widget-text);
-  padding: 28px;
   font-family: system-ui, sans-serif;
+  width: 100%;
+}
 
+.widgetRootInner {
   max-width: 1100px;
   margin: 0 auto;
+  padding: 28px;
+  box-sizing: border-box;
 }
 
 .widgetRoot h2 {
@@ -13,7 +17,6 @@
   margin-bottom: 10px;
   font-size: 22px;
 }
-
 
 .widgetRoot .widgetButton.ui-button--primary {
   background: var(--widget-button);
