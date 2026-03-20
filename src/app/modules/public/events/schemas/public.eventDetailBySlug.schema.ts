@@ -2,7 +2,7 @@ import { z } from "zod";
 import { eventProductSchema } from "@shared/models/db/db.eventProducts.schema";
 import { eventSchema } from "@shared/models/db/db.event.schema";
 import { organizationProfileSchema } from "@shared/models/db/db.organizationProfile.schema";
-import { eventFormFieldSchema } from "@shared/models/db/db.eventFormFields.schema";
+import { eventFormFieldGroupSchema, eventFormFieldSchema } from "@shared/models/db/db.eventFormFields.schema";
 
 
 export const publicOrgProfileOverviewForEventPageSchema = organizationProfileSchema.pick({
@@ -47,6 +47,13 @@ export const publicFormFieldSchema = eventFormFieldSchema.pick({
   isRequired: true,
   options: true,
   sortOrder: true,
+  groupId: true,
+});
+
+export const publicFormFieldsGroupSchema = eventFormFieldGroupSchema.pick({
+  id: true,
+  label: true,
+  sortOrder: true,
 });
 
 export const publicEventDetailSchema =
@@ -55,6 +62,7 @@ export const publicEventDetailSchema =
   event: publicEventSchema,
   products: z.array(publicEventProductSchema),
   formFields: z.array(publicFormFieldSchema),
+  formFieldsGroups: z.array(publicFormFieldsGroupSchema),
 });
 
 export type PublicEventProduct = z.infer<typeof publicEventProductSchema>;

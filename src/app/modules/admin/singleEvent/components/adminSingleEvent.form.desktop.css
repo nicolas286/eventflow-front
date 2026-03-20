@@ -308,3 +308,41 @@
   text-overflow: ellipsis;
   opacity: 0.85;
 }
+
+.adminRegGroupSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.adminRegGroupHeader {
+  font-size: 0.95rem;
+  font-weight: 700;
+  opacity: 0.9;
+  padding: 4px 2px;
+}
+
+.adminRegGroupList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.adminRegActionsWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.adminRegActionsRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.adminRegActionsRowGroup input {
+  min-width: 220px;
+  flex: 1;
+}

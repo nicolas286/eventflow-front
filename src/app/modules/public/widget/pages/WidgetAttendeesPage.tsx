@@ -132,6 +132,35 @@ export function WidgetAttendeesPage() {
     return sortFields(data?.formFields ?? []);
   }, [data?.formFields]);
 
+  const sortedFieldGroups = useMemo(() => {
+  return [...(data?.formFieldsGroups ?? [])].sort(
+    (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
+    );
+  }, [data?.formFieldsGroups]);
+
+  const groupedFieldSections = useMemo(() => {
+    const ungroupedFields = sortedFields.filter((f) => !f.groupId);
+
+    const groupedSections = sortedFieldGroups
+      .map((group) => ({
+        group,
+        fields: sortedFields.filter((f) => f.groupId === group.id),
+      }))
+      .filter((section) => section.fields.length > 0);
+
+    if (ungroupedFields.length > 0) {
+      return [
+        {
+          group: null,
+          fields: ungroupedFields,
+        },
+        ...groupedSections,
+      ];
+    }
+
+    return groupedSections;
+  }, [sortedFields, sortedFieldGroups]);
+
   const expectedSlots = useMemo(() => {
     return computeExpectedAttendeeSlots(sortedProducts, quantities);
   }, [sortedProducts, quantities]);
@@ -238,6 +267,181 @@ export function WidgetAttendeesPage() {
     navigate(`/widget/o/${orgSlug}/e/${eventSlug}/paiement${search}`);
   }
 
+  function renderField(
+  f: Field,
+  idx: number,
+  att: AttendeeSlot,
+  rowErrs: Record<string, string>,
+  rowTouched: Record<string, true>
+) {
+  const fieldKey = String(f.fieldKey ?? "").trim();
+  const value = fieldKey ? att.values?.[fieldKey] : undefined;
+
+  const errMsg = fieldKey ? rowErrs[fieldKey] : undefined;
+  const showErr = !!errMsg && (attemptedNext || !!rowTouched[fieldKey]);
+
+  const commonStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 12,
+    border: "1px solid rgba(255,255,255,0.16)",
+    outline: "none",
+    background: "rgba(255,255,255,0.04)",
+    color: "var(--widget-text)",
+  };
+
+  const label = (
+    <div className="widgetFieldLabel">
+      {f.label} {f.isRequired ? <span className="widgetFieldRequired">(requis)</span> : null}
+    </div>
+  );
+
+  const errorLine = showErr ? <MessageBox variant="error">{errMsg}</MessageBox> : null;
+
+  if (isBirthDateField(f as EventFormFieldUI)) {
+    return (
+      <div key={f.id} className="widgetFieldBlock">
+        {label}
+        <input
+          type="date"
+          value={typeof value === "string" ? value : ""}
+          onChange={(e) => setAnswer(idx, fieldKey, e.target.value)}
+          onBlur={() => setAttTouched((prev) => markTouched(prev, idx, fieldKey))}
+          style={commonStyle}
+        />
+        {errorLine}
+      </div>
+    );
+  }
+
+  if (isCountryField(f as EventFormFieldUI)) {
+    return (
+      <div key={f.id} className="widgetFieldBlock">
+        {label}
+        <CountrySelect
+          value={typeof value === "string" ? value : ""}
+          onChange={(v) => setAnswer(idx, fieldKey, v, { touch: true })}
+          style={commonStyle}
+          placeholder="Sélectionner un pays"
+        />
+        {errorLine}
+      </div>
+    );
+  }
+
+  if (isPhoneField(f as EventFormFieldUI)) {
+    return (
+      <div key={f.id} className="widgetFieldBlock">
+        {label}
+        <PhoneInput
+          value={typeof value === "string" ? value : ""}
+          onChange={(v) => setAnswer(idx, fieldKey, v)}
+          groupClassName="widgetPhoneGroup"
+          selectStyle={commonStyle}
+          inputStyle={commonStyle}
+          defaultDial="+32"
+        />
+        {errorLine}
+      </div>
+    );
+  }
+
+  if (f.fieldType === "textarea") {
+    return (
+      <div key={f.id} className="widgetFieldBlock widgetFieldBlockFull">
+        {label}
+        <textarea
+          value={typeof value === "string" ? value : ""}
+          onChange={(e) => setAnswer(idx, fieldKey, e.target.value)}
+          onBlur={() => setAttTouched((prev) => markTouched(prev, idx, fieldKey))}
+          style={{ ...commonStyle, minHeight: 90, resize: "vertical" }}
+        />
+        {errorLine}
+      </div>
+    );
+  }
+
+  if (f.fieldType === "select") {
+    const opts = Array.isArray(f.options) ? f.options : [];
+    return (
+      <div key={f.id} className="widgetFieldBlock">
+        {label}
+        <select
+          value={typeof value === "string" ? value : ""}
+          onChange={(e) => setAnswer(idx, fieldKey, e.target.value, { touch: true })}
+          onBlur={() => setAttTouched((prev) => markTouched(prev, idx, fieldKey))}
+          style={commonStyle}
+        >
+          <option value="">—</option>
+          {opts.map((o: Record<string, string>, i: number) => (
+            <option key={i} value={String(o.value ?? o)}>
+              {String(o.label ?? o)}
+            </option>
+          ))}
+        </select>
+        {errorLine}
+      </div>
+    );
+  }
+
+  if (f.fieldType === "checkbox") {
+    return (
+      <div key={f.id} className="widgetFieldBlock widgetFieldBlockFull">
+        <label className="widgetCheckboxRow">
+          <input
+            type="checkbox"
+            checked={value === true}
+            onChange={(e) => setAnswer(idx, fieldKey, e.target.checked, { touch: true })}
+          />
+          <span>
+            {f.label} {f.isRequired ? <span className="widgetFieldRequired">(requis)</span> : null}
+          </span>
+        </label>
+        {errorLine}
+      </div>
+    );
+  }
+
+  const inputType =
+    f.fieldType === "email"
+      ? "email"
+      : f.fieldType === "number"
+        ? "number"
+        : "text";
+
+  return (
+    <div key={f.id} className="widgetFieldBlock">
+      {label}
+      <input
+        type={inputType}
+        value={
+          inputType === "number"
+            ? typeof value === "number"
+              ? value
+              : ""
+            : typeof value === "string"
+              ? value
+              : ""
+        }
+        onChange={(e) =>
+          setAnswer(
+            idx,
+            fieldKey,
+            inputType === "number"
+              ? e.target.value === ""
+                ? ""
+                : Number(e.target.value)
+              : e.target.value
+          )
+        }
+        onBlur={() => setAttTouched((prev) => markTouched(prev, idx, fieldKey))}
+        style={commonStyle}
+      />
+      {errorLine}
+    </div>
+  );
+}
+
   if (loading || !orgSlug || !eventSlug) {
     return <div className="widgetRoot">Chargement…</div>;
   }
@@ -280,175 +484,21 @@ export function WidgetAttendeesPage() {
                   </div>
                 </div>
 
-                <div className="widgetFormGrid">
-                  {sortedFields.map((f) => {
-                    const fieldKey = String(f.fieldKey ?? "").trim();
-                    const value = fieldKey ? att.values?.[fieldKey] : undefined;
+               <div className="widgetGroupedFields">
+                  {groupedFieldSections.map((section) => (
+                    <div
+                      key={section.group?.id ?? "ungrouped"}
+                      className="widgetFieldGroupSection"
+                    >
+                      {section.group ? (
+                        <div className="widgetFieldGroupTitle">{section.group.label}</div>
+                      ) : null}
 
-                    const errMsg = fieldKey ? rowErrs[fieldKey] : undefined;
-                    const showErr = !!errMsg && (attemptedNext || !!rowTouched[fieldKey]);
-
-                    const commonStyle: React.CSSProperties = {
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: 12,
-                      border: "1px solid rgba(255,255,255,0.16)",
-                      outline: "none",
-                      background: "rgba(255,255,255,0.04)",
-                      color: "var(--widget-text)",
-                    };
-
-                    const label = (
-                      <div className="widgetFieldLabel">
-                        {f.label} {f.isRequired ? <span className="widgetFieldRequired">(requis)</span> : null}
+                      <div className="widgetFormGrid">
+                        {section.fields.map((f) => renderField(f, idx, att, rowErrs, rowTouched))}
                       </div>
-                    );
-
-                    const errorLine = showErr ? <MessageBox variant="error">{errMsg}</MessageBox> : null;
-
-                    if (isBirthDateField(f as EventFormFieldUI)) {
-                      return (
-                        <div key={f.id} className="widgetFieldBlock">
-                          {label}
-                          <input
-                            type="date"
-                            value={typeof value === "string" ? value : ""}
-                            onChange={(e) => setAnswer(idx, fieldKey, e.target.value)}
-                            onBlur={() => setAttTouched((prev) => markTouched(prev, idx, fieldKey))}
-                            style={commonStyle}
-                          />
-                          {errorLine}
-                        </div>
-                      );
-                    }
-
-                    if (isCountryField(f as EventFormFieldUI)) {
-                      return (
-                        <div key={f.id} className="widgetFieldBlock">
-                          {label}
-                          <CountrySelect
-                            value={typeof value === "string" ? value : ""}
-                            onChange={(v) => setAnswer(idx, fieldKey, v, { touch: true })}
-                            style={commonStyle}
-                            placeholder="Sélectionner un pays"
-                          />
-                          {errorLine}
-                        </div>
-                      );
-                    }
-
-                    if (isPhoneField(f as EventFormFieldUI)) {
-                      return (
-                        <div key={f.id} className="widgetFieldBlock">
-                          {label}
-                          <PhoneInput
-                            value={typeof value === "string" ? value : ""}
-                            onChange={(v) => setAnswer(idx, fieldKey, v)}
-                            groupClassName="widgetPhoneGroup"
-                            selectStyle={commonStyle}
-                            inputStyle={commonStyle}
-                            defaultDial="+32"
-                          />
-                          {errorLine}
-                        </div>
-                      );
-                    }
-
-                    if (f.fieldType === "textarea") {
-                      return (
-                        <div key={f.id} className="widgetFieldBlock widgetFieldBlockFull">
-                          {label}
-                          <textarea
-                            value={typeof value === "string" ? value : ""}
-                            onChange={(e) => setAnswer(idx, fieldKey, e.target.value)}
-                            onBlur={() => setAttTouched((prev) => markTouched(prev, idx, fieldKey))}
-                            style={{ ...commonStyle, minHeight: 90, resize: "vertical" }}
-                          />
-                          {errorLine}
-                        </div>
-                      );
-                    }
-
-                    if (f.fieldType === "select") {
-                      const opts = Array.isArray(f.options) ? f.options : [];
-                      return (
-                        <div key={f.id} className="widgetFieldBlock">
-                          {label}
-                          <select
-                            value={typeof value === "string" ? value : ""}
-                            onChange={(e) => setAnswer(idx, fieldKey, e.target.value, { touch: true })}
-                            onBlur={() => setAttTouched((prev) => markTouched(prev, idx, fieldKey))}
-                            style={commonStyle}
-                          >
-                            <option value="">—</option>
-                            {opts.map((o: Record<string, string>, i: number) => (
-                              <option key={i} value={String(o.value ?? o)}>
-                                {String(o.label ?? o)}
-                              </option>
-                            ))}
-                          </select>
-                          {errorLine}
-                        </div>
-                      );
-                    }
-
-                    if (f.fieldType === "checkbox") {
-                      return (
-                        <div key={f.id} className="widgetFieldBlock widgetFieldBlockFull">
-                          <label className="widgetCheckboxRow">
-                            <input
-                              type="checkbox"
-                              checked={value === true}
-                              onChange={(e) => setAnswer(idx, fieldKey, e.target.checked, { touch: true })}
-                            />
-                            <span>
-                              {f.label} {f.isRequired ? <span className="widgetFieldRequired">(requis)</span> : null}
-                            </span>
-                          </label>
-                          {errorLine}
-                        </div>
-                      );
-                    }
-
-                    const inputType =
-                      f.fieldType === "email"
-                        ? "email"
-                        : f.fieldType === "number"
-                        ? "number"
-                        : "text";
-
-                    return (
-                      <div key={f.id} className="widgetFieldBlock">
-                        {label}
-                        <input
-                          type={inputType}
-                          value={
-                            inputType === "number"
-                              ? typeof value === "number"
-                                ? value
-                                : ""
-                              : typeof value === "string"
-                              ? value
-                              : ""
-                          }
-                          onChange={(e) =>
-                            setAnswer(
-                              idx,
-                              fieldKey,
-                              inputType === "number"
-                                ? e.target.value === ""
-                                  ? ""
-                                  : Number(e.target.value)
-                                : e.target.value
-                            )
-                          }
-                          onBlur={() => setAttTouched((prev) => markTouched(prev, idx, fieldKey))}
-                          style={commonStyle}
-                        />
-                        {errorLine}
-                      </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
               </div>
             );

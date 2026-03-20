@@ -210,6 +210,7 @@ export function AdminSingleEventPage() {
               <SingleEventFormSection
                 event={event}
                 fields={core.data.formFields}
+                fieldsGroups={core.data.formFieldsGroups}
                 onChanged={refreshAll}
               />
             )}
