@@ -8,16 +8,72 @@ import { formatDateTime } from "@helpers/normalize";
 import type { Attendee } from "@shared/models/db/db.attendee.schema";
 import { formatMoney } from "@helpers/normalize";
 import type { OrderMeta } from "../hooks/useParticipantsViewModel";
+import type { EventFormFieldGroup } from "@shared/models/db/db.eventFormFields.schema";
 
-export type FilledField = { key: string; label: string; value: string };
+export type FilledField = {
+  key: string;
+  label: string;
+  value: string;
+  groupId?: string | null;
+  fieldType?: string | null;
+};
+
 export type Identity = { title: string; subtitle: string };
 
 type AttendeeEditorProps = ComponentProps<typeof AttendeeEditorPanel>;
+
+type FilledFieldGroupSection = {
+  id: string | null;
+  label: string | null;
+  fields: FilledField[];
+};
+
+function formatFilledValue(field: FilledField): string {
+  if (field.fieldType === "checkbox") {
+    if (field.value === "true") return "Oui";
+    if (field.value === "false") return "Non";
+  }
+
+  return field.value;
+}
+
+function groupFilledFields(
+  filled: FilledField[],
+  formFieldsGroups: EventFormFieldGroup[],
+): FilledFieldGroupSection[] {
+  const groupsSorted = [...formFieldsGroups].sort(
+    (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
+  );
+
+  const ungrouped = filled.filter((f) => !f.groupId);
+
+  const grouped = groupsSorted
+    .map((group) => ({
+      id: group.id,
+      label: group.label,
+      fields: filled.filter((f) => f.groupId === group.id),
+    }))
+    .filter((section) => section.fields.length > 0);
+
+  if (ungrouped.length > 0) {
+    return [
+      {
+        id: null,
+        label: null,
+        fields: ungrouped,
+      },
+      ...grouped,
+    ];
+  }
+
+  return grouped;
+}
 
 type OrdersPeopleListProps = {
   groups: Array<[orderId: string, people: Attendee[]]>;
   orderMetaById: Map<string, OrderMeta>;
   filledFieldsByAttendeeId: Map<string, FilledField[]>;
+  formFieldsGroups: EventFormFieldGroup[];
   computeIdentity: (attendeeId: string) => Identity;
 
   isMobile: boolean;
@@ -42,6 +98,7 @@ export function OrdersPeopleList(props: OrdersPeopleListProps) {
     groups,
     orderMetaById,
     filledFieldsByAttendeeId,
+    formFieldsGroups,
     computeIdentity,
     isMobile,
     targetOrderId,
@@ -120,7 +177,13 @@ export function OrdersPeopleList(props: OrdersPeopleListProps) {
               <div className="adminOrderPeople">
                 {people.map((att) => {
                   const identity = computeIdentity(att.id);
-                  const filled = filledFieldsByAttendeeId.get(att.id) ?? [];
+                  const filledRaw = filledFieldsByAttendeeId.get(att.id) ?? [];
+                  const filled = filledRaw.map((f) => ({
+                    ...f,
+                    value: formatFilledValue(f),
+                  }));
+
+                  const filledGrouped = groupFilledFields(filled, formFieldsGroups);
                   const showInlineEditor = isMobile && editorOpen && editingAttendeeId === att.id;
 
                   return (
@@ -130,6 +193,7 @@ export function OrdersPeopleList(props: OrdersPeopleListProps) {
                           att={att}
                           identity={identity}
                           filled={filled}
+                          filledGrouped={filledGrouped}
                           onEdit={() => onOpenEdit(att.id, orderId)}
                         />
                       </div>

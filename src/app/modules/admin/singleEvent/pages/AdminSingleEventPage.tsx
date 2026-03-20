@@ -223,6 +223,7 @@ export function AdminSingleEventPage() {
                 event={event}
                 products={core.data.products}
                 formFields={core.data.formFields}
+                formFieldsGroups={core.data.formFieldsGroups}
                 onChanged={refreshAll}
                 initialTab={shouldOpenScanner ? "tickets" : participantsTabFromUrl}
                 autoOpenScanner={shouldOpenScanner}

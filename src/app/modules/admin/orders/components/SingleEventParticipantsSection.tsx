@@ -9,7 +9,7 @@ import { SingleEventTicketsSubSection } from "./SingleEventTicketsSubSection";
 import { useAdminSingleEventOrdersViewData } from "../hooks/useMakeEventAdminOrdersView";
 
 import type { AdminEventDetailEvent } from "../../singleEvent/schemas/admin.eventDetail.schema";
-import type { EventFormField } from "@shared/models/db/db.eventFormFields.schema";
+import type { EventFormField, EventFormFieldGroup } from "@shared/models/db/db.eventFormFields.schema";
 import type { EventProducts } from "@shared/models/db/db.eventProducts.schema";
 
 import "./attendees.css";
@@ -25,6 +25,7 @@ export function SingleEventParticipantsSection(props: {
   event: AdminEventDetailEvent;
   products: EventProducts;
   formFields: EventFormField[];
+  formFieldsGroups: EventFormFieldGroup[]
   onChanged?: () => Promise<void>;
   initialTab?: ParticipantsTabKey;
   autoOpenScanner?: boolean;
@@ -36,6 +37,7 @@ export function SingleEventParticipantsSection(props: {
     event,
     products,
     formFields,
+    formFieldsGroups,
     onChanged,
     initialTab,
     autoOpenScanner,
@@ -135,6 +137,7 @@ export function SingleEventParticipantsSection(props: {
               event={event}
               products={products}
               formFields={formFields}
+              formFieldsGroups={formFieldsGroups}
               orders={orders}
               orderItems={orderItems}
               attendees={attendees}

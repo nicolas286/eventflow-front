@@ -20,7 +20,7 @@ import { useParticipantsViewModel,
 import { useSearchEventAdminOrdersViewData } from "../hooks/useSearchEventOrdersView";
 
 import type { AdminEventDetailEvent } from "../../singleEvent/schemas/admin.eventDetail.schema";
-import type { EventFormField } from "@shared/models/db/db.eventFormFields.schema";
+import type { EventFormField, EventFormFieldGroup } from "@shared/models/db/db.eventFormFields.schema";
 import type { EventProducts, EventProduct } from "@shared/models/db/db.eventProducts.schema";
 import type {
   AttendeeAnswers as AttendeeAnswer,
@@ -44,6 +44,7 @@ export function SingleEventOrdersSubSection(props: {
   event: AdminEventDetailEvent;
   products: EventProducts;
   formFields: EventFormField[];
+  formFieldsGroups: EventFormFieldGroup[];
   orders: OrdersUI;
   orderItems: OrderItem[];
   attendees: Attendee[];
@@ -58,6 +59,7 @@ export function SingleEventOrdersSubSection(props: {
     event,
     products,
     formFields,
+    formFieldsGroups,
     orders,
     attendees,
     attendeeAnswers,
@@ -149,18 +151,19 @@ export function SingleEventOrdersSubSection(props: {
   useEffect(() => setLocalOrders(initialOrders), [initialOrders]);
 
   const {
-    orderMetaById,
-    filledFieldsByAttendeeId,
-    fieldOptions,
-    filteredAttendees,
-    groups,
-    computeIdentity,
+  orderMetaById,
+  filledFieldsByAttendeeId,
+  fieldOptions,
+  filteredAttendees,
+  groups,
+  computeIdentity,
   } = useParticipantsViewModel({
     localAttendees,
     localAnswers,
     localOrders,
     localOrderItems: activeOrderItems,
     productsRows,
+    regFields,
     query: isSearchMode ? "" : query,
     filterMode: isSearchMode ? "all" : filterMode,
   });
@@ -378,6 +381,7 @@ export function SingleEventOrdersSubSection(props: {
       groups={groups}
       orderMetaById={orderMetaById}
       filledFieldsByAttendeeId={filledFieldsByAttendeeId}
+      formFieldsGroups={formFieldsGroups}
       computeIdentity={computeIdentity}
       isMobile={isMobile}
       targetOrderId={targetOrderId}
@@ -454,6 +458,7 @@ export function SingleEventOrdersSubSection(props: {
         localOrders: exportOrders,
         localOrderItems: exportOrderItems,
         productsRows,
+        regFields,
         query: "",
         filterMode: "all",
       });
