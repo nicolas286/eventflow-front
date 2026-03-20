@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { supabase } from "@gateways/supabase/supabaseClient";
 import { usePublicOrgData } from "../hooks/usePublicOrgData";
+import { useNavigate } from "react-router-dom";
 
 import Container from "@ui/components/container/Container";
 import Card, { CardBody } from "@ui/components/card/Card";
@@ -15,6 +16,7 @@ import { formatDateTimeHuman, toDayEndISO, toDayStartISO } from "@helpers/dateTi
 import type { PublicEventOverview } from "../schemas/public.orgEventsOverview.schema";
 
 import "./OrgPublicPage.css";
+import { CalendarIcon, PinIcon, TicketIcon } from "@shared/ui/components/icon/Icons";
 
 type SortKey = "date" | "name";
 type SortDir = "asc" | "desc";
@@ -61,7 +63,8 @@ export function OrgPublicPage() {
   const [dateTo, setDateTo] = useState<string>("");
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const navigate = useNavigate();
 
   // ✅ “now” pur + refresh léger (pour que “à venir/en cours” bouge tout seul)
   const [nowTs, setNowTs] = useState(() => Date.now());
@@ -182,92 +185,94 @@ export function OrgPublicPage() {
           website={profile.website}/>
 
         {/* Filtres + tri */}
-        <div className={`publicEventsToolbar ${mobileFiltersOpen ? "isMobileOpen" : ""}`}>
-          <div className="publicMobileFiltersToggle">
-            <Button
-              variant="secondary"
-              label={mobileFiltersOpen ? "Masquer les filtres" : "Afficher les filtres"}
-              onClick={() => setMobileFiltersOpen((v) => !v)}
-            />
+          <div className={`publicEventsToolbar ${filtersOpen ? "isOpen" : ""}`}>
+          <div className="publicEventsToolbarHeader">
+            <div className="publicEventsToolbarHeaderLeft">
+              <Button
+                variant="secondary"
+                label={filtersOpen ? "Masquer les filtres ▲" : "Afficher les filtres ▼"}
+                onClick={() => setFiltersOpen((v) => !v)}
+              />
 
-            {hasActiveFilters ? (
-              <Button variant="secondary" label="Réinitialiser" onClick={resetFilters} />
-            ) : null}
+              {hasActiveFilters ? (
+                <Button
+                  variant="secondary"
+                  label="Réinitialiser"
+                  onClick={resetFilters}
+                />
+              ) : null}
+            </div>
+
+            <div className="publicEventsToolbarHeaderRight">
+              <span className="publicMuted">
+                {filteredSortedEvents.length} événement{filteredSortedEvents.length > 1 ? "s" : ""}
+                {events.length !== filteredSortedEvents.length ? ` (filtré)` : ""}
+              </span>
+            </div>
           </div>
 
-          <div className="publicEventsToolbarRow">
-            <div className="publicField">
-              <div className="publicFieldLabel">Rechercher</div>
-              <input
-                className="publicInput"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Titre, lieu…"
-                aria-label="Rechercher un événement"
-              />
-            </div>
-
-            <div className="publicField">
-              <div className="publicFieldLabel">Du</div>
-              <input
-                className="publicInput"
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                aria-label="Date de début"
-              />
-            </div>
-
-            <div className="publicField">
-              <div className="publicFieldLabel">Au</div>
-              <input
-                className="publicInput"
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                aria-label="Date de fin"
-              />
-            </div>
-
-            <div className="publicField">
-              <div className="publicFieldLabel">Trier par</div>
-              <select
-                className="publicSelect"
-                value={sortKey}
-                onChange={(e) => setSortKey(e.target.value as SortKey)}
-                aria-label="Clé de tri"
-              >
-                <option value="date">Date</option>
-                <option value="name">Nom</option>
-              </select>
-            </div>
-
-            <div className="publicField">
-              <div className="publicFieldLabel">Ordre</div>
-              <select
-                className="publicSelect"
-                value={sortDir}
-                onChange={(e) => setSortDir(e.target.value as SortDir)}
-                aria-label="Direction de tri"
-              >
-                <option value="asc">Croissant</option>
-                <option value="desc">Décroissant</option>
-              </select>
-            </div>
-
-            {hasActiveFilters ? (
-              <div className="publicToolbarActions publicDesktopOnly">
-                <Button variant="secondary" label="Réinitialiser" onClick={resetFilters} />
+          {filtersOpen ? (
+            <div className="publicEventsToolbarRow">
+              <div className="publicField">
+                <div className="publicFieldLabel">Rechercher</div>
+                <input
+                  className="publicInput"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Titre, lieu…"
+                  aria-label="Rechercher un événement"
+                />
               </div>
-            ) : null}
-          </div>
 
-          <div className="publicEventsToolbarMeta">
-            <span className="publicMuted">
-              {filteredSortedEvents.length} événement{filteredSortedEvents.length > 1 ? "s" : ""}
-              {events.length !== filteredSortedEvents.length ? ` (filtré)` : ""}
-            </span>
-          </div>
+              <div className="publicField">
+                <div className="publicFieldLabel">Du</div>
+                <input
+                  className="publicInput"
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  aria-label="Date de début"
+                />
+              </div>
+
+              <div className="publicField">
+                <div className="publicFieldLabel">Au</div>
+                <input
+                  className="publicInput"
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  aria-label="Date de fin"
+                />
+              </div>
+
+              <div className="publicField">
+                <div className="publicFieldLabel">Trier par</div>
+                <select
+                  className="publicSelect"
+                  value={sortKey}
+                  onChange={(e) => setSortKey(e.target.value as SortKey)}
+                  aria-label="Clé de tri"
+                >
+                  <option value="date">Date</option>
+                  <option value="name">Nom</option>
+                </select>
+              </div>
+
+              <div className="publicField">
+                <div className="publicFieldLabel">Ordre</div>
+                <select
+                  className="publicSelect"
+                  value={sortDir}
+                  onChange={(e) => setSortDir(e.target.value as SortDir)}
+                  aria-label="Direction de tri"
+                >
+                  <option value="asc">Croissant</option>
+                  <option value="desc">Décroissant</option>
+                </select>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         {events.length === 0 ? (
@@ -303,34 +308,51 @@ export function OrgPublicPage() {
                   ) : null}
 
                   <CardBody className="publicOrgEventBody">
-                    <div className="publicOrgEventHeaderRow">
-                      <div className="publicOrgEventTitle">{e.title}</div>
-                      {badge}
-                    </div>
-
-                    <div className="publicOrgEventLocation">{e.location ?? "Lieu à venir"}</div>
-
-                    {startText || endText ? (
-                      <div className="publicOrgEventDates">
-                        {startText ? <span>Début : {startText}</span> : null}
-                        {endText ? <span>Fin : {endText}</span> : null}
+                    <div className="publicOrgEventTop">
+                      <div className="publicOrgEventHeaderRow">
+                        <div className="publicOrgEventTitle">{e.title}</div>
+                        {badge}
                       </div>
-                    ) : null}
+
+                      <div className="publicOrgEventLocation">
+                        <PinIcon />
+                        {e.location ?? "Lieu à venir"}
+                      </div>
+
+                      {startText || endText ? (
+                        <div className="publicOrgEventDates">
+                          {startText ? (
+                            <span>
+                              <CalendarIcon />
+                              {startText}
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
 
                     <div className="publicOrgEventFooter">
                       <div className="publicOrgEventActions">
-
-                        <Link to={`/o/${orgSlug}/e/${e.slug}`}>
-                          <Button
-                            variant="primary"
-                            title={e.isSoldOut ? "Événement complet" : "Voir l’événement"}
-                            aria-label={e.isSoldOut ? "Événement complet" : "Voir l’événement"}
-                          >
-                            {e.isSoldOut ? "Complet" : "Billets"}
-                          </Button>
-                        </Link>
-
+                        <Button
+                          className="publicOrgEventCta"
+                          variant="primary"
+                          title={e.isSoldOut ? "Événement complet" : "Voir les billets"}
+                          aria-label={e.isSoldOut ? "Événement complet" : "Voir les billets"}
+                          onClick={() => {
+                            if (!e.isSoldOut) navigate(`/o/${orgSlug}/e/${e.slug}`);
+                          }}
+                          disabled={e.isSoldOut}
+                        >
+                          <TicketIcon />
+                          {e.isSoldOut ? "Complet" : "Réserver"}
+                        </Button>
                       </div>
+
+                      {!e.isSoldOut && (
+                        <div className="publicOrgEventReassurance">
+                          Paiement sécurisé • Réservation immédiate
+                        </div>
+                      )}
                     </div>
                   </CardBody>
                 </Card>
