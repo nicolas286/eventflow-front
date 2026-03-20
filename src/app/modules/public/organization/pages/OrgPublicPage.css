@@ -1,6 +1,5 @@
 /* =========================================================
    OrgPublicPage – Events grid + cards with banner
-   - Desktop: 2 colonnes
    ========================================================= */
 
 .publicOrgEventsGrid {
@@ -8,14 +7,16 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   margin-top: 10px;
+  align-items: stretch;
 }
 
-/* Card container */
+/* Card */
 .publicOrgEventCard {
   overflow: hidden;
+  height: 100%;
 }
 
-/* Banner (image en background) */
+/* Banner */
 .publicOrgEventBanner {
   width: 100%;
   height: 160px;
@@ -27,9 +28,19 @@
 /* Body */
 .publicOrgEventBody {
   padding: 16px;
+  display: flex;
+  flex-direction: column;
+  min-height: 210px; /* 🔥 important pour homogénéité */
 }
 
-/* Header row: title + badge */
+/* 🔥 Bloc contenu (clé du fix) */
+.publicOrgEventTop {
+  display: flex;
+  flex-direction: column;
+  min-height: 110px; /* 🔥 ajuste si besoin */
+}
+
+/* Header */
 .publicOrgEventHeaderRow {
   display: flex;
   align-items: flex-start;
@@ -42,37 +53,108 @@
   line-height: 1.2;
   font-weight: 900;
   color: #0f172a;
+
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
+/* Location */
 .publicOrgEventLocation {
   margin-top: 8px;
   font-size: 15px;
   color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
+/* Dates */
 .publicOrgEventDates {
   margin-top: 12px;
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 6px;
   font-size: 14px;
   color: #334155;
+  line-height: 24px;
+}
+
+.publicOrgEventDates span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .publicOrgEventFooter {
-  position: absolute;
-  right: 16px;
-  bottom: 16px;
-  margin-top: 0;
+  margin-top: auto;
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column; /* 🔥 important */
+  align-items: center;
+  gap: 6px;
 }
 
+.publicOrgEventReassurance {
+  font-size: 12px;
+  color: #64748b;
+  opacity: 0.85;
+  text-align: center;
+  line-height: 1.3;
+}
+
+
+/* Actions */
 .publicOrgEventActions {
   display: flex;
   align-items: center;
-  gap: 10px; /* ✅ léger espace entre les boutons */
+  gap: 10px;
 }
 
-/* ------- Public events toolbar ------- */
+/* CTA */
+.publicOrgEventCta {
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 12px;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
+}
+
+.publicOrgEventCta:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) {
+  .publicOrgEventCta {
+    transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+  }
+
+  .publicOrgEventCta:hover {
+    transform: translateY(-1px) scale(1.02);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.22);
+    filter: brightness(1.03);
+  }
+}
+
+/* Hover card */
+@media (hover: hover) {
+  .publicOrgEventCard {
+    transition: transform 140ms ease;
+  }
+
+  .publicOrgEventCard:hover {
+    transform: translateY(-2px);
+  }
+
+  .publicOrgEventBanner {
+    transition: transform 220ms ease;
+  }
+
+  .publicOrgEventCard:hover .publicOrgEventBanner {
+    transform: scale(1.02);
+  }
+}
 
 .publicEventsToolbar {
   margin: 12px 0 14px;
@@ -83,19 +165,59 @@
   backdrop-filter: blur(6px);
 }
 
+.publicEventsToolbarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding-bottom: 8px;
+}
+
+.publicEventsToolbar.isOpen .publicEventsToolbarHeader {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.publicEventsToolbarHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.publicEventsToolbarHeaderRight {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .publicEventsToolbarRow {
+  margin-top: 12px;
   display: grid;
-  grid-template-columns: 1.4fr 0.8fr 0.8fr 0.7fr 0.7fr auto;
+  grid-template-columns: 1.4fr 0.8fr 0.8fr 0.7fr 0.7fr;
   gap: 10px;
   align-items: end;
+
+  animation: fadeSlide 180ms ease;
 }
 
-.publicMobileFiltersToggle {
-  display: none;
+@keyframes fadeSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.publicDesktopOnly {
-  display: flex;
+.publicEventsToolbarHeaderLeft .ui-button {
+  font-weight: 600;
+}
+
+.publicEventsToolbar.isOpen .ui-button {
+  background: rgba(0,0,0,0.04);
 }
 
 .publicField {
@@ -125,48 +247,34 @@
   border-color: rgba(0, 0, 0, 0.22);
 }
 
-.publicToolbarActions {
-  display: flex;
-  justify-content: flex-end;
-  padding-bottom: 1px;
-}
-
-.publicEventsToolbarMeta {
-  margin-top: 8px;
-  display: flex;
-  justify-content: flex-end;
-}
-
 .publicMuted {
   font-size: 12px;
   opacity: 0.7;
 }
 
-/* Petit hover premium (sans casser le branding) */
-@media (hover: hover) {
-  .publicOrgEventCard {
-    transition: transform 140ms ease, box-shadow 140ms ease;
-  }
-  .publicOrgEventCard:hover {
-    transform: translateY(-2px);
-  }
-  .publicOrgEventBanner {
-    transition: transform 220ms ease;
-  }
-  .publicOrgEventCard:hover .publicOrgEventBanner {
-    transform: scale(1.02);
-  }
-}
-
-
-
 @media (max-width: 920px) {
+  .publicEventsToolbarHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .publicEventsToolbarHeaderRight {
+    justify-content: flex-start;
+  }
+
   .publicEventsToolbarRow {
     grid-template-columns: 1fr 1fr;
   }
+}
 
-  .publicToolbarActions {
-    justify-content: stretch;
+@media (max-width: 860px) {
+  .publicEventsToolbarRow {
+    grid-template-columns: 1fr;
+  }
+
+  .publicInput,
+  .publicSelect {
+    width: 100%;
   }
 }
 
@@ -179,66 +287,7 @@
     height: 180px;
   }
 
-  .publicOrgEventFooter {
-    justify-content: center;
-  }
-}
-
-@media (max-width: 860px) {
-
-  /* Bouton visible uniquement en mobile */
-  .publicMobileFiltersToggle {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 12px;
-  }
-
-  /* Reset desktop-only */
-  .publicDesktopOnly {
-    display: none;
-  }
-
-  /* Toolbar row cachée par défaut */
-  .publicEventsToolbarRow {
-    display: none;
-    grid-template-columns: 1fr;
-    gap: 12px;
-    align-items: stretch;
-  }
-
-  /* Quand ouverte */
-  .publicEventsToolbar.isMobileOpen .publicEventsToolbarRow {
-    display: grid;
-  }
-
-  /* Inputs full width */
-  .publicField {
+  .publicOrgEventCta {
     width: 100%;
-  }
-
-  .publicInput,
-  .publicSelect {
-    width: 100%;
-  }
-}
-
-@media (max-width: 860px) {
-  .publicOrgEventActions {
-    gap: 8px;
-  }
-
-  /* ✅ compacter les boutons icônes */
-  .publicOrgEventActions .ui-button {
-    height: 34px;
-    padding: 0 10px;
-    min-width: 34px;
-    border-radius: 12px;
-  }
-
-  /* ✅ icônes légèrement plus petites */
-  .publicOrgEventActions .ui-button svg {
-    width: 16px;
-    height: 16px;
   }
 }

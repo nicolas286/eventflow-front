@@ -26,6 +26,7 @@ import {
 import "@app/layouts/publicCheckoutBase.desktop.css";
 import "./EventTicketsPage.desktop.css";
 import "./EventTicketsPage.mobile.css";
+import MarkdownText from "@shared/ui/components/markdowntext/MarkdownText";
 
 export function EventTicketsPage() {
   const navigate = useNavigate();
@@ -38,12 +39,14 @@ export function EventTicketsPage() {
   });
 
   const [tick, setTick] = useState(0);
-
+  const [descExpanded, setDescExpanded] = useState(false);
+ 
   const draft = useMemo(() => {
     if (!orgSlug || !eventSlug) return null;
     void tick;
     return loadDraft(orgSlug, eventSlug);
   }, [orgSlug, eventSlug, tick]);
+
 
   if (loading || !orgSlug || !eventSlug) {
     return (
@@ -103,14 +106,12 @@ export function EventTicketsPage() {
     navigate(`/o/${orgSlug}/e/${eventSlug}/participants`);
   }
 
-   const baseUrl = import.meta.env.VITE_PUBLIC_BASE_URL; 
-    const url = `${baseUrl}/o/${orgSlug}/e/${eventSlug}/billets`;
+  const baseUrl = import.meta.env.VITE_PUBLIC_BASE_URL;
+  const url = `${baseUrl}/o/${orgSlug}/e/${eventSlug}/billets`;
 
-    const title = event ? `${event.title} – ${org?.displayName ?? "Eventflow, la billetterie sans commission"}` : "Événement";
-    const desc = event?.description?.slice(0, 160) ?? "Réserve tes billets.";
-
-    const ogImage = event?.bannerUrl;
-
+  const title = event ? `${event.title} – ${org?.displayName ?? "Eventflow, la billetterie sans commission"}` : "Événement";
+  const desc = event?.description?.slice(0, 160) ?? "Réserve tes billets.";
+  const ogImage = event?.bannerUrl;
 
   return (
     <>
@@ -123,128 +124,173 @@ export function EventTicketsPage() {
         ogUrl={url}
         ogImage={ogImage}
       />
-    <div className="publicPage">
-      <Container>
-        <div className="publicSurface">
-          <PublicEventHeader orgSlug={orgSlug} org={org} event={event} />
 
-          <div className="publicDivider" />
+      <div className="publicPage">
+        <Container>
+          <div className="publicSurface">
+            <PublicEventHeader orgSlug={orgSlug} org={org} event={event} />
 
-          <div className="publicSectionTitle">1/3 — Choisir vos billets</div>
+            {event.description ? (
+              <div className="publicEventIntro">
+                <MarkdownText
+                  markdown={event.description}
+                  className={`publicEventIntroText ${descExpanded ? "isExpanded" : ""}`}
+                />
 
-          {sortedProducts.length === 0 ? (
-            <div className="publicEmpty">Aucun billet disponible pour le moment.</div>
-          ) : (
-            <div className="publicGutter">
-              <div className="publicList">
-                {sortedProducts.map((p) => {
-                  const qty = Number(quantities[p.id] ?? 0) || 0;
+                {event.description.length > 240 ? (
+                  <button
+                    type="button"
+                    className="publicEventIntroToggle"
+                    onClick={() => setDescExpanded((v) => !v)}
+                  >
+                    {descExpanded ? "Réduire" : "Lire plus"}
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
 
-                  const remaining = computeRemaining(p);
-                  const soldOut = remaining === 0 && remaining != null;
+            <div className="publicDivider" />
 
-                  const maxQty = resolveMaxQty(remaining);
+            <div className="publicSectionTitle">1/3 — Choisir vos billets</div>
 
-                  const badgeTone = soldOut ? "danger" : "success";
-                  const badgeLabel = soldOut ? "Épuisé" : "Disponible";
+            {sortedProducts.length === 0 ? (
+              <div className="publicEmpty">Aucun billet disponible pour le moment.</div>
+            ) : (
+              <div className="publicGutter">
+                <div className="publicList">
+                  {sortedProducts.map((p) => {
+                    const qty = Number(quantities[p.id] ?? 0) || 0;
 
-                  const createsAtt = p.createsAttendees === true;
-                  const perUnit = p.attendeesPerUnit ?? 0;
-                  const createdCount = createsAtt ? qty * perUnit : 0;
+                    const remaining = computeRemaining(p);
+                    const soldOut = remaining === 0 && remaining != null;
+                    const maxQty = resolveMaxQty(remaining);
 
-                  const moneyCurrency = p.currency ?? currency;
+                    const badgeTone = soldOut ? "danger" : "success";
+                    const badgeLabel = soldOut ? "Épuisé" : "Disponible";
 
-                  return (
-                    <Card key={p.id} className={soldOut ? "publicTicketCard isSoldOut" : "publicTicketCard"}>
-                      <CardHeader
-                        title={<div className="publicCardTitle">{p.name}</div>}
-                        subtitle={
-                          <div className="publicSubtitle">
-                            {formatMoney(p.priceCents, moneyCurrency)} 
-                          </div>
-                        }
-                        right={<Badge tone={badgeTone} label={badgeLabel} />}
-                      />
+                    const createsAtt = p.createsAttendees === true;
+                    const perUnit = p.attendeesPerUnit ?? 0;
+                    const createdCount = createsAtt ? qty * perUnit : 0;
 
-                      <CardBody className="publicTicketBody">
-                        <div className="publicTicketLayout">
-                          <div className="publicTicketLeft">
-                            {p.description ? (
-                              <div className="publicProse publicTicketDesc" style={{ whiteSpace: "pre-wrap" }}>
-                                {p.description}
+                    const moneyCurrency = p.currency ?? currency;
+
+                    return (
+                      <Card
+                        key={p.id}
+                        className={soldOut ? "publicTicketCard isSoldOut" : "publicTicketCard"}
+                      >
+                        <CardHeader
+                          title={<div className="publicCardTitle">{p.name}</div>}
+                          subtitle={
+                            <div className="publicSubtitle">
+                              {formatMoney(p.priceCents, moneyCurrency)}
+                            </div>
+                          }
+                          right={<Badge tone={badgeTone} label={badgeLabel} />}
+                        />
+
+                        <CardBody className="publicTicketBody">
+                          <div className="publicTicketLayout">
+                            <div className="publicTicketLeft">
+                              {p.description ? (
+                                <div
+                                  className="publicProse publicTicketDesc"
+                                  style={{ whiteSpace: "pre-wrap" }}
+                                >
+                                  {p.description}
+                                </div>
+                              ) : null}
+
+                              <div className="publicMetaRow">
+                                {createsAtt ? (
+                                  <span>
+                                    Participants : {perUnit} / billet
+                                    {qty > 0 ? ` · ${createdCount} participant(s) à renseigner` : ""}
+                                  </span>
+                                ) : (
+                                  <span>Ce billet ne demande pas de formulaire participant</span>
+                                )}
                               </div>
-                            ) : null}
+                            </div>
 
-                            <div className="publicMetaRow">
-                              {createsAtt ? (
-                                <span>
-                                  Participants : {perUnit} / billet
-                                  {qty > 0 ? ` · ${createdCount} participant(s) à renseigner` : ""}
-                                </span>
-                              ) : (
-                                <span>Ce billet ne demande pas de formulaire participant</span>
-                              )}
+                            <div className="publicTicketRight">
+                              <div className="publicQtyBlock">
+                                <Button
+                                  variant="primary"
+                                  label="−"
+                                  onClick={() => updateQty(p.id, qty - 1)}
+                                  disabled={qty <= 0}
+                                  className="publicQtyBtn"
+                                />
+
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={maxQty}
+                                  value={qty}
+                                  onChange={(e) => updateQty(p.id, Number(e.target.value))}
+                                  className="publicQtyInput"
+                                  disabled={soldOut}
+                                />
+
+                                <Button
+                                  variant="primary"
+                                  label="+"
+                                  onClick={() => updateQty(p.id, qty + 1)}
+                                  disabled={soldOut || qty >= maxQty}
+                                  className="publicQtyBtn"
+                                />
+                              </div>
+
+                              <div className="publicTicketTotal">
+                                {formatMoney(qty * p.priceCents, moneyCurrency)}
+                              </div>
                             </div>
                           </div>
+                        </CardBody>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
-                          <div className="publicTicketRight">
-                            <div className="publicQtyBlock">
-                              <Button
-                                variant="primary"
-                                label="−"
-                                onClick={() => updateQty(p.id, qty - 1)}
-                                disabled={qty <= 0}
-                                className="publicQtyBtn"
-                              />
+            <div className="publicDivider" />
 
-                              <input
-                                type="number"
-                                min={0}
-                                max={maxQty}
-                                value={qty}
-                                onChange={(e) => updateQty(p.id, Number(e.target.value))}
-                                className="publicQtyInput"
-                                disabled={soldOut}
-                              />
-
-                              <Button
-                                variant="primary"
-                                label="+"
-                                onClick={() => updateQty(p.id, qty + 1)}
-                                disabled={soldOut || qty >= maxQty}
-                                className="publicQtyBtn"
-                              />
-                            </div>
-
-                            <div className="publicTicketTotal">
-                              {formatMoney(qty * p.priceCents, moneyCurrency)}
-                            </div>
-                          </div>
-                        </div>
-                      </CardBody>
-                    </Card>
-                  );
-                })}
+            <div className="publicRecapRow">
+              <div>
+                <div className="publicRecapTitle">Récap</div>
+                <div className="publicSubtitle publicRecapSubtitle">
+                  {totalTickets} billet(s) · {attendeesToCreate} participant(s) à renseigner ·{" "}
+                  {formatMoney(totalCents, currency)}
+                </div>
+                <div className="publicRecapReassurance">
+                  Paiement sécurisé • Réservation instantanée
+                </div>
               </div>
             </div>
-          )}
-
-          <div className="publicDivider" />
-
-          <div className="publicRecapRow">
-            <div>
-              <div className="publicRecapTitle">Récap</div>
-              <div className="publicSubtitle publicRecapSubtitle">
-                {totalTickets} billet(s) · {attendeesToCreate} participant(s) à renseigner ·{" "}
-                {formatMoney(totalCents, currency)}
-              </div>
-            </div>
-
-            <Button label="Continuer (Participants)" onClick={goNext} disabled={totalTickets <= 0} />
           </div>
+        </Container>
+
+
+        <div className="publicStickyCheckoutBar">
+          <div className="publicStickyCheckoutMeta">
+            <div className="publicStickyCheckoutPrice">
+              {formatMoney(totalCents, currency)}
+            </div>
+            <div className="publicStickyCheckoutText">
+              {totalTickets} billet(s)
+            </div>
+          </div>
+
+          <Button
+            label="Continuer →"
+            onClick={goNext}
+            disabled={totalTickets <= 0}
+            className="publicStickyCheckoutButton"
+          />
         </div>
-      </Container>
-    </div>
+      </div>
     </>
   );
 }

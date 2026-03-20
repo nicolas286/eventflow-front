@@ -7,7 +7,6 @@ import type {
   PublicEvent,
   PublicOrgProfileOverviewForEventPage,
 } from "../../events/schemas/public.eventDetailBySlug.schema";
-import MarkdownText from "@shared/ui/components/markdowntext/MarkdownText";
 import { CalendarIcon, HourglassIcon, PinIcon } from "@shared/ui/components/icon/Icons";
 
 type Props = {
@@ -84,13 +83,6 @@ export function PublicEventHeader({ orgSlug, org, event }: Props) {
               ) : null}
             </div>
           ) : null}
-
-          {event.description && (
-            <MarkdownText
-              markdown={event.description}
-              className="publicSubtitle"
-            />
-          )}
         </div>
 
         <div className="publicActions">
