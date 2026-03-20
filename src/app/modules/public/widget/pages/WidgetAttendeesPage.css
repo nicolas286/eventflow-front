@@ -129,3 +129,24 @@
     margin-bottom: 14px;
   }
 }
+
+.widgetGroupedFields {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.widgetFieldGroupSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.widgetFieldGroupTitle {
+  font-weight: 800;
+  font-size: 0.98rem;
+  color: var(--widget-text);
+  opacity: 0.92;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+}

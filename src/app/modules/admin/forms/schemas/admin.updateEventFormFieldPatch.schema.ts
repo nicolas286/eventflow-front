@@ -13,6 +13,8 @@ export const updateEventFormFieldPatchSchema = z.object({
 
   sortOrder: eventFormFieldSchema.shape.sortOrder.optional(),
   options: eventFormFieldSchema.shape.options.optional().nullable(),
+
+  groupId: eventFormFieldSchema.shape.groupId.optional().nullable(),
 });
 
 export type UpdateEventFormFieldPatch = z.infer<

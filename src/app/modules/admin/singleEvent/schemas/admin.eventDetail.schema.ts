@@ -3,7 +3,7 @@ import { z } from "zod";
 import { eventSchema } from "@shared/models/db/db.event.schema";
 
 import { eventProductsSchema } from "@shared/models/db/db.eventProducts.schema";
-import { eventFormFieldSchema } from "@shared/models/db/db.eventFormFields.schema";
+import { eventFormFieldGroupSchema, eventFormFieldSchema } from "@shared/models/db/db.eventFormFields.schema";
 import { orderItemsSchema } from "@shared/models/db/db.orderItems.schema";
 import { paymentsUISchema } from "@shared/models/db/db.payment.schema";
 import { attendeesSchema } from "@shared/models/db/db.attendee.schema";
@@ -43,6 +43,8 @@ export const adminEventDetailOrgBrandingSchema = z.object({
 });
 
 export const eventFormFieldsSchema = z.array(eventFormFieldSchema);
+export const eventFormFieldGroupsSchema = z.array(eventFormFieldGroupSchema);
+
 
 export const attendeesPageSchema = z.object({
   limit: z.number().int().min(1).max(1000),
@@ -71,6 +73,7 @@ export const eventDetailAdminCoreSchema = z.object({
   orgBranding: adminEventDetailOrgBrandingSchema,
   products: eventProductsSchema,
   formFields: eventFormFieldsSchema,
+  formFieldsGroups: eventFormFieldGroupsSchema,
 });
 
 export const eventDetailAdminParticipantsSchema = z.object({
