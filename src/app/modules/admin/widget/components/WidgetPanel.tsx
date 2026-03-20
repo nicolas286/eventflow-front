@@ -40,33 +40,13 @@ export default function WidgetPanel({
   const iframeCode = useMemo(() => {
   if (!widgetUrl) return "";
 
-  return `<div
-  style="
-    width:100%;
-    overflow:hidden;
-    background:${bg};
-    line-height:0;
-    font-size:0;
-    box-shadow:0 1px 0 ${bg};
-  "
->
-  <iframe
-    id="eventflowWidgetFrame"
-    src="${widgetUrl}"
-    title="Billetterie Eventflow"
-    loading="lazy"
-    style="
-      display:block;
-      width:100%;
-      height:400px;
-      border:0;
-      background:${bg};
-      vertical-align:top;
-      margin:0 0 -1px 0;
-      padding:0;
-    "
-  ></iframe>
-</div>
+  return `<iframe
+  id="eventflowWidgetFrame"
+  src="${widgetUrl}"
+  title="Billetterie Eventflow"
+  loading="lazy"
+  style="display:block;width:100%;height:700px;border:0;background:transparent;"
+></iframe>
 <script>
   window.addEventListener("message", function (event) {
     if (event.origin !== "https://app.useeventflow.eu") return;
