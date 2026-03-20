@@ -37,16 +37,18 @@ export default function WidgetPanel({
     return `https://app.useeventflow.eu/widget/o/${slug}?bg=${enc(bg)}&card=${enc(card)}&text=${enc(text)}&button=${enc(button)}`;
   }, [slug, bg, card, text, button]);
 
-  const iframeCode = useMemo(() => {
+const iframeCode = useMemo(() => {
   if (!widgetUrl) return "";
 
-  return `<iframe
-  id="eventflowWidgetFrame"
-  src="${widgetUrl}"
-  title="Billetterie Eventflow"
-  loading="lazy"
-  style="display:block;width:100%;height:700px;border:0;background:transparent;"
-></iframe>
+  return `<div style="border-radius:24px;overflow:hidden;background:#fff;">
+  <iframe
+    id="eventflowWidgetFrame"
+    src="${widgetUrl}"
+    title="Billetterie Eventflow"
+    loading="lazy"
+    style="display:block;width:100%;height:700px;border:0;background:transparent;"
+  ></iframe>
+</div>
 <script>
   window.addEventListener("message", function (event) {
     if (event.origin !== "https://app.useeventflow.eu") return;
@@ -61,7 +63,7 @@ export default function WidgetPanel({
     iframe.style.height = nextHeight + "px";
   });
 </script>`;
-}, [widgetUrl, bg]);
+}, [widgetUrl]);
 
   async function copy(label: string, value: string) {
     try {
