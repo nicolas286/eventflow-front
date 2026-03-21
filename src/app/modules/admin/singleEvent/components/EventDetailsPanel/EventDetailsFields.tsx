@@ -17,6 +17,7 @@ export type EventDetailsDraft = {
   endsAtLocal: string;
   bannerUrlRaw: string;
   depositEurosRaw: string;
+  maxAttendeesRaw: string;
 };
 
 type Props = {
@@ -34,8 +35,6 @@ type Props = {
   clearBanner: () => void;
 };
 
-
-
 export function EventDetailsFields(props: Props) {
   const {
     draft,
@@ -49,7 +48,6 @@ export function EventDetailsFields(props: Props) {
     onBannerPicked,
     clearBanner,
   } = props;
-
 
   return (
     <div className="adminEventDetails">
@@ -75,16 +73,16 @@ export function EventDetailsFields(props: Props) {
         </div>
 
         <div className="adminEventField adminEventFieldSpan2">
-        <TextareaWithToolbar
-          label="Description"
-          value={draft.description}
-          onChange={(next) => setDraft((d) => ({ ...d, description: next }))}
-          error={fieldErrors.description ?? null}
-          textAreaClassName="adminEventTextarea"
-          rows={6}
-          hint="Markdown : **gras**, _italique_, ~~barré~~."
-        />
-      </div>
+          <TextareaWithToolbar
+            label="Description"
+            value={draft.description}
+            onChange={(next) => setDraft((d) => ({ ...d, description: next }))}
+            error={fieldErrors.description ?? null}
+            textAreaClassName="adminEventTextarea"
+            rows={6}
+            hint="Markdown : **gras**, _italique_, ~~barré~~."
+          />
+        </div>
 
         <div className="adminEventField adminEventLeftCol">
           <div className="adminEventLabel">Début</div>
@@ -112,7 +110,11 @@ export function EventDetailsFields(props: Props) {
               {hasCustomBannerNow || bannerFile ? "Remplacer" : "Choisir un fichier"}
             </Button>
 
-            {hasCustomBannerNow || bannerFile ? <Button variant="secondary" onClick={clearBanner}>Retirer</Button> : null}
+            {hasCustomBannerNow || bannerFile ? (
+              <Button variant="secondary" onClick={clearBanner}>
+                Retirer
+              </Button>
+            ) : null}
           </div>
 
           {bannerFile ? (
@@ -167,6 +169,29 @@ export function EventDetailsFields(props: Props) {
           />
           {fieldErrors.depositCents ? <MessageBox variant="error">{fieldErrors.depositCents}</MessageBox> : null}
           <div className="adminEventHint">0 = pas d’acompte.</div>
+        </div>
+
+        <div className="adminEventField adminEventLeftCol">
+          <div className="adminEventLabel">Participants max</div>
+          <input
+            type="number"
+            min={0}
+            step={1}
+            inputMode="numeric"
+            className="adminEventInput"
+            placeholder="0"
+            value={draft.maxAttendeesRaw}
+            onChange={(e) =>
+              setDraft((d) => ({
+                ...d,
+                maxAttendeesRaw: e.target.value,
+              }))
+            }
+          />
+          {fieldErrors.maxAttendees ? (
+            <MessageBox variant="error">{fieldErrors.maxAttendees}</MessageBox>
+          ) : null}
+          <div className="adminEventHint">0 = participants non limités.</div>
         </div>
       </div>
     </div>

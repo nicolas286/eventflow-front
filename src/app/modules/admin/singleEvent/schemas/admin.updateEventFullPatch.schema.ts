@@ -19,6 +19,13 @@ export const updateEventFullPatchSchema = z
     startsAt: dateNullable,
     endsAt: dateNullable,
 
+    maxAttendees: z
+    .number()
+    .int("Le nombre de participants maximal doit être un entier")
+    .min(0, "Le nombre de participants maximal ne peut être négatif")
+    .nullable()
+    .optional(),
+
     isPublished: z.boolean().optional(),
     depositCents: z.number().int().min(0, "L’acompte doit être ≥ 0").max(10_000_000).optional(),
   })
