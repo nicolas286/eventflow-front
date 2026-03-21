@@ -46,6 +46,7 @@ type Draft = {
   endsAtLocal: string;
   bannerUrlRaw: string;
   depositEurosRaw: string;
+  maxAttendeesRaw: string;
 };
 
 /* ------------------------------------------------------------------ */
@@ -70,7 +71,27 @@ function eventToDraft(event: AdminEventDetailEvent): Draft {
     endsAtLocal: isoToLocalInput(event.endsAt ?? null),
     bannerUrlRaw: (event.bannerUrlRaw ?? "").trim(),
     depositEurosRaw: centsToEuroInput(event.depositCents ?? 0),
+    maxAttendeesRaw:
+      event.maxAttendees != null && Number.isFinite(event.maxAttendees)
+        ? String(event.maxAttendees)
+        : "",
   };
+}
+
+function attendeesInputToValue(raw: string): number | null | undefined {
+  const trimmed = raw.trim();
+
+  if (!trimmed) return null;
+
+  const n = Number(trimmed);
+
+  if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0) {
+    return undefined;
+  }
+
+  if (n === 0) return null;
+
+  return n;
 }
 
 /* ------------------------------------------------------------------ */
@@ -151,7 +172,8 @@ export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanne
       draft.startsAtLocal === base.startsAtLocal &&
       draft.endsAtLocal === base.endsAtLocal &&
       draft.bannerUrlRaw.trim() === base.bannerUrlRaw.trim() &&
-      draft.depositEurosRaw.trim() === base.depositEurosRaw.trim();
+      draft.depositEurosRaw.trim() === base.depositEurosRaw.trim() &&
+      draft.maxAttendeesRaw.trim() === base.maxAttendeesRaw.trim();
 
     return !same;
   }, [draft, event, bannerFile]);
@@ -177,54 +199,65 @@ export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanne
 
   /* Build patch from draft + publish state (DIFF patch, what you actually send) */
   function buildPatch(nextIsPublished: boolean): UpdateEventFullPatch {
-    const patch: UpdateEventFullPatch = {};
+  const patch: UpdateEventFullPatch = {};
 
-    const nextTitle = draft.title.trim();
-    if (nextTitle && nextTitle !== (event.title ?? "")) patch.title = nextTitle;
+  const nextTitle = draft.title.trim();
+  if (nextTitle && nextTitle !== (event.title ?? "")) patch.title = nextTitle;
 
-    const nextLoc = draft.location.trim() || null;
-    if ((nextLoc ?? null) !== (event.location ?? null)) patch.location = nextLoc;
+  const nextLoc = draft.location.trim() || null;
+  if ((nextLoc ?? null) !== (event.location ?? null)) patch.location = nextLoc;
 
-    const nextDesc = draft.description.trim() || null;
-    if ((nextDesc ?? null) !== (event.description ?? null)) patch.description = nextDesc;
+  const nextDesc = draft.description.trim() || null;
+  if ((nextDesc ?? null) !== (event.description ?? null)) patch.description = nextDesc;
 
-    const nextBannerRaw = draft.bannerUrlRaw.trim() || null;
-    const curBannerRaw = (event.bannerUrlRaw ?? "").trim() || null;
-    if (nextBannerRaw !== curBannerRaw) patch.bannerUrl = nextBannerRaw;
+  const nextBannerRaw = draft.bannerUrlRaw.trim() || null;
+  const curBannerRaw = (event.bannerUrlRaw ?? "").trim() || null;
+  if (nextBannerRaw !== curBannerRaw) patch.bannerUrl = nextBannerRaw;
 
-    if ((startsIso ?? null) !== (event.startsAt ?? null)) patch.startsAt = startsIso ?? null;
-    if ((endsIso ?? null) !== (event.endsAt ?? null)) patch.endsAt = endsIso ?? null;
+  if ((startsIso ?? null) !== (event.startsAt ?? null)) patch.startsAt = startsIso ?? null;
+  if ((endsIso ?? null) !== (event.endsAt ?? null)) patch.endsAt = endsIso ?? null;
 
-    if (nextIsPublished !== Boolean(event.isPublished)) patch.isPublished = nextIsPublished;
+  if (nextIsPublished !== Boolean(event.isPublished)) patch.isPublished = nextIsPublished;
 
-    const cents = euroInputToCents(draft.depositEurosRaw);
-    if (cents != null) {
-      const curDeposit = Number(event.depositCents ?? 0);
-      if (cents !== curDeposit) patch.depositCents = cents;
-    }
-
-    return patch;
+  const cents = euroInputToCents(draft.depositEurosRaw);
+  if (cents != null) {
+    const curDeposit = Number(event.depositCents ?? 0);
+    if (cents !== curDeposit) patch.depositCents = cents;
   }
+
+  const nextMaxAttendees = attendeesInputToValue(draft.maxAttendeesRaw);
+  const curMaxAttendees = event.maxAttendees ?? null;
+
+  if (nextMaxAttendees !== undefined && nextMaxAttendees !== curMaxAttendees) {
+    patch.maxAttendees = nextMaxAttendees;
+  }
+
+  return patch;
+}
 
   /* Build "candidate patch" for LIVE validation (full values, not diff) */
   function buildPatchCandidateFromDraft(nextIsPublished: boolean): UpdateEventFullPatch {
-    const s = localInputToIso(draft.startsAtLocal) || null;
-    const e = localInputToIso(draft.endsAtLocal) || null;
+  const s = localInputToIso(draft.startsAtLocal) || null;
+  const e = localInputToIso(draft.endsAtLocal) || null;
 
-    const cents = euroInputToCents(draft.depositEurosRaw);
+  const cents = euroInputToCents(draft.depositEurosRaw);
+  const maxAttendees = attendeesInputToValue(draft.maxAttendeesRaw);
 
-    return {
-      title: draft.title.trim(),
-      location: draft.location.trim() || null,
-      description: draft.description.trim() || null,
-      bannerUrl: draft.bannerUrlRaw.trim() || null,
-      startsAt: s,
-      endsAt: e,
-      isPublished: nextIsPublished,
-      // If invalid, make zod fail (NaN is not a valid number)
-      depositCents: cents ?? (Number.NaN as unknown as number),
-    };
-  }
+  return {
+    title: draft.title.trim(),
+    location: draft.location.trim() || null,
+    description: draft.description.trim() || null,
+    bannerUrl: draft.bannerUrlRaw.trim() || null,
+    startsAt: s,
+    endsAt: e,
+    isPublished: nextIsPublished,
+    depositCents: cents ?? (Number.NaN as unknown as number),
+    maxAttendees:
+      maxAttendees === undefined
+        ? (Number.NaN as unknown as number)
+        : maxAttendees,
+  };
+}
 
   /* LIVE Zod validation (debounced) */
   useEffect(() => {

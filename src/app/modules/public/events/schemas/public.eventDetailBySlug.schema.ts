@@ -23,6 +23,7 @@ export const publicEventSchema = eventSchema.pick({
   startsAt: true,
   endsAt: true,
   depositCents: true,
+  maxAttendees: true,
 });
 
 export const publicEventProductSchema = eventProductSchema.pick({
