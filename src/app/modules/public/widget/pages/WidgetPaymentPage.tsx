@@ -376,7 +376,7 @@ export function WidgetPaymentPage() {
                   value={buyerEmail}
                   onChange={(e) => setBuyerEmail(e.target.value)}
                   placeholder="ex: moi@email.com"
-                  className="widgetInput"
+                  className="widgetFieldControl"
                   disabled={registering || pendingPay}
                 />
               </div>
