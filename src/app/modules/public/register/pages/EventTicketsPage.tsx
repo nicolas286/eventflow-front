@@ -5,6 +5,7 @@ import { usePublicEventDetail } from "../../events/hooks/usePublicEventDetail";
 
 import Container from "@ui/components/container/Container";
 import Card, { CardBody, CardHeader } from "@ui/components/card/Card";
+import { PublicStickyCheckoutBar } from "../components/PublicStickyCheckoutBar/PublicStickyCheckoutBar";
 import Button from "@ui/components/button/Button";
 import Badge from "@ui/components/badge/Badge";
 import { Seo } from "@shared/ui/components/seo/Seo";
@@ -254,42 +255,18 @@ export function EventTicketsPage() {
                 </div>
               </div>
             )}
-
-            <div className="publicDivider" />
-
-            <div className="publicRecapRow">
-              <div>
-                <div className="publicRecapTitle">Récap</div>
-                <div className="publicSubtitle publicRecapSubtitle">
-                  {totalTickets} billet(s) · {attendeesToCreate} participant(s) à renseigner ·{" "}
-                  {formatMoney(totalCents, currency)}
-                </div>
-                <div className="publicRecapReassurance">
-                  Paiement sécurisé • Réservation instantanée
-                </div>
-              </div>
-            </div>
           </div>
         </Container>
 
 
-        <div className="publicStickyCheckoutBar">
-          <div className="publicStickyCheckoutMeta">
-            <div className="publicStickyCheckoutPrice">
-              {formatMoney(totalCents, currency)}
-            </div>
-            <div className="publicStickyCheckoutText">
-              {totalTickets} billet(s)
-            </div>
-          </div>
-
-          <Button
-            label="Continuer →"
-            onClick={goNext}
-            disabled={totalTickets <= 0}
-            className="publicStickyCheckoutButton"
-          />
-        </div>
+        <PublicStickyCheckoutBar
+          amountCents={totalCents}
+          currency={currency}
+          primaryText={`${totalTickets} billet(s)`}
+          onClick={goNext}
+          disabled={totalTickets <= 0}
+          ctaLabel="Continuer →"
+        />
       </div>
     </>
   );

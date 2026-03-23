@@ -11,6 +11,13 @@ import CountrySelect from "@shared/ui/components/inputs/CountrySelect";
 import PhoneInput from "@shared/ui/components/inputs/PhoneInput";
 import { PublicEventHeader } from "../components/PublicEventHeader";
 import { loadDraft, saveDraft } from "../helpers/checkoutStore";
+import { PublicStickyCheckoutBar } from "../components/PublicStickyCheckoutBar/PublicStickyCheckoutBar";
+import {
+  computeTotalCents,
+  quantitiesToItems,
+  resolveCurrency,
+  sumItemQuantities,
+} from "@helpers/logic";
 
 import type { PublicFormField as Field } from "../../events/schemas/public.eventDetailBySlug.schema";
 
@@ -113,13 +120,25 @@ export function EventAttendeesPage() {
     return draft?.quantities ?? {};
   }, [draft?.quantities]);
 
-  const totalSelected = useMemo(() => {
-    return Object.values(quantities).reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
-  }, [quantities]);
-
   const sortedProducts = useMemo(() => {
     return sortProducts((data?.products ?? []) as EventProduct[]);
   }, [data?.products]);
+
+    const items = useMemo(() => {
+    return quantitiesToItems(quantities);
+  }, [quantities]);
+
+  const totalTickets = useMemo(() => {
+    return sumItemQuantities(items);
+  }, [items]);
+
+  const totalCents = useMemo(() => {
+    return computeTotalCents(items, sortedProducts);
+  }, [items, sortedProducts]);
+
+  const currency = useMemo(() => {
+    return resolveCurrency(sortedProducts);
+  }, [sortedProducts]);
 
   const sortedFields = useMemo(() => {
     return sortFields(data?.formFields ?? []);
@@ -470,7 +489,7 @@ export function EventAttendeesPage() {
 
           <div className="publicSectionTitle">2/3 — Participants</div>
 
-          {totalSelected <= 0 ? (
+          {totalTickets <= 0 ? (
             <div className="publicEmpty">Aucun billet sélectionné. Reviens à l’étape “Billets”.</div>
           ) : attendeesCount === 0 ? (
             <div className="publicEmpty">Aucun formulaire participant n’est requis pour ces billets.</div>
@@ -521,12 +540,21 @@ export function EventAttendeesPage() {
 
           <div className="publicDivider" />
 
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-            <Button variant="primary" label="Retour aux billets" onClick={goBack} />
-            <Button label="Continuer" onClick={goNext} disabled={totalSelected <= 0 || !allValid} />
+          <div style={{ display: "flex", justifyContent: "flex-start", gap: 12 }}>
+            <Button variant="secondary" label="Retour aux billets" onClick={goBack} />
           </div>
         </div>
       </Container>
+
+      <PublicStickyCheckoutBar
+        amountCents={totalCents}
+        currency={currency}
+        primaryText={`${totalTickets} billet(s)`}
+        secondaryText={`${attendeesCount} participant(s)`}
+        onClick={goNext}
+        disabled={totalTickets <= 0}
+        ctaLabel="Continuer →"
+      />
     </div>
   );
 }
