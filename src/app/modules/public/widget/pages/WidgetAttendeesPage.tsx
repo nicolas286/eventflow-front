@@ -280,15 +280,15 @@ export function WidgetAttendeesPage() {
   const errMsg = fieldKey ? rowErrs[fieldKey] : undefined;
   const showErr = !!errMsg && (attemptedNext || !!rowTouched[fieldKey]);
 
-    const commonStyle: React.CSSProperties = {
+  const commonStyle: React.CSSProperties = {
     width: "100%",
     padding: "10px 12px",
     borderRadius: 12,
-    border: "1px solid rgba(255,255,255,0.22)",
+    border: "1px solid var(--widget-input-border)",
     outline: "none",
-    background: "rgba(255,255,255,0.10)",
+    background: "var(--widget-input-bg)",
     color: "var(--widget-text)",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+    boxSizing: "border-box",
   };
 
   const label = (
@@ -304,6 +304,7 @@ export function WidgetAttendeesPage() {
       <div key={f.id} className="widgetFieldBlock">
         {label}
         <input
+          className="widgetFieldControl"
           type="date"
           value={typeof value === "string" ? value : ""}
           onChange={(e) => setAnswer(idx, fieldKey, e.target.value)}
@@ -352,6 +353,7 @@ export function WidgetAttendeesPage() {
       <div key={f.id} className="widgetFieldBlock widgetFieldBlockFull">
         {label}
         <textarea
+          className="widgetFieldControl"
           value={typeof value === "string" ? value : ""}
           onChange={(e) => setAnswer(idx, fieldKey, e.target.value)}
           onBlur={() => setAttTouched((prev) => markTouched(prev, idx, fieldKey))}
@@ -368,6 +370,7 @@ export function WidgetAttendeesPage() {
       <div key={f.id} className="widgetFieldBlock">
         {label}
         <select
+          className="widgetFieldControl"
           value={typeof value === "string" ? value : ""}
           onChange={(e) => setAnswer(idx, fieldKey, e.target.value, { touch: true })}
           onBlur={() => setAttTouched((prev) => markTouched(prev, idx, fieldKey))}
@@ -390,6 +393,7 @@ export function WidgetAttendeesPage() {
       <div key={f.id} className="widgetFieldBlock widgetFieldBlockFull">
         <label className="widgetCheckboxRow">
           <input
+            className="widgetFieldControl"
             type="checkbox"
             checked={value === true}
             onChange={(e) => setAnswer(idx, fieldKey, e.target.checked, { touch: true })}
@@ -414,6 +418,7 @@ export function WidgetAttendeesPage() {
     <div key={f.id} className="widgetFieldBlock">
       {label}
       <input
+       className="widgetFieldControl"
         type={inputType}
         value={
           inputType === "number"

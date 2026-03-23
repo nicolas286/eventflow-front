@@ -18,6 +18,10 @@ export function WidgetRoot({ theme, children }: Props) {
           "--widget-card": theme.card,
           "--widget-text": theme.text,
           "--widget-button": theme.button,
+          "--widget-input-bg": theme.inputBg,
+          "--widget-input-border": theme.inputBorder,
+          "--widget-input-placeholder": theme.inputPlaceholder,
+          "--widget-input-focus-ring": theme.inputFocusRing,
         } as CSSProperties
       }
     >
