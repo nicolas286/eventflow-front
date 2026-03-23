@@ -10,6 +10,7 @@ import Button from "@ui/components/button/Button";
 import { Turnstile, type TurnstileRef } from "@ui/components/Turnstile";
 
 import { PublicEventHeader } from "../components/PublicEventHeader";
+import { PublicStickyCheckoutBar } from "../components/PublicStickyCheckoutBar/PublicStickyCheckoutBar";
 import {
   clearDraft,
   formatMoney,
@@ -135,6 +136,15 @@ export function EventPaymentPage() {
   }, 0);
 
   const attendeesMismatch = attendeesCount !== (draft.attendees?.length ?? 0);
+
+  const stickyCtaLabel =
+  totalCents === 0
+    ? registering || pendingPay
+      ? "Validation…"
+      : "Confirmer la réservation"
+    : registering || pendingPay
+      ? "Redirection vers le paiement…"
+      : `Payer ${formatMoney(dueNowCentsUi, currency)}`;
 
   function setAccepted(next: boolean) {
     if (!orgSlug || !eventSlug) return;
@@ -439,24 +449,29 @@ export function EventPaymentPage() {
 
           <div className="publicDivider" />
 
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-            <Button variant="primary" label="Retour" onClick={goBack} disabled={registering || pendingPay} />
+          <div style={{ display: "flex", justifyContent: "flex-start", gap: 12 }}>
             <Button
-                  label={
-                    totalCents === 0
-                      ? registering || pendingPay
-                        ? "Validation…"
-                        : "Confirmer"
-                      : registering || pendingPay
-                      ? "Paiement…"
-                      : `Payer ${formatMoney(dueNowCentsUi, currency)}`
-                  }
-                  onClick={pay}
-                  disabled={!canPay}
-                />
+              variant="secondary"
+              label="Retour aux participants"
+              onClick={goBack}
+              disabled={registering || pendingPay}
+            />
           </div>
         </div>
       </Container>
+      <PublicStickyCheckoutBar
+      amountCents={dueNowCentsUi}
+      currency={currency}
+      primaryText={hasDeposit ? "À payer maintenant" : "Total"}
+      secondaryText={
+        hasDeposit
+          ? `Total commande : ${formatMoney(totalCents, currency)}`
+          : `${picked.reduce((acc, x) => acc + x.qty, 0)} billet(s)`
+      }
+      onClick={pay}
+      disabled={!canPay}
+      ctaLabel={stickyCtaLabel}
+    />
     </div>
   );
 }
