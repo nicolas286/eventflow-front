@@ -16,7 +16,6 @@ import {
   computeRemaining,
   computeTotalCents,
   computeNextQty,
-  computeExpectedAttendeeSlots,
   quantitiesToItems,
   resolveCurrency,
   sortBySortOrder,
@@ -81,7 +80,6 @@ export function EventTicketsPage() {
   const totalTickets = sumItemQuantities(items);
   const totalCents = computeTotalCents(items, sortedProducts);
   const currency = resolveCurrency(sortedProducts);
-  const attendeesToCreate = computeExpectedAttendeeSlots(sortedProducts, quantities).length;
 
   function updateQty(productId: string, nextQty: number) {
     if (!draft) return;
