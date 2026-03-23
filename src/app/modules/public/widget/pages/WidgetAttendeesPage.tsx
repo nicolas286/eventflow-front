@@ -280,14 +280,15 @@ export function WidgetAttendeesPage() {
   const errMsg = fieldKey ? rowErrs[fieldKey] : undefined;
   const showErr = !!errMsg && (attemptedNext || !!rowTouched[fieldKey]);
 
-  const commonStyle: React.CSSProperties = {
+    const commonStyle: React.CSSProperties = {
     width: "100%",
     padding: "10px 12px",
     borderRadius: 12,
-    border: "1px solid rgba(255,255,255,0.16)",
+    border: "1px solid rgba(255,255,255,0.22)",
     outline: "none",
-    background: "rgba(255,255,255,0.04)",
+    background: "rgba(255,255,255,0.10)",
     color: "var(--widget-text)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
   };
 
   const label = (
