@@ -20,6 +20,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
   "Access-Control-Max-Age": "86400"
 };
 async function sendConfirmationEmailForOrder(opts) {
+  // 1) claim (idempotence)
   const { data: claimRows, error: claimErr } = await opts.admin.rpc("claim_order_confirmation_email", {
     p_order_id: opts.orderId
   });
@@ -38,15 +39,17 @@ async function sendConfirmationEmailForOrder(opts) {
     };
   }
   const claim = Array.isArray(claimRows) ? claimRows[0] : claimRows;
+  // déjà envoyé / déjà claim
   if (!claim?.ok) return {
     sent: false,
     skipped: true,
     error: null
   };
+  // 2) call central template (send-confirmation-mail)
   try {
     const ctrl = new AbortController();
     const t = setTimeout(()=>ctrl.abort(), 10_000);
-    const res = await fetch(`${opts.functionsBase}/send-confirmation-mail`, {
+    const res = await fetch(`${opts.functionsBase}/send-confirmation-mail-tickets`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -85,6 +88,7 @@ async function sendConfirmationEmailForOrder(opts) {
         error: "SEND_FAILED"
       };
     }
+    // 3) mark sent
     await opts.admin.rpc("mark_order_confirmation_email_sent", {
       p_order_id: opts.orderId
     });
@@ -334,12 +338,15 @@ async function tryCancelMolliePayment(accessToken, paymentId, isTest) {
   }
 }
 function normalizeOrigin(u) {
+  // garde scheme + host (+ port)
   const url = new URL(u);
   return `${url.protocol}//${url.host}`;
 }
 function parseAllowedOrigins() {
   const raw = envTrim("APP_ALLOWED_ORIGINS") ?? "";
   return raw.split(",").map((s)=>s.trim()).filter(Boolean).map((s)=>{
+    // accepte déjà "https://x" ou "http://x:5173"
+    // et jette si ce n'est pas une URL
     try {
       return normalizeOrigin(s);
     } catch  {
@@ -349,6 +356,7 @@ function parseAllowedOrigins() {
 }
 function resolveAppBaseUrlFromRequest(req) {
   const allowed = parseAllowedOrigins();
+  // 1) Origin (le plus clean pour fetch/XHR)
   const origin = req.headers.get("origin");
   if (origin) {
     try {
@@ -356,6 +364,7 @@ function resolveAppBaseUrlFromRequest(req) {
       if (allowed.includes(o)) return o;
     } catch  {}
   }
+  // 2) Referer (si Origin absent)
   const ref = req.headers.get("referer");
   if (ref) {
     try {
@@ -433,11 +442,6 @@ Deno.serve(async (req)=>{
     }
     const checkoutSource = body.checkoutSource === "widget" ? "widget" : "public";
     const widgetReturnUrl = checkoutSource === "widget" ? getSafeWidgetReturnUrl(body.widgetReturnUrl) : null;
-    console.log("[register][debug] payload source", {
-      checkoutSource,
-      widgetReturnUrlRaw: body.widgetReturnUrl ?? null,
-      widgetReturnUrlSafe: widgetReturnUrl
-    });
     if (checkoutSource === "widget" && !widgetReturnUrl) {
       return json({
         error: "INVALID_WIDGET_RETURN_URL"
@@ -446,14 +450,21 @@ Deno.serve(async (req)=>{
     const supabaseUrl = envTrim("SUPABASE_URL");
     const serviceKey = envTrim("SUPABASE_SERVICE_ROLE_KEY");
     const functionsBase = envTrim("FUNCTIONS_URL");
-    const appBaseUrl = resolveAppBaseUrlFromRequest(req) ?? envTrim("APP_BASE_URL");
+    const appBaseUrl = resolveAppBaseUrlFromRequest(req) ?? envTrim("APP_BASE_URL"); // fallback “safe” si tu veux
     if (!supabaseUrl || !serviceKey || !functionsBase || !appBaseUrl) {
       console.error("[register] missing required env (or origin not allowed)");
       return json({
         error: "CONFIG_MISSING"
       }, 500);
     }
+    if (!supabaseUrl || !serviceKey || !functionsBase || !appBaseUrl) {
+      console.error("[register] missing required env");
+      return json({
+        error: "CONFIG_MISSING"
+      }, 500);
+    }
     const admin = createClient(supabaseUrl, serviceKey);
+    // Rate limit
     const limit = Number(envTrim("REGISTER_RATE_LIMIT_PER_10MIN") ?? "50");
     const windowSeconds = 600;
     const rateLimitKey = `register:${body.eventId}:${ip}`;
@@ -465,6 +476,7 @@ Deno.serve(async (req)=>{
     if (rlErr) return json({
       error: "Too many requests"
     }, 429);
+    // Create order intent
     const p_buyer = buildBuyer(body);
     const { data: rpcRes, error: rpcErr } = await admin.rpc("create_order_intent", {
       p_event_id: body.eventId,
@@ -493,6 +505,7 @@ Deno.serve(async (req)=>{
         details: rpcErr.details,
         hint: rpcErr.hint
       });
+      // Optionnel: renvoyer un peu plus d'infos en DEV
       const mapped = mapRpcError(rpcErr.message ?? "unknown_rpc_error");
       return json({
         error: mapped.code,
@@ -504,26 +517,42 @@ Deno.serve(async (req)=>{
       }, mapped.http);
     }
     const orderId = rpcRes?.order_id;
-    const bookingToken = rpcRes?.booking_token ?? null;
+    const bookingToken = rpcRes?.booking_token ?? null; // ✅ NEW
     const paymentRequired = Boolean(rpcRes?.payment_required);
     const totalCents = Number(rpcRes?.total_cents ?? 0);
     const currency = rpcRes?.currency || "EUR";
     const dueNowCents = typeof rpcRes?.amount_due_now_cents === "number" ? Number(rpcRes.amount_due_now_cents) : totalCents;
-    console.log("[register][debug] order intent result", {
-      orderId,
-      bookingTokenPresent: Boolean(bookingToken),
-      paymentRequired,
-      totalCents,
-      dueNowCents,
-      currency
-    });
     if (!orderId) return json({
       error: "Order creation failed"
     }, 500);
+    // ✅ booking token required for secure /order return polling
     if (!bookingToken) return json({
       error: "BOOKING_TOKEN_MISSING"
     }, 500);
     if (!paymentRequired || totalCents === 0) {
+      // 1) émettre les tickets d'abord
+      const { data: issueRows, error: issueErr } = await admin.rpc("issue_order_tickets", {
+        p_order_id: orderId
+      });
+      if (issueErr) {
+        console.error("[register] issue_order_tickets failed", {
+          orderId,
+          message: issueErr.message,
+          code: issueErr?.code,
+          details: issueErr?.details,
+          hint: issueErr?.hint
+        });
+        return json({
+          error: "TICKETS_ISSUE_FAILED",
+          debug: envTrim("DEBUG_ERRORS") === "1" ? {
+            message: issueErr.message,
+            code: issueErr?.code,
+            details: issueErr?.details,
+            issueRows
+          } : undefined
+        }, 500);
+      }
+      // 2) ensuite seulement envoyer le mail
       try {
         const edgeToken = envTrim("EDGE_SERVICE_TOKEN");
         if (!edgeToken) {
@@ -537,6 +566,7 @@ Deno.serve(async (req)=>{
           });
         }
       } catch (e) {
+        // best effort: la commande gratuite reste valide même si l'email plante
         console.error("[register] confirmation email flow crashed (ignored)", e);
       }
       return json({
@@ -549,38 +579,31 @@ Deno.serve(async (req)=>{
     if (!dueNowCents || dueNowCents <= 0) return json({
       error: "Invalid payment amount"
     }, 500);
+    // org_id from event
     const { data: ev, error: evErr } = await admin.from("events").select("org_id").eq("id", body.eventId).maybeSingle();
     if (evErr || !ev?.org_id) return json({
       error: "Event not found"
     }, 404);
     const orgId = ev.org_id;
-    console.log("[register][debug] event/org", {
-      eventId: body.eventId,
-      orgId,
-      checkoutSource
+    // connect tokens (ciphertext)
+    const { data: mcRows, error: mcErr } = await admin.rpc("get_org_mollie_connect_secrets", {
+      p_org_id: orgId
     });
     if (checkoutSource === "widget") {
       const { data: orgPlanRow, error: orgPlanErr } = await admin.from("organizations").select("plan").eq("id", orgId).maybeSingle();
       if (orgPlanErr) {
-        console.error("[register] org plan load failed", orgPlanErr);
+        console.error("[register-tickets] org plan load failed", orgPlanErr);
         return json({
           error: "ORG_PLAN_LOAD_FAILED"
         }, 500);
       }
       const orgPlan = String(orgPlanRow?.plan ?? "free").trim().toLowerCase();
-      console.log("[register][debug] widget plan check", {
-        orgId,
-        orgPlan
-      });
       if (orgPlan === "free") {
         return json({
           error: "WIDGET_NOT_AVAILABLE_FOR_FREE_PLAN"
         }, 403);
       }
     }
-    const { data: mcRows, error: mcErr } = await admin.rpc("get_org_mollie_connect_secrets", {
-      p_org_id: orgId
-    });
     const mc = Array.isArray(mcRows) ? mcRows[0] : null;
     if (mcErr) return json({
       error: "PAYMENTS_CONFIG_LOAD_FAILED"
@@ -594,6 +617,7 @@ Deno.serve(async (req)=>{
     if (!accessEnc || !refreshEnc || !kid) return json({
       error: "ORG_TOKEN_MISSING"
     }, 409);
+    // decrypt
     let accessToken;
     let refreshToken;
     try {
@@ -611,6 +635,7 @@ Deno.serve(async (req)=>{
         error: "ORG_TOKEN_DECRYPT_FAILED"
       }, 500);
     }
+    // refresh token if expired
     if (isExpired(mc.access_token_expires_at)) {
       const ref = await refreshMollieAccessToken(refreshToken);
       if (!ref.ok) return json({
@@ -618,6 +643,7 @@ Deno.serve(async (req)=>{
       }, 502);
       accessToken = ref.accessToken;
       refreshToken = ref.refreshToken;
+      // encrypt with ACTIVE key on update
       let newAccessEnc;
       let newRefreshEnc;
       let newKid;
@@ -654,10 +680,7 @@ Deno.serve(async (req)=>{
       error: "MOLLIE_PROFILE_MISSING"
     }, 409);
     const isTest = mc.mode === "test";
-    console.log("[register][debug] checking existing payment", {
-      orderId,
-      checkoutSource
-    });
+    // P0 idempotence: reuse payment open/pending
     const { data: existingPay, error: existingErr } = await admin.from("payments").select("provider_payment_id, raw, created_at").eq("order_id", orderId).eq("provider", "mollie").in("status", [
       "open",
       "pending"
@@ -666,11 +689,6 @@ Deno.serve(async (req)=>{
     }).limit(1).maybeSingle();
     if (!existingErr && existingPay?.provider_payment_id) {
       const existingCheckoutUrl = getCheckoutUrlFromRaw(existingPay.raw);
-      console.log("[register][debug] reusing existing mollie payment", {
-        orderId,
-        providerPaymentId: existingPay?.provider_payment_id ?? null,
-        existingCheckoutUrl
-      });
       if (existingCheckoutUrl) {
         return json({
           ok: true,
@@ -680,17 +698,12 @@ Deno.serve(async (req)=>{
           amountDueNowCents: dueNowCents,
           totalCents,
           reusedPayment: true,
-          bookingToken,
-          debug: envTrim("DEBUG_ERRORS") === "1" ? {
-            checkoutSource,
-            widgetReturnUrl,
-            reusedPayment: true,
-            existingCheckoutUrl
-          } : undefined
+          bookingToken
         });
       }
     }
-    const webhookUrl = `${functionsBase}/mollie-webhook`;
+    // Create Mollie payment
+    const webhookUrl = `${functionsBase}/mollie-webhook-tickets`;
     const redirectUrl = checkoutSource === "widget" && widgetReturnUrl ? appendQueryParams(widgetReturnUrl, {
       orderId,
       token: bookingToken,
@@ -698,17 +711,6 @@ Deno.serve(async (req)=>{
     }) : appendQueryParams(`${appBaseUrl}/order/${orderId}`, {
       return: "1",
       token: bookingToken
-    });
-    console.log("[register][debug] creating mollie payment", {
-      orderId,
-      checkoutSource,
-      widgetReturnUrl,
-      redirectUrl,
-      webhookUrl,
-      amount: (dueNowCents / 100).toFixed(2),
-      currency,
-      isTest,
-      profileId
     });
     const mollieRes = await fetch("https://api.mollie.com/v2/payments", {
       method: "POST",
@@ -734,27 +736,15 @@ Deno.serve(async (req)=>{
         }
       })
     });
-    if (!mollieRes.ok) {
-      const mollieErrTxt = await mollieRes.text().catch(()=>"");
-      console.error("[register][debug] mollie create failed", {
-        status: mollieRes.status,
-        body: mollieErrTxt
-      });
-      return json({
-        error: "MOLLIE_PAYMENT_CREATE_FAILED"
-      }, 502);
-    }
+    if (!mollieRes.ok) return json({
+      error: "MOLLIE_PAYMENT_CREATE_FAILED"
+    }, 502);
     const molliePayment = await mollieRes.json();
     const checkoutUrl = molliePayment?._links?.checkout?.href;
     const providerPaymentId = molliePayment?.id;
     if (!providerPaymentId) return json({
       error: "MISSING_PROVIDER_PAYMENT_ID"
     }, 502);
-    console.log("[register][debug] mollie payment created", {
-      orderId,
-      providerPaymentId,
-      checkoutUrl
-    });
     const nowIso = new Date().toISOString();
     const { error: payInsErr } = await admin.from("payments").insert({
       order_id: orderId,
@@ -788,13 +778,7 @@ Deno.serve(async (req)=>{
       amountDueNowCents: dueNowCents,
       totalCents,
       reusedPayment: false,
-      bookingToken,
-      debug: envTrim("DEBUG_ERRORS") === "1" ? {
-        checkoutSource,
-        widgetReturnUrl,
-        redirectUrl,
-        reusedPayment: false
-      } : undefined
+      bookingToken
     });
   } catch (e) {
     console.error("[register] unexpected", e);
