@@ -1,23 +1,58 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const anonKey = process.env.VITE_SUPABASE_ANON_KEY;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !anonKey || !serviceRoleKey) {
+  throw new Error("Missing Supabase environment variables");
+}
+
+const publicClient = createClient(supabaseUrl, anonKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+});
+
+const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+});
 
 async function main() {
-  const { data, error } = await supabase.auth.admin.createUser({
-    email: "test@test.com",
-    password: "password123",
-    email_confirm: true,
+  const email = "test@test.com";
+  const password = "password123";
+
+  const { data: signUpData, error: signUpError } = await publicClient.auth.signUp({
+    email,
+    password,
   });
 
-  if (error) {
-    console.error("Error:", error);
+  if (signUpError || !signUpData.user) {
+    console.error("Error creating user with signUp:", signUpError);
     return;
   }
 
-  console.log("User created:", data.user);
+  const user = signUpData.user;
+
+  const { error: profileError } = await adminClient.from("user_profile").upsert({
+    user_id: user.id,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+
+  if (profileError) {
+    console.error("User created but profile creation failed:", profileError);
+    return;
+  }
+
+  console.log("User created:", user);
+  console.log("Profile created for user:", user.id);
 }
 
-main();
+main().catch((err) => {
+  console.error("Unexpected error:", err);
+});

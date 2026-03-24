@@ -1,0 +1,138 @@
+import { badGateway, internal } from "./errors.ts";
+
+function getCheckoutUrlFromRaw(raw: any): string | null {
+  const href = raw?._links?.checkout?.href;
+  return typeof href === "string" && href.trim() ? href.trim() : null;
+}
+
+async function tryCancelMolliePayment(accessToken: string, paymentId: string, isTest: boolean) {
+  try {
+    const url = `https://api.mollie.com/v2/payments/${paymentId}${isTest ? "?testmode=true" : ""}`;
+    await fetch(url, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  } catch {
+    // no-op
+  }
+}
+
+export async function findReusablePayment(admin: any, orderId: string) {
+  const { data, error } = await admin.from("payments")
+    .select("provider_payment_id, raw, created_at")
+    .eq("order_id", orderId)
+    .eq("provider", "mollie")
+    .in("status", ["open", "pending"])
+    .eq("is_refund", false)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data?.provider_payment_id) return null;
+
+  const checkoutUrl = getCheckoutUrlFromRaw(data.raw);
+  if (!checkoutUrl) return null;
+
+  return {
+    providerPaymentId: data.provider_payment_id,
+    checkoutUrl,
+  };
+}
+
+export async function createMolliePayment(opts: {
+  accessToken: string;
+  profileId: string;
+  isTest: boolean;
+  orderId: string;
+  orgId: string;
+  bookingToken: string;
+  dueNowCents: number;
+  totalCents: number;
+  currency: string;
+  redirectUrl: string;
+  webhookUrl: string;
+}) {
+  const res = await fetch("https://api.mollie.com/v2/payments", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${opts.accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      amount: {
+        currency: opts.currency,
+        value: (opts.dueNowCents / 100).toFixed(2),
+      },
+      description: `Order ${opts.orderId}`,
+      redirectUrl: opts.redirectUrl,
+      webhookUrl: opts.webhookUrl,
+      profileId: opts.profileId,
+      testmode: opts.isTest,
+      metadata: {
+        order_id: opts.orderId,
+        org_id: opts.orgId,
+        booking_token: opts.bookingToken,
+        kind: opts.dueNowCents < opts.totalCents ? "deposit" : "full",
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw badGateway("MOLLIE_PAYMENT_CREATE_FAILED", body);
+  }
+
+  const raw = await res.json();
+  const providerPaymentId = raw?.id;
+  const checkoutUrl = raw?._links?.checkout?.href;
+
+  if (!providerPaymentId) {
+    throw badGateway("MISSING_PROVIDER_PAYMENT_ID");
+  }
+
+  if (!checkoutUrl) {
+    throw badGateway("MISSING_CHECKOUT_URL");
+  }
+
+  return {
+    raw,
+    providerPaymentId,
+    checkoutUrl,
+  };
+}
+
+export async function insertPaymentOrRollback(opts: {
+  admin: any;
+  accessToken: string;
+  isTest: boolean;
+  orderId: string;
+  dueNowCents: number;
+  currency: string;
+  molliePayment: any;
+  providerPaymentId: string;
+}) {
+  const nowIso = new Date().toISOString();
+
+  const { error } = await opts.admin.from("payments").insert({
+    order_id: opts.orderId,
+    provider: "mollie",
+    provider_payment_id: opts.providerPaymentId,
+    amount_cents: opts.dueNowCents,
+    currency: opts.currency,
+    status: "open",
+    is_refund: false,
+    created_at: nowIso,
+    updated_at: nowIso,
+    processed_at: null,
+    raw: opts.molliePayment,
+    type: "payment",
+    parent_payment_id: null,
+  });
+
+  if (error) {
+    await tryCancelMolliePayment(opts.accessToken, opts.providerPaymentId, opts.isTest);
+    throw internal("PAYMENT_DB_INSERT_FAILED");
+  }
+}
