@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 async function sendConfirmationMailViaEdge(opts) {
   const ctrl = new AbortController();
   const t = setTimeout(()=>ctrl.abort(), 10_000);
-  const res = await fetch(`${opts.functionsBase}/send-confirmation-mail`, {
+  const res = await fetch(`${opts.functionsBase}/send-confirmation-mail-tickets`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -363,9 +363,43 @@ Deno.serve(async (req)=>{
       p_raw: payment,
       p_note: null
     });
-    if (rpcErr) console.error("[webhook] apply_order_payment failed", rpcErr);
-    // 8) confirmation email (best effort, idempotent)
-    if (!rpcErr && functionsBase && edgeToken) {
+    if (rpcErr) {
+      console.error("[webhook-tickets] apply_order_payment failed", {
+        orderId,
+        paymentId,
+        message: rpcErr.message,
+        code: rpcErr?.code,
+        details: rpcErr?.details,
+        hint: rpcErr?.hint
+      });
+      return json({
+        ok: true
+      }, 200);
+    }
+    // 8) issue tickets
+    const { data: issueRows, error: issueErr } = await admin.rpc("issue_order_tickets", {
+      p_order_id: orderId
+    });
+    if (issueErr) {
+      console.error("[webhook-tickets] issue_order_tickets failed", {
+        orderId,
+        paymentId,
+        message: issueErr.message,
+        code: issueErr?.code,
+        details: issueErr?.details,
+        hint: issueErr?.hint
+      });
+      return json({
+        ok: true
+      }, 200);
+    }
+    console.log("[webhook-tickets] tickets issued", {
+      orderId,
+      paymentId,
+      insertedCount: Array.isArray(issueRows) ? issueRows[0]?.inserted_count ?? null : null
+    });
+    // 9) confirmation email (best effort, idempotent)
+    if (functionsBase && edgeToken) {
       try {
         await trySendOrderConfirmationEmail({
           admin,
@@ -374,7 +408,7 @@ Deno.serve(async (req)=>{
           edgeServiceToken: edgeToken
         });
       } catch (e) {
-        console.error("[webhook] trySendOrderConfirmationEmail crashed (ignored)", e);
+        console.error("[webhook-tickets] trySendOrderConfirmationEmail crashed (ignored)", e);
       }
     }
     return json({

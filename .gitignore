@@ -23,7 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 .env
-
+.env.prod
 # Local Netlify folder
 .netlify
 npx supabase projects list
