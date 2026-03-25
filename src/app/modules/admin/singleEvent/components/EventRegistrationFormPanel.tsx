@@ -615,12 +615,14 @@ async function moveGroup(group: EventFormFieldGroup, dir: -1 | 1) {
 
   const ungrouped = filtered.filter((f) => !f.groupId);
 
-  const grouped = groupsSorted
-    .map((group) => ({
-      group,
-      fields: filtered.filter((f) => f.groupId === group.id),
-    }))
-    .filter((section) => section.fields.length > 0);
+  let grouped = groupsSorted.map((group) => ({
+    group,
+    fields: filtered.filter((f) => f.groupId === group.id),
+  }));
+
+  if (isFiltering) {
+    grouped = grouped.filter((section) => section.fields.length > 0);
+  }
 
   if (ungrouped.length > 0) {
     return [
@@ -633,7 +635,7 @@ async function moveGroup(group: EventFormFieldGroup, dir: -1 | 1) {
   }
 
   return grouped;
-}, [filtered, fieldsGroups]);
+}, [filtered, fieldsGroups, isFiltering]);
 
   const reorderDisabledTitle = isFiltering ? "Le réordonnancement est désactivé pendant une recherche." : undefined;
 
