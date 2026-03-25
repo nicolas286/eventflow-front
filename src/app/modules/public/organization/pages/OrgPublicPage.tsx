@@ -11,7 +11,7 @@ import Badge from "@ui/components/badge/Badge";
 import { Seo } from "@shared/ui/components/seo/Seo";
 import { PublicOrgHero } from "../components/hero/PublicOrgHero";
 
-import { formatDateTimeHuman, toDayEndISO, toDayStartISO } from "@helpers/dateTime";
+import { formatDateTimeHuman, toDayEndISO, toDayStartISO, getDaysUntil } from "@helpers/dateTime";
 
 import type { PublicEventOverview } from "../schemas/public.orgEventsOverview.schema";
 
@@ -48,6 +48,29 @@ function getEventState(e: PublicEventOverview, nowTs: number) {
 
   // pas de endsAt => “en cours” dès que commencé
   return "ongoing" as const;
+}
+
+function getRegistrationMicrocopy(e: PublicEventOverview, nowTs: number) {
+  const deadlineTs = parseTs(e.registrationDeadline);
+
+  if (!deadlineTs) return null;
+
+  const formatted = formatDateTimeHuman(e.registrationDeadline!);
+  const daysLeft = getDaysUntil(deadlineTs, nowTs);
+
+  if (!e.isRegistrationOpen) {
+    return `Inscriptions clôturées le ${formatted}`;
+  }
+
+  if (daysLeft <= 1) {
+    return `Clôture des inscriptions aujourd’hui`;
+  }
+
+  if (daysLeft <= 3) {
+    return `Plus que ${daysLeft} jours pour réserver`;
+  }
+
+  return `Clôture des inscriptions le ${formatted}`;
 }
 
 export function OrgPublicPage() {
@@ -282,82 +305,108 @@ export function OrgPublicPage() {
         ) : (
           <div className="publicOrgEventsGrid">
             {filteredSortedEvents.map((e: PublicEventOverview) => {
-              const banner = e.bannerUrl;
+                const banner = e.bannerUrl;
 
-              const startText = e.startsAt ? formatDateTimeHuman(e.startsAt) : null;
-              const endText = e.endsAt ? formatDateTimeHuman(e.endsAt) : null;
+                const startText = e.startsAt ? formatDateTimeHuman(e.startsAt) : null;
+                const endText = e.endsAt ? formatDateTimeHuman(e.endsAt) : null;
 
-              const state = getEventState(e, nowTs);
+                const state = getEventState(e, nowTs);
+                const isClosed = !e.isRegistrationOpen;
 
-              const badge = e.isSoldOut ? (
-                <Badge tone="danger" label="Complet" />
-              ) : state === "upcoming" ? (
-                <Badge tone="info" label="À venir" />
-              ) : state === "ongoing" ? (
-                <Badge tone="success" label="En cours" />
-              ) : null;
+                const registrationMicrocopy = getRegistrationMicrocopy(e, nowTs);
 
-              return (
-                <Card key={e.id} className="publicOrgEventCard">
-                  {banner ? (
-                    <div
-                      className="publicOrgEventBanner"
-                      style={{ backgroundImage: `url("${banner}")` }}
-                      aria-label={e.title}
-                    />
-                  ) : null}
+                const badge = e.isSoldOut ? (
+                  <Badge tone="danger" label="Complet" />
+                ) : isClosed ? (
+                  <Badge tone="warn" label="Inscriptions clôturées" />
+                ) : state === "upcoming" ? (
+                  <Badge tone="info" label="À venir" />
+                ) : state === "ongoing" ? (
+                  <Badge tone="success" label="En cours" />
+                ) : null;
 
-                  <CardBody className="publicOrgEventBody">
-                    <div className="publicOrgEventTop">
-                      <div className="publicOrgEventHeaderRow">
-                        <div className="publicOrgEventTitle">{e.title}</div>
-                        {badge}
-                      </div>
+                const ctaDisabled = e.isSoldOut || isClosed;
+                const ctaLabel = e.isSoldOut
+                  ? "Complet"
+                  : isClosed
+                    ? "Clôturé"
+                    : "Réserver";
 
-                      <div className="publicOrgEventLocation">
-                        <PinIcon />
-                        {e.location ?? "Lieu à venir"}
-                      </div>
+                const ctaTitle = e.isSoldOut
+                  ? "Événement complet"
+                  : isClosed
+                    ? "Les inscriptions sont clôturées"
+                    : "Voir les billets";
 
-                      {startText || endText ? (
-                        <div className="publicOrgEventDates">
-                          {startText ? (
-                            <span>
-                              <CalendarIcon />
-                              {startText}
-                            </span>
-                          ) : null}
+                return (
+                  <Card key={e.id} className="publicOrgEventCard">
+                    {banner ? (
+                      <div
+                        className="publicOrgEventBanner"
+                        style={{ backgroundImage: `url("${banner}")` }}
+                        aria-label={e.title}
+                      />
+                    ) : null}
+
+                    <CardBody className="publicOrgEventBody">
+                      <div className="publicOrgEventTop">
+                        <div className="publicOrgEventHeaderRow">
+                          <div className="publicOrgEventTitle">{e.title}</div>
+                          {badge}
                         </div>
-                      ) : null}
-                    </div>
 
-                    <div className="publicOrgEventFooter">
-                      <div className="publicOrgEventActions">
-                        <Button
-                          className="publicOrgEventCta"
-                          variant="primary"
-                          title={e.isSoldOut ? "Événement complet" : "Voir les billets"}
-                          aria-label={e.isSoldOut ? "Événement complet" : "Voir les billets"}
-                          onClick={() => {
-                            if (!e.isSoldOut) navigate(`/o/${orgSlug}/e/${e.slug}`);
-                          }}
-                          disabled={e.isSoldOut}
-                        >
-                          <TicketIcon />
-                          {e.isSoldOut ? "Complet" : "Réserver"}
-                        </Button>
+                        <div className="publicOrgEventLocation">
+                          <PinIcon />
+                          {e.location ?? "Lieu à venir"}
+                        </div>
+
+                        {startText || endText ? (
+                          <div className="publicOrgEventDates">
+                            {startText ? (
+                              <span>
+                                <CalendarIcon />
+                                {startText}
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </div>
 
-                      {!e.isSoldOut && (
-                        <div className="publicOrgEventReassurance">
-                          Paiement sécurisé • Réservation immédiate
+                      <div className="publicOrgEventFooter">
+                        <div className="publicOrgEventActions">
+                          <Button
+                            className="publicOrgEventCta"
+                            variant="primary"
+                            title={ctaTitle}
+                            aria-label={ctaTitle}
+                            onClick={() => {
+                              if (!ctaDisabled) navigate(`/o/${orgSlug}/e/${e.slug}`);
+                            }}
+                            disabled={ctaDisabled}
+                          >
+                            <TicketIcon />
+                            {ctaLabel}
+                          </Button>
                         </div>
-                      )}
-                    </div>
-                  </CardBody>
-                </Card>
-              );
-            })}
+
+                        {registrationMicrocopy ? (
+                          <div className="publicOrgEventReassurance">
+                            {registrationMicrocopy}
+                          </div>
+                        ) : !ctaDisabled ? (
+                          <div className="publicOrgEventReassurance">
+                            Paiement sécurisé • Réservation immédiate
+                          </div>
+                        ) : isClosed && !e.isSoldOut ? (
+                          <div className="publicOrgEventReassurance">
+                            Les inscriptions sont clôturées pour cet événement
+                          </div>
+                        ) : null}
+                      </div>
+                                          </CardBody>
+                  </Card>
+                );
+              })}
           </div>
         )}
       </Container>

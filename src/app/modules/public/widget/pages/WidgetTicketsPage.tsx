@@ -74,7 +74,11 @@ export function WidgetTicketsPage() {
 
   const { event, products } = data;
 
-  const quantities = draft?.quantities ?? {};
+  const isEventSoldOut = event.isSoldOut === true;
+  const isRegistrationClosed = event.isRegistrationOpen === false;
+  const isEventClosed = isEventSoldOut || isRegistrationClosed;
+
+  const quantities = isEventClosed ? {} : (draft?.quantities ?? {});
   const sortedProducts = sortBySortOrder(products);
   const visibleProducts = sortedProducts.slice(0, MAX_TICKETS);
   const items = quantitiesToItems(quantities);
@@ -83,7 +87,7 @@ export function WidgetTicketsPage() {
   const currency = resolveCurrency(sortedProducts);
 
   function updateQty(productId: string, nextQty: number) {
-    if (!draft) return;
+    if (!draft || isEventClosed) return;
 
     const p = sortedProducts.find((x) => x.id === productId);
     if (!p) return;
@@ -103,49 +107,66 @@ export function WidgetTicketsPage() {
   }
 
   function goNext() {
+    if (isEventClosed) return;
     navigate(`/widget/o/${orgSlug}/e/${eventSlug}/participants${search}`);
   }
 
   function goBack() {
-  navigate(`/widget/o/${orgSlug}${search}`);
+    navigate(`/widget/o/${orgSlug}${search}`);
   }
+
+  const continueLabel = isEventSoldOut
+    ? "Complet"
+    : isRegistrationClosed
+      ? "Clôturé"
+      : "Continuer";
 
   return (
     <WidgetRoot theme={theme}>
-      <WidgetHeader left={<Button className="widgetButton" variant="ghost" label="← Retour" onClick={goBack} />}
-        title={event.title}/>
+      <WidgetHeader
+        left={<Button className="widgetButton" variant="ghost" label="← Retour" onClick={goBack} />}
+        title={event.title}
+      />
 
-      <WidgetGrid>
-        {visibleProducts.map((p) => {
-          const qty = Number(quantities[p.id] ?? 0) || 0;
-          const remaining = computeRemaining(p);
-          const soldOut = remaining === 0 && remaining != null;
-          const maxQty = resolveMaxQty(remaining);
-          const moneyCurrency = p.currency ?? currency;
+      {isEventSoldOut ? (
+        <div className="widgetEmptyState">Cet événement est complet.</div>
+      ) : isRegistrationClosed ? (
+        <div className="widgetEmptyState">Les inscriptions sont clôturées.</div>
+      ) : (
+        <WidgetGrid>
+          {visibleProducts.map((p) => {
+            const qty = Number(quantities[p.id] ?? 0) || 0;
+            const remaining = computeRemaining(p);
+            const soldOut = remaining === 0 && remaining != null;
+            const maxQty = resolveMaxQty(remaining);
+            const moneyCurrency = p.currency ?? currency;
 
-          return (
-            <WidgetTicketCard
-              product={p}
-              soldOut={soldOut}
-              currency={moneyCurrency}
-              qty={qty}
-              maxQty={maxQty}
-              updateQty={updateQty}/>
-              );
-        })}
-      </WidgetGrid>
+            return (
+              <WidgetTicketCard
+                key={p.id}
+                product={p}
+                soldOut={soldOut}
+                currency={moneyCurrency}
+                qty={qty}
+                maxQty={maxQty}
+                updateQty={updateQty}
+              />
+            );
+          })}
+        </WidgetGrid>
+      )}
 
-      {sortedProducts.length > MAX_TICKETS && (
-      <div className="widgetMoreEvents">
-        <Button
-        className="widgetButton"
-          variant="secondary"
-          label="Voir tous les billets"
-          onClick={() =>
-            window.open(`/o/${orgSlug}/e/${eventSlug}/billets`, "_blank")
-          }
-        />
-      </div>
+      {!isEventClosed && sortedProducts.length > MAX_TICKETS && (
+        <div className="widgetMoreEvents">
+          <Button
+            className="widgetButton"
+            variant="secondary"
+            label="Voir tous les billets"
+            onClick={() =>
+              window.open(`/o/${orgSlug}/e/${eventSlug}/billets`, "_blank")
+            }
+          />
+        </div>
       )}
 
       <div className="widgetRecap">
@@ -155,12 +176,13 @@ export function WidgetTicketsPage() {
 
         <Button
           className="widgetButton"
-          label="Continuer"
+          label={continueLabel}
           onClick={goNext}
-          disabled={totalTickets <= 0}
+          disabled={isEventClosed || totalTickets <= 0}
         />
       </div>
-      <WidgetFooter/>
+
+      <WidgetFooter />
     </WidgetRoot>
   );
 }

@@ -104,3 +104,9 @@ export function getDurationLabel(startsAt?: string | null, endsAt?: string | nul
   if (hours) return `${hours}h`;
   return `${minutes} min`;
 }
+
+/* ------------------------- Days until calculation ------------------------- */
+
+export function getDaysUntil(ts: number, nowTs: number) {
+  return Math.ceil((ts - nowTs) / (1000 * 60 * 60 * 24));
+}
