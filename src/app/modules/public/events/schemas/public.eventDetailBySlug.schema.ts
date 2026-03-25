@@ -4,27 +4,32 @@ import { eventSchema } from "@shared/models/db/db.event.schema";
 import { organizationProfileSchema } from "@shared/models/db/db.organizationProfile.schema";
 import { eventFormFieldGroupSchema, eventFormFieldSchema } from "@shared/models/db/db.eventFormFields.schema";
 
-
 export const publicOrgProfileOverviewForEventPageSchema = organizationProfileSchema.pick({
   slug: true,
   defaultEventBannerUrl: true,
   logoUrl: true,
   displayName: true,
-  primaryColor: true
+  primaryColor: true,
 });
 
-export const publicEventSchema = eventSchema.pick({
-  id: true,
-  slug: true,
-  title: true,
-  description: true,
-  location: true,
-  bannerUrl: true,
-  startsAt: true,
-  endsAt: true,
-  depositCents: true,
-  maxAttendees: true,
-});
+export const publicEventSchema = eventSchema
+  .pick({
+    id: true,
+    slug: true,
+    title: true,
+    description: true,
+    location: true,
+    bannerUrl: true,
+    startsAt: true,
+    endsAt: true,
+    registrationDeadline: true,
+    depositCents: true,
+    maxAttendees: true,
+  })
+  .extend({
+    isSoldOut: z.boolean().default(false),
+    isRegistrationOpen: z.boolean().default(true),
+  });
 
 export const publicEventProductSchema = eventProductSchema.pick({
   id: true,
@@ -57,8 +62,7 @@ export const publicFormFieldsGroupSchema = eventFormFieldGroupSchema.pick({
   sortOrder: true,
 });
 
-export const publicEventDetailSchema =
- z.object({
+export const publicEventDetailSchema = z.object({
   org: publicOrgProfileOverviewForEventPageSchema,
   event: publicEventSchema,
   products: z.array(publicEventProductSchema),

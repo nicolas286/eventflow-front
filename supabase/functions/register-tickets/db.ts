@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { internal, ResponseError } from "./errors.ts";
 
 export function createAdminClient(config: { supabaseUrl: string; serviceKey: string }) {
@@ -8,6 +8,7 @@ export function createAdminClient(config: { supabaseUrl: string; serviceKey: str
 function mapRpcError(msg: string) {
   const m = String(msg ?? "");
 
+  if (m.includes("EVENT_REGISTRATION_CLOSED")) return new ResponseError(409, "EVENT_REGISTRATION_CLOSED");
   if (m.includes("EVENT_SOLD_OUT")) return new ResponseError(409, "EVENT_SOLD_OUT");
   if (m.includes("MISSING_GATEKEEPER_PRODUCT")) return new ResponseError(400, "MISSING_GATEKEEPER_PRODUCT");
   if (m.toLowerCase().includes("insufficient stock")) return new ResponseError(409, "SOLD_OUT");

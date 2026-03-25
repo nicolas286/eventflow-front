@@ -40,13 +40,12 @@ export function EventTicketsPage() {
 
   const [tick, setTick] = useState(0);
   const [descExpanded, setDescExpanded] = useState(false);
- 
+
   const draft = useMemo(() => {
     if (!orgSlug || !eventSlug) return null;
     void tick;
     return loadDraft(orgSlug, eventSlug);
   }, [orgSlug, eventSlug, tick]);
-
 
   if (loading || !orgSlug || !eventSlug) {
     return (
@@ -74,6 +73,10 @@ export function EventTicketsPage() {
 
   const { org, event, products } = data;
 
+  const isEventSoldOut = event.isSoldOut === true;
+  const isRegistrationClosed = event.isRegistrationOpen === false;
+  const isEventClosed = isEventSoldOut || isRegistrationClosed;
+
   const quantities = draft?.quantities ?? {};
   const sortedProducts = sortBySortOrder(products);
   const items = quantitiesToItems(quantities);
@@ -82,7 +85,7 @@ export function EventTicketsPage() {
   const currency = resolveCurrency(sortedProducts);
 
   function updateQty(productId: string, nextQty: number) {
-    if (!draft) return;
+    if (!draft || isEventClosed) return;
 
     const p = sortedProducts.find((x) => x.id === productId);
     if (!p) return;
@@ -102,6 +105,7 @@ export function EventTicketsPage() {
   }
 
   function goNext() {
+    if (isEventClosed) return;
     navigate(`/o/${orgSlug}/e/${eventSlug}/participants`);
   }
 
@@ -111,6 +115,12 @@ export function EventTicketsPage() {
   const title = event ? `${event.title} – ${org?.displayName ?? "Eventflow, la billetterie sans commission"}` : "Événement";
   const desc = event?.description?.slice(0, 160) ?? "Réserve tes billets.";
   const ogImage = event?.bannerUrl;
+
+  const stickyCtaLabel = isEventSoldOut
+    ? "Complet"
+    : isRegistrationClosed
+      ? "Inscriptions clôturées"
+      : "Continuer →";
 
   return (
     <>
@@ -152,7 +162,11 @@ export function EventTicketsPage() {
 
             <div className="publicSectionTitle">1/3 — Choisir vos billets</div>
 
-            {sortedProducts.length === 0 ? (
+            {isEventSoldOut ? (
+              <div className="publicEmpty">Cet événement est complet.</div>
+            ) : isRegistrationClosed ? (
+              <div className="publicEmpty">Les inscriptions sont clôturées pour cet événement.</div>
+            ) : sortedProducts.length === 0 ? (
               <div className="publicEmpty">Aucun billet disponible pour le moment.</div>
             ) : (
               <div className="publicGutter">
@@ -218,7 +232,7 @@ export function EventTicketsPage() {
                                   variant="primary"
                                   label="−"
                                   onClick={() => updateQty(p.id, qty - 1)}
-                                  disabled={qty <= 0}
+                                  disabled={qty <= 0 || soldOut || isEventClosed}
                                   className="publicQtyBtn"
                                 />
 
@@ -229,14 +243,14 @@ export function EventTicketsPage() {
                                   value={qty}
                                   onChange={(e) => updateQty(p.id, Number(e.target.value))}
                                   className="publicQtyInput"
-                                  disabled={soldOut}
+                                  disabled={soldOut || isEventClosed}
                                 />
 
                                 <Button
                                   variant="primary"
                                   label="+"
                                   onClick={() => updateQty(p.id, qty + 1)}
-                                  disabled={soldOut || qty >= maxQty}
+                                  disabled={soldOut || isEventClosed || qty >= maxQty}
                                   className="publicQtyBtn"
                                 />
                               </div>
@@ -256,14 +270,13 @@ export function EventTicketsPage() {
           </div>
         </Container>
 
-
         <PublicStickyCheckoutBar
           amountCents={totalCents}
           currency={currency}
           primaryText={`${totalTickets} billet(s)`}
           onClick={goNext}
-          disabled={totalTickets <= 0}
-          ctaLabel="Continuer →"
+          disabled={isEventClosed || totalTickets <= 0}
+          ctaLabel={stickyCtaLabel}
         />
       </div>
     </>

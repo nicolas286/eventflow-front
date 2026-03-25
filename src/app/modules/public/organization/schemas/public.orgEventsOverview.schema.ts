@@ -12,6 +12,7 @@ export const publicEventOverviewSchema = eventSchema
   })
   .extend({
     isSoldOut: z.boolean().default(false),
+    isRegistrationOpen: z.boolean().default(true),
   });
 
 export const publicOrgEventsOverviewSchema = z.object({
