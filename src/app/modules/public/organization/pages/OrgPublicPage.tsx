@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@gateways/supabase/supabaseClient";
 import { usePublicOrgData } from "../hooks/usePublicOrgData";
 import { useNavigate } from "react-router-dom";
+import { useEventRibbon } from "../components/EventSoonRibbon/useEventRibbon";
 
 import Container from "@ui/components/container/Container";
 import Card, { CardBody } from "@ui/components/card/Card";
@@ -11,7 +12,8 @@ import Badge from "@ui/components/badge/Badge";
 import { Seo } from "@shared/ui/components/seo/Seo";
 import { PublicOrgHero } from "../components/hero/PublicOrgHero";
 
-import { formatDateTimeHuman, toDayEndISO, toDayStartISO, getDaysUntil } from "@helpers/dateTime";
+import { formatDateTimeHuman, toDayEndISO, toDayStartISO, getDaysUntil, parseTs } from "@helpers/dateTime";
+import { EventSoonRibbon } from "../components/EventSoonRibbon/EventSoonRibbon";
 
 import type { PublicEventOverview } from "../schemas/public.orgEventsOverview.schema";
 
@@ -21,11 +23,6 @@ import { CalendarIcon, PinIcon, TicketIcon } from "@shared/ui/components/icon/Ic
 type SortKey = "date" | "name";
 type SortDir = "asc" | "desc";
 
-function parseTs(iso?: string | null) {
-  if (!iso) return null;
-  const t = Date.parse(iso);
-  return Number.isFinite(t) ? t : null;
-}
 
 // ✅ “clé” temporelle pour filtrer le passé : endsAt si dispo, sinon startsAt
 function getEventPastCutoffTs(e: PublicEventOverview) {
@@ -314,6 +311,7 @@ export function OrgPublicPage() {
                 const isClosed = !e.isRegistrationOpen;
 
                 const registrationMicrocopy = getRegistrationMicrocopy(e, nowTs);
+                const ribbon = useEventRibbon(e, nowTs);
 
                 const badge = e.isSoldOut ? (
                   <Badge tone="danger" label="Complet" />
@@ -340,6 +338,7 @@ export function OrgPublicPage() {
 
                 return (
                   <Card key={e.id} className="publicOrgEventCard">
+                    {ribbon ? <EventSoonRibbon label={ribbon.label} type={ribbon.type} /> : null}
                     {banner ? (
                       <div
                         className="publicOrgEventBanner"
