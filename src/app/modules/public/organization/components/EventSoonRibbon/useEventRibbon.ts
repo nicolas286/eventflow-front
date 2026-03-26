@@ -13,7 +13,7 @@ function computeEventRibbon(e: PublicEventOverview, nowTs: number) {
 
     if (daysLeft <= 1) {
       return {
-        label: "Dernier jour pour réserver",
+        label: "Dernier jour",
         type: "deadline" as const,
       };
     }
@@ -34,14 +34,14 @@ function computeEventRibbon(e: PublicEventOverview, nowTs: number) {
 
     if (diffDays === 1) {
       return {
-        label: "Demain → réserve ta place",
+        label: "Demain",
         type: "start" as const,
       };
     }
 
     if (diffDays <= 7) {
       return {
-        label: `Dans ${diffDays} jours`,
+        label: `Bientôt · ${diffDays} jours`,
         type: "start" as const,
       };
     }

@@ -32,14 +32,15 @@
 }
 
 .eventSoonRibbon.deadline {
-  background: #f97316;
+  background: linear-gradient(135deg, #fb923c, #f97316);
   color: #fff;
 }
 
 .eventSoonRibbon.start {
-  background: #3b82f6;
+  background: linear-gradient(135deg, #7c3aed, #6366f1);
   color: #fff;
 }
+
 
 .eventSoonRibbonDot {
   width: 0.5rem;
