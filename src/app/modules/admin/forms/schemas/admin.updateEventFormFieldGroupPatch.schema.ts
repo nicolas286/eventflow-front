@@ -7,6 +7,7 @@ export const updateEventFormFieldGroupPatchSchema = z.object({
   label: eventFormFieldGroupSchema.shape.label.optional(),
   sortOrder: eventFormFieldGroupSchema.shape.sortOrder.optional(),
   isActive: eventFormFieldGroupSchema.shape.isActive.optional(),
+  description: eventFormFieldGroupSchema.shape.description.optional(),
 });
 
 export type UpdateEventFormFieldGroupPatch = z.infer<

@@ -497,9 +497,16 @@ export function WidgetAttendeesPage() {
                       className="widgetFieldGroupSection"
                     >
                       {section.group ? (
-                        <div className="widgetFieldGroupTitle">{section.group.label}</div>
-                      ) : null}
+                        <div className="widgetFieldGroupHeader">
+                          <div className="widgetFieldGroupTitle">{section.group.label}</div>
 
+                          {section.group.description ? (
+                            <div className="widgetFieldGroupDescription">
+                              {section.group.description}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
                       <div className="widgetFormGrid">
                         {section.fields.map((f) => renderField(f, idx, att, rowErrs, rowTouched))}
                       </div>

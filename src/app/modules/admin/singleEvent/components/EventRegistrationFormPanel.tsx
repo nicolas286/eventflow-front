@@ -44,6 +44,7 @@ type EditState = {
 type GroupEditState = {
   id: string;
   label: string;
+  description: string;
   isActive: boolean;
   sortOrder: number;
 };
@@ -79,6 +80,7 @@ export function EventRegistrationFormPanel(props: Props) {
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
 
   const [editing, setEditing] = useState<EditState | null>(null);
+  const [newGroupDescription, setNewGroupDescription] = useState("");
   const [editingKind, setEditingKind] = useState<"field" | "group" | null>(null);
   const [editingGroup, setEditingGroup] = useState<GroupEditState | null>(null);
   const [creating, setCreating] = useState(false);
@@ -285,6 +287,7 @@ export function EventRegistrationFormPanel(props: Props) {
   setEditingGroup({
     id: group.id,
     label: group.label ?? "",
+    description: group.description ?? "",
     isActive: Boolean(group.isActive ?? true),
     sortOrder: clampInt(group.sortOrder ?? 0, { fallback: 0 }),
   });
@@ -494,6 +497,7 @@ export function EventRegistrationFormPanel(props: Props) {
     groupId: editingGroup.id,
     patch: {
       label,
+      description: editingGroup.description.trim() || null,
       isActive: editingGroup.isActive,
       sortOrder: editingGroup.sortOrder,
     },
@@ -522,6 +526,7 @@ export function EventRegistrationFormPanel(props: Props) {
   const created = await createGroup.createEventFormFieldGroup({
     eventId: event.id,
     label,
+    description: newGroupDescription.trim() || null,
     sortOrder: nextSortOrder,
     isActive: true,
   });
@@ -529,6 +534,7 @@ export function EventRegistrationFormPanel(props: Props) {
   if (!created) return;
 
   setNewGroupLabel("");
+  setNewGroupDescription("");
   onChanged?.();
 }
 
@@ -662,6 +668,21 @@ async function moveGroup(group: EventFormFieldGroup, dir: -1 | 1) {
             value={editingGroup.label}
             onChange={(e) => setEditingGroup({ ...editingGroup, label: e.target.value })}
             disabled={isSaving}
+          />
+        </div>
+
+        <div className="adminEventField adminEventFieldSpan2">
+          <div className="adminEventLabel">Description</div>
+          <textarea
+            className="adminEventTextarea"
+            value={editingGroup.description}
+            onChange={(e) =>
+              setEditingGroup({ ...editingGroup, description: e.target.value })
+            }
+            disabled={isSaving}
+            rows={3}
+            maxLength={300}
+            placeholder="Texte d’aide affiché sous le titre du groupe (optionnel)"
           />
         </div>
 
@@ -1023,9 +1044,15 @@ async function moveGroup(group: EventFormFieldGroup, dir: -1 | 1) {
                       className="adminRegGroupSection"
                     >
                       <div className="adminRegGroupHeaderRow">
+                        <div className="adminRegGroupHeaderBlock">
                         <div className="adminRegGroupHeader">
                           {group ? group.label : "Sans groupe"}
                         </div>
+
+                        {group?.description ? (
+                          <div className="adminRegGroupDescription">{group.description}</div>
+                        ) : null}
+                      </div>
 
                         {group ? (
                           <div className="adminRegGroupActions">
@@ -1125,8 +1152,14 @@ async function moveGroup(group: EventFormFieldGroup, dir: -1 | 1) {
       className="adminRegGroupSection"
     >
       <div className="adminRegGroupHeaderRow">
-        <div className="adminRegGroupHeader">
-          {group ? group.label : "Sans groupe"}
+        <div className="adminRegGroupHeaderBlock">
+          <div className="adminRegGroupHeader">
+            {group ? group.label : "Sans groupe"}
+          </div>
+
+          {group?.description ? (
+            <div className="adminRegGroupDescription">{group.description}</div>
+          ) : null}
         </div>
 
         {group ? (

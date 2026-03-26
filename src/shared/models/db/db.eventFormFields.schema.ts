@@ -62,6 +62,7 @@ export const eventFormFieldGroupSchema = z.object({
   isActive: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  description: z.string().min(1, "La description du groupe est trop courte").max(300, "La description du groupe est trop longue").nullable().optional(),
 });
 
 export const eventFormFieldGroupUISchema = eventFormFieldGroupSchema.omit({
