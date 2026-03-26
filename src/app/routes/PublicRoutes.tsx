@@ -5,7 +5,7 @@ import { PublicLayout } from "../layouts/PublicLayout";
 
 import { OrgPublicPage } from "@app/modules/public/organization/pages/OrgPublicPage";
 import { EventTicketsPage } from "@app/modules/public/register/pages/EventTicketsPage";
-import { EventAttendeesPage } from "@app/modules/public/register/pages/EventAttendeesPage";
+import { EventAttendeesPage } from "@app/modules/public/register/pages/EventAttendeesPage/EventAttendeesPage";
 import { EventPaymentPage } from "@app/modules/public/register/pages/EventPaymentPage";
 import { OrderPage } from "@app/modules/public/register/pages/OrderPage";
 import { WidgetOrgPage } from "@app/modules/public/widget/pages/WidgetOrgPage";
