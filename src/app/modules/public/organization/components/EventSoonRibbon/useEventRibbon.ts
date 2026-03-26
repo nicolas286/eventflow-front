@@ -20,7 +20,7 @@ function computeEventRibbon(e: PublicEventOverview, nowTs: number) {
 
     if (daysLeft <= 3) {
       return {
-        label: `Plus que ${daysLeft} jours`,
+        label: `Clôture des réservations · ${daysLeft} jours`,
         type: "deadline" as const,
       };
     }
