@@ -1,4 +1,4 @@
-import { parseTs, getDaysUntil } from "@shared/helpers/dateTime";
+import { parseTs, getDaysUntil, getCalendarDayDiff } from "@shared/helpers/dateTime";
 import type { PublicEventOverview } from "../../schemas/public.orgEventsOverview.schema";
 
 function computeEventRibbon(e: PublicEventOverview, nowTs: number) {
@@ -30,29 +30,26 @@ function computeEventRibbon(e: PublicEventOverview, nowTs: number) {
 
   // fallback : proximité événement
   if (startTs && startTs > nowTs) {
-    const diffDays = Math.ceil((startTs - nowTs) / (1000 * 60 * 60 * 24));
+  const diffDays = getCalendarDayDiff(startTs, nowTs);
 
-    if (diffDays === 1) {
-      return {
-        label: "Demain",
-        type: "start" as const,
-      };
-    }
-
-    if (diffDays <= 7) {
-      return {
-        label: `Bientôt · ${diffDays} jours`,
-        type: "start" as const,
-      };
-    }
+  if (diffDays <= 1) {
+    return {
+      label: "Demain",
+      type: "start" as const,
+    };
   }
+
+  if (diffDays <= 7) {
+    return {
+      label: `Bientôt · ${diffDays} jours`,
+      type: "start" as const,
+    };
+  }
+}
 
   return null;
 }
 
-export function useEventRibbon(
-  e: PublicEventOverview,
-  nowTs: number
-) {
+export function useEventRibbon(e: PublicEventOverview, nowTs: number) {
   return computeEventRibbon(e, nowTs);
 }

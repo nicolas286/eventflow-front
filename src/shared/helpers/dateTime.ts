@@ -121,3 +121,26 @@ export function parseTs(iso?: string | null) {
   return Number.isFinite(t) ? t : null;
 }
 
+/* --------------------------- Days calendar diff --------------------------- */
+
+export function getCalendarDayDiff(targetTs: number, nowTs: number) {
+  const now = new Date(nowTs);
+  const target = new Date(targetTs);
+
+  const nowStart = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate()
+  );
+
+  const targetStart = new Date(
+    target.getFullYear(),
+    target.getMonth(),
+    target.getDate()
+  );
+
+  return Math.round(
+    (targetStart.getTime() - nowStart.getTime()) / 86400000
+  );
+}
+
