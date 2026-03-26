@@ -14,7 +14,7 @@ import { useEventAttendeesPage } from "./useEventAttendeesPage";
 
 import "@app/layouts/publicCheckoutBase.desktop.css";
 import "./EventAttendeesPage.desktop.css";
-import "./eventAttendeesPage.mobile.css";
+import "./EventAttendeesPage.mobile.css";
 
 type EventAttendeesPageContentProps = {
   orgSlug: string;
