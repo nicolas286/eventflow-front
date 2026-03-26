@@ -1,3 +1,4 @@
+
 /* ---------------- Date/Time helpers ---------------- */
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -110,3 +111,13 @@ export function getDurationLabel(startsAt?: string | null, endsAt?: string | nul
 export function getDaysUntil(ts: number, nowTs: number) {
   return Math.ceil((ts - nowTs) / (1000 * 60 * 60 * 24));
 }
+
+/* -------------------------------- Parse ts -------------------------------- */
+
+
+export function parseTs(iso?: string | null) {
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  return Number.isFinite(t) ? t : null;
+}
+
