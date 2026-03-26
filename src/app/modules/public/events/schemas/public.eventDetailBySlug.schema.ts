@@ -60,6 +60,7 @@ export const publicFormFieldsGroupSchema = eventFormFieldGroupSchema.pick({
   id: true,
   label: true,
   sortOrder: true,
+  description: true,
 });
 
 export const publicEventDetailSchema = z.object({

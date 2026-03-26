@@ -521,7 +521,15 @@ export function EventAttendeesPage() {
                                 className="publicFieldGroupSection"
                               >
                                 {section.group ? (
-                                  <div className="publicFieldGroupTitle">{section.group.label}</div>
+                                  <div className="publicFieldGroupHeader">
+                                    <div className="publicFieldGroupTitle">{section.group.label}</div>
+
+                                    {section.group.description ? (
+                                      <div className="publicFieldGroupDescription">
+                                        {section.group.description}
+                                      </div>
+                                    ) : null}
+                                  </div>
                                 ) : null}
 
                                 <div className="publicGrid2">
