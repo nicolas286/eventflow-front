@@ -58,14 +58,13 @@
   position:absolute;
   right:0;
   top:0;
-  bottom:0;              /* ✅ IMPORTANT: donne une vraie hauteur au conteneur */
+  bottom:0;
   width:var(--editor-w);
   box-sizing:border-box;
 
-  display:flex;          /* optionnel mais propre */
-  align-items:flex-start;/* optionnel */
+  display:flex;
+  align-items:flex-start;
 
-  /* anti overflow */
   min-width:0;
 }
 
@@ -79,10 +78,8 @@
 .regEditorPanel{
   position: sticky;
   top: calc(var(--admin-nav-h) + var(--admin-top-gap));
-
   max-height: calc(100vh - (var(--admin-nav-h) + var(--admin-top-gap) + 12px));
   overflow: auto;
-
   z-index: 20;
   padding-right: 2px;
 }
@@ -126,14 +123,10 @@
   }
 }
 
-/* ---------- Registration Form Builder (moved from AdminEventsPage global file) ---------- */
-
 .adminRegForm{
   display:flex;
   flex-direction:column;
   gap:12px;
-
-  /* anti overflow */
   min-width:0;
 }
 
@@ -141,8 +134,6 @@
   display:flex;
   flex-direction:column;
   gap:12px;
-
-  /* anti overflow */
   min-width:0;
 }
 
@@ -152,8 +143,6 @@
   border-radius:16px;
   padding:12px;
   box-shadow: 0 10px 24px rgba(0,0,0,0.05);
-
-  /* anti overflow */
   min-width:0;
 }
 
@@ -166,8 +155,6 @@
   align-items:center;
   justify-content:space-between;
   gap:12px;
-
-  /* anti overflow */
   min-width:0;
 }
 
@@ -175,8 +162,6 @@
   font-weight:900;
   font-size:18px;
   color:#111827;
-
-  /* anti overflow */
   min-width:0;
 }
 
@@ -185,8 +170,6 @@
   gap:8px;
   flex-wrap:wrap;
   justify-content:flex-end;
-
-  /* anti overflow */
   min-width:0;
 }
 
@@ -199,7 +182,6 @@
   border:1px solid rgba(16, 185, 129, 0.25);
   color:#065f46;
   white-space:nowrap;
-
   max-width:100%;
   box-sizing:border-box;
 }
@@ -229,8 +211,6 @@
   flex-wrap:wrap;
   color:#374151;
   font-size:12px;
-
-  /* anti overflow */
   min-width:0;
 }
 
@@ -243,15 +223,8 @@
   display:flex;
   gap:10px;
   flex-wrap:wrap;
-
-  /* anti overflow */
   min-width:0;
 }
-
-
-/* ===================================== */
-/* Registration Editor (clean version)   */
-/* ===================================== */
 
 .adminRegEditorCard{
   background: #fff;
@@ -264,7 +237,6 @@
   gap: 18px;
 }
 
-/* Header */
 .adminRegEditorHeader{
   display:flex;
   align-items:flex-start;
@@ -283,7 +255,6 @@
   border-radius:999px !important;
 }
 
-/* Footer */
 .adminRegEditorFooter{
   display:flex;
   justify-content:space-between;
@@ -434,4 +405,107 @@
 
 .adminRegActionsRowGroup .adminEventTextarea {
   min-height: 84px;
+}
+
+/* visibilité desktop + largeur complète */
+.adminRegInlineEditor {
+  display: none;
+}
+
+.regEditorPanel {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.regEditorPanelInner {
+  width: 100%;
+  min-width: 0;
+}
+
+.regEditorPanelInner > * {
+  width: 100%;
+  min-width: 0;
+}
+
+.adminRegEditorCard {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.adminRegEditorFormGrid {
+  width: 100%;
+  min-width: 0;
+}
+
+.adminRegEditorFormGrid .adminEventField,
+.adminRegEditorFormGrid input,
+.adminRegEditorFormGrid select,
+.adminRegEditorFormGrid textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* ✅ Checkboxes Requis / Actif bien alignées */
+.adminRegCheckRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.adminRegCheckRow input[type="checkbox"] {
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.adminRegCheckRow span {
+  display: inline-block;
+  line-height: 1.1;
+}
+
+.adminRegCheckRowSpacer {
+  margin-top: 0;
+  margin-left: 16px;
+}
+
+/* ✅ Checkboxes alignées proprement */
+.adminRegChecksInline {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+
+  margin-top: 30px;     /* ⬇️ descend le bloc */
+  margin-left: 14px;    /* ➡️ décale légèrement */
+}
+
+.adminRegCheckRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  line-height: 1;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.adminRegCheckRow input[type="checkbox"] {
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.adminRegCheckRow span {
+  display: inline-block;
+  line-height: 1.1;
+}
+
+.adminRegCheckRowSpacer {
+  margin: 0;
 }
