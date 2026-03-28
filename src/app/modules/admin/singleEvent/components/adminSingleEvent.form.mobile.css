@@ -29,13 +29,11 @@
   .adminRegInlineEditor {
     width: 100%;
     margin-top: 12px;
-
     transform-origin: top center;
     animation-duration: 180ms;
     animation-fill-mode: both;
   }
 
-  /* Create: editor au-dessus de la liste */
   .adminRegInlineEditor.isCreate {
     margin-top: 0;
     margin-bottom: 14px;
@@ -86,13 +84,70 @@
   }
 
   .adminRegCheckRow {
-    display: flex;
-    gap: 10px;
+    display: inline-flex;
     align-items: center;
-    padding-top: 6px;
+    gap: 8px;
+    margin: 0;
+    padding-top: 0;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .adminRegCheckRow input[type="checkbox"] {
+    margin: 0;
+    flex: 0 0 auto;
+  }
+
+  .adminRegCheckRow span {
+    display: inline-block;
+    line-height: 1.1;
   }
 
   .adminRegCheckRowSpacer {
-    margin-top: 10px;
+    margin-top: 0;
+    margin-left: 16px;
   }
+
+  .regEditorPanel {
+    display: none !important;
+  }
+
+  .adminRegInlineEditor {
+    display: block !important;
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+.adminRegChecksInline {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.adminRegCheckRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding-top: 0;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.adminRegCheckRow input[type="checkbox"] {
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.adminRegCheckRow span {
+  display: inline-block;
+  line-height: 1.1;
+}
+
+.adminRegCheckRowSpacer {
+  margin: 0;
 }
