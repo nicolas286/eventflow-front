@@ -29,17 +29,24 @@ function computeEventRibbon(e: PublicEventOverview, nowTs: number) {
   }
 
   // fallback : proximité événement
-  if (startTs && startTs > nowTs) {
+  if (startTs) {
   const diffDays = getCalendarDayDiff(startTs, nowTs);
 
-  if (diffDays <= 1) {
+  if (diffDays === 0) {
+    return {
+      label: "Aujourd’hui",
+      type: "start" as const,
+    };
+  }
+
+  if (diffDays === 1) {
     return {
       label: "Demain",
       type: "start" as const,
     };
   }
 
-  if (diffDays <= 7) {
+  if (diffDays > 1 && diffDays <= 7) {
     return {
       label: `Bientôt · ${diffDays} jours`,
       type: "start" as const,
