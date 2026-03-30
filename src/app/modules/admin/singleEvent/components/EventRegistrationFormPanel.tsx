@@ -855,7 +855,7 @@ export function EventRegistrationFormPanel(props: Props) {
           </div>
         </div>
 
-        {(editing.fieldType === "select" || editing.fieldType === "radio") && (
+        {(editing.fieldType === "select") && (
           <div className="adminEventField adminEventFieldSpan2">
             <div className="adminEventLabel">Options</div>
             <textarea
