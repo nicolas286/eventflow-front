@@ -388,7 +388,7 @@ export function EventRegistrationFormPanel(props: Props) {
       if (f.id) {
         setDeletedIds((s) => {
           const ns = new Set(s);
-          ns.add(f.id);
+          ns.add(f.id!);
           return ns;
         });
       }
@@ -660,26 +660,31 @@ export function EventRegistrationFormPanel(props: Props) {
     (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
   );
 
-  const ungrouped = filtered.filter((f) => !f.groupId);
+  const groupIds = new Set(groupsSorted.map((g) => g.id));
+
+  const ungrouped = filtered.filter((f) => {
+    if (!f.groupId) return true;
+    return !groupIds.has(f.groupId);
+  });
 
   let grouped = groupsSorted.map((group) => ({
     group,
     fields: filtered.filter((f) => f.groupId === group.id),
   }));
 
-    if (isFiltering) {
-      grouped = grouped.filter((section) => section.fields.length > 0);
-    }
+  if (isFiltering) {
+    grouped = grouped.filter((section) => section.fields.length > 0);
+  }
 
-    if (ungrouped.length > 0) {
-      return [
-        {
-          group: null as EventFormFieldGroup | null,
-          fields: ungrouped,
-        },
-        ...grouped,
-      ];
-    }
+  if (ungrouped.length > 0) {
+    return [
+      {
+        group: null as EventFormFieldGroup | null,
+        fields: ungrouped,
+      },
+      ...grouped,
+    ];
+  }
 
   return grouped;
 }, [filtered, fieldsGroups, isFiltering]);
@@ -850,7 +855,7 @@ export function EventRegistrationFormPanel(props: Props) {
           </div>
         </div>
 
-        {(editing.fieldType === "select" || editing.fieldType === "radio") && (
+        {(editing.fieldType === "select") && (
           <div className="adminEventField adminEventFieldSpan2">
             <div className="adminEventLabel">Options</div>
             <textarea
