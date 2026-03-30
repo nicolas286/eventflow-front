@@ -388,7 +388,7 @@ export function EventRegistrationFormPanel(props: Props) {
       if (f.id) {
         setDeletedIds((s) => {
           const ns = new Set(s);
-          ns.add(f.id);
+          ns.add(f.id!);
           return ns;
         });
       }
