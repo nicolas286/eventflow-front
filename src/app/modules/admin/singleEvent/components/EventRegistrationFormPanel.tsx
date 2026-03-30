@@ -291,26 +291,23 @@ export function EventRegistrationFormPanel(props: Props) {
     setIsClosing(true);
     setClosingKey(key);
 
-    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+  if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+  closeTimerRef.current = window.setTimeout(() => {
+    setEditing(null);
+    setEditingGroup(null);
+    setEditingKind(null);
+    setCreating(false);
+    setIsClosing(false);
+    setClosingKey(null);
 
-    closeTimerRef.current = window.setTimeout(() => {
-      setEditing(null);
-      setEditingGroup(null);
-      setEditingKind(null);
-      setCreating(false);
-      setIsClosing(false);
-      setClosingKey(null);
-
-      create.reset();
-      update.reset();
-      del.reset();
-      createGroup.reset();
-      updateGroup.reset();
-      deleteGroup.reset();
-
-      closeTimerRef.current = null;
-    }, 180);
-  }
+    create.reset();
+    update.reset();
+    del.reset();
+    createGroup.reset();
+    updateGroup.reset();
+    deleteGroup.reset();
+  }, 180);
+}
 
   function openEditGroup(group: EventFormFieldGroup) {
     cancelClosingIfAny();
@@ -562,10 +559,10 @@ export function EventRegistrationFormPanel(props: Props) {
     const label = newGroupLabel.trim();
     if (!label) return;
 
-    const nextSortOrder =
-      (sortedGroups.length > 0
-        ? Math.max(...sortedGroups.map((g) => g.sortOrder ?? 0))
-        : 0) + 1;
+  const nextSortOrder =
+    (fieldsGroups.length > 0
+      ? Math.max(...fieldsGroups.map((g) => g.sortOrder ?? 0))
+      : 0) + 1;
 
     const created = await createGroup.createEventFormFieldGroup({
       eventId: event.id,
@@ -575,10 +572,7 @@ export function EventRegistrationFormPanel(props: Props) {
       isActive: true,
     });
 
-    if (!created) {
-      setSaveAllError(createGroup.error || "Impossible de créer le groupe.");
-      return;
-    }
+  if (!created) return;
 
     setNewGroupLabel("");
     setNewGroupDescription("");
@@ -610,14 +604,15 @@ export function EventRegistrationFormPanel(props: Props) {
   async function moveGroup(group: EventFormFieldGroup, dir: -1 | 1) {
     if (isSaving) return;
 
-    const idx = sortedGroups.findIndex((g) => g.id === group.id);
-    if (idx < 0) return;
+  const sorted = [...fieldsGroups].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  const idx = sorted.findIndex((g) => g.id === group.id);
+  if (idx < 0) return;
 
-    const nextIdx = idx + dir;
-    if (nextIdx < 0 || nextIdx >= sortedGroups.length) return;
+  const nextIdx = idx + dir;
+  if (nextIdx < 0 || nextIdx >= sorted.length) return;
 
-    const current = sortedGroups[idx];
-    const target = sortedGroups[nextIdx];
+  const current = sorted[idx];
+  const target = sorted[nextIdx];
 
     const currentOrder = clampInt(current.sortOrder ?? idx + 1, { fallback: idx + 1 });
     const targetOrder = clampInt(target.sortOrder ?? nextIdx + 1, { fallback: nextIdx + 1 });
@@ -661,12 +656,16 @@ export function EventRegistrationFormPanel(props: Props) {
   }, [draft, query]);
 
   const groupedSections = useMemo(() => {
-    const ungrouped = filtered.filter((f) => !f.groupId);
+  const groupsSorted = [...fieldsGroups].sort(
+    (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
+  );
 
-    let grouped = sortedGroups.map((group) => ({
-      group,
-      fields: filtered.filter((f) => f.groupId === group.id),
-    }));
+  const ungrouped = filtered.filter((f) => !f.groupId);
+
+  let grouped = groupsSorted.map((group) => ({
+    group,
+    fields: filtered.filter((f) => f.groupId === group.id),
+  }));
 
     if (isFiltering) {
       grouped = grouped.filter((section) => section.fields.length > 0);
@@ -682,8 +681,8 @@ export function EventRegistrationFormPanel(props: Props) {
       ];
     }
 
-    return grouped;
-  }, [filtered, sortedGroups, isFiltering]);
+  return grouped;
+}, [filtered, fieldsGroups, isFiltering]);
 
   const reorderDisabledTitle = isFiltering
     ? "Le réordonnancement est désactivé pendant une recherche."
@@ -828,25 +827,27 @@ export function EventRegistrationFormPanel(props: Props) {
         </div>
 
         <div className="adminEventField">
-          <label className="adminRegCheckRow">
-            <input
-              type="checkbox"
-              checked={editing.isRequired}
-              onChange={(e) => setEditing({ ...editing, isRequired: e.target.checked })}
-              disabled={isSaving}
-            />
-            <span>Requis</span>
-          </label>
+          <div className="adminRegChecksInline">
+            <label className="adminRegCheckRow">
+              <input
+                type="checkbox"
+                checked={editing.isRequired}
+                onChange={(e) => setEditing({ ...editing, isRequired: e.target.checked })}
+                disabled={isSaving}
+              />
+              <span>Requis</span>
+            </label>
 
-          <label className="adminRegCheckRow adminRegCheckRowSpacer">
-            <input
-              type="checkbox"
-              checked={editing.isActive}
-              onChange={(e) => setEditing({ ...editing, isActive: e.target.checked })}
-              disabled={isSaving}
-            />
-            <span>Actif</span>
-          </label>
+            <label className="adminRegCheckRow">
+              <input
+                type="checkbox"
+                checked={editing.isActive}
+                onChange={(e) => setEditing({ ...editing, isActive: e.target.checked })}
+                disabled={isSaving}
+              />
+              <span>Actif</span>
+            </label>
+          </div>
         </div>
 
         {(editing.fieldType === "select" || editing.fieldType === "radio") && (
@@ -875,7 +876,8 @@ export function EventRegistrationFormPanel(props: Props) {
     </div>
   ) : null;
 
-  const editorNode = editingKind === "group" ? groupEditorNode : fieldEditorNode;
+  const editorNode =
+  editingKind === "group" ? groupEditorNode : fieldEditorNode;
 
   function renderFieldCard(f: DraftField, mobile = false) {
     const idx = draft.findIndex((x) => x.clientId === f.clientId);
@@ -1156,12 +1158,12 @@ export function EventRegistrationFormPanel(props: Props) {
                       ) : null}
                     </div>
 
-                    <div className="adminRegGroupList">
-                      {section.fields.map((f) => renderFieldCard(f, isMobile))}
+                      <div className="adminRegGroupList">
+                        {section.fields.map((f) => renderFieldCard(f, !isMobile))}
+                      </div>
                     </div>
-                  </div>
-                );
-              })
+                  );
+                })
             )}
           </div>
         </div>
@@ -1264,16 +1266,22 @@ export function EventRegistrationFormPanel(props: Props) {
                         ) : null}
                       </div>
 
-                      <div className="adminRegGroupList">
-                        {section.fields.map((f) => renderFieldCard(f, isMobile))}
-                      </div>
-                    </div>
-                  );
-                })
+                  <div className="adminRegGroupList">
+                    {section.fields.map((f) => renderFieldCard(f, !isMobile))}
+                  </div>
+                </div>
+              );
+            })
               )}
             </div>
           }
-          right={isOpen ? <div className="regEditorPanel isOpen">{editorNode}</div> : null}
+          right={
+            isOpen ? (
+              <div className="regEditorPanel isOpen">
+                <div className="regEditorPanelInner">{editorNode}</div>
+              </div>
+            ) : null
+          }
         />
       )}
 
