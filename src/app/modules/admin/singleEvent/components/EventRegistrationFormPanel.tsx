@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { EventFormField, EventFormFieldGroup, EventFormFieldOptions } from "@shared/models/db/db.eventFormFields.schema";
+import type {
+  EventFormField,
+  EventFormFieldGroup,
+  EventFormFieldOptions,
+} from "@shared/models/db/db.eventFormFields.schema";
 import type { CreateEventFormFieldInput } from "../../forms/schemas/admin.createFormField.schema";
 import type { UpdateEventFormFieldPatch } from "../../forms/schemas/admin.updateEventFormFieldPatch.schema";
 import { useCreateEventFormField } from "../../forms/hooks/useCreateEventFormField";
@@ -15,13 +19,17 @@ import { FIELD_TYPES, type FieldType } from "@shared/constants/fieldTypes";
 import { useMediaQuery } from "@helpers/ui";
 import { slugKey, normalizeContiguousSortOrder } from "@helpers/normalize";
 import { clampInt, uniqueKey, makeClientId } from "@helpers/logic";
-import { optionsToText, sortFromDB, parseOptionsLines, optionsToInlineText } from "@helpers/fields";
+import {
+  optionsToText,
+  sortFromDB,
+  parseOptionsLines,
+  optionsToInlineText,
+} from "@helpers/fields";
 import { TrashIcon } from "@ui/components/icon/Icons";
 import { FlexPanel } from "@ui/components/panels/FlexPanel";
 
 import "./adminSingleEvent.form.desktop.css";
-import "./adminSingleEvent.form.mobile.css"; 
-
+import "./adminSingleEvent.form.mobile.css";
 
 type Props = {
   supabase: SupabaseClient;
@@ -94,11 +102,10 @@ export function EventRegistrationFormPanel(props: Props) {
   const [moveAnim, setMoveAnim] = useState<Record<string, MoveDir>>({});
   const moveTimerRef = useRef<number | null>(null);
 
-  const closeTimerRef = useRef<number | null>(null);
-  const [closingKey, setClosingKey] = useState<string | null>(null); // "create" ou clientId
+  const [closingKey, setClosingKey] = useState<string | null>(null);
   const [isClosing, setIsClosing] = useState(false);
+  const closeTimerRef = useRef<number | null>(null);
 
-  // ✅ Search / filter
   const [query, setQuery] = useState("");
   const isFiltering = query.trim().length > 0;
 
@@ -116,37 +123,63 @@ export function EventRegistrationFormPanel(props: Props) {
     updateGroup.loading ||
     deleteGroup.loading;
 
-  const incomingSig = useMemo(() => {
+  const sortedGroups = useMemo(() => {
+    return [...fieldsGroups].sort((a, b) => {
+      const diff = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+      if (diff !== 0) return diff;
+      return String(a.id).localeCompare(String(b.id));
+    });
+  }, [fieldsGroups]);
+
+  const incomingFieldsSig = useMemo(() => {
     return sortFromDB(fields)
       .map((f) => {
         const id = String(f.id);
         const updatedAt = f.updatedAt ?? "";
         const order = clampInt(f.sortOrder, { fallback: 0 });
+        const groupId = f.groupId ?? "";
+        const active = f.isActive ? "1" : "0";
+        const required = f.isRequired ? "1" : "0";
 
-        return `${id}:${updatedAt}:${order}`;
+        return `${id}:${updatedAt}:${order}:${groupId}:${active}:${required}:${f.label ?? ""}`;
       })
       .join("|");
   }, [fields]);
+
+  const incomingGroupsSig = useMemo(() => {
+    return sortedGroups
+      .map((g) => {
+        const order = clampInt(g.sortOrder ?? 0, { fallback: 0 });
+        const active = g.isActive ? "1" : "0";
+        return `${g.id}:${order}:${active}:${g.label ?? ""}:${g.description ?? ""}`;
+      })
+      .join("|");
+  }, [sortedGroups]);
+
+  const incomingSig = useMemo(() => {
+    return `${incomingFieldsSig}__${incomingGroupsSig}`;
+  }, [incomingFieldsSig, incomingGroupsSig]);
 
   useEffect(() => {
     if (isDirty) return;
     if (lastLoadedSigRef.current === incomingSig) return;
 
     const sorted = sortFromDB(fields);
+
     const next: DraftField[] = normalizeContiguousSortOrder(
-    sorted.map((f) => ({
-      id: f.id,
-      clientId: f.id,
-      label: f.label ?? "",
-      fieldKey: String(f.fieldKey ?? ""),
-      fieldType: (f.fieldType ?? "text") as FieldType,
-      groupId: f.groupId ?? null,
-      isRequired: f.isRequired,
-      isActive: f.isActive ?? true,
-      sortOrder: clampInt(f.sortOrder ?? 0),
-      options: f.options ?? null,
-    }))
-  );
+      sorted.map((f) => ({
+        id: f.id,
+        clientId: f.id,
+        label: f.label ?? "",
+        fieldKey: String(f.fieldKey ?? ""),
+        fieldType: (f.fieldType ?? "text") as FieldType,
+        groupId: f.groupId ?? null,
+        isRequired: f.isRequired,
+        isActive: f.isActive ?? true,
+        sortOrder: clampInt(f.sortOrder ?? 0),
+        options: f.options ?? null,
+      }))
+    );
 
     setDraft(next);
     setDeletedIds(new Set());
@@ -181,14 +214,18 @@ export function EventRegistrationFormPanel(props: Props) {
   }
 
   function buildOptions(fieldType: FieldType, optionsText: string) {
-    if (fieldType === "select" /*|| fieldType === "radio"*/) return parseOptionsLines(optionsText);
+    if (fieldType === "select") return parseOptionsLines(optionsText);
     return null;
   }
 
   function cancelClosingIfAny() {
     setIsClosing(false);
     setClosingKey(null);
-    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+
+    if (closeTimerRef.current) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
   }
 
   function openCreate() {
@@ -196,6 +233,7 @@ export function EventRegistrationFormPanel(props: Props) {
     setEditingGroup(null);
     cancelClosingIfAny();
     setSaveAllError(null);
+
     create.reset();
     update.reset();
     del.reset();
@@ -217,6 +255,7 @@ export function EventRegistrationFormPanel(props: Props) {
     setEditingGroup(null);
     cancelClosingIfAny();
     setSaveAllError(null);
+
     create.reset();
     update.reset();
     del.reset();
@@ -234,32 +273,48 @@ export function EventRegistrationFormPanel(props: Props) {
   }
 
   function closeEditor() {
-  const key =
-    editingKind === "group"
-      ? editingGroup?.id ?? null
-      : creating
-      ? "create"
-      : editing?.id ?? null;
+    const key =
+      editingKind === "group"
+        ? editingGroup?.id ?? null
+        : creating
+        ? "create"
+        : editing?.id ?? null;
 
-  if (!key) {
-    setEditing(null);
-    setEditingGroup(null);
-    setEditingKind(null);
-    setCreating(false);
-    return;
+    if (!key) {
+      setEditing(null);
+      setEditingGroup(null);
+      setEditingKind(null);
+      setCreating(false);
+      return;
+    }
+
+    setIsClosing(true);
+    setClosingKey(key);
+
+    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+
+    closeTimerRef.current = window.setTimeout(() => {
+      setEditing(null);
+      setEditingGroup(null);
+      setEditingKind(null);
+      setCreating(false);
+      setIsClosing(false);
+      setClosingKey(null);
+
+      create.reset();
+      update.reset();
+      del.reset();
+      createGroup.reset();
+      updateGroup.reset();
+      deleteGroup.reset();
+
+      closeTimerRef.current = null;
+    }, 180);
   }
 
-  setIsClosing(true);
-  setClosingKey(key);
-
-  if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
-  closeTimerRef.current = window.setTimeout(() => {
-    setEditing(null);
-    setEditingGroup(null);
-    setEditingKind(null);
-    setCreating(false);
-    setIsClosing(false);
-    setClosingKey(null);
+  function openEditGroup(group: EventFormFieldGroup) {
+    cancelClosingIfAny();
+    setSaveAllError(null);
 
     create.reset();
     update.reset();
@@ -267,33 +322,23 @@ export function EventRegistrationFormPanel(props: Props) {
     createGroup.reset();
     updateGroup.reset();
     deleteGroup.reset();
-  }, 180);
-}
 
-  function openEditGroup(group: EventFormFieldGroup) {
-  cancelClosingIfAny();
-  setSaveAllError(null);
+    setCreating(false);
+    setEditingKind("group");
+    setEditing(null);
+    setEditingGroup({
+      id: group.id,
+      label: group.label ?? "",
+      description: group.description ?? "",
+      isActive: Boolean(group.isActive ?? true),
+      sortOrder: clampInt(group.sortOrder ?? 0, { fallback: 0 }),
+    });
+  }
 
-  create.reset();
-  update.reset();
-  del.reset();
-  createGroup.reset();
-  updateGroup.reset();
-  deleteGroup.reset();
-
-  setCreating(false);
-  setEditingKind("group");
-  setEditing(null);
-  setEditingGroup({
-    id: group.id,
-    label: group.label ?? "",
-    description: group.description ?? "",
-    isActive: Boolean(group.isActive ?? true),
-    sortOrder: clampInt(group.sortOrder ?? 0, { fallback: 0 }),
-  });
-}
-
-  function toggleLocal(clientId: string, patch: Partial<Pick<DraftField, "isRequired" | "isActive">>) {
+  function toggleLocal(
+    clientId: string,
+    patch: Partial<Pick<DraftField, "isRequired" | "isActive">>
+  ) {
     setDraft((prev) => prev.map((f) => (f.clientId === clientId ? { ...f, ...patch } : f)));
     markDirty();
   }
@@ -346,7 +391,7 @@ export function EventRegistrationFormPanel(props: Props) {
       if (f.id) {
         setDeletedIds((s) => {
           const ns = new Set(s);
-          ns.add(f.id!);
+          ns.add(f.id);
           return ns;
         });
       }
@@ -365,10 +410,9 @@ export function EventRegistrationFormPanel(props: Props) {
     const label = editing.label.trim();
     if (!label) return;
 
-    const isCreate = creating;
     const options = buildOptions(editing.fieldType, editing.optionsText);
 
-    if (isCreate) {
+    if (creating) {
       const clientId = makeClientId();
       const key = buildKeyFromLabel(label);
 
@@ -422,8 +466,8 @@ export function EventRegistrationFormPanel(props: Props) {
   }
 
   function groupHasFields(groupId: string) {
-  return draft.some((f) => f.groupId === groupId);
-}
+    return draft.some((f) => f.groupId === groupId);
+  }
 
   async function saveAll() {
     if (!event?.id) return;
@@ -455,7 +499,7 @@ export function EventRegistrationFormPanel(props: Props) {
             isActive: f.isActive,
             sortOrder: f.sortOrder,
             options,
-          } as CreateEventFormFieldInput;
+          };
 
           const created = await create.createEventFormField(input);
           if (!created) throw new Error(String(create.error || "Erreur création"));
@@ -488,116 +532,118 @@ export function EventRegistrationFormPanel(props: Props) {
   }
 
   async function saveGroupEditor() {
-  if (!editingGroup || isSaving) return;
+    if (!editingGroup || isSaving) return;
 
-  const label = editingGroup.label.trim();
-  if (!label) return;
+    const label = editingGroup.label.trim();
+    if (!label) return;
 
-  const updated = await updateGroup.updateEventFormFieldGroup({
-    groupId: editingGroup.id,
-    patch: {
-      label,
-      description: editingGroup.description.trim() || null,
-      isActive: editingGroup.isActive,
-      sortOrder: editingGroup.sortOrder,
-    },
-  });
+    const updated = await updateGroup.updateEventFormFieldGroup({
+      groupId: editingGroup.id,
+      patch: {
+        label,
+        description: editingGroup.description.trim() || null,
+        isActive: editingGroup.isActive,
+        sortOrder: editingGroup.sortOrder,
+      },
+    });
 
-  if (!updated) {
-    setSaveAllError(updateGroup.error || "Impossible de modifier le groupe.");
-    return;
+    if (!updated) {
+      setSaveAllError(updateGroup.error || "Impossible de modifier le groupe.");
+      return;
+    }
+
+    closeEditor();
+    onChanged?.();
   }
-
-  closeEditor();
-  onChanged?.();
-}
 
   async function handleCreateGroup() {
-  if (!event?.id || isSaving) return;
+    if (!event?.id || isSaving) return;
 
-  const label = newGroupLabel.trim();
-  if (!label) return;
+    const label = newGroupLabel.trim();
+    if (!label) return;
 
-  const nextSortOrder =
-    (fieldsGroups.length > 0
-      ? Math.max(...fieldsGroups.map((g) => g.sortOrder ?? 0))
-      : 0) + 1;
+    const nextSortOrder =
+      (sortedGroups.length > 0
+        ? Math.max(...sortedGroups.map((g) => g.sortOrder ?? 0))
+        : 0) + 1;
 
-  const created = await createGroup.createEventFormFieldGroup({
-    eventId: event.id,
-    label,
-    description: newGroupDescription.trim() || null,
-    sortOrder: nextSortOrder,
-    isActive: true,
-  });
+    const created = await createGroup.createEventFormFieldGroup({
+      eventId: event.id,
+      label,
+      description: newGroupDescription.trim() || null,
+      sortOrder: nextSortOrder,
+      isActive: true,
+    });
 
-  if (!created) return;
+    if (!created) {
+      setSaveAllError(createGroup.error || "Impossible de créer le groupe.");
+      return;
+    }
 
-  setNewGroupLabel("");
-  setNewGroupDescription("");
-  onChanged?.();
-}
-
-async function handleDeleteGroup(group: EventFormFieldGroup) {
-  if (isSaving) return;
-
-  const hasFields = draft.some((f) => f.groupId === group.id);
-  if (hasFields) {
-    setSaveAllError("Ce groupe contient encore des champs. Retirez-les du groupe avant suppression.");
-    return;
+    setNewGroupLabel("");
+    setNewGroupDescription("");
+    onChanged?.();
   }
 
-  const ok = await deleteGroup.deleteEventFormFieldGroup({ id: group.id });
-  if (!ok) {
-    setSaveAllError(deleteGroup.error || "Impossible de supprimer le groupe.");
-    return;
+  async function handleDeleteGroup(group: EventFormFieldGroup) {
+    if (isSaving) return;
+
+    const hasFields = draft.some((f) => f.groupId === group.id);
+    if (hasFields) {
+      setSaveAllError("Ce groupe contient encore des champs. Retirez-les du groupe avant suppression.");
+      return;
+    }
+
+    const ok = await deleteGroup.deleteEventFormFieldGroup({ id: group.id });
+    if (!ok) {
+      setSaveAllError(deleteGroup.error || "Impossible de supprimer le groupe.");
+      return;
+    }
+
+    if (editingKind === "group" && editingGroup?.id === group.id) {
+      closeEditor();
+    }
+
+    onChanged?.();
   }
 
-  if (editingKind === "group" && editingGroup?.id === group.id) {
-    closeEditor();
+  async function moveGroup(group: EventFormFieldGroup, dir: -1 | 1) {
+    if (isSaving) return;
+
+    const idx = sortedGroups.findIndex((g) => g.id === group.id);
+    if (idx < 0) return;
+
+    const nextIdx = idx + dir;
+    if (nextIdx < 0 || nextIdx >= sortedGroups.length) return;
+
+    const current = sortedGroups[idx];
+    const target = sortedGroups[nextIdx];
+
+    const currentOrder = clampInt(current.sortOrder ?? idx + 1, { fallback: idx + 1 });
+    const targetOrder = clampInt(target.sortOrder ?? nextIdx + 1, { fallback: nextIdx + 1 });
+
+    const a = await updateGroup.updateEventFormFieldGroup({
+      groupId: current.id,
+      patch: { sortOrder: targetOrder },
+    });
+
+    if (!a) {
+      setSaveAllError(updateGroup.error || "Impossible de réordonner le groupe.");
+      return;
+    }
+
+    const b = await updateGroup.updateEventFormFieldGroup({
+      groupId: target.id,
+      patch: { sortOrder: currentOrder },
+    });
+
+    if (!b) {
+      setSaveAllError(updateGroup.error || "Impossible de réordonner le groupe.");
+      return;
+    }
+
+    onChanged?.();
   }
-
-  onChanged?.();
-}
-
-async function moveGroup(group: EventFormFieldGroup, dir: -1 | 1) {
-  if (isSaving) return;
-
-  const sorted = [...fieldsGroups].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-  const idx = sorted.findIndex((g) => g.id === group.id);
-  if (idx < 0) return;
-
-  const nextIdx = idx + dir;
-  if (nextIdx < 0 || nextIdx >= sorted.length) return;
-
-  const current = sorted[idx];
-  const target = sorted[nextIdx];
-
-  const currentOrder = clampInt(current.sortOrder ?? idx + 1, { fallback: idx + 1 });
-  const targetOrder = clampInt(target.sortOrder ?? nextIdx + 1, { fallback: nextIdx + 1 });
-
-  const a = await updateGroup.updateEventFormFieldGroup({
-    groupId: current.id,
-    patch: { sortOrder: targetOrder },
-  });
-
-  if (!a) {
-    setSaveAllError(updateGroup.error || "Impossible de réordonner le groupe.");
-    return;
-  }
-
-  const b = await updateGroup.updateEventFormFieldGroup({
-    groupId: target.id,
-    patch: { sortOrder: currentOrder },
-  });
-
-  if (!b) {
-    setSaveAllError(updateGroup.error || "Impossible de réordonner le groupe.");
-    return;
-  }
-
-  onChanged?.();
-}
 
   const isOpen = Boolean(editing || editingGroup);
   const editingId = editing?.id ?? editingGroup?.id ?? null;
@@ -615,35 +661,33 @@ async function moveGroup(group: EventFormFieldGroup, dir: -1 | 1) {
   }, [draft, query]);
 
   const groupedSections = useMemo(() => {
-  const groupsSorted = [...fieldsGroups].sort(
-    (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
-  );
+    const ungrouped = filtered.filter((f) => !f.groupId);
 
-  const ungrouped = filtered.filter((f) => !f.groupId);
+    let grouped = sortedGroups.map((group) => ({
+      group,
+      fields: filtered.filter((f) => f.groupId === group.id),
+    }));
 
-  let grouped = groupsSorted.map((group) => ({
-    group,
-    fields: filtered.filter((f) => f.groupId === group.id),
-  }));
+    if (isFiltering) {
+      grouped = grouped.filter((section) => section.fields.length > 0);
+    }
 
-  if (isFiltering) {
-    grouped = grouped.filter((section) => section.fields.length > 0);
-  }
+    if (ungrouped.length > 0) {
+      return [
+        {
+          group: null as EventFormFieldGroup | null,
+          fields: ungrouped,
+        },
+        ...grouped,
+      ];
+    }
 
-  if (ungrouped.length > 0) {
-    return [
-      {
-        group: null as EventFormFieldGroup | null,
-        fields: ungrouped,
-      },
-      ...grouped,
-    ];
-  }
+    return grouped;
+  }, [filtered, sortedGroups, isFiltering]);
 
-  return grouped;
-}, [filtered, fieldsGroups, isFiltering]);
-
-  const reorderDisabledTitle = isFiltering ? "Le réordonnancement est désactivé pendant une recherche." : undefined;
+  const reorderDisabledTitle = isFiltering
+    ? "Le réordonnancement est désactivé pendant une recherche."
+    : undefined;
 
   const groupEditorNode = editingGroup ? (
     <div className="adminRegEditorCard">
@@ -719,7 +763,6 @@ async function moveGroup(group: EventFormFieldGroup, dir: -1 | 1) {
 
   const fieldEditorNode = editing ? (
     <div className="adminRegEditorCard">
-      {/* Header avec croix */}
       <div className="adminRegEditorHeader">
         <div>
           <div className="adminRegEditorTitle">{creating ? "Nouveau champ" : "Modifier champ"}</div>
@@ -733,7 +776,6 @@ async function moveGroup(group: EventFormFieldGroup, dir: -1 | 1) {
         </Button>
       </div>
 
-      {/* Form */}
       <div className="adminEventFormGrid adminRegEditorFormGrid">
         <div className="adminEventField">
           <div className="adminEventLabel">Label</div>
@@ -775,9 +817,8 @@ async function moveGroup(group: EventFormFieldGroup, dir: -1 | 1) {
             disabled={isSaving}
           >
             <option value="">Sans groupe</option>
-            {fieldsGroups
+            {sortedGroups
               .filter((g) => g.isActive)
-              .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
               .map((g) => (
                 <option key={g.id} value={g.id}>
                   {g.label}
@@ -808,7 +849,7 @@ async function moveGroup(group: EventFormFieldGroup, dir: -1 | 1) {
           </label>
         </div>
 
-        {(editing.fieldType === "select" /*|| editing.fieldType === "radio"*/) && (
+        {(editing.fieldType === "select" || editing.fieldType === "radio") && (
           <div className="adminEventField adminEventFieldSpan2">
             <div className="adminEventLabel">Options</div>
             <textarea
@@ -822,7 +863,6 @@ async function moveGroup(group: EventFormFieldGroup, dir: -1 | 1) {
         )}
       </div>
 
-      {/* Footer clean */}
       <div className="adminRegEditorFooter">
         <Button variant="secondary" onClick={closeEditor} disabled={isSaving}>
           Annuler
@@ -835,127 +875,127 @@ async function moveGroup(group: EventFormFieldGroup, dir: -1 | 1) {
     </div>
   ) : null;
 
-  const editorNode =
-  editingKind === "group" ? groupEditorNode : fieldEditorNode;
+  const editorNode = editingKind === "group" ? groupEditorNode : fieldEditorNode;
 
   function renderFieldCard(f: DraftField, mobile = false) {
-  const idx = draft.findIndex((x) => x.clientId === f.clientId);
+    const idx = draft.findIndex((x) => x.clientId === f.clientId);
 
-  const active = Boolean(f.isActive ?? true);
-  const required = Boolean(f.isRequired ?? false);
-  const type = String(f.fieldType ?? "text");
-  const optsLine =
-    type === "select" || type === "radio"
-      ? optionsToInlineText(f.options ?? undefined, 80)
-      : null;
+    const active = Boolean(f.isActive ?? true);
+    const required = Boolean(f.isRequired ?? false);
+    const type = String(f.fieldType ?? "text");
+    const optsLine =
+      type === "select" || type === "radio"
+        ? optionsToInlineText(f.options ?? undefined, 80)
+        : null;
 
-  const animDir = moveAnim[f.clientId];
-  const cardAnimClass =
-    animDir === "up" ? "isMoveUp" : animDir === "down" ? "isMoveDown" : "";
+    const animDir = moveAnim[f.clientId];
+    const cardAnimClass =
+      animDir === "up" ? "isMoveUp" : animDir === "down" ? "isMoveDown" : "";
 
-  const showEditInline =
-    mobile &&
-    ((isOpen && !creating && editingId === f.clientId) ||
-      (isClosing && closingKey === f.clientId));
+    const showEditInline =
+      mobile &&
+      ((isOpen && !creating && editingId === f.clientId) ||
+        (isClosing && closingKey === f.clientId));
 
-  return (
-    <div key={f.clientId} className={mobile ? "adminRegBlock" : undefined}>
-      <div
-        className={[
-          active ? "adminRegCard" : "adminRegCard isInactive",
-          cardAnimClass,
-        ].join(" ")}
-      >
-        <div className="adminRegTop">
-          <div className="adminRegTitleLine">{f.label}</div>
+    return (
+      <div key={f.clientId} className={mobile ? "adminRegBlock" : undefined}>
+        <div
+          className={[
+            active ? "adminRegCard" : "adminRegCard isInactive",
+            cardAnimClass,
+          ].join(" ")}
+        >
+          <div className="adminRegTop">
+            <div className="adminRegTitleLine">{f.label}</div>
 
-          <div className="adminRegPills">
-            <span className={active ? "adminRegPill" : "adminRegPill isOff"}>
-              {active ? "Actif" : "Inactif"}
-            </span>
-            <span className={required ? "adminRegPill isReq" : "adminRegPill isOpt"}>
-              {required ? "Requis" : "Optionnel"}
-            </span>
+            <div className="adminRegPills">
+              <span className={active ? "adminRegPill" : "adminRegPill isOff"}>
+                {active ? "Actif" : "Inactif"}
+              </span>
+              <span className={required ? "adminRegPill isReq" : "adminRegPill isOpt"}>
+                {required ? "Requis" : "Optionnel"}
+              </span>
+            </div>
+          </div>
+
+          <div className="adminRegMeta">
+            <span>Type : {type}</span>
+            {optsLine ? <span className="adminRegOptionsInline">• {optsLine}</span> : null}
+          </div>
+
+          <div className="adminRegActions">
+            <Button variant="secondary" onClick={() => openEdit(f)} disabled={isSaving}>
+              Modifier
+            </Button>
+
+            <Button
+              onClick={() => toggleLocal(f.clientId, { isRequired: !required })}
+              disabled={isSaving}
+              variant="secondary"
+            >
+              {required ? "Rendre optionnel" : "Rendre requis"}
+            </Button>
+
+            <Button
+              onClick={() => toggleLocal(f.clientId, { isActive: !active })}
+              disabled={isSaving}
+              variant="secondary"
+            >
+              {active ? "Désactiver" : "Activer"}
+            </Button>
+
+            <Button
+              onClick={() => moveLocal(f.clientId, -1)}
+              disabled={isSaving || isFiltering || idx === 0}
+              title={isFiltering ? reorderDisabledTitle : undefined}
+              className="adminMoveBtn"
+              aria-label="Monter"
+              variant="secondary"
+            >
+              ↑
+            </Button>
+
+            <Button
+              onClick={() => moveLocal(f.clientId, 1)}
+              disabled={isSaving || isFiltering || idx === draft.length - 1}
+              title={isFiltering ? reorderDisabledTitle : undefined}
+              className="adminMoveBtn"
+              aria-label="Descendre"
+              variant="secondary"
+            >
+              ↓
+            </Button>
+
+            <Button
+              variant="danger"
+              className="deleteFormFieldButton"
+              onClick={() => removeLocal(f.clientId)}
+              disabled={isSaving}
+            >
+              <TrashIcon />
+            </Button>
           </div>
         </div>
 
-        <div className="adminRegMeta">
-          <span>Type : {type}</span>
-          {optsLine ? <span className="adminRegOptionsInline">• {optsLine}</span> : null}
-        </div>
-
-        <div className="adminRegActions">
-          <Button variant="secondary" onClick={() => openEdit(f)} disabled={isSaving}>
-            Modifier
-          </Button>
-
-          <Button
-            onClick={() => toggleLocal(f.clientId, { isRequired: !required })}
-            disabled={isSaving}
-            variant="secondary"
+        {mobile && showEditInline ? (
+          <div
+            className={[
+              "adminRegInlineEditor",
+              "isEdit",
+              isClosing && closingKey === f.clientId ? "isClosing" : "isOpen",
+            ].join(" ")}
           >
-            {required ? "Rendre optionnel" : "Rendre requis"}
-          </Button>
-
-          <Button
-            onClick={() => toggleLocal(f.clientId, { isActive: !active })}
-            disabled={isSaving}
-            variant="secondary"
-          >
-            {active ? "Désactiver" : "Activer"}
-          </Button>
-
-          <Button
-            onClick={() => moveLocal(f.clientId, -1)}
-            disabled={isSaving || isFiltering || idx === 0}
-            title={isFiltering ? reorderDisabledTitle : undefined}
-            className="adminMoveBtn"
-            aria-label="Monter"
-            variant="secondary"
-          >
-            ↑
-          </Button>
-
-          <Button
-            onClick={() => moveLocal(f.clientId, 1)}
-            disabled={isSaving || isFiltering || idx === draft.length - 1}
-            title={isFiltering ? reorderDisabledTitle : undefined}
-            className="adminMoveBtn"
-            aria-label="Descendre"
-            variant="secondary"
-          >
-            ↓
-          </Button>
-
-          <Button
-            variant="danger"
-            className="deleteFormFieldButton"
-            onClick={() => removeLocal(f.clientId)}
-            disabled={isSaving}
-          >
-            <TrashIcon />
-          </Button>
-        </div>
+            {editorNode}
+          </div>
+        ) : null}
       </div>
-
-      {mobile && showEditInline ? (
-        <div
-          className={[
-            "adminRegInlineEditor",
-            "isEdit",
-            isClosing && closingKey === f.clientId ? "isClosing" : "isOpen",
-          ].join(" ")}
-        >
-          {editorNode}
-        </div>
-      ) : null}
-    </div>
-  );
-}
+    );
+  }
 
   const showCreateInline = (isOpen && creating) || (isClosing && closingKey === "create");
 
-  const subtitle = "Gérez les informations que les participants devront fournir lors de leur inscription à l’événement.";
+  const subtitle =
+    "Gérez les informations que les participants devront fournir lors de leur inscription à l’événement.";
 
   return (
     <FlexPanel
@@ -963,55 +1003,51 @@ async function moveGroup(group: EventFormFieldGroup, dir: -1 | 1) {
       subtitle={subtitle}
       state={isDirty ? "dirty" : "default"}
       actions={
-          <div className="adminRegActionsWrap">
-            {/* Ligne 1 */}
-            <div className="adminRegActionsRow">
-              <Button
-                onClick={openCreate}
-                disabled={!event?.id || isSaving}
-                variant="secondary"
-              >
-                Ajouter un champ
+        <div className="adminRegActionsWrap">
+          <div className="adminRegActionsRow">
+            <Button
+              onClick={openCreate}
+              disabled={!event?.id || isSaving}
+              variant="secondary"
+            >
+              Ajouter un champ
+            </Button>
+
+            <Button
+              onClick={saveAll}
+              disabled={!event?.id || !isDirty || isSaving}
+            >
+              {isSavingAll ? "Enregistrement…" : "Enregistrer"}
+            </Button>
+
+            {isDirty ? (
+              <Button onClick={resetLocalChanges} disabled={isSaving}>
+                Annuler
               </Button>
-
-              <Button
-                onClick={saveAll}
-                disabled={!event?.id || !isDirty || isSaving}
-              >
-                {isSavingAll ? "Enregistrement…" : "Enregistrer"}
-              </Button>
-
-              {isDirty ? (
-                <Button onClick={resetLocalChanges} disabled={isSaving}>
-                  Annuler
-                </Button>
-              ) : null}
-            </div>
-
-            {/* Ligne 2 */}
-            <div className="adminRegActionsRow adminRegActionsRowGroup">
-              <input
-                className="adminEventInput"
-                placeholder="Nom du groupe…"
-                value={newGroupLabel}
-                onChange={(e) => setNewGroupLabel(e.target.value)}
-                disabled={!event?.id || isSaving}
-              />
-
-              <Button
-                onClick={handleCreateGroup}
-                disabled={!event?.id || isSaving || !newGroupLabel.trim()}
-                variant="secondary"
-              >
-                Ajouter un groupe
-              </Button>
-            </div>
+            ) : null}
           </div>
-        }
+
+          <div className="adminRegActionsRow adminRegActionsRowGroup">
+            <input
+              className="adminEventInput"
+              placeholder="Nom du groupe…"
+              value={newGroupLabel}
+              onChange={(e) => setNewGroupLabel(e.target.value)}
+              disabled={!event?.id || isSaving}
+            />
+
+            <Button
+              onClick={handleCreateGroup}
+              disabled={!event?.id || isSaving || !newGroupLabel.trim()}
+              variant="secondary"
+            >
+              Ajouter un groupe
+            </Button>
+          </div>
+        </div>
+      }
     >
       <FilterBar query={query} onQueryChange={setQuery} placeholder="Rechercher un champ…" />
-
-      
 
       {saveAllError ? <div className="adminRegSaveError">{saveAllError}</div> : null}
 
@@ -1036,6 +1072,114 @@ async function moveGroup(group: EventFormFieldGroup, dir: -1 | 1) {
               <div className="adminEventEmpty">Aucun champ ne correspond à “{query.trim()}”.</div>
             ) : (
               groupedSections.map((section) => {
+                const group = section.group;
+
+                return (
+                  <div
+                    key={group?.id ?? "ungrouped"}
+                    className="adminRegGroupSection"
+                  >
+                    <div className="adminRegGroupHeaderRow">
+                      <div className="adminRegGroupHeaderBlock">
+                        <div className="adminRegGroupHeader">
+                          {group ? group.label : "Sans groupe"}
+                        </div>
+
+                        {group?.description ? (
+                          <div className="adminRegGroupDescription">{group.description}</div>
+                        ) : null}
+                      </div>
+
+                      {group ? (
+                        <div className="adminRegGroupActions">
+                          <Button
+                            className="adminRegGroupBtn"
+                            variant="secondary"
+                            onClick={() => openEditGroup(group)}
+                            disabled={isSaving}
+                          >
+                            Modifier
+                          </Button>
+
+                          <Button
+                            className="adminRegGroupBtn"
+                            variant="secondary"
+                            onClick={() =>
+                              updateGroup.updateEventFormFieldGroup({
+                                groupId: group.id,
+                                patch: { isActive: !group.isActive },
+                              }).then((res) => {
+                                if (!res) {
+                                  setSaveAllError(updateGroup.error || "Impossible de modifier le groupe.");
+                                  return;
+                                }
+                                onChanged?.();
+                              })
+                            }
+                            disabled={isSaving}
+                          >
+                            {group.isActive ? "Désactiver" : "Activer"}
+                          </Button>
+
+                          <Button
+                            className="adminRegGroupBtn adminRegGroupBtnIcon"
+                            variant="secondary"
+                            onClick={() => moveGroup(group, -1)}
+                            disabled={isSaving}
+                          >
+                            ↑
+                          </Button>
+
+                          <Button
+                            className="adminRegGroupBtn adminRegGroupBtnIcon"
+                            variant="secondary"
+                            onClick={() => moveGroup(group, 1)}
+                            disabled={isSaving}
+                          >
+                            ↓
+                          </Button>
+
+                          <Button
+                            className="adminRegGroupBtnDanger"
+                            variant="danger"
+                            onClick={() => handleDeleteGroup(section.group!)}
+                            disabled={isSaving || groupHasFields(section.group!.id)}
+                            title={
+                              groupHasFields(section.group!.id)
+                                ? "Ce groupe contient encore des champs"
+                                : undefined
+                            }
+                          >
+                            <TrashIcon />
+                          </Button>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="adminRegGroupList">
+                      {section.fields.map((f) => renderFieldCard(f, isMobile))}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      ) : (
+        <EditorShell
+          isOpen={isOpen}
+          onRequestClose={closeEditor}
+          editorWidth={420}
+          editorGap={14}
+          stickyTop={120}
+          left={
+            <div className="adminRegList">
+              {draft.length === 0 ? (
+                <div className="adminEventEmpty">Aucun champ. Clique “Ajouter un champ”.</div>
+              ) : filtered.length === 0 ? (
+                <div className="adminEventEmpty">Aucun champ ne correspond à “{query.trim()}”.</div>
+              ) : (
+                groupedSections.map((section) => {
                   const group = section.group;
 
                   return (
@@ -1045,14 +1189,14 @@ async function moveGroup(group: EventFormFieldGroup, dir: -1 | 1) {
                     >
                       <div className="adminRegGroupHeaderRow">
                         <div className="adminRegGroupHeaderBlock">
-                        <div className="adminRegGroupHeader">
-                          {group ? group.label : "Sans groupe"}
-                        </div>
+                          <div className="adminRegGroupHeader">
+                            {group ? group.label : "Sans groupe"}
+                          </div>
 
-                        {group?.description ? (
-                          <div className="adminRegGroupDescription">{group.description}</div>
-                        ) : null}
-                      </div>
+                          {group?.description ? (
+                            <div className="adminRegGroupDescription">{group.description}</div>
+                          ) : null}
+                        </div>
 
                         {group ? (
                           <div className="adminRegGroupActions">
@@ -1121,119 +1265,11 @@ async function moveGroup(group: EventFormFieldGroup, dir: -1 | 1) {
                       </div>
 
                       <div className="adminRegGroupList">
-                        {section.fields.map((f) => renderFieldCard(f, !isMobile))}
+                        {section.fields.map((f) => renderFieldCard(f, isMobile))}
                       </div>
                     </div>
                   );
                 })
-            )}
-          </div>
-        </div>
-      ) : (
-        <EditorShell
-          isOpen={isOpen}
-          onRequestClose={closeEditor}
-          editorWidth={420}
-          editorGap={14}
-          stickyTop={120}
-          left={
-            <div className="adminRegList">
-              {draft.length === 0 ? (
-                <div className="adminEventEmpty">Aucun champ. Clique “Ajouter un champ”.</div>
-              ) : filtered.length === 0 ? (
-                <div className="adminEventEmpty">Aucun champ ne correspond à “{query.trim()}”.</div>
-              ) : (
-                groupedSections.map((section) => {
-  const group = section.group;
-
-  return (
-    <div
-      key={group?.id ?? "ungrouped"}
-      className="adminRegGroupSection"
-    >
-      <div className="adminRegGroupHeaderRow">
-        <div className="adminRegGroupHeaderBlock">
-          <div className="adminRegGroupHeader">
-            {group ? group.label : "Sans groupe"}
-          </div>
-
-          {group?.description ? (
-            <div className="adminRegGroupDescription">{group.description}</div>
-          ) : null}
-        </div>
-
-        {group ? (
-          <div className="adminRegGroupActions">
-            <Button
-              className="adminRegGroupBtn"
-              variant="secondary"
-              onClick={() => openEditGroup(group)}
-              disabled={isSaving}
-            >
-              Modifier
-            </Button>
-
-            <Button
-              className="adminRegGroupBtn"
-              variant="secondary"
-              onClick={() =>
-                updateGroup.updateEventFormFieldGroup({
-                  groupId: group.id,
-                  patch: { isActive: !group.isActive },
-                }).then((res) => {
-                  if (!res) {
-                    setSaveAllError(updateGroup.error || "Impossible de modifier le groupe.");
-                    return;
-                  }
-                  onChanged?.();
-                })
-              }
-              disabled={isSaving}
-            >
-              {group.isActive ? "Désactiver" : "Activer"}
-            </Button>
-
-            <Button
-              className="adminRegGroupBtn adminRegGroupBtnIcon"
-              variant="secondary"
-              onClick={() => moveGroup(group, -1)}
-              disabled={isSaving}
-            >
-              ↑
-            </Button>
-
-            <Button
-              className="adminRegGroupBtn adminRegGroupBtnIcon"
-              variant="secondary"
-              onClick={() => moveGroup(group, 1)}
-              disabled={isSaving}
-            >
-              ↓
-            </Button>
-
-            <Button
-              className="adminRegGroupBtnDanger"
-              variant="danger"
-              onClick={() => handleDeleteGroup(section.group!)}
-              disabled={isSaving || groupHasFields(section.group!.id)}
-              title={
-                groupHasFields(section.group!.id)
-                  ? "Ce groupe contient encore des champs"
-                  : undefined
-              }
-            >
-              <TrashIcon />
-            </Button>
-              </div>
-            ) : null}
-          </div>
-
-                  <div className="adminRegGroupList">
-                    {section.fields.map((f) => renderFieldCard(f, !isMobile))}
-                  </div>
-                </div>
-              );
-            })
               )}
             </div>
           }
