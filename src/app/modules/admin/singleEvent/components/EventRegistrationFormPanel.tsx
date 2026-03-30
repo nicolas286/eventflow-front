@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { EventFormField, EventFormFieldGroup, EventFormFieldOptions } from "@shared/models/db/db.eventFormFields.schema";
+import type {
+  EventFormField,
+  EventFormFieldGroup,
+  EventFormFieldOptions,
+} from "@shared/models/db/db.eventFormFields.schema";
 import type { CreateEventFormFieldInput } from "../../forms/schemas/admin.createFormField.schema";
 import type { UpdateEventFormFieldPatch } from "../../forms/schemas/admin.updateEventFormFieldPatch.schema";
 import { useCreateEventFormField } from "../../forms/hooks/useCreateEventFormField";
@@ -15,13 +19,17 @@ import { FIELD_TYPES, type FieldType } from "@shared/constants/fieldTypes";
 import { useMediaQuery } from "@helpers/ui";
 import { slugKey, normalizeContiguousSortOrder } from "@helpers/normalize";
 import { clampInt, uniqueKey, makeClientId } from "@helpers/logic";
-import { optionsToText, sortFromDB, parseOptionsLines, optionsToInlineText } from "@helpers/fields";
+import {
+  optionsToText,
+  sortFromDB,
+  parseOptionsLines,
+  optionsToInlineText,
+} from "@helpers/fields";
 import { TrashIcon } from "@ui/components/icon/Icons";
 import { FlexPanel } from "@ui/components/panels/FlexPanel";
 
 import "./adminSingleEvent.form.desktop.css";
-import "./adminSingleEvent.form.mobile.css"; 
-
+import "./adminSingleEvent.form.mobile.css";
 
 type Props = {
   supabase: SupabaseClient;
@@ -94,9 +102,9 @@ export function EventRegistrationFormPanel(props: Props) {
   const [moveAnim, setMoveAnim] = useState<Record<string, MoveDir>>({});
   const moveTimerRef = useRef<number | null>(null);
 
-  const closeTimerRef = useRef<number | null>(null);
-  const [closingKey, setClosingKey] = useState<string | null>(null); // "create" ou clientId
+  const [closingKey, setClosingKey] = useState<string | null>(null);
   const [isClosing, setIsClosing] = useState(false);
+  const closeTimerRef = useRef<number | null>(null);
 
   const [query, setQuery] = useState("");
   const isFiltering = query.trim().length > 0;
@@ -115,23 +123,49 @@ export function EventRegistrationFormPanel(props: Props) {
     updateGroup.loading ||
     deleteGroup.loading;
 
-  const incomingSig = useMemo(() => {
+  const sortedGroups = useMemo(() => {
+    return [...fieldsGroups].sort((a, b) => {
+      const diff = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+      if (diff !== 0) return diff;
+      return String(a.id).localeCompare(String(b.id));
+    });
+  }, [fieldsGroups]);
+
+  const incomingFieldsSig = useMemo(() => {
     return sortFromDB(fields)
       .map((f) => {
         const id = String(f.id);
         const updatedAt = f.updatedAt ?? "";
         const order = clampInt(f.sortOrder, { fallback: 0 });
+        const groupId = f.groupId ?? "";
+        const active = f.isActive ? "1" : "0";
+        const required = f.isRequired ? "1" : "0";
 
-        return `${id}:${updatedAt}:${order}`;
+        return `${id}:${updatedAt}:${order}:${groupId}:${active}:${required}:${f.label ?? ""}`;
       })
       .join("|");
   }, [fields]);
+
+  const incomingGroupsSig = useMemo(() => {
+    return sortedGroups
+      .map((g) => {
+        const order = clampInt(g.sortOrder ?? 0, { fallback: 0 });
+        const active = g.isActive ? "1" : "0";
+        return `${g.id}:${order}:${active}:${g.label ?? ""}:${g.description ?? ""}`;
+      })
+      .join("|");
+  }, [sortedGroups]);
+
+  const incomingSig = useMemo(() => {
+    return `${incomingFieldsSig}__${incomingGroupsSig}`;
+  }, [incomingFieldsSig, incomingGroupsSig]);
 
   useEffect(() => {
     if (isDirty) return;
     if (lastLoadedSigRef.current === incomingSig) return;
 
     const sorted = sortFromDB(fields);
+
     const next: DraftField[] = normalizeContiguousSortOrder(
       sorted.map((f) => ({
         id: f.id,
@@ -180,14 +214,18 @@ export function EventRegistrationFormPanel(props: Props) {
   }
 
   function buildOptions(fieldType: FieldType, optionsText: string) {
-    if (fieldType === "select" /*|| fieldType === "radio"*/) return parseOptionsLines(optionsText);
+    if (fieldType === "select") return parseOptionsLines(optionsText);
     return null;
   }
 
   function cancelClosingIfAny() {
     setIsClosing(false);
     setClosingKey(null);
-    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+
+    if (closeTimerRef.current) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
   }
 
   function openCreate() {
@@ -195,6 +233,7 @@ export function EventRegistrationFormPanel(props: Props) {
     setEditingGroup(null);
     cancelClosingIfAny();
     setSaveAllError(null);
+
     create.reset();
     update.reset();
     del.reset();
@@ -216,6 +255,7 @@ export function EventRegistrationFormPanel(props: Props) {
     setEditingGroup(null);
     cancelClosingIfAny();
     setSaveAllError(null);
+
     create.reset();
     update.reset();
     del.reset();
@@ -251,23 +291,23 @@ export function EventRegistrationFormPanel(props: Props) {
     setIsClosing(true);
     setClosingKey(key);
 
-    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
-    closeTimerRef.current = window.setTimeout(() => {
-      setEditing(null);
-      setEditingGroup(null);
-      setEditingKind(null);
-      setCreating(false);
-      setIsClosing(false);
-      setClosingKey(null);
+  if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+  closeTimerRef.current = window.setTimeout(() => {
+    setEditing(null);
+    setEditingGroup(null);
+    setEditingKind(null);
+    setCreating(false);
+    setIsClosing(false);
+    setClosingKey(null);
 
-      create.reset();
-      update.reset();
-      del.reset();
-      createGroup.reset();
-      updateGroup.reset();
-      deleteGroup.reset();
-    }, 180);
-  }
+    create.reset();
+    update.reset();
+    del.reset();
+    createGroup.reset();
+    updateGroup.reset();
+    deleteGroup.reset();
+  }, 180);
+}
 
   function openEditGroup(group: EventFormFieldGroup) {
     cancelClosingIfAny();
@@ -292,7 +332,10 @@ export function EventRegistrationFormPanel(props: Props) {
     });
   }
 
-  function toggleLocal(clientId: string, patch: Partial<Pick<DraftField, "isRequired" | "isActive">>) {
+  function toggleLocal(
+    clientId: string,
+    patch: Partial<Pick<DraftField, "isRequired" | "isActive">>
+  ) {
     setDraft((prev) => prev.map((f) => (f.clientId === clientId ? { ...f, ...patch } : f)));
     markDirty();
   }
@@ -345,7 +388,7 @@ export function EventRegistrationFormPanel(props: Props) {
       if (f.id) {
         setDeletedIds((s) => {
           const ns = new Set(s);
-          ns.add(f.id!);
+          ns.add(f.id);
           return ns;
         });
       }
@@ -364,10 +407,9 @@ export function EventRegistrationFormPanel(props: Props) {
     const label = editing.label.trim();
     if (!label) return;
 
-    const isCreate = creating;
     const options = buildOptions(editing.fieldType, editing.optionsText);
 
-    if (isCreate) {
+    if (creating) {
       const clientId = makeClientId();
       const key = buildKeyFromLabel(label);
 
@@ -454,7 +496,7 @@ export function EventRegistrationFormPanel(props: Props) {
             isActive: f.isActive,
             sortOrder: f.sortOrder,
             options,
-          } as CreateEventFormFieldInput;
+          };
 
           const created = await create.createEventFormField(input);
           if (!created) throw new Error(String(create.error || "Erreur création"));
@@ -517,10 +559,10 @@ export function EventRegistrationFormPanel(props: Props) {
     const label = newGroupLabel.trim();
     if (!label) return;
 
-    const nextSortOrder =
-      (fieldsGroups.length > 0
-        ? Math.max(...fieldsGroups.map((g) => g.sortOrder ?? 0))
-        : 0) + 1;
+  const nextSortOrder =
+    (fieldsGroups.length > 0
+      ? Math.max(...fieldsGroups.map((g) => g.sortOrder ?? 0))
+      : 0) + 1;
 
     const created = await createGroup.createEventFormFieldGroup({
       eventId: event.id,
@@ -530,7 +572,7 @@ export function EventRegistrationFormPanel(props: Props) {
       isActive: true,
     });
 
-    if (!created) return;
+  if (!created) return;
 
     setNewGroupLabel("");
     setNewGroupDescription("");
@@ -562,15 +604,15 @@ export function EventRegistrationFormPanel(props: Props) {
   async function moveGroup(group: EventFormFieldGroup, dir: -1 | 1) {
     if (isSaving) return;
 
-    const sorted = [...fieldsGroups].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-    const idx = sorted.findIndex((g) => g.id === group.id);
-    if (idx < 0) return;
+  const sorted = [...fieldsGroups].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  const idx = sorted.findIndex((g) => g.id === group.id);
+  if (idx < 0) return;
 
-    const nextIdx = idx + dir;
-    if (nextIdx < 0 || nextIdx >= sorted.length) return;
+  const nextIdx = idx + dir;
+  if (nextIdx < 0 || nextIdx >= sorted.length) return;
 
-    const current = sorted[idx];
-    const target = sorted[nextIdx];
+  const current = sorted[idx];
+  const target = sorted[nextIdx];
 
     const currentOrder = clampInt(current.sortOrder ?? idx + 1, { fallback: idx + 1 });
     const targetOrder = clampInt(target.sortOrder ?? nextIdx + 1, { fallback: nextIdx + 1 });
@@ -614,16 +656,16 @@ export function EventRegistrationFormPanel(props: Props) {
   }, [draft, query]);
 
   const groupedSections = useMemo(() => {
-    const groupsSorted = [...fieldsGroups].sort(
-      (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
-    );
+  const groupsSorted = [...fieldsGroups].sort(
+    (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
+  );
 
-    const ungrouped = filtered.filter((f) => !f.groupId);
+  const ungrouped = filtered.filter((f) => !f.groupId);
 
-    let grouped = groupsSorted.map((group) => ({
-      group,
-      fields: filtered.filter((f) => f.groupId === group.id),
-    }));
+  let grouped = groupsSorted.map((group) => ({
+    group,
+    fields: filtered.filter((f) => f.groupId === group.id),
+  }));
 
     if (isFiltering) {
       grouped = grouped.filter((section) => section.fields.length > 0);
@@ -639,10 +681,12 @@ export function EventRegistrationFormPanel(props: Props) {
       ];
     }
 
-    return grouped;
-  }, [filtered, fieldsGroups, isFiltering]);
+  return grouped;
+}, [filtered, fieldsGroups, isFiltering]);
 
-  const reorderDisabledTitle = isFiltering ? "Le réordonnancement est désactivé pendant une recherche." : undefined;
+  const reorderDisabledTitle = isFiltering
+    ? "Le réordonnancement est désactivé pendant une recherche."
+    : undefined;
 
   const groupEditorNode = editingGroup ? (
     <div className="adminRegEditorCard">
@@ -772,9 +816,8 @@ export function EventRegistrationFormPanel(props: Props) {
             disabled={isSaving}
           >
             <option value="">Sans groupe</option>
-            {fieldsGroups
+            {sortedGroups
               .filter((g) => g.isActive)
-              .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
               .map((g) => (
                 <option key={g.id} value={g.id}>
                   {g.label}
@@ -807,7 +850,7 @@ export function EventRegistrationFormPanel(props: Props) {
           </div>
         </div>
 
-        {(editing.fieldType === "select" /*|| editing.fieldType === "radio"*/) && (
+        {(editing.fieldType === "select" || editing.fieldType === "radio") && (
           <div className="adminEventField adminEventFieldSpan2">
             <div className="adminEventLabel">Options</div>
             <textarea
@@ -834,7 +877,7 @@ export function EventRegistrationFormPanel(props: Props) {
   ) : null;
 
   const editorNode =
-    editingKind === "group" ? groupEditorNode : fieldEditorNode;
+  editingKind === "group" ? groupEditorNode : fieldEditorNode;
 
   function renderFieldCard(f: DraftField, mobile = false) {
     const idx = draft.findIndex((x) => x.clientId === f.clientId);
@@ -953,7 +996,8 @@ export function EventRegistrationFormPanel(props: Props) {
 
   const showCreateInline = (isOpen && creating) || (isClosing && closingKey === "create");
 
-  const subtitle = "Gérez les informations que les participants devront fournir lors de leur inscription à l’événement.";
+  const subtitle =
+    "Gérez les informations que les participants devront fournir lors de leur inscription à l’événement.";
 
   return (
     <FlexPanel
@@ -1114,12 +1158,12 @@ export function EventRegistrationFormPanel(props: Props) {
                       ) : null}
                     </div>
 
-                    <div className="adminRegGroupList">
-                      {section.fields.map((f) => renderFieldCard(f, true))}
+                      <div className="adminRegGroupList">
+                        {section.fields.map((f) => renderFieldCard(f, !isMobile))}
+                      </div>
                     </div>
-                  </div>
-                );
-              })
+                  );
+                })
             )}
           </div>
         </div>
@@ -1222,12 +1266,12 @@ export function EventRegistrationFormPanel(props: Props) {
                         ) : null}
                       </div>
 
-                      <div className="adminRegGroupList">
-                        {section.fields.map((f) => renderFieldCard(f, false))}
-                      </div>
-                    </div>
-                  );
-                })
+                  <div className="adminRegGroupList">
+                    {section.fields.map((f) => renderFieldCard(f, !isMobile))}
+                  </div>
+                </div>
+              );
+            })
               )}
             </div>
           }
