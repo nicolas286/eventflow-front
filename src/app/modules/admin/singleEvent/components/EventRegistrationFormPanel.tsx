@@ -1035,6 +1035,8 @@ export function EventRegistrationFormPanel(props: Props) {
     );
   }
 
+  
+
   const showCreateInline = (isOpen && creating) || (isClosing && closingKey === "create");
 
   const subtitle =
