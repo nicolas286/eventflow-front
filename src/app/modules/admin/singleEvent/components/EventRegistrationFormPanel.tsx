@@ -60,7 +60,6 @@ type GroupEditState = {
 export type DraftField = {
   id: string | null;
   clientId: string;
-
   label: string;
   fieldKey: string;
   fieldType: FieldType;
@@ -69,7 +68,6 @@ export type DraftField = {
   isActive: boolean;
   sortOrder: number;
   options: EventFormFieldOptions;
-
   isNew?: boolean;
 };
 
@@ -84,14 +82,20 @@ export function EventRegistrationFormPanel(props: Props) {
   const update = useUpdateEventFormField({ supabase });
   const del = useDeleteEventFormField({ supabase });
 
+  const createGroup = useCreateEventFormFieldGroup({ supabase });
+  const updateGroup = useUpdateEventFormFieldGroup({ supabase });
+  const deleteGroup = useDeleteEventFormFieldGroup({ supabase });
+
   const [draft, setDraft] = useState<DraftField[]>([]);
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
 
   const [editing, setEditing] = useState<EditState | null>(null);
-  const [newGroupDescription, setNewGroupDescription] = useState("");
   const [editingKind, setEditingKind] = useState<"field" | "group" | null>(null);
   const [editingGroup, setEditingGroup] = useState<GroupEditState | null>(null);
   const [creating, setCreating] = useState(false);
+
+  const [newGroupLabel, setNewGroupLabel] = useState("");
+  const [newGroupDescription, setNewGroupDescription] = useState("");
 
   const [isDirty, setIsDirty] = useState(false);
   const [isSavingAll, setIsSavingAll] = useState(false);
@@ -108,11 +112,6 @@ export function EventRegistrationFormPanel(props: Props) {
 
   const [query, setQuery] = useState("");
   const isFiltering = query.trim().length > 0;
-
-  const createGroup = useCreateEventFormFieldGroup({ supabase });
-  const updateGroup = useUpdateEventFormFieldGroup({ supabase });
-  const deleteGroup = useDeleteEventFormFieldGroup({ supabase });
-  const [newGroupLabel, setNewGroupLabel] = useState("");
 
   const isSaving =
     isSavingAll ||
@@ -174,9 +173,9 @@ export function EventRegistrationFormPanel(props: Props) {
         fieldKey: String(f.fieldKey ?? ""),
         fieldType: (f.fieldType ?? "text") as FieldType,
         groupId: f.groupId ?? null,
-        isRequired: f.isRequired,
+        isRequired: Boolean(f.isRequired),
         isActive: f.isActive ?? true,
-        sortOrder: clampInt(f.sortOrder ?? 0),
+        sortOrder: clampInt(f.sortOrder ?? 0, { fallback: 0 }),
         options: f.options ?? null,
       }))
     );
@@ -272,43 +271,6 @@ export function EventRegistrationFormPanel(props: Props) {
     });
   }
 
-  function closeEditor() {
-    const key =
-      editingKind === "group"
-        ? editingGroup?.id ?? null
-        : creating
-        ? "create"
-        : editing?.id ?? null;
-
-    if (!key) {
-      setEditing(null);
-      setEditingGroup(null);
-      setEditingKind(null);
-      setCreating(false);
-      return;
-    }
-
-    setIsClosing(true);
-    setClosingKey(key);
-
-  if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
-  closeTimerRef.current = window.setTimeout(() => {
-    setEditing(null);
-    setEditingGroup(null);
-    setEditingKind(null);
-    setCreating(false);
-    setIsClosing(false);
-    setClosingKey(null);
-
-    create.reset();
-    update.reset();
-    del.reset();
-    createGroup.reset();
-    updateGroup.reset();
-    deleteGroup.reset();
-  }, 180);
-}
-
   function openEditGroup(group: EventFormFieldGroup) {
     cancelClosingIfAny();
     setSaveAllError(null);
@@ -330,6 +292,43 @@ export function EventRegistrationFormPanel(props: Props) {
       isActive: Boolean(group.isActive ?? true),
       sortOrder: clampInt(group.sortOrder ?? 0, { fallback: 0 }),
     });
+  }
+
+  function closeEditor() {
+    const key =
+      editingKind === "group"
+        ? editingGroup?.id ?? null
+        : creating
+          ? "create"
+          : editing?.id ?? null;
+
+    if (!key) {
+      setEditing(null);
+      setEditingGroup(null);
+      setEditingKind(null);
+      setCreating(false);
+      return;
+    }
+
+    setIsClosing(true);
+    setClosingKey(key);
+
+    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = window.setTimeout(() => {
+      setEditing(null);
+      setEditingGroup(null);
+      setEditingKind(null);
+      setCreating(false);
+      setIsClosing(false);
+      setClosingKey(null);
+
+      create.reset();
+      update.reset();
+      del.reset();
+      createGroup.reset();
+      updateGroup.reset();
+      deleteGroup.reset();
+    }, 180);
   }
 
   function toggleLocal(
@@ -355,29 +354,61 @@ export function EventRegistrationFormPanel(props: Props) {
     }, 220);
   }
 
-  function moveLocal(clientId: string, dir: -1 | 1) {
-    setDraft((prev) => {
-      const idx = prev.findIndex((x) => x.clientId === clientId);
-      if (idx < 0) return prev;
+  async function moveFieldPersisted(clientId: string, dir: -1 | 1) {
+    if (isSaving) return;
 
-      const nextIdx = idx + dir;
-      if (nextIdx < 0 || nextIdx >= prev.length) return prev;
+    if (isDirty) {
+      setSaveAllError("Enregistre ou annule d’abord les modifications avant de réordonner les champs.");
+      return;
+    }
 
-      const copy = [...prev];
-      const a = copy[idx];
-      const b = copy[nextIdx];
+    const current = draft.find((f) => f.clientId === clientId);
+    if (!current?.id) return;
 
-      copy[idx] = b;
-      copy[nextIdx] = a;
+    const sameGroup = draft.filter(
+      (f) => (f.groupId ?? null) === (current.groupId ?? null)
+    );
+
+    const idx = sameGroup.findIndex((f) => f.clientId === clientId);
+    if (idx < 0) return;
+
+    const targetIdx = idx + dir;
+    if (targetIdx < 0 || targetIdx >= sameGroup.length) return;
+
+    const target = sameGroup[targetIdx];
+    if (!target?.id) return;
+
+    setIsSavingAll(true);
+    setSaveAllError(null);
+
+    try {
+      const currentSort = clampInt(current.sortOrder, { fallback: 0 });
+      const targetSort = clampInt(target.sortOrder, { fallback: 0 });
 
       const aDir: MoveDir = dir === -1 ? "up" : "down";
       const bDir: MoveDir = dir === -1 ? "down" : "up";
-      triggerMoveAnim(a.clientId, aDir, b.clientId, bDir);
 
-      return normalizeContiguousSortOrder(copy);
-    });
+      const ok1 = await update.updateEventFormField({
+        fieldId: current.id,
+        patch: { sortOrder: targetSort },
+      });
 
-    markDirty();
+      if (!ok1) throw new Error(String(update.error || "Erreur de réordonnancement"));
+
+      const ok2 = await update.updateEventFormField({
+        fieldId: target.id,
+        patch: { sortOrder: currentSort },
+      });
+
+      if (!ok2) throw new Error(String(update.error || "Erreur de réordonnancement"));
+
+      triggerMoveAnim(current.clientId, aDir, target.clientId, bDir);
+      onChanged?.();
+    } catch (e: any) {
+      setSaveAllError(e?.message ? String(e.message) : "Erreur inconnue");
+    } finally {
+      setIsSavingAll(false);
+    }
   }
 
   function removeLocal(clientId: string) {
@@ -559,10 +590,10 @@ export function EventRegistrationFormPanel(props: Props) {
     const label = newGroupLabel.trim();
     if (!label) return;
 
-  const nextSortOrder =
-    (fieldsGroups.length > 0
-      ? Math.max(...fieldsGroups.map((g) => g.sortOrder ?? 0))
-      : 0) + 1;
+    const nextSortOrder =
+      (fieldsGroups.length > 0
+        ? Math.max(...fieldsGroups.map((g) => g.sortOrder ?? 0))
+        : 0) + 1;
 
     const created = await createGroup.createEventFormFieldGroup({
       eventId: event.id,
@@ -572,7 +603,7 @@ export function EventRegistrationFormPanel(props: Props) {
       isActive: true,
     });
 
-  if (!created) return;
+    if (!created) return;
 
     setNewGroupLabel("");
     setNewGroupDescription("");
@@ -604,15 +635,15 @@ export function EventRegistrationFormPanel(props: Props) {
   async function moveGroup(group: EventFormFieldGroup, dir: -1 | 1) {
     if (isSaving) return;
 
-  const sorted = [...fieldsGroups].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-  const idx = sorted.findIndex((g) => g.id === group.id);
-  if (idx < 0) return;
+    const sorted = [...fieldsGroups].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    const idx = sorted.findIndex((g) => g.id === group.id);
+    if (idx < 0) return;
 
-  const nextIdx = idx + dir;
-  if (nextIdx < 0 || nextIdx >= sorted.length) return;
+    const nextIdx = idx + dir;
+    if (nextIdx < 0 || nextIdx >= sorted.length) return;
 
-  const current = sorted[idx];
-  const target = sorted[nextIdx];
+    const current = sorted[idx];
+    const target = sorted[nextIdx];
 
     const currentOrder = clampInt(current.sortOrder ?? idx + 1, { fallback: idx + 1 });
     const targetOrder = clampInt(target.sortOrder ?? nextIdx + 1, { fallback: nextIdx + 1 });
@@ -656,38 +687,38 @@ export function EventRegistrationFormPanel(props: Props) {
   }, [draft, query]);
 
   const groupedSections = useMemo(() => {
-  const groupsSorted = [...fieldsGroups].sort(
-    (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
-  );
+    const groupsSorted = [...fieldsGroups].sort(
+      (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
+    );
 
-  const groupIds = new Set(groupsSorted.map((g) => g.id));
+    const groupIds = new Set(groupsSorted.map((g) => g.id));
 
-  const ungrouped = filtered.filter((f) => {
-    if (!f.groupId) return true;
-    return !groupIds.has(f.groupId);
-  });
+    const ungrouped = filtered.filter((f) => {
+      if (!f.groupId) return true;
+      return !groupIds.has(f.groupId);
+    });
 
-  let grouped = groupsSorted.map((group) => ({
-    group,
-    fields: filtered.filter((f) => f.groupId === group.id),
-  }));
+    let grouped = groupsSorted.map((group) => ({
+      group,
+      fields: filtered.filter((f) => f.groupId === group.id),
+    }));
 
-  if (isFiltering) {
-    grouped = grouped.filter((section) => section.fields.length > 0);
-  }
+    if (isFiltering) {
+      grouped = grouped.filter((section) => section.fields.length > 0);
+    }
 
-  if (ungrouped.length > 0) {
-    return [
-      {
-        group: null as EventFormFieldGroup | null,
-        fields: ungrouped,
-      },
-      ...grouped,
-    ];
-  }
+    if (ungrouped.length > 0) {
+      return [
+        {
+          group: null as EventFormFieldGroup | null,
+          fields: ungrouped,
+        },
+        ...grouped,
+      ];
+    }
 
-  return grouped;
-}, [filtered, fieldsGroups, isFiltering]);
+    return grouped;
+  }, [filtered, fieldsGroups, isFiltering]);
 
   const reorderDisabledTitle = isFiltering
     ? "Le réordonnancement est désactivé pendant une recherche."
@@ -855,7 +886,7 @@ export function EventRegistrationFormPanel(props: Props) {
           </div>
         </div>
 
-        {(editing.fieldType === "select") && (
+        {editing.fieldType === "select" ? (
           <div className="adminEventField adminEventFieldSpan2">
             <div className="adminEventLabel">Options</div>
             <textarea
@@ -866,7 +897,7 @@ export function EventRegistrationFormPanel(props: Props) {
               disabled={isSaving}
             />
           </div>
-        )}
+        ) : null}
       </div>
 
       <div className="adminRegEditorFooter">
@@ -881,11 +912,16 @@ export function EventRegistrationFormPanel(props: Props) {
     </div>
   ) : null;
 
-  const editorNode =
-  editingKind === "group" ? groupEditorNode : fieldEditorNode;
+  const editorNode = editingKind === "group" ? groupEditorNode : fieldEditorNode;
 
   function renderFieldCard(f: DraftField, mobile = false) {
-    const idx = draft.findIndex((x) => x.clientId === f.clientId);
+    const sameGroup = draft.filter(
+      (x) => (x.groupId ?? null) === (f.groupId ?? null)
+    );
+    const groupIdx = sameGroup.findIndex((x) => x.clientId === f.clientId);
+
+    const canMoveUp = groupIdx > 0;
+    const canMoveDown = groupIdx < sameGroup.length - 1;
 
     const active = Boolean(f.isActive ?? true);
     const required = Boolean(f.isRequired ?? false);
@@ -952,8 +988,8 @@ export function EventRegistrationFormPanel(props: Props) {
             </Button>
 
             <Button
-              onClick={() => moveLocal(f.clientId, -1)}
-              disabled={isSaving || isFiltering || idx === 0}
+              onClick={() => moveFieldPersisted(f.clientId, -1)}
+              disabled={isSaving || isFiltering || !canMoveUp}
               title={isFiltering ? reorderDisabledTitle : undefined}
               className="adminMoveBtn"
               aria-label="Monter"
@@ -963,8 +999,8 @@ export function EventRegistrationFormPanel(props: Props) {
             </Button>
 
             <Button
-              onClick={() => moveLocal(f.clientId, 1)}
-              disabled={isSaving || isFiltering || idx === draft.length - 1}
+              onClick={() => moveFieldPersisted(f.clientId, 1)}
+              disabled={isSaving || isFiltering || !canMoveDown}
               title={isFiltering ? reorderDisabledTitle : undefined}
               className="adminMoveBtn"
               aria-label="Descendre"
@@ -1149,10 +1185,10 @@ export function EventRegistrationFormPanel(props: Props) {
                           <Button
                             className="adminRegGroupBtnDanger"
                             variant="danger"
-                            onClick={() => handleDeleteGroup(section.group!)}
-                            disabled={isSaving || groupHasFields(section.group!.id)}
+                            onClick={() => handleDeleteGroup(group)}
+                            disabled={isSaving || groupHasFields(group.id)}
                             title={
-                              groupHasFields(section.group!.id)
+                              groupHasFields(group.id)
                                 ? "Ce groupe contient encore des champs"
                                 : undefined
                             }
@@ -1163,12 +1199,12 @@ export function EventRegistrationFormPanel(props: Props) {
                       ) : null}
                     </div>
 
-                      <div className="adminRegGroupList">
-                        {section.fields.map((f) => renderFieldCard(f, !isMobile))}
-                      </div>
+                    <div className="adminRegGroupList">
+                      {section.fields.map((f) => renderFieldCard(f, true))}
                     </div>
-                  );
-                })
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
@@ -1257,10 +1293,10 @@ export function EventRegistrationFormPanel(props: Props) {
                             <Button
                               className="adminRegGroupBtnDanger"
                               variant="danger"
-                              onClick={() => handleDeleteGroup(section.group!)}
-                              disabled={isSaving || groupHasFields(section.group!.id)}
+                              onClick={() => handleDeleteGroup(group)}
+                              disabled={isSaving || groupHasFields(group.id)}
                               title={
-                                groupHasFields(section.group!.id)
+                                groupHasFields(group.id)
                                   ? "Ce groupe contient encore des champs"
                                   : undefined
                               }
@@ -1271,12 +1307,12 @@ export function EventRegistrationFormPanel(props: Props) {
                         ) : null}
                       </div>
 
-                  <div className="adminRegGroupList">
-                    {section.fields.map((f) => renderFieldCard(f, !isMobile))}
-                  </div>
-                </div>
-              );
-            })
+                      <div className="adminRegGroupList">
+                        {section.fields.map((f) => renderFieldCard(f, false))}
+                      </div>
+                    </div>
+                  );
+                })
               )}
             </div>
           }
