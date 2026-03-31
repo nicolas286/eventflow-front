@@ -1,4 +1,3 @@
-import type { EventProduct } from "../models/db/db.eventProducts.schema";
 import type { OrderStatus } from "../../app/modules/public/register/pages/OrderPage";
 
 /* ============================================================
@@ -112,10 +111,19 @@ export function sortAlpha<T>(
 }
 
 /** Wrapper spécifique produits */
-export function sortProducts(products: EventProduct[]) {
-  return sortBySortOrder(products);
-}
+type SortableProduct = {
+  sortOrder?: number | null;
+};
 
+export function sortProducts<T extends SortableProduct>(
+  products: T[] | null | undefined
+): T[] {
+  const arr = [...(products ?? [])];
+
+  arr.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+  return arr;
+}
 /* ============================================================
    STOCK
    ============================================================ */

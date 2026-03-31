@@ -10,13 +10,14 @@ export const eventSchema = z.object({
   bannerUrl: z.string().min(5, "L'URL de la bannière est trop courte").max(500, "L'URL de la bannière est trop longue").nullable().optional(),
   startsAt: z.string().nullable().optional(),
   endsAt: z.string().nullable().optional(),
+  registrationDeadline: z.string().nullable().optional(),
   isPublished: z.boolean(),
   maxAttendees: z
-  .number()
-  .int("Le nombre de participants maximal doit être un entier")
-  .min(0, "Le nombre de participants maximal ne peut être négatif")
-  .nullable()
-  .optional(),
+    .number()
+    .int("Le nombre de participants maximal doit être un entier")
+    .min(0, "Le nombre de participants maximal ne peut être négatif")
+    .nullable()
+    .optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   depositCents: z.number().int().min(0, "L'acompte doit être positif ou nul").nullable().optional(),

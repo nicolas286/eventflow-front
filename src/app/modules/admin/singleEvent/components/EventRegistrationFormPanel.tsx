@@ -1,25 +1,35 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { EventFormField, EventFormFieldGroup, EventFormFieldOptions } from "@shared/models/db/db.eventFormFields.schema";
+import type {
+  EventFormField,
+  EventFormFieldGroup,
+  EventFormFieldOptions,
+} from "@shared/models/db/db.eventFormFields.schema";
 import type { CreateEventFormFieldInput } from "../../forms/schemas/admin.createFormField.schema";
 import type { UpdateEventFormFieldPatch } from "../../forms/schemas/admin.updateEventFormFieldPatch.schema";
 import { useCreateEventFormField } from "../../forms/hooks/useCreateEventFormField";
 import { useUpdateEventFormField } from "../../forms/hooks/useUpdateEventFormField";
 import { useDeleteEventFormField } from "../../forms/hooks/useDeleteEventFormField";
 import { useCreateEventFormFieldGroup } from "../../forms/hooks/useCreateEventFormFieldGroup";
+import { useUpdateEventFormFieldGroup } from "../../forms/hooks/useUpdateEventFormFieldGroup";
+import { useDeleteEventFormFieldGroup } from "../../forms/hooks/useDeleteEventFormFieldGroup";
 import { Button, EditorShell, StickySaveBar, FilterBar } from "@ui/components";
 import { FIELD_TYPES, type FieldType } from "@shared/constants/fieldTypes";
 import { useMediaQuery } from "@helpers/ui";
 import { slugKey, normalizeContiguousSortOrder } from "@helpers/normalize";
 import { clampInt, uniqueKey, makeClientId } from "@helpers/logic";
-import { optionsToText, sortFromDB, parseOptionsLines, optionsToInlineText } from "@helpers/fields";
+import {
+  optionsToText,
+  sortFromDB,
+  parseOptionsLines,
+  optionsToInlineText,
+} from "@helpers/fields";
 import { TrashIcon } from "@ui/components/icon/Icons";
 import { FlexPanel } from "@ui/components/panels/FlexPanel";
 
 import "./adminSingleEvent.form.desktop.css";
-import "./adminSingleEvent.form.mobile.css"; 
-
+import "./adminSingleEvent.form.mobile.css";
 
 type Props = {
   supabase: SupabaseClient;
@@ -37,6 +47,14 @@ type EditState = {
   isRequired: boolean;
   isActive: boolean;
   optionsText: string;
+};
+
+type GroupEditState = {
+  id: string;
+  label: string;
+  description: string;
+  isActive: boolean;
+  sortOrder: number;
 };
 
 export type DraftField = {
@@ -70,6 +88,9 @@ export function EventRegistrationFormPanel(props: Props) {
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
 
   const [editing, setEditing] = useState<EditState | null>(null);
+  const [newGroupDescription, setNewGroupDescription] = useState("");
+  const [editingKind, setEditingKind] = useState<"field" | "group" | null>(null);
+  const [editingGroup, setEditingGroup] = useState<GroupEditState | null>(null);
   const [creating, setCreating] = useState(false);
 
   const [isDirty, setIsDirty] = useState(false);
@@ -81,50 +102,84 @@ export function EventRegistrationFormPanel(props: Props) {
   const [moveAnim, setMoveAnim] = useState<Record<string, MoveDir>>({});
   const moveTimerRef = useRef<number | null>(null);
 
-  const closeTimerRef = useRef<number | null>(null);
-  const [closingKey, setClosingKey] = useState<string | null>(null); // "create" ou clientId
+  const [closingKey, setClosingKey] = useState<string | null>(null);
   const [isClosing, setIsClosing] = useState(false);
+  const closeTimerRef = useRef<number | null>(null);
 
-  // ✅ Search / filter
   const [query, setQuery] = useState("");
   const isFiltering = query.trim().length > 0;
 
   const createGroup = useCreateEventFormFieldGroup({ supabase });
+  const updateGroup = useUpdateEventFormFieldGroup({ supabase });
+  const deleteGroup = useDeleteEventFormFieldGroup({ supabase });
   const [newGroupLabel, setNewGroupLabel] = useState("");
 
-  const isSaving = isSavingAll || create.loading || update.loading || del.loading || createGroup.loading;
+  const isSaving =
+    isSavingAll ||
+    create.loading ||
+    update.loading ||
+    del.loading ||
+    createGroup.loading ||
+    updateGroup.loading ||
+    deleteGroup.loading;
 
-  const incomingSig = useMemo(() => {
+  const sortedGroups = useMemo(() => {
+    return [...fieldsGroups].sort((a, b) => {
+      const diff = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+      if (diff !== 0) return diff;
+      return String(a.id).localeCompare(String(b.id));
+    });
+  }, [fieldsGroups]);
+
+  const incomingFieldsSig = useMemo(() => {
     return sortFromDB(fields)
       .map((f) => {
         const id = String(f.id);
         const updatedAt = f.updatedAt ?? "";
         const order = clampInt(f.sortOrder, { fallback: 0 });
+        const groupId = f.groupId ?? "";
+        const active = f.isActive ? "1" : "0";
+        const required = f.isRequired ? "1" : "0";
 
-        return `${id}:${updatedAt}:${order}`;
+        return `${id}:${updatedAt}:${order}:${groupId}:${active}:${required}:${f.label ?? ""}`;
       })
       .join("|");
   }, [fields]);
+
+  const incomingGroupsSig = useMemo(() => {
+    return sortedGroups
+      .map((g) => {
+        const order = clampInt(g.sortOrder ?? 0, { fallback: 0 });
+        const active = g.isActive ? "1" : "0";
+        return `${g.id}:${order}:${active}:${g.label ?? ""}:${g.description ?? ""}`;
+      })
+      .join("|");
+  }, [sortedGroups]);
+
+  const incomingSig = useMemo(() => {
+    return `${incomingFieldsSig}__${incomingGroupsSig}`;
+  }, [incomingFieldsSig, incomingGroupsSig]);
 
   useEffect(() => {
     if (isDirty) return;
     if (lastLoadedSigRef.current === incomingSig) return;
 
     const sorted = sortFromDB(fields);
+
     const next: DraftField[] = normalizeContiguousSortOrder(
-    sorted.map((f) => ({
-      id: f.id,
-      clientId: f.id,
-      label: f.label ?? "",
-      fieldKey: String(f.fieldKey ?? ""),
-      fieldType: (f.fieldType ?? "text") as FieldType,
-      groupId: f.groupId ?? null,
-      isRequired: f.isRequired,
-      isActive: f.isActive ?? true,
-      sortOrder: clampInt(f.sortOrder ?? 0),
-      options: f.options ?? null,
-    }))
-  );
+      sorted.map((f) => ({
+        id: f.id,
+        clientId: f.id,
+        label: f.label ?? "",
+        fieldKey: String(f.fieldKey ?? ""),
+        fieldType: (f.fieldType ?? "text") as FieldType,
+        groupId: f.groupId ?? null,
+        isRequired: f.isRequired,
+        isActive: f.isActive ?? true,
+        sortOrder: clampInt(f.sortOrder ?? 0),
+        options: f.options ?? null,
+      }))
+    );
 
     setDraft(next);
     setDeletedIds(new Set());
@@ -159,19 +214,26 @@ export function EventRegistrationFormPanel(props: Props) {
   }
 
   function buildOptions(fieldType: FieldType, optionsText: string) {
-    if (fieldType === "select" /*|| fieldType === "radio"*/) return parseOptionsLines(optionsText);
+    if (fieldType === "select") return parseOptionsLines(optionsText);
     return null;
   }
 
   function cancelClosingIfAny() {
     setIsClosing(false);
     setClosingKey(null);
-    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+
+    if (closeTimerRef.current) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
   }
 
   function openCreate() {
+    setEditingKind("field");
+    setEditingGroup(null);
     cancelClosingIfAny();
     setSaveAllError(null);
+
     create.reset();
     update.reset();
     del.reset();
@@ -189,8 +251,11 @@ export function EventRegistrationFormPanel(props: Props) {
   }
 
   function openEdit(f: DraftField) {
+    setEditingKind("field");
+    setEditingGroup(null);
     cancelClosingIfAny();
     setSaveAllError(null);
+
     create.reset();
     update.reset();
     del.reset();
@@ -208,14 +273,17 @@ export function EventRegistrationFormPanel(props: Props) {
   }
 
   function closeEditor() {
-    if (!editing) {
-      setCreating(false);
-      return;
-    }
+    const key =
+      editingKind === "group"
+        ? editingGroup?.id ?? null
+        : creating
+        ? "create"
+        : editing?.id ?? null;
 
-    const key = creating ? "create" : (editing.id ?? null);
     if (!key) {
       setEditing(null);
+      setEditingGroup(null);
+      setEditingKind(null);
       setCreating(false);
       return;
     }
@@ -223,19 +291,51 @@ export function EventRegistrationFormPanel(props: Props) {
     setIsClosing(true);
     setClosingKey(key);
 
-    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
-    closeTimerRef.current = window.setTimeout(() => {
-      setEditing(null);
-      setCreating(false);
-      setIsClosing(false);
-      setClosingKey(null);
-      create.reset();
-      update.reset();
-      del.reset();
-    }, 180);
+  if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+  closeTimerRef.current = window.setTimeout(() => {
+    setEditing(null);
+    setEditingGroup(null);
+    setEditingKind(null);
+    setCreating(false);
+    setIsClosing(false);
+    setClosingKey(null);
+
+    create.reset();
+    update.reset();
+    del.reset();
+    createGroup.reset();
+    updateGroup.reset();
+    deleteGroup.reset();
+  }, 180);
+}
+
+  function openEditGroup(group: EventFormFieldGroup) {
+    cancelClosingIfAny();
+    setSaveAllError(null);
+
+    create.reset();
+    update.reset();
+    del.reset();
+    createGroup.reset();
+    updateGroup.reset();
+    deleteGroup.reset();
+
+    setCreating(false);
+    setEditingKind("group");
+    setEditing(null);
+    setEditingGroup({
+      id: group.id,
+      label: group.label ?? "",
+      description: group.description ?? "",
+      isActive: Boolean(group.isActive ?? true),
+      sortOrder: clampInt(group.sortOrder ?? 0, { fallback: 0 }),
+    });
   }
 
-  function toggleLocal(clientId: string, patch: Partial<Pick<DraftField, "isRequired" | "isActive">>) {
+  function toggleLocal(
+    clientId: string,
+    patch: Partial<Pick<DraftField, "isRequired" | "isActive">>
+  ) {
     setDraft((prev) => prev.map((f) => (f.clientId === clientId ? { ...f, ...patch } : f)));
     markDirty();
   }
@@ -340,10 +440,9 @@ export function EventRegistrationFormPanel(props: Props) {
     const label = editing.label.trim();
     if (!label) return;
 
-    const isCreate = creating;
     const options = buildOptions(editing.fieldType, editing.optionsText);
 
-    if (isCreate) {
+    if (creating) {
       const clientId = makeClientId();
       const key = buildKeyFromLabel(label);
 
@@ -396,6 +495,10 @@ export function EventRegistrationFormPanel(props: Props) {
     lastLoadedSigRef.current = "";
   }
 
+  function groupHasFields(groupId: string) {
+    return draft.some((f) => f.groupId === groupId);
+  }
+
   async function saveAll() {
     if (!event?.id) return;
     if (isSaving) return;
@@ -426,7 +529,7 @@ export function EventRegistrationFormPanel(props: Props) {
             isActive: f.isActive,
             sortOrder: f.sortOrder,
             options,
-          } as CreateEventFormFieldInput;
+          };
 
           const created = await create.createEventFormField(input);
           if (!created) throw new Error(String(create.error || "Erreur création"));
@@ -458,32 +561,120 @@ export function EventRegistrationFormPanel(props: Props) {
     }
   }
 
-  async function handleCreateGroup() {
-  if (!event?.id || isSaving) return;
+  async function saveGroupEditor() {
+    if (!editingGroup || isSaving) return;
 
-  const label = newGroupLabel.trim();
-  if (!label) return;
+    const label = editingGroup.label.trim();
+    if (!label) return;
+
+    const updated = await updateGroup.updateEventFormFieldGroup({
+      groupId: editingGroup.id,
+      patch: {
+        label,
+        description: editingGroup.description.trim() || null,
+        isActive: editingGroup.isActive,
+        sortOrder: editingGroup.sortOrder,
+      },
+    });
+
+    if (!updated) {
+      setSaveAllError(updateGroup.error || "Impossible de modifier le groupe.");
+      return;
+    }
+
+    closeEditor();
+    onChanged?.();
+  }
+
+  async function handleCreateGroup() {
+    if (!event?.id || isSaving) return;
+
+    const label = newGroupLabel.trim();
+    if (!label) return;
 
   const nextSortOrder =
     (fieldsGroups.length > 0
       ? Math.max(...fieldsGroups.map((g) => g.sortOrder ?? 0))
       : 0) + 1;
 
-  const created = await createGroup.createEventFormFieldGroup({
-    eventId: event.id,
-    label,
-    sortOrder: nextSortOrder,
-    isActive: true,
-  });
+    const created = await createGroup.createEventFormFieldGroup({
+      eventId: event.id,
+      label,
+      description: newGroupDescription.trim() || null,
+      sortOrder: nextSortOrder,
+      isActive: true,
+    });
 
   if (!created) return;
 
-  setNewGroupLabel("");
-  onChanged?.();
-}
+    setNewGroupLabel("");
+    setNewGroupDescription("");
+    onChanged?.();
+  }
 
-  const isOpen = Boolean(editing);
-  const editingId = editing?.id ?? null;
+  async function handleDeleteGroup(group: EventFormFieldGroup) {
+    if (isSaving) return;
+
+    const hasFields = draft.some((f) => f.groupId === group.id);
+    if (hasFields) {
+      setSaveAllError("Ce groupe contient encore des champs. Retirez-les du groupe avant suppression.");
+      return;
+    }
+
+    const ok = await deleteGroup.deleteEventFormFieldGroup({ id: group.id });
+    if (!ok) {
+      setSaveAllError(deleteGroup.error || "Impossible de supprimer le groupe.");
+      return;
+    }
+
+    if (editingKind === "group" && editingGroup?.id === group.id) {
+      closeEditor();
+    }
+
+    onChanged?.();
+  }
+
+  async function moveGroup(group: EventFormFieldGroup, dir: -1 | 1) {
+    if (isSaving) return;
+
+  const sorted = [...fieldsGroups].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  const idx = sorted.findIndex((g) => g.id === group.id);
+  if (idx < 0) return;
+
+  const nextIdx = idx + dir;
+  if (nextIdx < 0 || nextIdx >= sorted.length) return;
+
+  const current = sorted[idx];
+  const target = sorted[nextIdx];
+
+    const currentOrder = clampInt(current.sortOrder ?? idx + 1, { fallback: idx + 1 });
+    const targetOrder = clampInt(target.sortOrder ?? nextIdx + 1, { fallback: nextIdx + 1 });
+
+    const a = await updateGroup.updateEventFormFieldGroup({
+      groupId: current.id,
+      patch: { sortOrder: targetOrder },
+    });
+
+    if (!a) {
+      setSaveAllError(updateGroup.error || "Impossible de réordonner le groupe.");
+      return;
+    }
+
+    const b = await updateGroup.updateEventFormFieldGroup({
+      groupId: target.id,
+      patch: { sortOrder: currentOrder },
+    });
+
+    if (!b) {
+      setSaveAllError(updateGroup.error || "Impossible de réordonner le groupe.");
+      return;
+    }
+
+    onChanged?.();
+  }
+
+  const isOpen = Boolean(editing || editingGroup);
+  const editingId = editing?.id ?? editingGroup?.id ?? null;
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -502,14 +693,21 @@ export function EventRegistrationFormPanel(props: Props) {
     (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
   );
 
-  const ungrouped = filtered.filter((f) => !f.groupId);
+  const groupIds = new Set(groupsSorted.map((g) => g.id));
 
-  const grouped = groupsSorted
-    .map((group) => ({
-      group,
-      fields: filtered.filter((f) => f.groupId === group.id),
-    }))
-    .filter((section) => section.fields.length > 0);
+  const ungrouped = filtered.filter((f) => {
+    if (!f.groupId) return true;
+    return !groupIds.has(f.groupId);
+  });
+
+  let grouped = groupsSorted.map((group) => ({
+    group,
+    fields: filtered.filter((f) => f.groupId === group.id),
+  }));
+
+  if (isFiltering) {
+    grouped = grouped.filter((section) => section.fields.length > 0);
+  }
 
   if (ungrouped.length > 0) {
     return [
@@ -522,13 +720,86 @@ export function EventRegistrationFormPanel(props: Props) {
   }
 
   return grouped;
-}, [filtered, fieldsGroups]);
+}, [filtered, fieldsGroups, isFiltering]);
 
-  const reorderDisabledTitle = isFiltering ? "Le réordonnancement est désactivé pendant une recherche." : undefined;
+  const reorderDisabledTitle = isFiltering
+    ? "Le réordonnancement est désactivé pendant une recherche."
+    : undefined;
 
-  const editorNode = editing ? (
+  const groupEditorNode = editingGroup ? (
     <div className="adminRegEditorCard">
-      {/* Header avec croix */}
+      <div className="adminRegEditorHeader">
+        <div>
+          <div className="adminRegEditorTitle">Modifier groupe</div>
+          <div className="adminEventHint">
+            Ce groupe permet d’organiser les champs du formulaire.
+          </div>
+        </div>
+
+        <Button variant="ghost" className="adminRegEditorClose" onClick={closeEditor} aria-label="Fermer">
+          ✕
+        </Button>
+      </div>
+
+      <div className="adminEventFormGrid adminRegEditorFormGrid">
+        <div className="adminEventField">
+          <div className="adminEventLabel">Label</div>
+          <input
+            className="adminEventInput"
+            value={editingGroup.label}
+            onChange={(e) => setEditingGroup({ ...editingGroup, label: e.target.value })}
+            disabled={isSaving}
+          />
+        </div>
+
+        <div className="adminEventField adminEventFieldSpan2">
+          <div className="adminEventLabel">Description</div>
+          <textarea
+            className="adminEventTextarea"
+            value={editingGroup.description}
+            onChange={(e) =>
+              setEditingGroup({ ...editingGroup, description: e.target.value })
+            }
+            disabled={isSaving}
+            rows={3}
+            maxLength={300}
+            placeholder="Texte d’aide affiché sous le titre du groupe (optionnel)"
+          />
+        </div>
+
+        <div className="adminEventField">
+          <label className="adminRegCheckRow">
+            <input
+              type="checkbox"
+              checked={editingGroup.isActive}
+              onChange={(e) =>
+                setEditingGroup({ ...editingGroup, isActive: e.target.checked })
+              }
+              disabled={isSaving}
+            />
+            <span>Actif</span>
+          </label>
+        </div>
+      </div>
+
+      <div className="adminRegEditorFooter">
+        <Button variant="secondary" onClick={closeEditor} disabled={isSaving}>
+          Annuler
+        </Button>
+
+        <Button
+          variant="primary"
+          onClick={saveGroupEditor}
+          disabled={!editingGroup.label.trim() || isSaving}
+        >
+          Enregistrer
+        </Button>
+      </div>
+    </div>
+  ) : null;
+
+  const fieldEditorNode = editing ? (
+    <div className="adminRegEditorCard">
       <div className="adminRegEditorHeader">
         <div>
           <div className="adminRegEditorTitle">{creating ? "Nouveau champ" : "Modifier champ"}</div>
@@ -542,7 +813,6 @@ export function EventRegistrationFormPanel(props: Props) {
         </Button>
       </div>
 
-      {/* Form */}
       <div className="adminEventFormGrid adminRegEditorFormGrid">
         <div className="adminEventField">
           <div className="adminEventLabel">Label</div>
@@ -584,9 +854,8 @@ export function EventRegistrationFormPanel(props: Props) {
             disabled={isSaving}
           >
             <option value="">Sans groupe</option>
-            {fieldsGroups
+            {sortedGroups
               .filter((g) => g.isActive)
-              .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
               .map((g) => (
                 <option key={g.id} value={g.id}>
                   {g.label}
@@ -596,28 +865,30 @@ export function EventRegistrationFormPanel(props: Props) {
         </div>
 
         <div className="adminEventField">
-          <label className="adminRegCheckRow">
-            <input
-              type="checkbox"
-              checked={editing.isRequired}
-              onChange={(e) => setEditing({ ...editing, isRequired: e.target.checked })}
-              disabled={isSaving}
-            />
-            <span>Requis</span>
-          </label>
+          <div className="adminRegChecksInline">
+            <label className="adminRegCheckRow">
+              <input
+                type="checkbox"
+                checked={editing.isRequired}
+                onChange={(e) => setEditing({ ...editing, isRequired: e.target.checked })}
+                disabled={isSaving}
+              />
+              <span>Requis</span>
+            </label>
 
-          <label className="adminRegCheckRow adminRegCheckRowSpacer">
-            <input
-              type="checkbox"
-              checked={editing.isActive}
-              onChange={(e) => setEditing({ ...editing, isActive: e.target.checked })}
-              disabled={isSaving}
-            />
-            <span>Actif</span>
-          </label>
+            <label className="adminRegCheckRow">
+              <input
+                type="checkbox"
+                checked={editing.isActive}
+                onChange={(e) => setEditing({ ...editing, isActive: e.target.checked })}
+                disabled={isSaving}
+              />
+              <span>Actif</span>
+            </label>
+          </div>
         </div>
 
-        {(editing.fieldType === "select" /*|| editing.fieldType === "radio"*/) && (
+        {(editing.fieldType === "select") && (
           <div className="adminEventField adminEventFieldSpan2">
             <div className="adminEventLabel">Options</div>
             <textarea
@@ -631,7 +902,6 @@ export function EventRegistrationFormPanel(props: Props) {
         )}
       </div>
 
-      {/* Footer clean */}
       <div className="adminRegEditorFooter">
         <Button variant="secondary" onClick={closeEditor} disabled={isSaving}>
           Annuler
@@ -644,82 +914,79 @@ export function EventRegistrationFormPanel(props: Props) {
     </div>
   ) : null;
 
+  const editorNode =
+  editingKind === "group" ? groupEditorNode : fieldEditorNode;
+
   function renderFieldCard(f: DraftField, mobile = false) {
-  const sameGroup = draft.filter(
-    (x) => (x.groupId ?? null) === (f.groupId ?? null)
-  );
-  const groupIdx = sameGroup.findIndex((x) => x.clientId === f.clientId);
+  const idx = draft.findIndex((x) => x.clientId === f.clientId);
 
-  const canMoveUp = groupIdx > 0;
-  const canMoveDown = groupIdx < sameGroup.length - 1;
+    const active = Boolean(f.isActive ?? true);
+    const required = Boolean(f.isRequired ?? false);
+    const type = String(f.fieldType ?? "text");
+    const optsLine =
+      type === "select" || type === "radio"
+        ? optionsToInlineText(f.options ?? undefined, 80)
+        : null;
 
-  const active = Boolean(f.isActive ?? true);
-  const required = Boolean(f.isRequired ?? false);
-  const type = String(f.fieldType ?? "text");
-  const optsLine =
-    type === "select" || type === "radio"
-      ? optionsToInlineText(f.options ?? undefined, 80)
-      : null;
+    const animDir = moveAnim[f.clientId];
+    const cardAnimClass =
+      animDir === "up" ? "isMoveUp" : animDir === "down" ? "isMoveDown" : "";
 
-  const animDir = moveAnim[f.clientId];
-  const cardAnimClass =
-    animDir === "up" ? "isMoveUp" : animDir === "down" ? "isMoveDown" : "";
+    const showEditInline =
+      mobile &&
+      ((isOpen && !creating && editingId === f.clientId) ||
+        (isClosing && closingKey === f.clientId));
 
-  const showEditInline =
-    mobile &&
-    ((isOpen && !creating && editingId === f.clientId) ||
-      (isClosing && closingKey === f.clientId));
+    return (
+      <div key={f.clientId} className={mobile ? "adminRegBlock" : undefined}>
+        <div
+          className={[
+            active ? "adminRegCard" : "adminRegCard isInactive",
+            cardAnimClass,
+          ].join(" ")}
+        >
+          <div className="adminRegTop">
+            <div className="adminRegTitleLine">{f.label}</div>
 
-  return (
-    <div key={f.clientId} className={mobile ? "adminRegBlock" : undefined}>
-      <div
-        className={[
-          active ? "adminRegCard" : "adminRegCard isInactive",
-          cardAnimClass,
-        ].join(" ")}
-      >
-        <div className="adminRegTop">
-          <div className="adminRegTitleLine">{f.label}</div>
-
-          <div className="adminRegPills">
-            <span className={active ? "adminRegPill" : "adminRegPill isOff"}>
-              {active ? "Actif" : "Inactif"}
-            </span>
-            <span className={required ? "adminRegPill isReq" : "adminRegPill isOpt"}>
-              {required ? "Requis" : "Optionnel"}
-            </span>
+            <div className="adminRegPills">
+              <span className={active ? "adminRegPill" : "adminRegPill isOff"}>
+                {active ? "Actif" : "Inactif"}
+              </span>
+              <span className={required ? "adminRegPill isReq" : "adminRegPill isOpt"}>
+                {required ? "Requis" : "Optionnel"}
+              </span>
+            </div>
           </div>
-        </div>
 
-        <div className="adminRegMeta">
-          <span>Type : {type}</span>
-          {optsLine ? <span className="adminRegOptionsInline">• {optsLine}</span> : null}
-        </div>
+          <div className="adminRegMeta">
+            <span>Type : {type}</span>
+            {optsLine ? <span className="adminRegOptionsInline">• {optsLine}</span> : null}
+          </div>
 
-        <div className="adminRegActions">
-          <Button variant="secondary" onClick={() => openEdit(f)} disabled={isSaving}>
-            Modifier
-          </Button>
+          <div className="adminRegActions">
+            <Button variant="secondary" onClick={() => openEdit(f)} disabled={isSaving}>
+              Modifier
+            </Button>
+
+            <Button
+              onClick={() => toggleLocal(f.clientId, { isRequired: !required })}
+              disabled={isSaving}
+              variant="secondary"
+            >
+              {required ? "Rendre optionnel" : "Rendre requis"}
+            </Button>
+
+            <Button
+              onClick={() => toggleLocal(f.clientId, { isActive: !active })}
+              disabled={isSaving}
+              variant="secondary"
+            >
+              {active ? "Désactiver" : "Activer"}
+            </Button>
 
           <Button
-            onClick={() => toggleLocal(f.clientId, { isRequired: !required })}
-            disabled={isSaving}
-            variant="secondary"
-          >
-            {required ? "Rendre optionnel" : "Rendre requis"}
-          </Button>
-
-          <Button
-            onClick={() => toggleLocal(f.clientId, { isActive: !active })}
-            disabled={isSaving}
-            variant="secondary"
-          >
-            {active ? "Désactiver" : "Activer"}
-          </Button>
-
-          <Button
-            onClick={() => moveFieldPersisted(f.clientId, -1)}
-            disabled={isSaving || isFiltering || !canMoveUp}
+            onClick={() => moveLocal(f.clientId, -1)}
+            disabled={isSaving || isFiltering || idx === 0}
             title={isFiltering ? reorderDisabledTitle : undefined}
             className="adminMoveBtn"
             aria-label="Monter"
@@ -729,8 +996,8 @@ export function EventRegistrationFormPanel(props: Props) {
           </Button>
 
           <Button
-            onClick={() => moveFieldPersisted(f.clientId, 1)}
-            disabled={isSaving || isFiltering || !canMoveDown}
+            onClick={() => moveLocal(f.clientId, 1)}
+            disabled={isSaving || isFiltering || idx === draft.length - 1}
             title={isFiltering ? reorderDisabledTitle : undefined}
             className="adminMoveBtn"
             aria-label="Descendre"
@@ -739,35 +1006,36 @@ export function EventRegistrationFormPanel(props: Props) {
             ↓
           </Button>
 
-          <Button
-            variant="danger"
-            className="deleteFormFieldButton"
-            onClick={() => removeLocal(f.clientId)}
-            disabled={isSaving}
-          >
-            <TrashIcon />
-          </Button>
+            <Button
+              variant="danger"
+              className="deleteFormFieldButton"
+              onClick={() => removeLocal(f.clientId)}
+              disabled={isSaving}
+            >
+              <TrashIcon />
+            </Button>
+          </div>
         </div>
-      </div>
 
-      {mobile && showEditInline ? (
-        <div
-          className={[
-            "adminRegInlineEditor",
-            "isEdit",
-            isClosing && closingKey === f.clientId ? "isClosing" : "isOpen",
-          ].join(" ")}
-        >
-          {editorNode}
-        </div>
-      ) : null}
-    </div>
-  );
-}
+        {mobile && showEditInline ? (
+          <div
+            className={[
+              "adminRegInlineEditor",
+              "isEdit",
+              isClosing && closingKey === f.clientId ? "isClosing" : "isOpen",
+            ].join(" ")}
+          >
+            {editorNode}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 
   const showCreateInline = (isOpen && creating) || (isClosing && closingKey === "create");
 
-  const subtitle = "Gérez les informations que les participants devront fournir lors de leur inscription à l’événement.";
+  const subtitle =
+    "Gérez les informations que les participants devront fournir lors de leur inscription à l’événement.";
 
   return (
     <FlexPanel
@@ -775,55 +1043,51 @@ export function EventRegistrationFormPanel(props: Props) {
       subtitle={subtitle}
       state={isDirty ? "dirty" : "default"}
       actions={
-          <div className="adminRegActionsWrap">
-            {/* Ligne 1 */}
-            <div className="adminRegActionsRow">
-              <Button
-                onClick={openCreate}
-                disabled={!event?.id || isSaving}
-                variant="secondary"
-              >
-                Ajouter un champ
+        <div className="adminRegActionsWrap">
+          <div className="adminRegActionsRow">
+            <Button
+              onClick={openCreate}
+              disabled={!event?.id || isSaving}
+              variant="secondary"
+            >
+              Ajouter un champ
+            </Button>
+
+            <Button
+              onClick={saveAll}
+              disabled={!event?.id || !isDirty || isSaving}
+            >
+              {isSavingAll ? "Enregistrement…" : "Enregistrer"}
+            </Button>
+
+            {isDirty ? (
+              <Button onClick={resetLocalChanges} disabled={isSaving}>
+                Annuler
               </Button>
-
-              <Button
-                onClick={saveAll}
-                disabled={!event?.id || !isDirty || isSaving}
-              >
-                {isSavingAll ? "Enregistrement…" : "Enregistrer"}
-              </Button>
-
-              {isDirty ? (
-                <Button onClick={resetLocalChanges} disabled={isSaving}>
-                  Annuler
-                </Button>
-              ) : null}
-            </div>
-
-            {/* Ligne 2 */}
-            <div className="adminRegActionsRow adminRegActionsRowGroup">
-              <input
-                className="adminEventInput"
-                placeholder="Nom du groupe…"
-                value={newGroupLabel}
-                onChange={(e) => setNewGroupLabel(e.target.value)}
-                disabled={!event?.id || isSaving}
-              />
-
-              <Button
-                onClick={handleCreateGroup}
-                disabled={!event?.id || isSaving || !newGroupLabel.trim()}
-                variant="secondary"
-              >
-                Ajouter un groupe
-              </Button>
-            </div>
+            ) : null}
           </div>
-        }
+
+          <div className="adminRegActionsRow adminRegActionsRowGroup">
+            <input
+              className="adminEventInput"
+              placeholder="Nom du groupe…"
+              value={newGroupLabel}
+              onChange={(e) => setNewGroupLabel(e.target.value)}
+              disabled={!event?.id || isSaving}
+            />
+
+            <Button
+              onClick={handleCreateGroup}
+              disabled={!event?.id || isSaving || !newGroupLabel.trim()}
+              variant="secondary"
+            >
+              Ajouter un groupe
+            </Button>
+          </div>
+        </div>
+      }
     >
       <FilterBar query={query} onQueryChange={setQuery} placeholder="Rechercher un champ…" />
-
-      
 
       {saveAllError ? <div className="adminRegSaveError">{saveAllError}</div> : null}
 
@@ -847,17 +1111,93 @@ export function EventRegistrationFormPanel(props: Props) {
             ) : filtered.length === 0 ? (
               <div className="adminEventEmpty">Aucun champ ne correspond à “{query.trim()}”.</div>
             ) : (
-              groupedSections.map((section) => (
-                <div
-                  key={section.group?.id ?? "ungrouped"}
-                  className="adminRegGroupSection"
-                >
-                  <div className="adminRegGroupHeader">
-                    {section.group ? section.group.label : "Sans groupe"}
-                  </div>
+              groupedSections.map((section) => {
+                const group = section.group;
+
+                return (
+                  <div
+                    key={group?.id ?? "ungrouped"}
+                    className="adminRegGroupSection"
+                  >
+                    <div className="adminRegGroupHeaderRow">
+                      <div className="adminRegGroupHeaderBlock">
+                        <div className="adminRegGroupHeader">
+                          {group ? group.label : "Sans groupe"}
+                        </div>
+
+                        {group?.description ? (
+                          <div className="adminRegGroupDescription">{group.description}</div>
+                        ) : null}
+                      </div>
+
+                      {group ? (
+                        <div className="adminRegGroupActions">
+                          <Button
+                            className="adminRegGroupBtn"
+                            variant="secondary"
+                            onClick={() => openEditGroup(group)}
+                            disabled={isSaving}
+                          >
+                            Modifier
+                          </Button>
+
+                          <Button
+                            className="adminRegGroupBtn"
+                            variant="secondary"
+                            onClick={() =>
+                              updateGroup.updateEventFormFieldGroup({
+                                groupId: group.id,
+                                patch: { isActive: !group.isActive },
+                              }).then((res) => {
+                                if (!res) {
+                                  setSaveAllError(updateGroup.error || "Impossible de modifier le groupe.");
+                                  return;
+                                }
+                                onChanged?.();
+                              })
+                            }
+                            disabled={isSaving}
+                          >
+                            {group.isActive ? "Désactiver" : "Activer"}
+                          </Button>
+
+                          <Button
+                            className="adminRegGroupBtn adminRegGroupBtnIcon"
+                            variant="secondary"
+                            onClick={() => moveGroup(group, -1)}
+                            disabled={isSaving}
+                          >
+                            ↑
+                          </Button>
+
+                          <Button
+                            className="adminRegGroupBtn adminRegGroupBtnIcon"
+                            variant="secondary"
+                            onClick={() => moveGroup(group, 1)}
+                            disabled={isSaving}
+                          >
+                            ↓
+                          </Button>
+
+                          <Button
+                            className="adminRegGroupBtnDanger"
+                            variant="danger"
+                            onClick={() => handleDeleteGroup(section.group!)}
+                            disabled={isSaving || groupHasFields(section.group!.id)}
+                            title={
+                              groupHasFields(section.group!.id)
+                                ? "Ce groupe contient encore des champs"
+                                : undefined
+                            }
+                          >
+                            <TrashIcon />
+                          </Button>
+                        </div>
+                      ) : null}
+                    </div>
 
                   <div className="adminRegGroupList">
-                    {section.fields.map((f) => renderFieldCard(f, true))}
+                    {section.fields.map((f) => renderFieldCard(f, false))}
                   </div>
                 </div>
               ))
@@ -878,24 +1218,106 @@ export function EventRegistrationFormPanel(props: Props) {
               ) : filtered.length === 0 ? (
                 <div className="adminEventEmpty">Aucun champ ne correspond à “{query.trim()}”.</div>
               ) : (
-                groupedSections.map((section) => (
-                  <div
-                    key={section.group?.id ?? "ungrouped"}
-                    className="adminRegGroupSection"
-                  >
-                    <div className="adminRegGroupHeader">
-                      {section.group ? section.group.label : "Sans groupe"}
-                    </div>
+                groupedSections.map((section) => {
+                  const group = section.group;
+
+                  return (
+                    <div
+                      key={group?.id ?? "ungrouped"}
+                      className="adminRegGroupSection"
+                    >
+                      <div className="adminRegGroupHeaderRow">
+                        <div className="adminRegGroupHeaderBlock">
+                          <div className="adminRegGroupHeader">
+                            {group ? group.label : "Sans groupe"}
+                          </div>
+
+                          {group?.description ? (
+                            <div className="adminRegGroupDescription">{group.description}</div>
+                          ) : null}
+                        </div>
+
+                        {group ? (
+                          <div className="adminRegGroupActions">
+                            <Button
+                              className="adminRegGroupBtn"
+                              variant="secondary"
+                              onClick={() => openEditGroup(group)}
+                              disabled={isSaving}
+                            >
+                              Modifier
+                            </Button>
+
+                            <Button
+                              className="adminRegGroupBtn"
+                              variant="secondary"
+                              onClick={() =>
+                                updateGroup.updateEventFormFieldGroup({
+                                  groupId: group.id,
+                                  patch: { isActive: !group.isActive },
+                                }).then((res) => {
+                                  if (!res) {
+                                    setSaveAllError(updateGroup.error || "Impossible de modifier le groupe.");
+                                    return;
+                                  }
+                                  onChanged?.();
+                                })
+                              }
+                              disabled={isSaving}
+                            >
+                              {group.isActive ? "Désactiver" : "Activer"}
+                            </Button>
+
+                            <Button
+                              className="adminRegGroupBtn adminRegGroupBtnIcon"
+                              variant="secondary"
+                              onClick={() => moveGroup(group, -1)}
+                              disabled={isSaving}
+                            >
+                              ↑
+                            </Button>
+
+                            <Button
+                              className="adminRegGroupBtn adminRegGroupBtnIcon"
+                              variant="secondary"
+                              onClick={() => moveGroup(group, 1)}
+                              disabled={isSaving}
+                            >
+                              ↓
+                            </Button>
+
+                            <Button
+                              className="adminRegGroupBtnDanger"
+                              variant="danger"
+                              onClick={() => handleDeleteGroup(section.group!)}
+                              disabled={isSaving || groupHasFields(section.group!.id)}
+                              title={
+                                groupHasFields(section.group!.id)
+                                  ? "Ce groupe contient encore des champs"
+                                  : undefined
+                              }
+                            >
+                              <TrashIcon />
+                            </Button>
+                          </div>
+                        ) : null}
+                      </div>
 
                     <div className="adminRegGroupList">
-                      {section.fields.map((f) => renderFieldCard(f, false))}
+                      {section.fields.map((f) => renderFieldCard(f, true))}
                     </div>
                   </div>
                 ))
               )}
             </div>
           }
-          right={isOpen ? <div className="regEditorPanel isOpen">{editorNode}</div> : null}
+          right={
+            isOpen ? (
+              <div className="regEditorPanel isOpen">
+                <div className="regEditorPanelInner">{editorNode}</div>
+              </div>
+            ) : null
+          }
         />
       )}
 

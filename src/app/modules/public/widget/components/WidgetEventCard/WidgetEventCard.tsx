@@ -3,43 +3,58 @@ import { Button } from "@shared/ui/components";
 import "./WidgetEventCard.css"; 
 
 type Props = {
-    event: PublicEventOverview;
-    onClick: () => void;
+  event: PublicEventOverview;
+  onClick: () => void;
 }
 
-export function WidgetEventCard({event, onClick}: Props) {
-    return (
-        <div
-        className="widgetEventCard"
-        onClick={onClick}
-        >
-          <div className="widgetEventTitle">{event.title}</div>
+export function WidgetEventCard({ event, onClick }: Props) {
+  const isSoldOut = event.isSoldOut;
+  const isClosed = event.isRegistrationOpen === false;
+  const isDisabled = isSoldOut || isClosed;
 
-            {event.startsAt && (
-            <div className="widgetEventDate">
-              {new Date(event.startsAt).toLocaleString("fr-BE", {
-                dateStyle: "medium",
-                timeStyle: "short",
-              })}
-            </div>
-          )}
+  const label = isSoldOut
+    ? "Complet"
+    : isClosed
+      ? "Clôturé"
+      : "Billets";
 
-            {event.isSoldOut ? (
-              <div style={{ fontSize: 13, fontWeight: 600, marginTop: 6 }}>
-                Complet
-              </div>
-            ) : null}
+  return (
+    <div
+      className={`widgetEventCard ${isDisabled ? "isDisabled" : ""}`}
+      onClick={() => {
+        if (!isDisabled) onClick();
+      }}
+    >
+      <div className="widgetEventTitle">{event.title}</div>
 
-            <Button
-              className="widgetButton"
-              label={event.isSoldOut ? "Complet" : "Billets"}
-              disabled={event.isSoldOut}
-              onClick={(e) => {
-                e.stopPropagation();
-                onClick();
-              }}
-            />
-
+      {event.startsAt && (
+        <div className="widgetEventDate">
+          {new Date(event.startsAt).toLocaleString("fr-BE", {
+            dateStyle: "medium",
+            timeStyle: "short",
+          })}
         </div>
-    );
+      )}
+
+      {isSoldOut ? (
+        <div style={{ fontSize: 13, fontWeight: 600, marginTop: 6 }}>
+          Complet
+        </div>
+      ) : isClosed ? (
+        <div style={{ fontSize: 13, fontWeight: 600, marginTop: 6 }}>
+          Inscriptions clôturées
+        </div>
+      ) : null}
+
+      <Button
+        className="widgetButton"
+        label={label}
+        disabled={isDisabled}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!isDisabled) onClick();
+        }}
+      />
+    </div>
+  );
 }

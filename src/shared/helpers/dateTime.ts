@@ -1,3 +1,4 @@
+
 /* ---------------- Date/Time helpers ---------------- */
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -104,3 +105,42 @@ export function getDurationLabel(startsAt?: string | null, endsAt?: string | nul
   if (hours) return `${hours}h`;
   return `${minutes} min`;
 }
+
+/* ------------------------- Days until calculation ------------------------- */
+
+export function getDaysUntil(ts: number, nowTs: number) {
+  return Math.ceil((ts - nowTs) / (1000 * 60 * 60 * 24));
+}
+
+/* -------------------------------- Parse ts -------------------------------- */
+
+
+export function parseTs(iso?: string | null) {
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  return Number.isFinite(t) ? t : null;
+}
+
+/* --------------------------- Days calendar diff --------------------------- */
+
+export function getCalendarDayDiff(targetTs: number, nowTs: number) {
+  const now = new Date(nowTs);
+  const target = new Date(targetTs);
+
+  const nowStart = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate()
+  );
+
+  const targetStart = new Date(
+    target.getFullYear(),
+    target.getMonth(),
+    target.getDate()
+  );
+
+  return Math.round(
+    (targetStart.getTime() - nowStart.getTime()) / 86400000
+  );
+}
+

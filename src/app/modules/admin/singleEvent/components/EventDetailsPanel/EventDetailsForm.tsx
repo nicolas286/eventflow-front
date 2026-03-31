@@ -44,6 +44,7 @@ type Draft = {
   description: string;
   startsAtLocal: string;
   endsAtLocal: string;
+  registrationDeadlineLocal: string;
   bannerUrlRaw: string;
   depositEurosRaw: string;
   maxAttendeesRaw: string;
@@ -69,6 +70,7 @@ function eventToDraft(event: AdminEventDetailEvent): Draft {
     description: event.description ?? "",
     startsAtLocal: isoToLocalInput(event.startsAt ?? null),
     endsAtLocal: isoToLocalInput(event.endsAt ?? null),
+    registrationDeadlineLocal: isoToLocalInput(event.registrationDeadline ?? null),
     bannerUrlRaw: (event.bannerUrlRaw ?? "").trim(),
     depositEurosRaw: centsToEuroInput(event.depositCents ?? 0),
     maxAttendeesRaw:
@@ -138,6 +140,10 @@ export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanne
 
   const startsIso = useMemo(() => localInputToIso(draft.startsAtLocal), [draft.startsAtLocal]);
   const endsIso = useMemo(() => localInputToIso(draft.endsAtLocal), [draft.endsAtLocal]);
+  const registrationDeadlineIso = useMemo(
+  () => localInputToIso(draft.registrationDeadlineLocal),
+  [draft.registrationDeadlineLocal]
+  );
 
   const canSave = Boolean(event.id && draft.title.trim());
   const canPublish = Boolean(startsIso);
@@ -171,6 +177,7 @@ export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanne
       draft.description.trim() === base.description.trim() &&
       draft.startsAtLocal === base.startsAtLocal &&
       draft.endsAtLocal === base.endsAtLocal &&
+      draft.registrationDeadlineLocal === base.registrationDeadlineLocal &&
       draft.bannerUrlRaw.trim() === base.bannerUrlRaw.trim() &&
       draft.depositEurosRaw.trim() === base.depositEurosRaw.trim() &&
       draft.maxAttendeesRaw.trim() === base.maxAttendeesRaw.trim();
@@ -216,6 +223,9 @@ export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanne
 
   if ((startsIso ?? null) !== (event.startsAt ?? null)) patch.startsAt = startsIso ?? null;
   if ((endsIso ?? null) !== (event.endsAt ?? null)) patch.endsAt = endsIso ?? null;
+  if ((registrationDeadlineIso ?? null) !== (event.registrationDeadline ?? null)) {
+    patch.registrationDeadline = registrationDeadlineIso ?? null;
+  }
 
   if (nextIsPublished !== Boolean(event.isPublished)) patch.isPublished = nextIsPublished;
 
@@ -239,6 +249,7 @@ export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanne
   function buildPatchCandidateFromDraft(nextIsPublished: boolean): UpdateEventFullPatch {
   const s = localInputToIso(draft.startsAtLocal) || null;
   const e = localInputToIso(draft.endsAtLocal) || null;
+  const r = localInputToIso(draft.registrationDeadlineLocal) || null;
 
   const cents = euroInputToCents(draft.depositEurosRaw);
   const maxAttendees = attendeesInputToValue(draft.maxAttendeesRaw);
@@ -250,6 +261,7 @@ export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanne
     bannerUrl: draft.bannerUrlRaw.trim() || null,
     startsAt: s,
     endsAt: e,
+    registrationDeadline: r,
     isPublished: nextIsPublished,
     depositCents: cents ?? (Number.NaN as unknown as number),
     maxAttendees:

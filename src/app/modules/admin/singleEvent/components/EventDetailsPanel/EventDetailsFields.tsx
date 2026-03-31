@@ -15,6 +15,7 @@ export type EventDetailsDraft = {
   description: string;
   startsAtLocal: string;
   endsAtLocal: string;
+  registrationDeadlineLocal: string;
   bannerUrlRaw: string;
   depositEurosRaw: string;
   maxAttendeesRaw: string;
@@ -96,46 +97,6 @@ export function EventDetailsFields(props: Props) {
           {fieldErrors.startsAt ? <MessageBox variant="error">{fieldErrors.startsAt}</MessageBox> : null}
         </div>
 
-        <div className="adminEventField adminEventBannerSide">
-          <div className="adminEventLabel">Bannière</div>
-
-          {bannerPreviewUrl ? (
-            <img className="adminEventBannerPreviewMini" src={bannerPreviewUrl} alt="Bannière" />
-          ) : (
-            <div className="adminEventEmpty">Aucune bannière</div>
-          )}
-
-          <div className="adminEventBannerActionsBelow">
-            <Button variant="secondary" onClick={openBannerPicker}>
-              {hasCustomBannerNow || bannerFile ? "Remplacer" : "Choisir un fichier"}
-            </Button>
-
-            {hasCustomBannerNow || bannerFile ? (
-              <Button variant="secondary" onClick={clearBanner}>
-                Retirer
-              </Button>
-            ) : null}
-          </div>
-
-          {bannerFile ? (
-            <div className="adminEventHint" style={{ margin: 0 }}>
-              Fichier prêt : <strong>{bannerFile.name}</strong>
-            </div>
-          ) : null}
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            style={{ display: "none" }}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              onBannerPicked(file);
-            }}
-          />
-        </div>
-
         <div className="adminEventField adminEventLeftCol">
           <div className="adminEventLabel">Fin (optionnel)</div>
           <input
@@ -146,6 +107,28 @@ export function EventDetailsFields(props: Props) {
             onChange={(e) => setDraft((d) => ({ ...d, endsAtLocal: e.target.value }))}
           />
           {fieldErrors.endsAt ? <MessageBox variant="error">{fieldErrors.endsAt}</MessageBox> : null}
+        </div>
+
+        <div className="adminEventField adminEventLeftCol">
+          <div className="adminEventLabel">Clôture des inscriptions (optionnel)</div>
+          <input
+            type="datetime-local"
+            min={localDateTimeMinNow()}
+            className="adminEventInput"
+            value={draft.registrationDeadlineLocal}
+            onChange={(e) =>
+              setDraft((d) => ({
+                ...d,
+                registrationDeadlineLocal: e.target.value,
+              }))
+            }
+          />
+          {fieldErrors.registrationDeadline ? (
+            <MessageBox variant="error">{fieldErrors.registrationDeadline}</MessageBox>
+          ) : null}
+          <div className="adminEventHint">
+            Exemple : clôturer les inscriptions quelques jours avant l’événement.
+          </div>
         </div>
 
         <div className="adminEventField adminEventLeftCol">
@@ -193,7 +176,47 @@ export function EventDetailsFields(props: Props) {
           ) : null}
           <div className="adminEventHint">0 = participants non limités.</div>
         </div>
+
+        <div className="adminEventField adminEventFieldSpan2">
+          <div className="adminEventLabel">Bannière</div>
+
+          {bannerPreviewUrl ? (
+            <img className="adminEventBannerPreviewMini" src={bannerPreviewUrl} alt="Bannière" />
+          ) : (
+            <div className="adminEventEmpty">Aucune bannière</div>
+          )}
+
+          <div className="adminEventBannerActionsBelow">
+            <Button variant="secondary" onClick={openBannerPicker}>
+              {hasCustomBannerNow || bannerFile ? "Remplacer" : "Choisir un fichier"}
+            </Button>
+
+            {hasCustomBannerNow || bannerFile ? (
+              <Button variant="secondary" onClick={clearBanner}>
+                Retirer
+              </Button>
+            ) : null}
+          </div>
+
+          {bannerFile ? (
+            <div className="adminEventHint" style={{ margin: 0 }}>
+              Fichier prêt : <strong>{bannerFile.name}</strong>
+            </div>
+          ) : null}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              onBannerPicked(file);
+            }}
+          />
+        </div>
       </div>
-    </div>
+</div>
   );
 }
