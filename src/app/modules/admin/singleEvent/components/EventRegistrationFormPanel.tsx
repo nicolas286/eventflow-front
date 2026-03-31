@@ -255,30 +255,63 @@ export function EventRegistrationFormPanel(props: Props) {
     }, 220);
   }
 
-  function moveLocal(clientId: string, dir: -1 | 1) {
-    setDraft((prev) => {
-      const idx = prev.findIndex((x) => x.clientId === clientId);
-      if (idx < 0) return prev;
+  async function moveFieldPersisted(clientId: string, dir: -1 | 1) {
+  if (isSaving) return;
 
-      const nextIdx = idx + dir;
-      if (nextIdx < 0 || nextIdx >= prev.length) return prev;
+  if (isDirty) {
+    setSaveAllError("Enregistre ou annule d’abord les modifications avant de réordonner les champs.");
+    return;
+  }
 
-      const copy = [...prev];
-      const a = copy[idx];
-      const b = copy[nextIdx];
+  const current = draft.find((f) => f.clientId === clientId);
+  if (!current?.id) return;
 
-      copy[idx] = b;
-      copy[nextIdx] = a;
+  const sameGroup = draft.filter(
+    (f) => (f.groupId ?? null) === (current.groupId ?? null)
+  );
 
-      const aDir: MoveDir = dir === -1 ? "up" : "down";
-      const bDir: MoveDir = dir === -1 ? "down" : "up";
-      triggerMoveAnim(a.clientId, aDir, b.clientId, bDir);
+  const idx = sameGroup.findIndex((f) => f.clientId === clientId);
+  if (idx < 0) return;
 
-      return normalizeContiguousSortOrder(copy);
+  const targetIdx = idx + dir;
+  if (targetIdx < 0 || targetIdx >= sameGroup.length) return;
+
+  const target = sameGroup[targetIdx];
+  if (!target?.id) return;
+
+  setIsSavingAll(true);
+  setSaveAllError(null);
+
+  try {
+    const currentSort = clampInt(current.sortOrder, { fallback: 0 });
+    const targetSort = clampInt(target.sortOrder, { fallback: 0 });
+
+    const aDir: MoveDir = dir === -1 ? "up" : "down";
+    const bDir: MoveDir = dir === -1 ? "down" : "up";
+
+    const ok1 = await update.updateEventFormField({
+      fieldId: current.id,
+      patch: { sortOrder: targetSort },
     });
 
-    markDirty();
+    if (!ok1) throw new Error(String(update.error || "Erreur de réordonnancement"));
+
+    const ok2 = await update.updateEventFormField({
+      fieldId: target.id,
+      patch: { sortOrder: currentSort },
+    });
+
+    if (!ok2) throw new Error(String(update.error || "Erreur de réordonnancement"));
+
+    triggerMoveAnim(current.clientId, aDir, target.clientId, bDir);
+
+    onChanged?.();
+  } catch (e: any) {
+    setSaveAllError(e?.message ? String(e.message) : "Erreur inconnue");
+  } finally {
+    setIsSavingAll(false);
   }
+}
 
   function removeLocal(clientId: string) {
     setDraft((prev) => {
@@ -612,7 +645,13 @@ export function EventRegistrationFormPanel(props: Props) {
   ) : null;
 
   function renderFieldCard(f: DraftField, mobile = false) {
-  const idx = draft.findIndex((x) => x.clientId === f.clientId);
+  const sameGroup = draft.filter(
+    (x) => (x.groupId ?? null) === (f.groupId ?? null)
+  );
+  const groupIdx = sameGroup.findIndex((x) => x.clientId === f.clientId);
+
+  const canMoveUp = groupIdx > 0;
+  const canMoveDown = groupIdx < sameGroup.length - 1;
 
   const active = Boolean(f.isActive ?? true);
   const required = Boolean(f.isRequired ?? false);
@@ -679,8 +718,8 @@ export function EventRegistrationFormPanel(props: Props) {
           </Button>
 
           <Button
-            onClick={() => moveLocal(f.clientId, -1)}
-            disabled={isSaving || isFiltering || idx === 0}
+            onClick={() => moveFieldPersisted(f.clientId, -1)}
+            disabled={isSaving || isFiltering || !canMoveUp}
             title={isFiltering ? reorderDisabledTitle : undefined}
             className="adminMoveBtn"
             aria-label="Monter"
@@ -690,8 +729,8 @@ export function EventRegistrationFormPanel(props: Props) {
           </Button>
 
           <Button
-            onClick={() => moveLocal(f.clientId, 1)}
-            disabled={isSaving || isFiltering || idx === draft.length - 1}
+            onClick={() => moveFieldPersisted(f.clientId, 1)}
+            disabled={isSaving || isFiltering || !canMoveDown}
             title={isFiltering ? reorderDisabledTitle : undefined}
             className="adminMoveBtn"
             aria-label="Descendre"
@@ -818,7 +857,7 @@ export function EventRegistrationFormPanel(props: Props) {
                   </div>
 
                   <div className="adminRegGroupList">
-                    {section.fields.map((f) => renderFieldCard(f, false))}
+                    {section.fields.map((f) => renderFieldCard(f, true))}
                   </div>
                 </div>
               ))
@@ -849,7 +888,7 @@ export function EventRegistrationFormPanel(props: Props) {
                     </div>
 
                     <div className="adminRegGroupList">
-                      {section.fields.map((f) => renderFieldCard(f, true))}
+                      {section.fields.map((f) => renderFieldCard(f, false))}
                     </div>
                   </div>
                 ))
