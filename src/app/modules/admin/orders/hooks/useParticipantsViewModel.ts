@@ -12,19 +12,20 @@ type OrderRow = EventDetailAdmin["orders"]["rows"][number];
 type OrderItemRow = EventDetailAdmin["orderItems"][number];
 type ProductRow = EventDetailAdmin["products"][number];
 
-export type OrderMeta = {
+type OrderMeta = {
   orderNumber: string;
-  createdAt?: string;
-  status: OrderRow["status"];
+  createdAt?: string | undefined;
+  status: "pending" | "awaiting_payment" | "partially_paid" | "expired" | "canceled" | "paid";
   currency: string;
   totalCents: number;
   paidCents: number;
   dueCents: number;
-  nonAttendeeItems?: Array<{
+  buyerEmail?: string | undefined;
+  nonAttendeeItems?: {
     id: string;
     name: string;
     quantity: number;
-  }>;
+  }[] | undefined;
 };
 
 type FilledField = {
@@ -128,6 +129,7 @@ export function buildParticipantsViewModel(params: BuildParticipantsViewModelPar
       totalCents: total,
       paidCents: paid,
       dueCents: due,
+      buyerEmail: o.buyerEmail ?? undefined,
       nonAttendeeItems,
     });
   }
