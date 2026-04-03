@@ -1,0 +1,2 @@
+drop trigger if exists trg_max_30_form_fields_per_event
+on public.event_form_fields;

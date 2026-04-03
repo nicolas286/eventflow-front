@@ -192,17 +192,23 @@ export function buildParticipantsViewModel(params: BuildParticipantsViewModelPar
 
   /* -------------------- IDENTITY -------------------- */
   const computeIdentity = (attendeeId: string) => {
-    const fields = filledFieldsByAttendeeId.get(attendeeId) ?? [];
-    const getVal = (...keys: string[]) => fields.find((f) => keys.includes(f.key))?.value ?? "";
+  const fields = filledFieldsByAttendeeId.get(attendeeId) ?? [];
+  const getVal = (...keys: string[]) =>
+    fields.find((f) => keys.includes(f.key))?.value ?? "";
 
-    const full = `${getVal("firstName", "prenom", "first_name")} ${getVal("lastName", "nom", "last_name")}`.trim();
-    const email = getVal("email");
+  const full = `${getVal("firstName", "prenom", "first_name")} ${getVal(
+    "lastName",
+    "nom",
+    "last_name",
+  )}`.trim();
 
-    return {
-      title: full || email || "Participant",
-      subtitle: full && email ? email : "",
-    };
+  const email = getVal("email");
+
+  return {
+    title: full || email || "Participant",
+    subtitle: email || "",
   };
+};
 
   /* -------------------- FILTERED ATTENDEES -------------------- */
   const q = normalizeText(query);
