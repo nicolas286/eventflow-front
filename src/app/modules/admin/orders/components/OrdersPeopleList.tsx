@@ -134,7 +134,12 @@ export function OrdersPeopleList(props: OrdersPeopleListProps) {
               <div className="adminOrderHeader">
                 <div>
                   <div className="adminOrderTitle">Commande {orderNumber}</div>
-                  <div className="adminOrderSub">Créée le {formatDateTime(meta?.createdAt)}</div>
+                    <div className="adminOrderSub">Créée le {formatDateTime(meta?.createdAt)}</div>
+                    {meta?.buyerEmail ? (
+                      <div className="adminOrderSub">
+                        <b>Acheteur</b> {meta.buyerEmail}
+                      </div>
+                    ) : null}
 
                   {isFree ? (
                     <div className="adminOrderFree">Gratuit</div>

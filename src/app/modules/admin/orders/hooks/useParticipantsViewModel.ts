@@ -14,17 +14,18 @@ type ProductRow = EventDetailAdmin["products"][number];
 
 export type OrderMeta = {
   orderNumber: string;
-  createdAt?: string;
-  status: OrderRow["status"];
+  createdAt?: string | undefined;
+  status: "pending" | "awaiting_payment" | "partially_paid" | "expired" | "canceled" | "paid";
   currency: string;
   totalCents: number;
   paidCents: number;
   dueCents: number;
-  nonAttendeeItems?: Array<{
+  buyerEmail?: string | undefined;
+  nonAttendeeItems?: {
     id: string;
     name: string;
     quantity: number;
-  }>;
+  }[] | undefined;
 };
 
 type FilledField = {
@@ -128,6 +129,7 @@ export function buildParticipantsViewModel(params: BuildParticipantsViewModelPar
       totalCents: total,
       paidCents: paid,
       dueCents: due,
+      buyerEmail: o.buyerEmail ?? undefined,
       nonAttendeeItems,
     });
   }
@@ -192,17 +194,23 @@ export function buildParticipantsViewModel(params: BuildParticipantsViewModelPar
 
   /* -------------------- IDENTITY -------------------- */
   const computeIdentity = (attendeeId: string) => {
-    const fields = filledFieldsByAttendeeId.get(attendeeId) ?? [];
-    const getVal = (...keys: string[]) => fields.find((f) => keys.includes(f.key))?.value ?? "";
+  const fields = filledFieldsByAttendeeId.get(attendeeId) ?? [];
+  const getVal = (...keys: string[]) =>
+    fields.find((f) => keys.includes(f.key))?.value ?? "";
 
-    const full = `${getVal("firstName", "prenom", "first_name")} ${getVal("lastName", "nom", "last_name")}`.trim();
-    const email = getVal("email");
+  const full = `${getVal("firstName", "prenom", "first_name")} ${getVal(
+    "lastName",
+    "nom",
+    "last_name",
+  )}`.trim();
 
-    return {
-      title: full || email || "Participant",
-      subtitle: full && email ? email : "",
-    };
+  const email = getVal("email");
+
+  return {
+    title: full || email || "Participant",
+    subtitle: email || "",
   };
+};
 
   /* -------------------- FILTERED ATTENDEES -------------------- */
   const q = normalizeText(query);
