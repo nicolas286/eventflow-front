@@ -23,7 +23,7 @@ export const eventFormFieldSchema = z.object({
   eventId: z.uuid(),
   groupId: z.uuid().nullable().optional(),
   label: z.string().min(2, "Le label est trop court").max(120, "Le label est trop long"),
-  fieldKey: z.string().min(2, "La clé est trop courte").max(50, "La clé est trop longue"),
+  fieldKey: z.string().min(2, "La clé est trop courte").max(100, "La clé est trop longue"),
   fieldType: z.enum([
     "text",
     "textarea",
