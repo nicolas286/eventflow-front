@@ -12,7 +12,7 @@ type OrderRow = EventDetailAdmin["orders"]["rows"][number];
 type OrderItemRow = EventDetailAdmin["orderItems"][number];
 type ProductRow = EventDetailAdmin["products"][number];
 
-type OrderMeta = {
+export type OrderMeta = {
   orderNumber: string;
   createdAt?: string | undefined;
   status: "pending" | "awaiting_payment" | "partially_paid" | "expired" | "canceled" | "paid";
