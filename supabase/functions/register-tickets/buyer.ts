@@ -1,4 +1,4 @@
-function toNonEmptyString(v: unknown): string | null {
+export function toNonEmptyString(v: unknown): string | null {
   const s = typeof v === "string" ? v.trim() : String(v ?? "").trim();
   return s ? s : null;
 }

@@ -2,7 +2,13 @@ import { json, corsHeaders } from "./http.ts";
 import { ResponseError } from "./errors.ts";
 import { parseRegisterPayload } from "./validation.ts";
 import { resolveRuntimeConfig } from "./config.ts";
-import { createAdminClient, createOrderIntentOrThrow, getEventOrgIdOrThrow, getOrgPlanOrThrow, issueFreeOrderTicketsOrThrow } from "./db.ts";
+import {
+  createAdminClient,
+  createOrderIntentOrThrow,
+  getEventPaymentContextOrThrow,
+  getOrgPlanOrThrow,
+  issueFreeOrderTicketsOrThrow,
+} from "./db.ts";
 import { buildBuyer } from "./buyer.ts";
 import { getClientIp, verifyCaptchaOrThrow } from "./turnstile.ts";
 import { resolveCheckoutContextOrThrow } from "./checkout.ts";
@@ -63,7 +69,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const orgId = await getEventOrgIdOrThrow(admin, body.eventId);
+    const { orgId, eventTitle } = await getEventPaymentContextOrThrow(admin, body.eventId);
 
     if (checkout.checkoutSource === "widget") {
       const orgPlan = await getOrgPlanOrThrow(admin, orgId);
@@ -100,6 +106,8 @@ Deno.serve(async (req) => {
       currency: order.currency,
       redirectUrl: checkout.buildRedirectUrl(order.orderId, order.bookingToken),
       webhookUrl: `${config.functionsBase}/mollie-webhook-tickets`,
+      eventTitle,
+      buyerEmail: buyer.email,
     });
 
     await insertPaymentOrRollback({
