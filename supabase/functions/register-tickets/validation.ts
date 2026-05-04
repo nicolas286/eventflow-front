@@ -35,7 +35,7 @@ function isValidUuid(v: unknown): v is string {
 }
 
 function isValidEmail(v: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  return /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(v);
 }
 
 function parseEmail(v: unknown): string | null {
