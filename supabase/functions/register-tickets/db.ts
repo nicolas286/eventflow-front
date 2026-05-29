@@ -100,9 +100,9 @@ export async function issueFreeOrderTicketsOrThrow(admin: any, orderId: string) 
   }
 }
 
-export async function getEventOrgIdOrThrow(admin: any, eventId: string) {
+export async function getEventPaymentContextOrThrow(admin: any, eventId: string) {
   const { data, error } = await admin.from("events")
-    .select("org_id")
+    .select("org_id, title")
     .eq("id", eventId)
     .maybeSingle();
 
@@ -110,7 +110,10 @@ export async function getEventOrgIdOrThrow(admin: any, eventId: string) {
     throw new ResponseError(404, "EVENT_NOT_FOUND");
   }
 
-  return data.org_id;
+  return {
+    orgId: data.org_id,
+    eventTitle: data.title ?? null,
+  };
 }
 
 export async function getOrgPlanOrThrow(admin: any, orgId: string) {

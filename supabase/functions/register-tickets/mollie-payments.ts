@@ -1,4 +1,5 @@
 import { badGateway, internal } from "./errors.ts";
+import { toNonEmptyString } from "./buyer.ts";
 
 function getCheckoutUrlFromRaw(raw: any): string | null {
   const href = raw?._links?.checkout?.href;
@@ -17,6 +18,21 @@ async function tryCancelMolliePayment(accessToken: string, paymentId: string, is
   } catch {
     // no-op
   }
+}
+
+function buildMollieDescription(opts: {
+  eventTitle?: string | null;
+  buyerEmail?: string | null;
+  dueNowCents: number;
+  currency: string;
+}) {
+  const eventTitle = toNonEmptyString(opts.eventTitle) ?? "Événement";
+  const buyerEmail = toNonEmptyString(opts.buyerEmail) ?? "acheteur inconnu";
+  const amount = (opts.dueNowCents / 100).toFixed(2);
+
+  const desc = `Eventflow — ${eventTitle} — ${buyerEmail} — ${amount} ${opts.currency}`;
+
+  return desc.length > 255 ? desc.slice(0, 252) + "..." : desc;
 }
 
 export async function findReusablePayment(admin: any, orderId: string) {
@@ -53,7 +69,16 @@ export async function createMolliePayment(opts: {
   currency: string;
   redirectUrl: string;
   webhookUrl: string;
+  eventTitle?: string | null;
+  buyerEmail?: string | null;
 }) {
+  const description = buildMollieDescription({
+  eventTitle: opts.eventTitle,
+  buyerEmail: opts.buyerEmail,
+  dueNowCents: opts.dueNowCents,
+  currency: opts.currency,
+});
+
   const res = await fetch("https://api.mollie.com/v2/payments", {
     method: "POST",
     headers: {
@@ -65,7 +90,7 @@ export async function createMolliePayment(opts: {
         currency: opts.currency,
         value: (opts.dueNowCents / 100).toFixed(2),
       },
-      description: `Order ${opts.orderId}`,
+      description,
       redirectUrl: opts.redirectUrl,
       webhookUrl: opts.webhookUrl,
       profileId: opts.profileId,

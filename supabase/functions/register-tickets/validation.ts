@@ -6,9 +6,27 @@ import type {
 } from "./types.ts";
 import { badRequest } from "./errors.ts";
 
-function toNonEmptyString(v: unknown): string | null {
-  const s = typeof v === "string" ? v.trim() : String(v ?? "").trim();
+const MAX_ITEMS = 50;
+const MAX_ATTENDEES = 500;
+const MAX_ANSWERS_PER_ATTENDEE = 200;
+const MAX_TURNSTILE_TOKEN_LENGTH = 5000;
+const MAX_WIDGET_RETURN_URL_LENGTH = 200;
+const MAX_BUYER_EMAIL_LENGTH = 254;
+const MAX_BUYER_NAME_LENGTH = 120;
+const MAX_BUYER_PHONE_LENGTH = 20;
+
+function toOptionalTrimmedString(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const s = v.trim();
   return s ? s : null;
+}
+
+function requireObject(v: unknown): Record<string, unknown> {
+  if (!v || typeof v !== "object" || Array.isArray(v)) {
+    throw badRequest("INVALID_PAYLOAD");
+  }
+
+  return v as Record<string, unknown>;
 }
 
 function isValidUuid(v: unknown): v is string {
@@ -16,86 +34,167 @@ function isValidUuid(v: unknown): v is string {
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
 }
 
+function isValidEmail(v: string): boolean {
+  return /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(v);
+}
+
+function parseEmail(v: unknown): string | null {
+  const email = toOptionalTrimmedString(v);
+
+  if (email === null) return null;
+  if (email.length > MAX_BUYER_EMAIL_LENGTH) {
+    throw badRequest("INVALID_BUYER_EMAIL");
+  }
+  if (!isValidEmail(email)) {
+    throw badRequest("INVALID_BUYER_EMAIL");
+  }
+
+  return email;
+}
+
+function parseBoundedString(
+  v: unknown,
+  maxLength: number,
+  errorCode = "INVALID_PAYLOAD",
+): string | null {
+  const s = toOptionalTrimmedString(v);
+
+  if (s === null) return null;
+  if (s.length > maxLength) {
+    throw badRequest(errorCode);
+  }
+
+  return s;
+}
+
+function parseCheckoutSource(v: unknown): "widget" | "public" | undefined {
+  const s = toOptionalTrimmedString(v);
+
+  if (s === null) return undefined;
+  if (s !== "widget" && s !== "public") {
+    throw badRequest("INVALID_PAYLOAD");
+  }
+
+  return s;
+}
+
 function parseItems(input: unknown): RegisterItemInput[] {
-  if (!Array.isArray(input) || input.length === 0) {
+  if (!Array.isArray(input) || input.length === 0 || input.length > MAX_ITEMS) {
     throw badRequest("INVALID_PAYLOAD");
   }
 
   return input.map((it) => {
-    if (!it || typeof it !== "object") {
-      throw badRequest("INVALID_PAYLOAD");
-    }
+    const obj = requireObject(it);
 
-    const eventProductId = (it as Record<string, unknown>).eventProductId;
-    const quantity = Number((it as Record<string, unknown>).quantity);
+    const eventProductId = obj.eventProductId;
+    const quantityRaw = obj.quantity;
 
     if (!isValidUuid(eventProductId)) {
       throw badRequest("INVALID_PAYLOAD");
     }
 
-    if (!Number.isFinite(quantity) || quantity < 1 || quantity > 100) {
+    if (typeof quantityRaw !== "number" || !Number.isInteger(quantityRaw) || quantityRaw < 1 || quantityRaw > 100) {
       throw badRequest("INVALID_PAYLOAD");
     }
 
     return {
       eventProductId,
-      quantity,
+      quantity: quantityRaw,
     };
   });
 }
 
+function parseAnswerValue(value: unknown): unknown {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (value && typeof value === "object") {
+    return value;
+  }
+
+  return null;
+}
+
 function parseAnswers(input: unknown): RegisterAnswerInput[] {
-  if (!Array.isArray(input)) return [];
+  if (input === undefined) return [];
+  if (!Array.isArray(input) || input.length > MAX_ANSWERS_PER_ATTENDEE) {
+    throw badRequest("INVALID_PAYLOAD");
+  }
 
   return input.map((x) => {
-    if (!x || typeof x !== "object") {
-      throw badRequest("INVALID_PAYLOAD");
-    }
+    const obj = requireObject(x);
 
-    const eventFormFieldId = (x as Record<string, unknown>).eventFormFieldId;
-    const value = (x as Record<string, unknown>).value ?? null;
-
+    const eventFormFieldId = obj.eventFormFieldId;
     if (!isValidUuid(eventFormFieldId)) {
       throw badRequest("INVALID_PAYLOAD");
     }
 
     return {
       eventFormFieldId,
-      value,
+      value: parseAnswerValue(obj.value ?? null),
     };
   });
 }
 
 function parseAttendees(input: unknown): RegisterAttendeeInput[] {
-  if (!Array.isArray(input)) {
+  if (!Array.isArray(input) || input.length > MAX_ATTENDEES) {
     throw badRequest("INVALID_PAYLOAD");
   }
 
   return input.map((a) => {
-    if (!a || typeof a !== "object") {
-      throw badRequest("INVALID_PAYLOAD");
-    }
+    const obj = requireObject(a);
 
-    const eventProductId = (a as Record<string, unknown>).eventProductId;
+    const eventProductId = obj.eventProductId;
     if (!isValidUuid(eventProductId)) {
       throw badRequest("INVALID_PAYLOAD");
     }
 
     return {
       eventProductId,
-      answers: parseAnswers((a as Record<string, unknown>).answers),
+      answers: parseAnswers(obj.answers),
     };
   });
 }
 
-export async function parseRegisterPayload(req: Request): Promise<RegisterRequestBody> {
-  const body = await req.json().catch(() => null);
-
-  if (!body || typeof body !== "object") {
-    throw badRequest("INVALID_PAYLOAD");
+function parseBuyer(input: unknown): RegisterRequestBody["buyer"] {
+  if (input === undefined || input === null) {
+    return undefined;
   }
 
-  const raw = body as Record<string, unknown>;
+  const obj = requireObject(input);
+
+  const email = parseEmail(obj.email);
+  const name = parseBoundedString(obj.name, MAX_BUYER_NAME_LENGTH, "INVALID_BUYER_NAME");
+  const phone = parseBoundedString(obj.phone, MAX_BUYER_PHONE_LENGTH, "INVALID_BUYER_PHONE");
+  const isAttendee =
+    typeof obj.isAttendee === "boolean" ? obj.isAttendee : undefined;
+
+  const hasAnyBuyerField = Boolean(email || name || phone || typeof isAttendee === "boolean");
+  if (!hasAnyBuyerField) {
+    return undefined;
+  }
+
+  return {
+    email,
+    name,
+    phone,
+    isAttendee,
+  };
+}
+
+export async function parseRegisterPayload(req: Request): Promise<RegisterRequestBody> {
+  const body = await req.json().catch(() => null);
+  const raw = requireObject(body);
 
   if (!isValidUuid(raw.eventId)) {
     throw badRequest("INVALID_PAYLOAD");
@@ -103,31 +202,38 @@ export async function parseRegisterPayload(req: Request): Promise<RegisterReques
 
   const items = parseItems(raw.items);
   const attendees = parseAttendees(raw.attendees);
-  const turnstileToken = toNonEmptyString(raw.turnstileToken);
 
+  const turnstileToken = parseBoundedString(
+    raw.turnstileToken,
+    MAX_TURNSTILE_TOKEN_LENGTH,
+    "MISSING_CAPTCHA_TOKEN",
+  );
   if (!turnstileToken) {
     throw badRequest("MISSING_CAPTCHA_TOKEN");
   }
 
-  const buyer = raw.buyer && typeof raw.buyer === "object"
-    ? {
-        email: toNonEmptyString((raw.buyer as Record<string, unknown>).email),
-        name: toNonEmptyString((raw.buyer as Record<string, unknown>).name),
-        phone: toNonEmptyString((raw.buyer as Record<string, unknown>).phone),
-        isAttendee:
-          typeof (raw.buyer as Record<string, unknown>).isAttendee === "boolean"
-            ? (raw.buyer as Record<string, unknown>).isAttendee as boolean
-            : undefined,
-      }
-    : undefined;
+  const buyer = parseBuyer(raw.buyer);
+  const buyerEmail = parseEmail(raw.buyerEmail);
 
-  const buyerEmail = toNonEmptyString(raw.buyerEmail);
-  const hasBuyer = Boolean(buyer?.email || buyer?.name || buyer?.phone);
-  const hasLegacy = Boolean(buyerEmail);
-
-  if (!hasBuyer && !hasLegacy) {
-    throw badRequest("BUYER_REQUIRED");
+  // Au moins un email acheteur valide doit être présent
+  const effectiveBuyerEmail = buyer?.email ?? buyerEmail;
+  if (!effectiveBuyerEmail) {
+    throw badRequest("BUYER_EMAIL_REQUIRED");
   }
+
+  // Cohérence: chaque attendee doit pointer vers un produit présent dans items
+  const itemProductIds = new Set(items.map((x) => x.eventProductId));
+  for (const attendee of attendees) {
+    if (!itemProductIds.has(attendee.eventProductId)) {
+      throw badRequest("INVALID_PAYLOAD");
+    }
+  }
+
+  const widgetReturnUrl = parseBoundedString(
+    raw.widgetReturnUrl,
+    MAX_WIDGET_RETURN_URL_LENGTH,
+    "INVALID_PAYLOAD",
+  );
 
   return {
     eventId: raw.eventId,
@@ -136,7 +242,7 @@ export async function parseRegisterPayload(req: Request): Promise<RegisterReques
     buyer,
     buyerEmail,
     turnstileToken,
-    checkoutSource: toNonEmptyString(raw.checkoutSource),
-    widgetReturnUrl: toNonEmptyString(raw.widgetReturnUrl),
+    checkoutSource: parseCheckoutSource(raw.checkoutSource),
+    widgetReturnUrl,
   };
 }
