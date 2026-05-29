@@ -396,7 +396,7 @@ export function normalizeError(e: unknown, fallbackMessage: string): AppError {
     return new AppError({
       code: "NETWORK",
       message:
-        "Impossible de contacter le serveur. Vérifie ta connexion ou réessaie dans quelques minutes.",
+        "Une erreur temporaire de connexion est survenue. Réessayez dans quelques instants.",
       cause: e,
     });
   }
