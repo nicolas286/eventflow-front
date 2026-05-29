@@ -11,6 +11,7 @@ import OrgThemeSync from "@shared/ui/components/theme/OrgThemeSync";
 
 import type { EventOverviewRow } from "../../events/schemas/admin.eventsOverview.schema";
 import type { DashboardBootstrap } from "../schemas/admin.dashboardBootstrap.schema";
+import { normalizeError } from "@shared/errors/errors";
 
 export type AdminOutletContext = {
   org: OrgInfo | null;
@@ -51,14 +52,21 @@ export default function AdminDashboard() {
     );
   }
 
-  if (error) {
+    if (error) {
+    const appError = normalizeError(
+      error,
+      "Une erreur est survenue. Réessayez dans quelques instants."
+    );
+
     return (
       <div className="adminPage">
         <OrgThemeSync primaryColor={primaryHex} />
         {!isOnboarding && <TopNav mode="admin" org={topNavOrg} />}
 
         <div className="adminPageGrid">
-          <div className="adminPageRight">Erreur : {String(error)}</div>
+          <div className="adminPageRight">
+            {appError.message}
+          </div>
         </div>
       </div>
     );
