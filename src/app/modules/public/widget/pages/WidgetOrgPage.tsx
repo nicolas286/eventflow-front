@@ -27,17 +27,30 @@ export function WidgetOrgPage() {
     orgSlug,
   });
 
-  const MAX_EVENTS = 4;
+  const params = new URLSearchParams(search);
 
-const upcomingEvents = useMemo(() => {
-  return (events ?? [])
-    .filter((e) => {
-      const ts = Date.parse(e.endsAt ?? e.startsAt ?? "");
-      return Number.isFinite(ts) ? ts >= nowTs : true;
-    })
-    .sort((a, b) => Date.parse(a.startsAt ?? "") - Date.parse(b.startsAt ?? ""))
-    .slice(0, MAX_EVENTS);
-}, [events, nowTs]);
+  const ctaText = params.get("ctaText") || "Billets";
+
+  const maxEventsParam = Number(params.get("maxEvents"));
+  const maxEvents =
+    Number.isFinite(maxEventsParam) && maxEventsParam > 0
+      ? maxEventsParam
+      : 4;
+
+  const displayRemaining = params.get("displayRemaining") === "true";
+
+  const layout = params.get("layout") === "carousel" ? "carousel" : "grid";
+  const isCarousel = layout === "carousel";
+
+  const upcomingEvents = useMemo(() => {
+    return (events ?? [])
+      .filter((e) => {
+        const ts = Date.parse(e.endsAt ?? e.startsAt ?? "");
+        return Number.isFinite(ts) ? ts >= nowTs : true;
+      })
+      .sort((a, b) => Date.parse(a.startsAt ?? "") - Date.parse(b.startsAt ?? ""))
+      .slice(0, maxEvents);
+  }, [events, nowTs, maxEvents]);
 
   if (!orgSlug) {
     return <div style={{ padding: 20 }}>Organisation introuvable</div>;
@@ -63,29 +76,33 @@ const upcomingEvents = useMemo(() => {
       {upcomingEvents.length === 0 ? (
         <p>Aucun événement</p>
       ) : (
-        <WidgetGrid>
-          {upcomingEvents.map((e) => (
-          <WidgetEventCard
-            key={e.id}
-            event={e}
-            onClick={() =>
-          navigate(`/widget/o/${orgSlug}/e/${e.slug}/billets${search}`)
-          }/>
-        ))} 
-        </WidgetGrid> 
+        <WidgetGrid layout={layout}>
+          {upcomingEvents.map((event) => (
+            <WidgetEventCard
+              key={event.id}
+              event={event}
+              orgSlug={orgSlug}
+              ctaText={ctaText}
+              displayRemaining={displayRemaining}
+              onClick={() =>
+                navigate(`/widget/o/${orgSlug}/e/${event.slug}/billets${search}`)
+              }
+            />
+          ))}
+        </WidgetGrid>
       )}
 
-      {events && events.length > MAX_EVENTS && (
-      <div className="widgetMoreEvents">
-        <Button
-        className="widgetButton"
-          variant="secondary"
-          label="Voir tous les événements"
-          onClick={() =>
-            window.open(`/o/${orgSlug}`, "_blank", "noopener,noreferrer")
-          }
-        />
-      </div>
+      {events && events.length > maxEvents && !isCarousel && (
+        <div className="widgetMoreEvents">
+          <Button
+            className="widgetButton"
+            variant="secondary"
+            label="Voir tous les événements"
+            onClick={() =>
+              window.open(`/o/${orgSlug}`, "_blank", "noopener,noreferrer")
+            }
+          />
+        </div>
       )}
     <WidgetFooter/>
   </WidgetRoot>

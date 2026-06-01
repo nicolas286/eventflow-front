@@ -36,3 +36,20 @@
   font-size: 13px;
   opacity: 0.7;
 }
+
+  .widgetEventRemaining {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--widget-accent, #22c55e);
+}
+
+.widgetEventRemaining.isLow {
+  color: #f59e0b;
+}
+
+.widgetEventStatus {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
