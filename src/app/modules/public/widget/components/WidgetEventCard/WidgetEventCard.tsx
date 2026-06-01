@@ -1,22 +1,62 @@
 import type { PublicEventOverview } from "@app/modules/public/organization/schemas/public.orgEventsOverview.schema";
+import { usePublicEventDetail } from "@app/modules/public/events/hooks/usePublicEventDetail";
+import { supabase } from "@gateways/supabase/supabaseClient";
 import { Button } from "@shared/ui/components";
-import "./WidgetEventCard.css"; 
+import "./WidgetEventCard.css";
 
 type Props = {
   event: PublicEventOverview;
+  orgSlug: string;
   onClick: () => void;
-}
 
-export function WidgetEventCard({ event, onClick }: Props) {
+  ctaText?: string;
+  displayRemaining?: boolean;
+};
+
+export function WidgetEventCard({
+  event,
+  orgSlug,
+  onClick,
+  ctaText,
+  displayRemaining = false,
+}: Props) {
+  const { data } = usePublicEventDetail({
+    supabase,
+    orgSlug,
+    eventSlug: event.slug,
+  });
+
+  const remainingSeats = (() => {
+  if (!displayRemaining || !data?.products) return null;
+
+  return data.products.reduce((total, product) => {
+    if (product.stockQty == null) return total;
+
+    const usedQty = (product.soldQty ?? 0) + (product.reservedQty ?? 0);
+    const remainingQty = Math.max(product.stockQty - usedQty, 0);
+    const attendeesPerUnit = product.attendeesPerUnit ?? 1;
+
+    return total + remainingQty * attendeesPerUnit;
+  }, 0);
+})();
+
   const isSoldOut = event.isSoldOut;
   const isClosed = event.isRegistrationOpen === false;
-  const isDisabled = isSoldOut || isClosed;
+
+  const noSeatsLeft =
+    displayRemaining &&
+    remainingSeats !== null &&
+    remainingSeats <= 0;
+
+  const isDisabled = isSoldOut || isClosed || noSeatsLeft;
 
   const label = isSoldOut
     ? "Complet"
     : isClosed
       ? "Clôturé"
-      : "Billets";
+      : noSeatsLeft
+        ? "Complet"
+        : (ctaText ?? "Billets");
 
   return (
     <div
@@ -36,14 +76,24 @@ export function WidgetEventCard({ event, onClick }: Props) {
         </div>
       )}
 
+      {displayRemaining && remainingSeats !== null && (
+        <div
+          className={`widgetEventRemaining ${
+            remainingSeats <= 5 ? "isLow" : ""
+          }`}
+        >
+          {remainingSeats > 0
+            ? `${remainingSeats} place${remainingSeats > 1 ? "s" : ""} restante${
+                remainingSeats > 1 ? "s" : ""
+              }`
+            : "Complet"}
+        </div>
+      )}
+
       {isSoldOut ? (
-        <div style={{ fontSize: 13, fontWeight: 600, marginTop: 6 }}>
-          Complet
-        </div>
+        <div className="widgetEventStatus">Complet</div>
       ) : isClosed ? (
-        <div style={{ fontSize: 13, fontWeight: 600, marginTop: 6 }}>
-          Inscriptions clôturées
-        </div>
+        <div className="widgetEventStatus">Inscriptions clôturées</div>
       ) : null}
 
       <Button
