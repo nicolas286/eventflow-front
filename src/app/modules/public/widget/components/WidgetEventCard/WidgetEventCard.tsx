@@ -27,13 +27,17 @@ export function WidgetEventCard({
   });
 
   const remainingSeats = (() => {
-  if (!displayRemaining || !data?.products) return null;
+  if (!displayRemaining || !data?.products?.length) return null;
 
-  return data.products.reduce((total, product) => {
-    if (product.stockQty == null) return total;
+  const productsWithStock = data.products.filter(
+    (product) => product.stockQty !== null && product.stockQty !== undefined
+  );
 
+  if (productsWithStock.length === 0) return null;
+
+  return productsWithStock.reduce((total, product) => {
     const usedQty = (product.soldQty ?? 0) + (product.reservedQty ?? 0);
-    const remainingQty = Math.max(product.stockQty - usedQty, 0);
+    const remainingQty = Math.max((product.stockQty ?? 0) - usedQty, 0);
     const attendeesPerUnit = product.attendeesPerUnit ?? 1;
 
     return total + remainingQty * attendeesPerUnit;

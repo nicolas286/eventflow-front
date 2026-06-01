@@ -1,5 +1,5 @@
 .widgetEventCard {
-  flex: 1 1 220px;
+  width: 100%;
   max-width: 300px;
 
   background: var(--widget-card);

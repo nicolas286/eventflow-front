@@ -1,23 +1,24 @@
 .widgetGridDefault {
   display: grid;
   gap: 16px;
+  justify-content: center;
+}
+
+.widgetGridDefault > * {
+  width: 100%;
 }
 
 .widgetGridCarousel {
   display: flex;
   gap: 16px;
-
   overflow-x: auto;
   overflow-y: hidden;
-
   scroll-snap-type: x proximity;
-
-  padding-bottom: 10px;
-
+  padding: 0 16px 10px;
   scrollbar-width: thin;
 }
 
 .widgetGridCarousel > * {
-  flex: 0 0 min(320px, 85vw);
+  flex: 0 0 min(300px, 85vw);
   scroll-snap-align: start;
 }
