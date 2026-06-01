@@ -18,6 +18,12 @@
   scrollbar-width: thin;
 }
 
+.widgetGridCarousel::before,
+.widgetGridCarousel::after {
+  content: "";
+  flex: 1 0 auto;
+}
+
 .widgetGridCarousel > * {
   flex: 0 0 min(300px, 85vw);
   scroll-snap-align: start;
