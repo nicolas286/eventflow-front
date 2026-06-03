@@ -28,19 +28,25 @@ export function useRegister(params: { supabase: SupabaseClient }) {
 
       // si l’edge renvoie { error: ... }
       if (result && typeof result === "object" && "error" in result) {
-        const msg = typeof (result as any).error === "string" ? (result as any).error : "Erreur register";
-        setState({ loading: false, error: msg, result });
-        return result;
+        throw new Error(
+          typeof (result as any).error === "string"
+            ? (result as any).error
+            : "Erreur register"
+        );
       }
 
       setState({ loading: false, error: null, result });
       return result;
+
     } catch (e: unknown) {
-
       const ne = normalizeError(e, "Impossible de finaliser la réservation");
-      setState({ loading: false, error: ne.message, result: null });
 
-      // au lieu de retourner null (qui casse tes if), on throw :
+      setState({
+        loading: false,
+        error: ne.message,
+        result: null,
+      });
+
       throw ne;
     }
   }

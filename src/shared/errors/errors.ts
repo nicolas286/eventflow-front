@@ -506,6 +506,24 @@ const message =
     });
   }
 
+  if (e instanceof Error) {
+    const raw = sanitizeRawMessage(e.message);
+
+    const rpcCode = raw ? mapRpcMessageToAppCode(raw) : null;
+    const business = raw ? humanBusinessMessage(raw) : null;
+    const cleaned = raw ? stripRpcPrefix(raw) : "";
+
+    return new AppError({
+      code: rpcCode ?? "UNKNOWN",
+      message: business ?? (rpcCode ? cleaned : raw ?? fallbackMessage),
+      cause: e,
+      meta: {
+        kind: "error",
+        rawMessage: raw,
+      },
+    });
+  }
+
   if (isDomExceptionLike(e)) {
     const name = String((e as any).name);
     const code = mapIdbToAppCode(name);
