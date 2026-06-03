@@ -38,6 +38,7 @@ export function WidgetOrgPage() {
       : 4;
 
   const displayRemaining = params.get("displayRemaining") === "true";
+  const displayTitle = params.get("displayTitle") === "true";
 
   const layout = params.get("layout") === "carousel" ? "carousel" : "grid";
   const isCarousel = layout === "carousel";
@@ -71,7 +72,7 @@ export function WidgetOrgPage() {
 
   return (
     <WidgetRoot theme={theme}>
-      <WidgetHeader title={`Prochains événements de ${profile.displayName}`}/>
+      {displayTitle && <WidgetHeader title={`Prochains événements de ${profile.displayName}`}/>}
 
       {upcomingEvents.length === 0 ? (
         <p>Aucun événement</p>
