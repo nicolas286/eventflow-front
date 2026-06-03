@@ -16,6 +16,18 @@ function mapRpcError(msg: string) {
   if (m.includes("EVENT_NOT_PUBLISHED")) return new ResponseError(409, "EVENT_NOT_PUBLISHED");
   if (m.includes("EVENT_ENDED")) return new ResponseError(409, "EVENT_ENDED");
 
+  if (m.includes("PLAN_LIMIT")) {
+  if (m.includes("registrations_per_event")) {
+    return new ResponseError(403, "PLAN_LIMIT_REGISTRATIONS_PER_EVENT");
+  }
+
+  if (m.includes("paid_events_per_year")) {
+    return new ResponseError(403, "PLAN_LIMIT_PAID_EVENTS_PER_YEAR");
+  }
+
+  return new ResponseError(403, "PLAN_LIMIT");
+}
+
   return new ResponseError(400, "FAILED");
 }
 

@@ -124,12 +124,17 @@ function humanEmailRateLimitMessage(): string {
 function humanBusinessMessage(msg: string): string | null {
   const m = msg.trim();
 
-  if (/^PLAN_LIMIT\b/i.test(m)) {
-    if (/paid_events_per_year/i.test(m)) {
+  if (m === "PLAN_LIMIT_REGISTRATIONS_PER_EVENT") {
+  return "Limite du nombre d’inscriptions par événement atteinte pour ton abonnement actuel.";
+    }
+
+    if (m === "PLAN_LIMIT_PAID_EVENTS_PER_YEAR") {
       return "Plan gratuit : limite d’événements avec tickets payants atteinte pour cette année. Passe sur Starter pour continuer.";
     }
-    return "Limite de ton abonnement atteinte. Passe sur un plan supérieur pour continuer.";
-  }
+
+    if (m === "PLAN_LIMIT") {
+      return "Limite de ton abonnement atteinte. Passe sur un plan supérieur pour continuer.";
+    }
 
   if (m === "FORBIDDEN") return "Accès refusé : tu n’as pas les droits nécessaires.";
   if (m === "NOT_AUTHENTICATED") return "Ta session a expiré. Reconnecte-toi.";
@@ -141,6 +146,10 @@ function humanBusinessMessage(msg: string): string | null {
   if (isEmailRateLimitMessage(m)) {
     return humanEmailRateLimitMessage();
   }
+
+  if (/MOLLIE_PAYMENT_CREATE_FAILED/i.test(m) || /payment method is not activated/i.test(m)) {
+  return "Le mode de paiement sélectionné n’est pas encore activé sur le compte Mollie. Activez-le dans Mollie ou choisissez un autre moyen de paiement.";
+}
 
   if (/Edge Function returned a non-2xx status code/i.test(m)) {
     return "Erreur serveur pendant la réservation. Réessaie dans quelques instants.";
