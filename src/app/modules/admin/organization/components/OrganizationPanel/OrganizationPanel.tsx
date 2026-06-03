@@ -4,7 +4,7 @@ import "./OrganizationPanel.desktop.css";
 import "./OrganizationPanel.mobile.css";
 
 import { Button, Input, Select, Badge } from "@ui/components";
-import { TextareaWithToolbar } from "@shared/ui/components/inputs/TextAreaWithToolbar";
+import { MarkdownRichTextarea } from "@shared/ui/components/inputs/MarkdownRichTextArea";
 
 import { supabase } from "@shared/gateways/supabase/supabaseClient";
 import { useSaveOrgInfo } from "../../hooks/useSaveOrgInfo";
@@ -253,14 +253,12 @@ export default function StructurePanel({ orgId, orgInfo, orgProfile, onSaved }: 
           </div>
 
           <div className="structurePanel__field">
-            <TextareaWithToolbar
+            <MarkdownRichTextarea
               label="Description"
               value={form.description}
               onChange={(next: string) =>
-              setForm((s) => ({ ...s, description: next }))
-            }
-              rows={5}
-              hint="Markdown : **gras**, _italique_, ~~barré~~."
+                setForm((s) => ({ ...s, description: next }))
+              }
             />
           </div>
 
