@@ -1,6 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
+import rehypeRaw from "rehype-raw";
 import "./MarkdownText.css";
 
 type Props = {
@@ -15,8 +16,9 @@ export default function MarkdownText({ markdown, className }: Props) {
   return (
     <div className={["markdownText", className].filter(Boolean).join(" ")}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkBreaks]}  
-        skipHtml
+        remarkPlugins={[remarkGfm, remarkBreaks]}
+        rehypePlugins={[rehypeRaw]}
+        skipHtml={false}
         components={{
           a: ({ ...props }) => (
             <a {...props} target="_blank" rel="noopener noreferrer" />

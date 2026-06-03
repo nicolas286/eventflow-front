@@ -4,7 +4,7 @@ import { Button, Input } from "@ui/components";
 import { localDateTimeMinNow } from "@helpers/dateTime";
 
 import type { UpdateEventFullPatch } from "../../schemas/admin.updateEventFullPatch.schema";
-import { TextareaWithToolbar } from "@shared/ui/components/inputs/TextAreaWithToolbar";
+import { MarkdownRichTextarea } from "@shared/ui/components/inputs/MarkdownRichTextArea";
 import { MessageBox } from "@shared/ui/components/message/MessageBox";
 
 type FieldErrors = Partial<Record<keyof UpdateEventFullPatch, string>>;
@@ -74,14 +74,11 @@ export function EventDetailsFields(props: Props) {
         </div>
 
         <div className="adminEventField adminEventFieldSpan2">
-          <TextareaWithToolbar
+          <MarkdownRichTextarea
             label="Description"
             value={draft.description}
             onChange={(next) => setDraft((d) => ({ ...d, description: next }))}
             error={fieldErrors.description ?? null}
-            textAreaClassName="adminEventTextarea"
-            rows={6}
-            hint="Markdown : **gras**, _italique_, ~~barré~~."
           />
         </div>
 
