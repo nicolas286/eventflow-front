@@ -334,8 +334,24 @@ function getFnBodyText(e: FunctionsErrorLike): string | null {
   const ctx = (e as any)?.context;
   const body = ctx?.body;
 
-  // body déjà string
-  if (typeof body === "string") return body;
+  if (typeof body === "string") {
+  try {
+    const parsed = JSON.parse(body);
+
+    if (parsed && typeof parsed === "object") {
+      return (
+        (typeof parsed.message === "string" && parsed.message) ||
+        (typeof parsed.error === "string" && parsed.error) ||
+        (typeof parsed.details === "string" && parsed.details) ||
+        body
+      );
+    }
+  } catch {
+    // body string classique
+  }
+
+  return body;
+}
 
   // body objet (souvent déjà parsé)
   if (body && typeof body === "object") {
