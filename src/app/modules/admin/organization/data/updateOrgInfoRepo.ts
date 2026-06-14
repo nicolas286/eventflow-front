@@ -18,8 +18,7 @@ export function updateOrgInfoRepo(supabase: SupabaseClient) {
     async updateOrgInfo(input: UpdateOrgInfoPatch): Promise<UpdateOrgInfoResult> {
       const parsed = updateOrgInfoPatchSchema.parse(input);
 
-      // On construit un input RPC minimal en n'envoyant QUE les champs présents
-      // (super important car ta RPC utilise `p_input ? 'field'`)
+
       const rpcInput: Record<string, unknown> = {
         org_id: parsed.orgId,
       };
