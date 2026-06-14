@@ -117,6 +117,7 @@ export default function AdminEventsPage() {
       orgId,
       title: "Nouvel événement",
       description: null,
+      charterText: null,
       location: null,
       bannerUrl: null,
       depositCents: null,

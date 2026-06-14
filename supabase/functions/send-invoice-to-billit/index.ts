@@ -55,10 +55,9 @@ function hasBuyerPeppolData(billing) {
   const buyerCity = clean(billing.city);
   const buyerPostalCode = clean(billing.postalCode);
   const buyerVatCountry = clean(billing.vatCountryCode);
-  const buyerVatNumber = clean(billing.vatNumber);
-  const buyerVat = buyerVatCountry && buyerVatNumber ? `${buyerVatCountry}${buyerVatNumber}` : "";
-  // Pour rester simple, on utilise la TVA comme endpoint acheteur si on n’a rien d’autre.
-  // Ce n’est pas idéal dans tous les cas, mais c’est le fallback le plus praticable ici.
+  const rawBuyerVatNumber = clean(billing.vatNumber);
+  const normalizedBuyerVatNumber = rawBuyerVatNumber.replace(/\s+/g, "").replace(new RegExp(`^${buyerVatCountry}`, "i"), "");
+  const buyerVat = buyerVatCountry && normalizedBuyerVatNumber ? `${buyerVatCountry}${normalizedBuyerVatNumber}` : "";
   const buyerEndpointId = buyerVat ? `0208:${buyerVat.replace(/\s+/g, "")}` : "";
   const currency = clean(invoice.currency, "EUR");
   const subtotalCents = Number(invoice.subtotal_cents ?? invoice.subtotalCents ?? 0);
@@ -194,16 +193,21 @@ function hasBuyerPeppolData(billing) {
 
 </Invoice>`;
 }
-/* ------------------------------------------------------------------ */ /* Edge handler                                                       */ /* ------------------------------------------------------------------ */ Deno.serve(async (req)=>{
+Deno.serve(async (req)=>{
   try {
-    if (req.method !== "POST") return json({
-      error: "Method not allowed"
-    }, 405);
-    const { invoice_id } = await req.json().catch(()=>({}));
-    if (!invoice_id) return json({
-      ok: false,
-      error: "invoice_id_required"
-    }, 400);
+    if (req.method !== "POST") {
+      return json({
+        error: "Method not allowed"
+      }, 405);
+    }
+    const body = await req.json().catch(()=>({}));
+    const { invoice_id, debug = false, dryRun = false } = body;
+    if (!invoice_id) {
+      return json({
+        ok: false,
+        error: "invoice_id_required"
+      }, 400);
+    }
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!supabaseUrl || !serviceKey) {
@@ -215,6 +219,8 @@ function hasBuyerPeppolData(billing) {
     const supabase = createClient(supabaseUrl, serviceKey);
     const billitKey = Deno.env.get("BILLIT_API_KEY");
     const billitPartyId = Deno.env.get("BILLIT_PARTY_ID");
+    const billitBaseUrl = Deno.env.get("BILLIT_BASE_URL") ?? "https://api.billit.be";
+    const billitEndpoint = `${billitBaseUrl}/v1/peppol/sendxml`;
     const env = {
       BILLIT_SELLER_NAME: Deno.env.get("BILLIT_SELLER_NAME") ?? "",
       BILLIT_SELLER_VAT: Deno.env.get("BILLIT_SELLER_VAT") ?? "",
@@ -225,32 +231,90 @@ function hasBuyerPeppolData(billing) {
       BILLIT_SELLER_POSTAL_CODE: Deno.env.get("BILLIT_SELLER_POSTAL_CODE") ?? ""
     };
     const { data: invoice, error } = await supabase.from("invoices").select(`
-        id,
-        number,
-        currency,
-        subtotal_cents,
-        vat_cents,
-        total_cents,
-        issued_at,
-        paid_at,
-        billing_snapshot,
-        pdf_path,
-        peppol_status
-      `).eq("id", invoice_id).maybeSingle();
-    if (error || !invoice) {
+            id,
+            number,
+            currency,
+            subtotal_cents,
+            vat_cents,
+            total_cents,
+            issued_at,
+            paid_at,
+            billing_snapshot,
+            pdf_path
+          `).eq("id", invoice_id).maybeSingle();
+    if (error) {
+      console.error("[billit-edge] invoice_query_error", error);
       return json({
         ok: false,
-        error: "invoice_not_found"
+        error: "invoice_query_error",
+        details: error
+      }, 500);
+    }
+    if (!invoice) {
+      return json({
+        ok: false,
+        error: "invoice_not_found",
+        invoice_id
       }, 404);
     }
-    if (invoice.peppol_status === "sent") {
+    const { data: peppolRow, error: peppolError } = await supabase.from("invoice_peppol").select("status, attempt_count, error_message, provider_message_id, sent_at").eq("invoice_id", invoice_id).eq("provider", "billit").maybeSingle();
+    if (peppolError) {
+      console.error("[billit-edge] peppol_query_error", peppolError);
+      return json({
+        ok: false,
+        error: "peppol_query_error",
+        details: peppolError
+      }, 500);
+    }
+    if (peppolRow?.status === "sent" && !debug && !dryRun) {
       return json({
         ok: true,
         reused: true,
-        reason: "already_sent"
+        reason: "already_sent",
+        providerMessageId: peppolRow.provider_message_id,
+        sentAt: peppolRow.sent_at
       }, 200);
     }
     const billing = invoice.billing_snapshot?.billing ?? {};
+    const ublXml = buildUblInvoice(invoice, env);
+    if (debug || dryRun) {
+      return json({
+        ok: true,
+        debug: true,
+        dryRun: true,
+        invoice: {
+          id: invoice.id,
+          number: invoice.number,
+          currency: invoice.currency,
+          subtotal_cents: invoice.subtotal_cents,
+          vat_cents: invoice.vat_cents,
+          total_cents: invoice.total_cents,
+          issued_at: invoice.issued_at,
+          paid_at: invoice.paid_at,
+          pdf_path: invoice.pdf_path
+        },
+        peppol: peppolRow,
+        billit: {
+          endpoint: billitEndpoint,
+          baseUrl: billitBaseUrl,
+          hasApiKey: Boolean(billitKey),
+          hasPartyId: Boolean(billitPartyId),
+          partyId: billitPartyId ?? null
+        },
+        seller: {
+          name: env.BILLIT_SELLER_NAME,
+          vat: env.BILLIT_SELLER_VAT,
+          country: env.BILLIT_SELLER_COUNTRY,
+          endpointId: env.BILLIT_SELLER_ENDPOINT_ID,
+          street: env.BILLIT_SELLER_STREET,
+          city: env.BILLIT_SELLER_CITY,
+          postalCode: env.BILLIT_SELLER_POSTAL_CODE
+        },
+        buyer: billing,
+        buyerPeppolDataOk: hasBuyerPeppolData(billing),
+        ublPreview: safeStr(ublXml, 4000)
+      }, 200);
+    }
     await supabase.rpc("rpc_update_invoice_peppol_status", {
       p_input: {
         invoice_id,
@@ -286,7 +350,6 @@ function hasBuyerPeppolData(billing) {
         reason: "missing_buyer_peppol_data"
       }, 200);
     }
-    // On essaie de générer le PDF si absent, sans bloquer l'envoi.
     if (!invoice.pdf_path) {
       supabase.functions.invoke("generate-invoice-pdf", {
         body: {
@@ -294,8 +357,15 @@ function hasBuyerPeppolData(billing) {
         }
       }).catch((e)=>console.error("[billit-edge] generate pdf call failed", e));
     }
-    const ublXml = buildUblInvoice(invoice, env);
-    const res = await fetch("https://api.billit.be/v1/peppol/sendxml", {
+    console.error("[billit-edge] sending to Billit", {
+      endpoint: billitEndpoint,
+      invoice_id,
+      invoiceNumber: invoice.number,
+      hasApiKey: Boolean(billitKey),
+      hasPartyId: Boolean(billitPartyId),
+      partyId: billitPartyId
+    });
+    const res = await fetch(billitEndpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -308,7 +378,29 @@ function hasBuyerPeppolData(billing) {
       })
     });
     const text = await res.text().catch(()=>"");
+    console.error("[billit-edge] Billit raw response", {
+      status: res.status,
+      statusText: res.statusText,
+      body: text
+    });
     if (!res.ok) {
+      const isCustomerNotPeppol = text.includes("TheCustomerDoesNotSupportPeppolForType");
+      if (isCustomerNotPeppol) {
+        await supabase.rpc("rpc_update_invoice_peppol_status", {
+          p_input: {
+            invoice_id,
+            status: "skipped",
+            error_message: safeStr(text, 500)
+          }
+        });
+        return json({
+          ok: true,
+          skipped: true,
+          reason: "customer_does_not_support_peppol_invoice",
+          billitStatus: res.status,
+          body: safeStr(text, 1000)
+        }, 200);
+      }
       await supabase.rpc("rpc_update_invoice_peppol_status", {
         p_input: {
           invoice_id,
@@ -320,6 +412,7 @@ function hasBuyerPeppolData(billing) {
         ok: false,
         error: "billit_send_failed",
         status: res.status,
+        statusText: res.statusText,
         body: safeStr(text, 1000)
       }, 502);
     }
@@ -341,13 +434,15 @@ function hasBuyerPeppolData(billing) {
     });
     return json({
       ok: true,
-      messageId: payload?.message_id ?? payload?.messageId ?? payload?.id ?? null
+      messageId: payload?.message_id ?? payload?.messageId ?? payload?.id ?? null,
+      payload
     }, 200);
   } catch (e) {
-    console.error("[billit-edge]", e);
+    console.error("[billit-edge] unexpected", e);
     return json({
       ok: false,
-      error: "unexpected"
+      error: "unexpected",
+      message: String(e?.message ?? e)
     }, 500);
   }
 });

@@ -21,6 +21,12 @@ export const eventSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   depositCents: z.number().int().min(0, "L'acompte doit être positif ou nul").nullable().optional(),
+  
+  charterText: z
+    .string()
+    .max(10000, "La charte est trop longue")
+    .nullable()
+    .optional(),
 });
 
 export const eventsSchema = z.array(eventSchema);

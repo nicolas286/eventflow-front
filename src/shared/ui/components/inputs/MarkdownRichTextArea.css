@@ -3,13 +3,23 @@
   border-radius: 12px;
   overflow: hidden;
   background: #fff;
+
+  display: flex;
+  flex-direction: column;
 }
 
 .markdownRichTextarea .mdxeditor {
   min-height: 160px;
+  max-height: 500px;
+
+  display: flex;
+  flex-direction: column;
 }
 
 .markdownRichTextarea [contenteditable="true"] {
   min-height: 120px;
+  max-height: 400px;
+  overflow-y: auto;
+
   padding: 12px;
 }
