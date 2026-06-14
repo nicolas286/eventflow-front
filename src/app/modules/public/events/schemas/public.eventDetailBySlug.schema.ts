@@ -25,6 +25,7 @@ export const publicEventSchema = eventSchema
     registrationDeadline: true,
     depositCents: true,
     maxAttendees: true,
+    charterText: true,
   })
   .extend({
     isSoldOut: z.boolean().default(false),

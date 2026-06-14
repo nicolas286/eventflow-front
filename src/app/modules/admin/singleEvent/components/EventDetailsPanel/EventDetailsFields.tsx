@@ -13,6 +13,7 @@ export type EventDetailsDraft = {
   title: string;
   location: string;
   description: string;
+  charterText: string;
   startsAtLocal: string;
   endsAtLocal: string;
   registrationDeadlineLocal: string;
@@ -51,6 +52,7 @@ export function EventDetailsFields(props: Props) {
   } = props;
 
   return (
+    <>
     <div className="adminEventDetails">
       <div className="adminEventFormGrid">
         <div className="adminEventField">
@@ -74,12 +76,41 @@ export function EventDetailsFields(props: Props) {
         </div>
 
         <div className="adminEventField adminEventFieldSpan2">
-          <MarkdownRichTextarea
-            label="Description"
-            value={draft.description}
-            onChange={(next) => setDraft((d) => ({ ...d, description: next }))}
-            error={fieldErrors.description ?? null}
-          />
+  <details className="adminEventDropdown" open={Boolean(draft.description.trim())}>
+            <summary className="adminEventDropdownSummary">
+              <span>Description</span>
+              {draft.description.trim() ? <small>Renseignée</small> : <small>Vide</small>}
+            </summary>
+
+            <div className="adminEventDropdownBody">
+              <MarkdownRichTextarea
+                value={draft.description}
+                onChange={(next) => setDraft((d) => ({ ...d, description: next }))}
+                error={fieldErrors.description ?? null}
+              />
+            </div>
+          </details>
+        </div>
+
+        <div className="adminEventField adminEventFieldSpan2">
+          <details className="adminEventDropdown" open={Boolean(draft.charterText.trim())}>
+            <summary className="adminEventDropdownSummary">
+              <span>Charte / règlement de l’événement</span>
+              {draft.charterText.trim() ? <small>Renseignée</small> : <small>Vide</small>}
+            </summary>
+
+            <div className="adminEventDropdownBody">
+              <MarkdownRichTextarea
+                value={draft.charterText}
+                onChange={(next) => setDraft((d) => ({ ...d, charterText: next }))}
+                error={fieldErrors.charterText ?? null}
+              />
+
+              <div className="adminEventHint">
+                Si une charte est renseignée, les participants devront la lire et l’accepter avant l’inscription.
+              </div>
+            </div>
+          </details>
         </div>
 
         <div className="adminEventField adminEventLeftCol">
@@ -215,5 +246,55 @@ export function EventDetailsFields(props: Props) {
         </div>
       </div>
 </div>
+
+<style>
+  {`
+    .adminEventDropdown {
+    border: 1px solid var(--color-border, #ddd);
+    border-radius: 14px;
+    background: #fff;
+    overflow: hidden;
+  }
+
+  .adminEventDropdownSummary {
+    cursor: pointer;
+    list-style: none;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-weight: 800;
+  }
+
+  .adminEventDropdownSummary::-webkit-details-marker {
+    display: none;
+  }
+
+  .adminEventDropdownSummary::after {
+    content: "▾";
+    font-size: 14px;
+    opacity: 0.65;
+    transition: transform 0.18s ease;
+  }
+
+  .adminEventDropdown[open] .adminEventDropdownSummary::after {
+    transform: rotate(180deg);
+  }
+
+  .adminEventDropdownSummary small {
+    margin-left: auto;
+    font-size: 12px;
+    font-weight: 700;
+    opacity: 0.55;
+  }
+
+  .adminEventDropdownBody {
+    padding: 0 16px 16px;
+  }
+  `}
+  
+</style></>
   );
 }
+

@@ -12,6 +12,12 @@ export const updateEventFullPatchSchema = z
 
     description: z.string().max(5000, "La description est trop longue").nullable().optional(),
 
+    charterText: z
+    .string()
+    .max(10000, "La charte est trop longue")
+    .nullable()
+    .optional(),
+
     location: z.string().max(180, "L'emplacement est trop long").nullable().optional(),
 
     bannerUrl: z.string().nullable().optional(),

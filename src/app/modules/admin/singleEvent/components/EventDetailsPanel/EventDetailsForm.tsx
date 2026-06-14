@@ -42,6 +42,7 @@ type Draft = {
   title: string;
   location: string;
   description: string;
+  charterText: string;
   startsAtLocal: string;
   endsAtLocal: string;
   registrationDeadlineLocal: string;
@@ -68,6 +69,7 @@ function eventToDraft(event: AdminEventDetailEvent): Draft {
     title: event.title ?? "",
     location: event.location ?? "",
     description: event.description ?? "",
+    charterText: event.charterText ?? "",
     startsAtLocal: isoToLocalInput(event.startsAt ?? null),
     endsAtLocal: isoToLocalInput(event.endsAt ?? null),
     registrationDeadlineLocal: isoToLocalInput(event.registrationDeadline ?? null),
@@ -175,6 +177,7 @@ export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanne
       draft.title.trim() === base.title.trim() &&
       draft.location.trim() === base.location.trim() &&
       draft.description.trim() === base.description.trim() &&
+      draft.charterText.trim() === (base.charterText ?? "").trim() &&
       draft.startsAtLocal === base.startsAtLocal &&
       draft.endsAtLocal === base.endsAtLocal &&
       draft.registrationDeadlineLocal === base.registrationDeadlineLocal &&
@@ -217,6 +220,12 @@ export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanne
   const nextDesc = draft.description.trim() || null;
   if ((nextDesc ?? null) !== (event.description ?? null)) patch.description = nextDesc;
 
+  const nextCharter = draft.charterText.trim() || null;
+
+  if ((nextCharter ?? null) !== (event.charterText ?? null)) {
+    patch.charterText = nextCharter;
+  }
+
   const nextBannerRaw = draft.bannerUrlRaw.trim() || null;
   const curBannerRaw = (event.bannerUrlRaw ?? "").trim() || null;
   if (nextBannerRaw !== curBannerRaw) patch.bannerUrl = nextBannerRaw;
@@ -258,6 +267,7 @@ export function EventDetailsPanel({ event, updateError, onConfirm, onUploadBanne
     title: draft.title.trim(),
     location: draft.location.trim() || null,
     description: draft.description.trim() || null,
+    charterText: draft.charterText.trim() || null,
     bannerUrl: draft.bannerUrlRaw.trim() || null,
     startsAt: s,
     endsAt: e,

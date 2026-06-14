@@ -39,8 +39,7 @@ function hasBuyerPeppolData(billing) {
   const vatNumber = String(billing?.vatNumber ?? "").trim();
   return Boolean(legalName && countryCode && vatCountryCode && vatNumber);
 }
-/* ------------------------------------------------------------------ */ /* UBL Builder                                                        */ /* ------------------------------------------------------------------ */ 
-function buildUblInvoice(invoice, env) {
+/* ------------------------------------------------------------------ */ /* UBL Builder                                                        */ /* ------------------------------------------------------------------ */ function buildUblInvoice(invoice, env) {
   const billing = invoice.billing_snapshot?.billing ?? {};
   const sellerName = clean(env.BILLIT_SELLER_NAME, "Eventflow");
   const sellerVat = clean(env.BILLIT_SELLER_VAT);
@@ -57,16 +56,8 @@ function buildUblInvoice(invoice, env) {
   const buyerPostalCode = clean(billing.postalCode);
   const buyerVatCountry = clean(billing.vatCountryCode);
   const rawBuyerVatNumber = clean(billing.vatNumber);
-
-  const normalizedBuyerVatNumber = rawBuyerVatNumber
-    .replace(/\s+/g, "")
-    .replace(new RegExp(`^${buyerVatCountry}`, "i"), "");
-
-  const buyerVat =
-    buyerVatCountry && normalizedBuyerVatNumber
-      ? `${buyerVatCountry}${normalizedBuyerVatNumber}`
-      : "";
-      
+  const normalizedBuyerVatNumber = rawBuyerVatNumber.replace(/\s+/g, "").replace(new RegExp(`^${buyerVatCountry}`, "i"), "");
+  const buyerVat = buyerVatCountry && normalizedBuyerVatNumber ? `${buyerVatCountry}${normalizedBuyerVatNumber}` : "";
   const buyerEndpointId = buyerVat ? `0208:${buyerVat.replace(/\s+/g, "")}` : "";
   const currency = clean(invoice.currency, "EUR");
   const subtotalCents = Number(invoice.subtotal_cents ?? invoice.subtotalCents ?? 0);
@@ -202,43 +193,34 @@ function buildUblInvoice(invoice, env) {
 
 </Invoice>`;
 }
-
-Deno.serve(async (req) => {
+Deno.serve(async (req)=>{
   try {
     if (req.method !== "POST") {
-      return json({ error: "Method not allowed" }, 405);
+      return json({
+        error: "Method not allowed"
+      }, 405);
     }
-
-    const body = await req.json().catch(() => ({}));
+    const body = await req.json().catch(()=>({}));
     const { invoice_id, debug = false, dryRun = false } = body;
-
     if (!invoice_id) {
       return json({
         ok: false,
-        error: "invoice_id_required",
+        error: "invoice_id_required"
       }, 400);
     }
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
     if (!supabaseUrl || !serviceKey) {
       return json({
         ok: false,
-        error: "server_misconfigured",
+        error: "server_misconfigured"
       }, 500);
     }
-
     const supabase = createClient(supabaseUrl, serviceKey);
-
     const billitKey = Deno.env.get("BILLIT_API_KEY");
     const billitPartyId = Deno.env.get("BILLIT_PARTY_ID");
-
-    const billitBaseUrl =
-      Deno.env.get("BILLIT_BASE_URL") ?? "https://api.billit.be";
-
+    const billitBaseUrl = Deno.env.get("BILLIT_BASE_URL") ?? "https://api.billit.be";
     const billitEndpoint = `${billitBaseUrl}/v1/peppol/sendxml`;
-
     const env = {
       BILLIT_SELLER_NAME: Deno.env.get("BILLIT_SELLER_NAME") ?? "",
       BILLIT_SELLER_VAT: Deno.env.get("BILLIT_SELLER_VAT") ?? "",
@@ -246,12 +228,9 @@ Deno.serve(async (req) => {
       BILLIT_SELLER_ENDPOINT_ID: Deno.env.get("BILLIT_SELLER_ENDPOINT_ID") ?? "",
       BILLIT_SELLER_STREET: Deno.env.get("BILLIT_SELLER_STREET") ?? "",
       BILLIT_SELLER_CITY: Deno.env.get("BILLIT_SELLER_CITY") ?? "",
-      BILLIT_SELLER_POSTAL_CODE: Deno.env.get("BILLIT_SELLER_POSTAL_CODE") ?? "",
+      BILLIT_SELLER_POSTAL_CODE: Deno.env.get("BILLIT_SELLER_POSTAL_CODE") ?? ""
     };
-
-    const { data: invoice, error } = await supabase
-          .from("invoices")
-          .select(`
+    const { data: invoice, error } = await supabase.from("invoices").select(`
             id,
             number,
             currency,
@@ -262,58 +241,42 @@ Deno.serve(async (req) => {
             paid_at,
             billing_snapshot,
             pdf_path
-          `)
-          .eq("id", invoice_id)
-          .maybeSingle();
-
-        if (error) {
-          console.error("[billit-edge] invoice_query_error", error);
-
-          return json({
-            ok: false,
-            error: "invoice_query_error",
-            details: error,
-          }, 500);
-        }
-
-        if (!invoice) {
-          return json({
-            ok: false,
-            error: "invoice_not_found",
-            invoice_id,
-          }, 404);
-        }
-
-    const { data: peppolRow, error: peppolError } = await supabase
-        .from("invoice_peppol")
-        .select("status, attempt_count, error_message, provider_message_id, sent_at")
-        .eq("invoice_id", invoice_id)
-        .eq("provider", "billit")
-        .maybeSingle();
-
-      if (peppolError) {
-        console.error("[billit-edge] peppol_query_error", peppolError);
-
-        return json({
-          ok: false,
-          error: "peppol_query_error",
-          details: peppolError,
-        }, 500);
-      }
-
-      if (peppolRow?.status === "sent" && !debug && !dryRun) {
-        return json({
-          ok: true,
-          reused: true,
-          reason: "already_sent",
-          providerMessageId: peppolRow.provider_message_id,
-          sentAt: peppolRow.sent_at,
-        }, 200);
-      }
-
+          `).eq("id", invoice_id).maybeSingle();
+    if (error) {
+      console.error("[billit-edge] invoice_query_error", error);
+      return json({
+        ok: false,
+        error: "invoice_query_error",
+        details: error
+      }, 500);
+    }
+    if (!invoice) {
+      return json({
+        ok: false,
+        error: "invoice_not_found",
+        invoice_id
+      }, 404);
+    }
+    const { data: peppolRow, error: peppolError } = await supabase.from("invoice_peppol").select("status, attempt_count, error_message, provider_message_id, sent_at").eq("invoice_id", invoice_id).eq("provider", "billit").maybeSingle();
+    if (peppolError) {
+      console.error("[billit-edge] peppol_query_error", peppolError);
+      return json({
+        ok: false,
+        error: "peppol_query_error",
+        details: peppolError
+      }, 500);
+    }
+    if (peppolRow?.status === "sent" && !debug && !dryRun) {
+      return json({
+        ok: true,
+        reused: true,
+        reason: "already_sent",
+        providerMessageId: peppolRow.provider_message_id,
+        sentAt: peppolRow.sent_at
+      }, 200);
+    }
     const billing = invoice.billing_snapshot?.billing ?? {};
     const ublXml = buildUblInvoice(invoice, env);
-
     if (debug || dryRun) {
       return json({
         ok: true,
@@ -328,7 +291,7 @@ Deno.serve(async (req) => {
           total_cents: invoice.total_cents,
           issued_at: invoice.issued_at,
           paid_at: invoice.paid_at,
-          pdf_path: invoice.pdf_path,
+          pdf_path: invoice.pdf_path
         },
         peppol: peppolRow,
         billit: {
@@ -336,7 +299,7 @@ Deno.serve(async (req) => {
           baseUrl: billitBaseUrl,
           hasApiKey: Boolean(billitKey),
           hasPartyId: Boolean(billitPartyId),
-          partyId: billitPartyId ?? null,
+          partyId: billitPartyId ?? null
         },
         seller: {
           name: env.BILLIT_SELLER_NAME,
@@ -345,165 +308,141 @@ Deno.serve(async (req) => {
           endpointId: env.BILLIT_SELLER_ENDPOINT_ID,
           street: env.BILLIT_SELLER_STREET,
           city: env.BILLIT_SELLER_CITY,
-          postalCode: env.BILLIT_SELLER_POSTAL_CODE,
+          postalCode: env.BILLIT_SELLER_POSTAL_CODE
         },
         buyer: billing,
         buyerPeppolDataOk: hasBuyerPeppolData(billing),
-        ublPreview: safeStr(ublXml, 4000),
+        ublPreview: safeStr(ublXml, 4000)
       }, 200);
     }
-
     await supabase.rpc("rpc_update_invoice_peppol_status", {
       p_input: {
         invoice_id,
         status: "sending",
-        error_message: null,
-      },
+        error_message: null
+      }
     });
-
     if (!billitKey || !billitPartyId) {
       await supabase.rpc("rpc_update_invoice_peppol_status", {
         p_input: {
           invoice_id,
           status: "skipped",
-          error_message:
-            "Billit not configured (missing BILLIT_API_KEY or BILLIT_PARTY_ID)",
-        },
+          error_message: "Billit not configured (missing BILLIT_API_KEY or BILLIT_PARTY_ID)"
+        }
       });
-
       return json({
         ok: true,
         skipped: true,
-        reason: "billit_not_configured",
+        reason: "billit_not_configured"
       }, 200);
     }
-
     if (!hasBuyerPeppolData(billing)) {
       await supabase.rpc("rpc_update_invoice_peppol_status", {
         p_input: {
           invoice_id,
           status: "skipped",
-          error_message:
-            "Peppol not applicable (missing buyer legal/VAT/address data)",
-        },
+          error_message: "Peppol not applicable (missing buyer legal/VAT/address data)"
+        }
       });
-
       return json({
         ok: true,
         skipped: true,
-        reason: "missing_buyer_peppol_data",
+        reason: "missing_buyer_peppol_data"
       }, 200);
     }
-
     if (!invoice.pdf_path) {
-      supabase.functions
-        .invoke("generate-invoice-pdf", {
-          body: { invoice_id },
-        })
-        .catch((e) =>
-          console.error("[billit-edge] generate pdf call failed", e)
-        );
+      supabase.functions.invoke("generate-invoice-pdf", {
+        body: {
+          invoice_id
+        }
+      }).catch((e)=>console.error("[billit-edge] generate pdf call failed", e));
     }
-
     console.error("[billit-edge] sending to Billit", {
       endpoint: billitEndpoint,
       invoice_id,
       invoiceNumber: invoice.number,
       hasApiKey: Boolean(billitKey),
       hasPartyId: Boolean(billitPartyId),
-      partyId: billitPartyId,
+      partyId: billitPartyId
     });
-
     const res = await fetch(billitEndpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
         ApiKey: billitKey,
-        PartyID: billitPartyId,
+        PartyID: billitPartyId
       },
       body: JSON.stringify({
-        XML: ublXml,
-      }),
+        XML: ublXml
+      })
     });
-
-    const text = await res.text().catch(() => "");
-
+    const text = await res.text().catch(()=>"");
     console.error("[billit-edge] Billit raw response", {
       status: res.status,
       statusText: res.statusText,
-      body: text,
+      body: text
     });
-
     if (!res.ok) {
-
-  const isCustomerNotPeppol =
-    text.includes("TheCustomerDoesNotSupportPeppolForType");
-
-  if (isCustomerNotPeppol) {
-    await supabase.rpc("rpc_update_invoice_peppol_status", {
-      p_input: {
-        invoice_id,
-        status: "skipped",
-        error_message: safeStr(text, 500),
-      },
-    });
-
-    return json({
-      ok: true,
-      skipped: true,
-      reason: "customer_does_not_support_peppol_invoice",
-      billitStatus: res.status,
-      body: safeStr(text, 1000),
-    }, 200);
-  }
-
-  await supabase.rpc("rpc_update_invoice_peppol_status", {
-    p_input: {
-      invoice_id,
-      status: "failed",
-      error_message: safeStr(text || `HTTP ${res.status}`, 500),
-    },
-  });
-
-  return json({
-    ok: false,
-    error: "billit_send_failed",
-    status: res.status,
-    statusText: res.statusText,
-    body: safeStr(text, 1000),
-  }, 502);
-}
-
+      const isCustomerNotPeppol = text.includes("TheCustomerDoesNotSupportPeppolForType");
+      if (isCustomerNotPeppol) {
+        await supabase.rpc("rpc_update_invoice_peppol_status", {
+          p_input: {
+            invoice_id,
+            status: "skipped",
+            error_message: safeStr(text, 500)
+          }
+        });
+        return json({
+          ok: true,
+          skipped: true,
+          reason: "customer_does_not_support_peppol_invoice",
+          billitStatus: res.status,
+          body: safeStr(text, 1000)
+        }, 200);
+      }
+      await supabase.rpc("rpc_update_invoice_peppol_status", {
+        p_input: {
+          invoice_id,
+          status: "failed",
+          error_message: safeStr(text || `HTTP ${res.status}`, 500)
+        }
+      });
+      return json({
+        ok: false,
+        error: "billit_send_failed",
+        status: res.status,
+        statusText: res.statusText,
+        body: safeStr(text, 1000)
+      }, 502);
+    }
     let payload = {};
     try {
       payload = text ? JSON.parse(text) : {};
-    } catch {
-      payload = { raw: text };
+    } catch  {
+      payload = {
+        raw: text
+      };
     }
-
     await supabase.rpc("rpc_update_invoice_peppol_status", {
       p_input: {
         invoice_id,
         status: "sent",
-        provider_message_id:
-          payload?.message_id ?? payload?.messageId ?? payload?.id ?? null,
-        error_message: null,
-      },
+        provider_message_id: payload?.message_id ?? payload?.messageId ?? payload?.id ?? null,
+        error_message: null
+      }
     });
-
     return json({
       ok: true,
       messageId: payload?.message_id ?? payload?.messageId ?? payload?.id ?? null,
-      payload,
+      payload
     }, 200);
   } catch (e) {
     console.error("[billit-edge] unexpected", e);
-
     return json({
       ok: false,
       error: "unexpected",
-      message: String(e?.message ?? e),
+      message: String(e?.message ?? e)
     }, 500);
   }
 });

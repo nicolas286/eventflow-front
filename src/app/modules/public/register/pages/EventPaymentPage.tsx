@@ -6,6 +6,7 @@ import { usePublicEventDetail } from "../../events/hooks/usePublicEventDetail";
 import Container from "@ui/components/container/Container";
 import Card, { CardBody, CardHeader } from "@ui/components/card/Card";
 import Button from "@ui/components/button/Button";
+import { PublicCharterModal } from "../components/PublicCharterModal/PublicCharterModal";
 
 import { Turnstile, type TurnstileRef } from "@ui/components/Turnstile";
 
@@ -65,8 +66,13 @@ export function EventPaymentPage() {
   const [turnstileError, setTurnstileError] = useState<string | null>(null);
   const [pendingPay, setPendingPay] = useState(false);
 
+  const [charterOpen, setCharterOpen] = useState(false);
+  const [charterRead, setCharterRead] = useState(false);
+
   const turnstileRef = useRef<TurnstileRef | null>(null);
   const turnstileSiteKey = (import.meta.env.VITE_TURNSTILE_SITEKEY as string | undefined)?.trim() ?? "";
+
+
 
   const { register, loading: registering, error: registerError } = useRegister({ supabase });
 
@@ -306,9 +312,17 @@ export function EventPaymentPage() {
     }
   }
 
+  const charterText =
+  typeof event.charterText === "string"
+    ? event.charterText.trim() : "";
+
+  const hasCharter = charterText.length > 0;
+
+
   const canPay =
     picked.length > 0 &&
     accepted &&
+    (!hasCharter || charterRead) &&
     !registering &&
     !pendingPay &&
     !attendeesMismatch &&
@@ -379,6 +393,30 @@ export function EventPaymentPage() {
                   </CardBody>
                 </Card>
 
+                {hasCharter ? (
+                  <Card>
+                    <CardHeader title="Charte de l’événement" />
+                    <CardBody>
+                      <div className="publicSubtitle" style={{ marginBottom: 12 }}>
+                        L’organisateur demande de lire et d’accepter la charte avant de confirmer l’inscription.
+                      </div>
+
+                      <Button
+                        variant="secondary"
+                        label={charterRead ? "Relire la charte" : "Lire la charte"}
+                        onClick={() => setCharterOpen(true)}
+                        disabled={registering || pendingPay}
+                      />
+
+                      {!charterRead ? (
+                        <div className="publicEmpty" style={{ marginTop: 12 }}>
+                          Vous devez lire la charte avant de pouvoir accepter les conditions.
+                        </div>
+                      ) : null}
+                    </CardBody>
+                  </Card>
+                ) : null}
+
                 <Card>
                   <CardHeader title="Contact & validation" />
                   <CardBody>
@@ -434,7 +472,7 @@ export function EventPaymentPage() {
                           checked={accepted}
                           onChange={(e) => setAccepted(e.target.checked)}
                           style={{ width: 18, height: 18 }}
-                          disabled={registering || pendingPay}
+                          disabled={registering || pendingPay || (hasCharter && !charterRead)}
                         />
                         <span style={{ fontWeight: 700 }}>J’accepte les conditions et je confirme l’achat.</span>
                       </label>
@@ -472,6 +510,18 @@ export function EventPaymentPage() {
       disabled={!canPay}
       ctaLabel={stickyCtaLabel}
     />
+
+    {charterOpen ? (
+      <PublicCharterModal
+        open={charterOpen}
+        markdown={charterText}
+        onClose={() => setCharterOpen(false)}
+        onConfirmRead={() => {
+          setCharterRead(true);
+          setCharterOpen(false);
+        }}
+      />
+    ) : null}
     </div>
   );
 }
