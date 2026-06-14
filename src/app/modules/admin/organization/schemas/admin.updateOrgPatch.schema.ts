@@ -12,6 +12,9 @@ const orgPatchSchema = organizationSchema
     name: true,
     status: true,
   })
+  .extend({
+    name: organizationSchema.shape.name.trim(),
+  })
   .partial();
 
 

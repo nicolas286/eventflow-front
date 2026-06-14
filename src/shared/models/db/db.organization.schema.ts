@@ -7,7 +7,7 @@ export const organizationSchema = z.object({
   status: z.enum(["trial", "active", "suspended"]),
   createdAt: z.string(),
   createdBy: z.uuid(),
-  paymentsProvider: z.enum(["mollie", "manual"]),
+  paymentsProvider: z.enum(["mollie"]),
   paymentsStatus: z.enum(["not_connected", "pending", "connected", "revoked"]),
   paymentsLiveReady: z.boolean(),
   plan: z.enum(["free", "pro", "starter"]),

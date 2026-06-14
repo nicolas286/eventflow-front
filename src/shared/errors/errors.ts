@@ -125,34 +125,74 @@ function humanBusinessMessage(msg: string): string | null {
   const m = msg.trim();
 
   if (m === "PLAN_LIMIT_REGISTRATIONS_PER_EVENT") {
-  return "Limite du nombre d’inscriptions par événement atteinte pour ton abonnement actuel.";
-    }
+    return "Limite du nombre d’inscriptions par événement atteinte pour votre abonnement actuel.";
+  }
 
-    if (m === "PLAN_LIMIT_PAID_EVENTS_PER_YEAR") {
-      return "Plan gratuit : limite d’événements avec tickets payants atteinte pour cette année. Passe sur Starter pour continuer.";
-    }
+  if (m === "PLAN_LIMIT_PAID_EVENTS_PER_YEAR") {
+    return "Plan gratuit : limite d’événements avec tickets payants atteinte pour cette année. Passez sur Starter pour continuer.";
+  }
 
-    if (m === "PLAN_LIMIT") {
-      return "Limite de ton abonnement atteinte. Passe sur un plan supérieur pour continuer.";
-    }
+  if (m === "PLAN_LIMIT") {
+    return "Limite de votre abonnement atteinte. Passez sur un plan supérieur pour continuer.";
+  }
 
-  if (m === "FORBIDDEN") return "Accès refusé : tu n’as pas les droits nécessaires.";
-  if (m === "NOT_AUTHENTICATED") return "Ta session a expiré. Reconnecte-toi.";
-  if (m === "EVENT_MISMATCH") return "Ce ticket n’est pas lié à cet événement.";
-  if (m === "TICKET_NOT_FOUND") return "Ticket introuvable.";
-  if (m === "TICKET_CANCELLED") return "Ce ticket a été annulé.";
-  if (m === "TICKET_INVALID") return "Ce ticket est invalide.";
+  if (m === "FORBIDDEN") {
+    return "Accès refusé : vous n'avez pas les droits nécessaires.";
+  }
+
+  if (m === "NOT_AUTHENTICATED") {
+    return "Votre session a expiré. Reconnectez-vous.";
+  }
+
+  if (m === "EVENT_MISMATCH") {
+    return "Ce ticket n’est pas lié à cet événement.";
+  }
+
+  if (m === "TICKET_NOT_FOUND") {
+    return "Ticket introuvable.";
+  }
+
+  if (m === "TICKET_CANCELLED") {
+    return "Ce ticket a été annulé.";
+  }
+
+  if (m === "TICKET_INVALID") {
+    return "Ce ticket est invalide.";
+  }
+
+  if (m === "CONFLICT" || m === "ORG_ALREADY_EXISTS") {
+    return "Vous avez déjà créé une organisation.";
+  }
+
+  if (/VALIDATION_ERROR:\s*type is required/i.test(m)) {
+    return "Veuillez choisir un type d’organisation.";
+  }
+
+  if (/VALIDATION_ERROR:\s*invalid type/i.test(m)) {
+    return "Le type d’organisation est invalide.";
+  }
+
+  if (/VALIDATION_ERROR:\s*name is required/i.test(m)) {
+    return "Veuillez indiquer le nom de l’organisation.";
+  }
+
+  if (/VALIDATION_ERROR:\s*name must be between 3 and 120 characters/i.test(m)) {
+    return "Le nom doit contenir entre 3 et 120 caractères.";
+  }
 
   if (isEmailRateLimitMessage(m)) {
     return humanEmailRateLimitMessage();
   }
 
-  if (/MOLLIE_PAYMENT_CREATE_FAILED/i.test(m) || /payment method is not activated/i.test(m)) {
-  return "Le mode de paiement sélectionné n’est pas encore activé sur le compte Mollie. Activez-le dans Mollie ou choisissez un autre moyen de paiement.";
-}
+  if (
+    /MOLLIE_PAYMENT_CREATE_FAILED/i.test(m) ||
+    /payment method is not activated/i.test(m)
+  ) {
+    return "Le mode de paiement sélectionné n’est pas encore activé sur le compte Mollie. Activez-le dans Mollie ou choisissez un autre moyen de paiement.";
+  }
 
   if (/Edge Function returned a non-2xx status code/i.test(m)) {
-    return "Erreur serveur pendant la réservation. Réessaie dans quelques instants.";
+    return "Une erreur serveur est survenue pendant la réservation. Veuillez réessayer dans quelques instants.";
   }
 
   return null;
