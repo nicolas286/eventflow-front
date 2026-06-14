@@ -30,10 +30,9 @@ const optionalTrimmed = (max: number, msgTooLong: string) =>
 
 const vatNumberSchema = z
   .string()
-  .min(6, "Le numéro de TVA est trop court")
-  .max(20, "Le numéro de TVA est trop long")
   .transform((s) => s.trim().replace(/\s+/g, "").toUpperCase())
-;
+  .refine((s) => s.length >= 6, "Le numéro de TVA est trop court")
+  .refine((s) => s.length <= 20, "Le numéro de TVA est trop long");
 
 export const organizationBillingSchema = z.object({
   orgId: z.uuid(),
@@ -77,7 +76,7 @@ export const organizationBillingPatchSchema = z
 
     legalName: z
       .string()
-      .min(2, "La raison sociale est trop courte")
+      .min(3, "La raison sociale est trop courte")
       .max(160, "La raison sociale est trop longue")
       .transform((s) => s.trim())
       .optional(),
