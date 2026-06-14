@@ -7,6 +7,9 @@ export const createOrganizationFormSchema = organizationSchema
     type: true,
     name: true,
   })
+  .extend({
+    name: organizationSchema.shape.name.trim(),
+  })
   .strict();
 
 export type CreateOrganizationForm = z.infer<typeof createOrganizationFormSchema>;
