@@ -137,6 +137,155 @@ export function humanBusinessMessage(msg: string): string | null {
       /Edge Function returned a non-2xx status code/i,
       "Une erreur serveur est survenue pendant la réservation. Veuillez réessayer dans quelques instants.",
     ],
+
+      // ------------------------------------------------------------------
+    // Organization billing
+    // ------------------------------------------------------------------
+
+    [
+      /VALIDATION_ERROR:\s*invalid payload/i,
+      "Les données envoyées sont invalides.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*forbidden billing validation fields/i,
+      "Les champs de validation TVA ne peuvent pas être modifiés manuellement.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*org_id is required/i,
+      "Organisation introuvable.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*no fields to update/i,
+      "Aucune information de facturation à mettre à jour.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*missing required fields for first billing setup/i,
+      "Veuillez compléter les informations obligatoires de facturation.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*legal_name cannot be empty/i,
+      "La raison sociale est obligatoire.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*legal_name too short/i,
+      "La raison sociale doit contenir au moins 3 caractères.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*legal_name too long/i,
+      "La raison sociale ne peut pas dépasser 160 caractères.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*address_line1 cannot be empty/i,
+      "L’adresse est obligatoire.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*address_line1 too short/i,
+      "L’adresse est trop courte.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*address_line1 too long/i,
+      "L’adresse ne peut pas dépasser 200 caractères.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*address_line2 too long/i,
+      "Le complément d’adresse ne peut pas dépasser 200 caractères.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*postal_code cannot be empty/i,
+      "Le code postal est obligatoire.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*postal_code too short/i,
+      "Le code postal est trop court.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*postal_code too long/i,
+      "Le code postal ne peut pas dépasser 20 caractères.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*city cannot be empty/i,
+      "La ville est obligatoire.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*city too short/i,
+      "La ville est trop courte.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*city too long/i,
+      "La ville ne peut pas dépasser 120 caractères.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*country_code cannot be empty/i,
+      "Le pays est obligatoire.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*country_code must be ISO-2/i,
+      "Le code pays est invalide.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*vat_country_code must be ISO-2/i,
+      "Le pays TVA est invalide.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*vat_number too short/i,
+      "Le numéro de TVA est trop court.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*vat_number too long/i,
+      "Le numéro de TVA est trop long.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*billing_email too long/i,
+      "L’adresse email de facturation est trop longue.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*billing_email invalid/i,
+      "L’adresse email de facturation est invalide.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*invoice_reference too long/i,
+      "La référence facture ne peut pas dépasser 64 caractères.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*vat_number required when vat_country_code is set/i,
+      "Le numéro de TVA est requis si le pays TVA est renseigné.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*vat_country_code required when vat_number is set/i,
+      "Le pays TVA est requis si le numéro de TVA est renseigné.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*invalid uuid or value type/i,
+      "Certaines données envoyées sont invalides.",
+    ],
   ];
 
   for (const [regex, message] of regexMessages) {
