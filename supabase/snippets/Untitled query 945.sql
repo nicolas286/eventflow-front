@@ -1,0 +1,43 @@
+insert into public.plan_limits (
+  plan,
+  max_events_per_year,
+  max_registrations_per_event,
+  max_products_per_event,
+  max_form_fields,
+  max_admins,
+  branding_required,
+  custom_domain_allowed,
+  api_access,
+  advanced_analytics,
+  promo_codes,
+  automated_emails
+)
+values
+(
+  'pro',
+  null,
+  null,
+  10,
+  100,
+  1,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false
+),
+(
+  'starter',
+  5,
+  null,
+  10,
+  100,
+  1,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false
+);

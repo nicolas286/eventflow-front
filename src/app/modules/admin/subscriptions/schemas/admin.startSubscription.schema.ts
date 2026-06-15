@@ -5,7 +5,7 @@ import { z } from "zod";
 /* ------------------------------------------------------------------ */
 
 export const startSubscriptionPayloadSchema = z.object({
-  orgId: z.string().uuid(),
+  orgId: z.uuid(),
   plan: z.enum(["starter", "pro"]),
   promoCode: z.string().trim().min(1).max(100).nullable().optional(),
 });

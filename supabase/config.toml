@@ -388,3 +388,6 @@ verify_jwt = false
 
 [functions.send-invoice-to-billit]
 verify_jwt = false
+
+[functions.start-subscription]
+verify_jwt = false
