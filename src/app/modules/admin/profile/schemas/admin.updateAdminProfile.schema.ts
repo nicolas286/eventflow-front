@@ -23,27 +23,19 @@ export type AdminProfileForm = z.infer<typeof adminProfileFormSchema>;
 
 export const adminProfilePatchSchema = profileSchema
   .omit({
+    userId: true,
     createdAt: true,
     updatedAt: true,
   })
   .partial()
-  .extend({
-    firstName: z.string().min(2).max(80).nullable().optional(),
-    lastName: z.string().min(2).max(80).nullable().optional(),
-    phone: z.string().min(3).max(32).nullable().optional(),
-    addressLine1: z.string().min(3).max(120).nullable().optional(),
-    addressLine2: z.string().min(3).max(120).nullable().optional(),
-    postalCode: z.string().min(2).max(20).nullable().optional(),
-    city: z.string().min(2).max(80).nullable().optional(),
-    country: z.string().min(2).max(80).nullable().optional(),
-    countryCode: z.string().length(2).nullable().optional(),
-  })
   .strict();
 
-export const updateAdminProfileInputSchema = z.object({
-  userId: z.uuid(),
-  patch: adminProfilePatchSchema,
-});
+export const updateAdminProfileInputSchema = z
+  .object({
+    userId: profileSchema.shape.userId,
+    patch: adminProfilePatchSchema,
+  })
+  .strict();
 
 export type UpdateAdminProfileInput = z.infer<typeof updateAdminProfileInputSchema>;
 export type AdminProfile = z.infer<typeof profileSchema>;
