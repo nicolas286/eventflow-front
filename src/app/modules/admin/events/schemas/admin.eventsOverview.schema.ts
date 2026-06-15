@@ -1,11 +1,14 @@
 import { z } from "zod";
-import { eventSchema } from "@shared/models/db/db.event.schema";
+import { eventDbSchema } from "@shared/models/db/db.event.schema";
+import { validateEventDateConsistency } from "@shared/models/db/db.event.schema";
 
-export const eventOverviewEventSchema = eventSchema.omit({
-  description: true,
-  bannerUrl: true,
-  depositCents: true,
-});
+export const eventOverviewEventSchema = eventDbSchema
+  .omit({
+    description: true,
+    bannerUrl: true,
+    depositCents: true,
+  })
+  .superRefine(validateEventDateConsistency);
 
 export const eventOverviewRowSchema = z.object({
   event: eventOverviewEventSchema,

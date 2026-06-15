@@ -19,3 +19,9 @@
   align-items: center;
   gap: 6px;
 }
+
+.eventCard__badges {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}

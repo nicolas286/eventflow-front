@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { eventSchema } from "@shared/models/db/db.event.schema";
+import { eventDbSchema } from "@shared/models/db/db.event.schema";
 
 import { eventProductsSchema } from "@shared/models/db/db.eventProducts.schema";
 import { eventFormFieldGroupSchema, eventFormFieldSchema } from "@shared/models/db/db.eventFormFields.schema";
@@ -26,7 +26,7 @@ import { ordersUISchema } from "../../orders/schemas/admin.ordersSchema";
  * }
  */
 
-export const adminEventDetailEventSchema = eventSchema
+export const adminEventDetailEventSchema = eventDbSchema
   .omit({
     bannerUrl: true,
     createdAt: true,
@@ -37,7 +37,7 @@ export const adminEventDetailEventSchema = eventSchema
     bannerUrlEffective: z.string().min(5).max(2048),
   });
 
-export const adminEventDetailOrgBrandingSchema = z.object({
+  export const adminEventDetailOrgBrandingSchema = z.object({
   logoUrl: z.string().min(5).max(2048),
   defaultEventBannerUrl: z.string().min(5).max(2048),
 });

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { eventProductSchema } from "@shared/models/db/db.eventProducts.schema";
-import { eventSchema } from "@shared/models/db/db.event.schema";
+import { eventDbSchema } from "@shared/models/db/db.event.schema";
 import { organizationProfileSchema } from "@shared/models/db/db.organizationProfile.schema";
 import { eventFormFieldGroupSchema, eventFormFieldSchema } from "@shared/models/db/db.eventFormFields.schema";
 
@@ -12,7 +12,7 @@ export const publicOrgProfileOverviewForEventPageSchema = organizationProfileSch
   primaryColor: true,
 });
 
-export const publicEventSchema = eventSchema
+export const publicEventSchema = eventDbSchema
   .pick({
     id: true,
     slug: true,
