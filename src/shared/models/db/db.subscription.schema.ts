@@ -7,11 +7,13 @@ export const subscriptionSchema = z.object({
 
   mollieCustomerId: z
     .string()
+    .min(3, "L'ID client Mollie est trop court")
     .max(100, "L'ID client Mollie est trop long")
     .nullable(),
 
   mollieSubscriptionId: z
     .string()
+    .min(3, "L'ID d'abonnement Mollie est trop court")
     .max(100, "L'ID d'abonnement Mollie est trop long")
     .nullable(),
 
