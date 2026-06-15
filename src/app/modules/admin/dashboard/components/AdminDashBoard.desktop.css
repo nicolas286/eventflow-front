@@ -54,3 +54,16 @@
   border: 1px solid rgba(0,0,0,0.12);
   background: white;
 }
+
+.eventTable__sectionTitle {
+  margin: 1.5rem 0 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.eventCardWrap--past {
+  opacity: 0.65;
+}

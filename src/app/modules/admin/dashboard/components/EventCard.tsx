@@ -10,6 +10,7 @@ import { CoinsIcon, QrIcon, UsersIcon } from "@shared/ui/components/icon/Icons";
 import { useNavigate } from "react-router-dom";
 import Button from "@ui/components/button/Button";
 import { formatMoney } from "@app/modules/public/register/helpers/checkoutStore";
+import { isPastEvent } from "@shared/helpers/isPastEvent";
 
 import "./EventCard.css";
 
@@ -41,6 +42,7 @@ export default function EventCard({
 }: Props) {
   const { event: ev, ordersCount, paidCents } = row;
   const s = getStatusInfo(ev.isPublished ? "open" : "draft");
+  const isPast = isPastEvent(ev); 
   const canView = !!ev.slug;
   const detailsTo = canView ? `/admin/events/${ev.slug}` : undefined;
   const navigate = useNavigate();
@@ -68,7 +70,12 @@ export default function EventCard({
           <div className="eventCard__title">{safeEventTitle({ event: ev })}</div>
         )}
 
-        <Badge tone={s.tone} label={s.label} />
+         <div className="eventCard__badges">
+          <Badge
+            tone={isPast ? "neutral" : s.tone}
+            label={isPast ? "Passé" : s.label}
+          />
+        </div>
       </div>
 
       <div className="eventCard__meta">

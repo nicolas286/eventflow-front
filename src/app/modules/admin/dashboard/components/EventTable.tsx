@@ -2,12 +2,14 @@ import "./EventTable.mobile.css";
 import "./EventTable.desktop.css";
 
 import { Card, CardBody, CardHeader } from "@ui/components";
+import { useMemo } from "react";
 import { useToast } from "@ui/components/toast/useToast";
 import { normalizeWebsite } from "@shared/helpers/normalize";
 
 import EventCard from "./EventCard";
 
 import type { EventOverviewRow } from "../../events/schemas/admin.eventsOverview.schema";
+import { splitEventsByStatus } from "../helpers/sortEventsByStatus";
 
 type EventTableProps = {
   events: EventOverviewRow[];
@@ -98,6 +100,11 @@ export default function EventTable({
   window.open(waUrl, "_blank", "noopener,noreferrer");
 }
 
+    const { upcoming, past } = useMemo(
+    () => splitEventsByStatus(events),
+    [events]
+  );
+
   return (
     <Card>
 
@@ -113,11 +120,32 @@ export default function EventTable({
             </div>
           )}
 
-          {events.map((row) => {
+          {upcoming.map((row) => (
+          <div key={row.event.id} className="eventCardWrap">
+            <EventCard
+              row={row}
+              isSelected={row.event.id === editingId}
+              orgSlug={orgSlug}
+              onSelect={onSelect}
+              onDelete={onDelete}
+              onDuplicate={onDuplicate}
+              onCopyLink={copyPublicEventUrl}
+              onShareFacebook={shareOnFacebook}
+              onShareWhatsapp={shareOnWhatsapp}
+            />
 
-            return (
-              <div key={row.event.id} className="eventCardWrap">
+            {renderInlineEditor?.(row)}
+          </div>
+        ))}
 
+        {past.length > 0 && (
+          <>
+            <div className="eventTable__sectionTitle">
+              Événements passés
+            </div>
+
+            {past.map((row) => (
+              <div key={row.event.id} className="eventCardWrap eventCardWrap--past">
                 <EventCard
                   row={row}
                   isSelected={row.event.id === editingId}
@@ -131,10 +159,10 @@ export default function EventTable({
                 />
 
                 {renderInlineEditor?.(row)}
-
               </div>
-            );
-          })}
+            ))}
+          </>
+        )}
 
         </div>
 

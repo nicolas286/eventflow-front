@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { eventSchema } from "@shared/models/db/db.event.schema";
+import { eventDbSchema } from "@shared/models/db/db.event.schema";
 
-export const publicEventOverviewSchema = eventSchema
+export const publicEventOverviewSchema = eventDbSchema
   .omit({
     orgId: true,
     description: true,
@@ -16,7 +16,11 @@ export const publicEventOverviewSchema = eventSchema
   });
 
 export const publicOrgEventsOverviewSchema = z.object({
-  orgSlug: z.string().min(3, "Le slug est trop court").max(80, "Le slug est trop long"),
+  orgSlug: z
+    .string()
+    .min(3, "Le slug est trop court")
+    .max(150, "Le slug est trop long"),
+
   events: z.array(publicEventOverviewSchema),
 });
 
