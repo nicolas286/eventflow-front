@@ -38,7 +38,7 @@ export function useUpdateEventProduct(params: { supabase: SupabaseClient }) {
       } catch (e: unknown) {
         const ne = normalizeError(e, "Impossible de mettre à jour le produit");
         setState((s) => ({ ...s, loading: false, error: ne.message }));
-        throw e;
+        throw ne;
       }
     },
     [repo]
