@@ -1,7 +1,6 @@
 import { normalizeText } from "./normalize";
 import type { EventFormFieldUI, EventFormFieldOptions, EventFormField } from "../models/db/db.eventFormFields.schema";
 import { clampInt } from "./logic";
-import { slugKey } from "./normalize";
 
 export function isBlank(v: unknown): boolean {
   return v == null || (typeof v === "string" && v.trim() === "");
