@@ -7,7 +7,15 @@ export const eventProductSchema = z.object({
   description: z.string().max(500, "La description du produit est trop longue").nullable().optional(),
   priceCents: z.number().int().min(0, "Le prix doit être positif ou nul").max(10000000, "Le prix est trop élevé"),
   currency: z.string().length(3, "Le code devise doit faire 3 caractères").optional(),
-  stockQty: z.number().int().min(0, "La quantité en stock doit être positive ou nulle").nullable().optional(),
+  stockQty: z
+    .number()
+    .min(0, "La quantité en stock doit être positive ou nulle.")
+    .max(1000000, "Le stock ne peut pas dépasser 1 000 000.")
+    .refine(Number.isInteger, {
+      message: "La quantité en stock doit être un nombre entier.",
+    })
+    .nullable()
+    .optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().min(0, "L'ordre de tri doit être positif ou nul").max(1000, "L'ordre de tri est trop élevé").optional(),
   createsAttendees: z.boolean().optional(),

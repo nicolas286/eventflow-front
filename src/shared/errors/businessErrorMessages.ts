@@ -345,6 +345,15 @@ export function humanBusinessMessage(msg: string): string | null {
       /VALIDATION_ERROR:\s*product close_event_when_sold_out requires is_gatekeeper=true/i,
       "La fermeture automatique de l’événement nécessite un produit principal.",
     ],
+    [
+      /VALIDATION_ERROR:\s*product product_id is required/i,
+      "Produit introuvable.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*product name is required/i,
+      "Veuillez indiquer le nom du produit.",
+    ],
   ];
 
   for (const [regex, message] of regexMessages) {
