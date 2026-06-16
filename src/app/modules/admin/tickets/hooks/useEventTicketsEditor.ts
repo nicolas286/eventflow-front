@@ -4,7 +4,6 @@ import type { EventProduct, EventProducts } from "@shared/models/db/db.eventProd
 import type { CreateEventProductInput } from "../../products/schemas/admin.createEventProduct.schema";
 import type { UpdateEventProductPatch } from "@app/modules/admin/products/data/updateEventProductRepo";
 
-import { normalizeContiguousSortOrder } from "@helpers/normalize";
 import { makeClientId, nonNegInt, posInt, sortBySortOrder } from "@helpers/logic";
 import { toNullIfEmpty } from "@helpers/fields";
 
@@ -23,12 +22,10 @@ export type TicketDraft = {
   isActive: boolean;
   isGatekeeper: boolean;
   closeEventWhenSoldOut: boolean;
-
-  isNew?: boolean;
 };
 
 type EditState = {
-  id: string | null; // clientId
+  id: string | null;
   name: string;
   description: string;
   priceCents: number;
@@ -51,14 +48,13 @@ type MoveFx =
     }
   | null;
 
-type SaveAllSummary = {
-  created: number;
-  updated: number;
-  deleted: number;
-  activated: number;
-  deactivated: number;
-  reordered: boolean;
-};
+type ActionKind =
+  | "created"
+  | "updated"
+  | "deleted"
+  | "activated"
+  | "deactivated"
+  | "reordered";
 
 type Params = {
   eventId: string | null;
@@ -68,8 +64,9 @@ type Params = {
   onUpdate: (input: { productId: string; patch: UpdateEventProductPatch }) => Promise<void>;
   onRemove?: (productId: string) => Promise<void>;
   onChanged?: () => void;
-  onSaveSuccess?: (summary: SaveAllSummary) => void;
-  onSaveError?: (message: string) => void;
+
+  onActionSuccess?: (kind: ActionKind) => void;
+  onActionError?: (message: string) => void;
 
   createLoading?: boolean;
   updateLoading?: boolean;
@@ -83,35 +80,30 @@ export function useEventTicketsEditor({
   onUpdate,
   onRemove,
   onChanged,
-  onSaveSuccess,
-  onSaveError,
+  onActionSuccess,
+  onActionError,
   createLoading = false,
   updateLoading = false,
   deleteLoading = false,
 }: Params) {
   const [draft, setDraft] = useState<TicketDraft[]>([]);
-  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
-  const initialDraftRef = useRef<TicketDraft[]>([]);
 
   const [editing, setEditing] = useState<EditState | null>(null);
   const [creating, setCreating] = useState(false);
 
-  const [isDirty, setIsDirty] = useState(false);
-  const [isSavingAll, setIsSavingAll] = useState(false);
-  const [saveAllError, setSaveAllError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const [moveFx, setMoveFx] = useState<MoveFx>(null);
   const moveFxTimerRef = useRef<number | null>(null);
 
-  const [closingKey, setClosingKey] = useState<string | null>(null); // "create" ou clientId
+  const [closingKey, setClosingKey] = useState<string | null>(null);
   const [isClosing, setIsClosing] = useState(false);
   const closeTimerRef = useRef<number | null>(null);
 
   const [query, setQuery] = useState("");
-
   const lastLoadedSigRef = useRef<string>("");
 
-  const isSaving = isSavingAll || createLoading || updateLoading || deleteLoading;
+  const isSaving = createLoading || updateLoading || deleteLoading;
   const isFiltering = query.trim().length > 0;
 
   function productToDraft(p: EventProduct): TicketDraft {
@@ -134,25 +126,23 @@ export function useEventTicketsEditor({
 
   const incomingSig = useMemo(() => {
     const arr = sortBySortOrder(Array.isArray(products) ? products : []);
+
     return arr
       .map((p) => `${String(p?.id)}:${String(p?.updatedAt ?? "")}:${nonNegInt(p?.sortOrder)}`)
       .join("|");
   }, [products]);
 
   useEffect(() => {
-    if (isDirty) return;
     if (lastLoadedSigRef.current === incomingSig) return;
 
     const arr = sortBySortOrder(Array.isArray(products) ? products : []);
-    const next = normalizeContiguousSortOrder(arr.map(productToDraft));
+    const next = arr.map(productToDraft);
 
     setDraft(next);
-    initialDraftRef.current = next;
-    setDeletedIds(new Set());
-    setSaveAllError(null);
+    setError(null);
     lastLoadedSigRef.current = incomingSig;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [incomingSig, isDirty]);
+  }, [incomingSig]);
 
   useEffect(() => {
     return () => {
@@ -161,26 +151,42 @@ export function useEventTicketsEditor({
     };
   }, []);
 
-  function armMoveFx(next: MoveFx) {
-    setMoveFx(next);
-    if (moveFxTimerRef.current) window.clearTimeout(moveFxTimerRef.current);
-    moveFxTimerRef.current = window.setTimeout(() => setMoveFx(null), 240);
+  function handleError(e: unknown, fallback = "Erreur inconnue") {
+    const message = e instanceof Error ? e.message : fallback;
+    setError(message);
+    onActionError?.(message);
   }
 
-  function markDirty() {
-    setIsDirty(true);
-    setSaveAllError(null);
+  function clearError() {
+    setError(null);
+  }
+
+  function armMoveFx(next: MoveFx) {
+    setMoveFx(next);
+
+    if (moveFxTimerRef.current) {
+      window.clearTimeout(moveFxTimerRef.current);
+    }
+
+    moveFxTimerRef.current = window.setTimeout(() => {
+      setMoveFx(null);
+      moveFxTimerRef.current = null;
+    }, 240);
   }
 
   function cancelClosingIfAny() {
     setIsClosing(false);
     setClosingKey(null);
-    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+
+    if (closeTimerRef.current) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
   }
 
   function openCreate() {
     cancelClosingIfAny();
-    setSaveAllError(null);
+    clearError();
     setCreating(true);
 
     setEditing({
@@ -201,7 +207,7 @@ export function useEventTicketsEditor({
 
   function openEdit(f: TicketDraft) {
     cancelClosingIfAny();
-    setSaveAllError(null);
+    clearError();
     setCreating(false);
 
     setEditing({
@@ -226,7 +232,8 @@ export function useEventTicketsEditor({
       return;
     }
 
-    const key = creating ? "create" : (editing.id ?? null);
+    const key = creating ? "create" : editing.id;
+
     if (!key) {
       setEditing(null);
       setCreating(false);
@@ -236,256 +243,183 @@ export function useEventTicketsEditor({
     setIsClosing(true);
     setClosingKey(key);
 
-    if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
+    if (closeTimerRef.current) {
+      window.clearTimeout(closeTimerRef.current);
+    }
+
     closeTimerRef.current = window.setTimeout(() => {
       setEditing(null);
       setCreating(false);
       setIsClosing(false);
       setClosingKey(null);
+      closeTimerRef.current = null;
     }, 180);
   }
 
-  function moveLocal(clientId: string, dir: -1 | 1) {
-    setDraft((prev) => {
-      const idx = prev.findIndex((x) => x.clientId === clientId);
-      if (idx < 0) return prev;
+  function buildCreateInputFromEditing(): CreateEventProductInput | null {
+    if (!eventId || !editing) return null;
 
-      const nextIdx = idx + dir;
-      if (nextIdx < 0 || nextIdx >= prev.length) return prev;
+    const name = String(editing.name ?? "").trim();
+    if (!name) return null;
 
-      const a = prev[idx];
-      const b = prev[nextIdx];
-      armMoveFx({ aId: a.clientId, bId: b.clientId, dir, nonce: Date.now() });
-
-      const copy = [...prev];
-      [copy[idx], copy[nextIdx]] = [copy[nextIdx], copy[idx]];
-
-      return normalizeContiguousSortOrder(copy);
-    });
-    markDirty();
+    return {
+      eventId,
+      name,
+      description: toNullIfEmpty(String(editing.description ?? "")),
+      priceCents: nonNegInt(editing.priceCents),
+      currency: "EUR",
+      stockQty: editing.stockQty == null ? null : nonNegInt(editing.stockQty),
+      sortOrder: creating ? draft.length + 1 : nonNegInt(editing.sortOrder),
+      createsAttendees: Boolean(editing.createsAttendees),
+      attendeesPerUnit: editing.createsAttendees ? posInt(editing.attendeesPerUnit) : 1,
+      isActive: Boolean(editing.isActive),
+      isGatekeeper: Boolean(editing.isGatekeeper),
+      closeEventWhenSoldOut: editing.isGatekeeper
+        ? Boolean(editing.closeEventWhenSoldOut)
+        : false,
+    };
   }
 
-  function toggleLocal(clientId: string, patch: Partial<Pick<TicketDraft, "isActive">>) {
-    setDraft((prev) => prev.map((t) => (t.clientId === clientId ? { ...t, ...patch } : t)));
-    markDirty();
+  function createInputToPatch(input: CreateEventProductInput): UpdateEventProductPatch {
+    return {
+      name: input.name,
+      description: input.description,
+      priceCents: input.priceCents,
+      currency: input.currency,
+      stockQty: input.stockQty,
+      sortOrder: input.sortOrder,
+      createsAttendees: input.createsAttendees,
+      attendeesPerUnit: input.attendeesPerUnit,
+      isActive: input.isActive,
+      isGatekeeper: input.isGatekeeper,
+      closeEventWhenSoldOut: input.closeEventWhenSoldOut,
+    };
   }
 
-  function removeLocal(clientId: string) {
+  async function saveEditor() {
+    if (!eventId || !editing || isSaving) return;
+
+    const input = buildCreateInputFromEditing();
+    if (!input) return;
+
+    try {
+      clearError();
+
+      if (creating) {
+        await onCreate(input);
+        onActionSuccess?.("created");
+      } else {
+        if (!editing.id) return;
+
+        const current = draft.find((t) => t.clientId === editing.id);
+        if (!current?.id) return;
+
+        await onUpdate({
+          productId: current.id,
+          patch: createInputToPatch(input),
+        });
+
+        onActionSuccess?.("updated");
+      }
+
+      closeEditor();
+      onChanged?.();
+    } catch (e) {
+      handleError(e, creating ? "Impossible de créer le ticket." : "Impossible de modifier le ticket.");
+    }
+  }
+
+  async function togglePersisted(clientId: string, patch: Partial<Pick<TicketDraft, "isActive">>) {
+    if (isSaving) return;
+
+    const current = draft.find((t) => t.clientId === clientId);
+    if (!current?.id) return;
+
+    try {
+      clearError();
+
+      await onUpdate({
+        productId: current.id,
+        patch,
+      });
+
+      onActionSuccess?.(patch.isActive ? "activated" : "deactivated");
+      onChanged?.();
+    } catch (e) {
+      handleError(e, "Impossible de modifier le ticket.");
+    }
+  }
+
+  async function removePersisted(clientId: string) {
+    if (isSaving || !onRemove) return;
+
+    const current = draft.find((t) => t.clientId === clientId);
+    if (!current?.id) return;
+
     const ok = window.confirm("Supprimer ce ticket ? (les commandes passées restent intactes)");
     if (!ok) return;
 
-    setDraft((prev) => {
-      const found = prev.find((x) => x.clientId === clientId);
-      if (!found) return prev;
+    try {
+      clearError();
 
-      if (found.id && onRemove) {
-        setDeletedIds((s) => {
-          const ns = new Set(s);
-          ns.add(found.id!);
-          return ns;
-        });
+      await onRemove(current.id);
+
+      if (editing?.id === clientId) {
+        closeEditor();
       }
 
-      const next = prev.filter((x) => x.clientId !== clientId);
-      return normalizeContiguousSortOrder(next);
-    });
-
-    if (editing?.id === clientId) closeEditor();
-    markDirty();
-  }
-
-  function hasTicketChanged(prev: TicketDraft, next: TicketDraft) {
-    return (
-      prev.name !== next.name ||
-      prev.description !== next.description ||
-      prev.priceCents !== next.priceCents ||
-      prev.stockQty !== next.stockQty ||
-      prev.sortOrder !== next.sortOrder ||
-      prev.createsAttendees !== next.createsAttendees ||
-      prev.attendeesPerUnit !== next.attendeesPerUnit ||
-      prev.isActive !== next.isActive ||
-      prev.isGatekeeper !== next.isGatekeeper ||
-      prev.closeEventWhenSoldOut !== next.closeEventWhenSoldOut
-    );
-  }
-
-  function upsertLocalFromEditor() {
-    if (!editing) return;
-
-    const name = String(editing.name ?? "").trim();
-    if (!name) return;
-
-    if (creating) {
-      const clientId = makeClientId();
-      const next: TicketDraft = {
-        id: null,
-        clientId,
-        name,
-        description: String(editing.description ?? ""),
-        priceCents: nonNegInt(editing.priceCents),
-        currency: "EUR",
-        stockQty: editing.stockQty == null ? null : nonNegInt(editing.stockQty),
-        sortOrder: draft.length + 1,
-        createsAttendees: Boolean(editing.createsAttendees),
-        attendeesPerUnit: posInt(editing.attendeesPerUnit),
-        isActive: Boolean(editing.isActive),
-        isGatekeeper: Boolean(editing.isGatekeeper),
-        closeEventWhenSoldOut: Boolean(editing.closeEventWhenSoldOut),
-        isNew: true,
-      };
-
-      setDraft((prev) => normalizeContiguousSortOrder([...prev, next]));
-      markDirty();
-      closeEditor();
-      return;
+      onActionSuccess?.("deleted");
+      onChanged?.();
+    } catch (e) {
+      handleError(e, "Impossible de supprimer le ticket.");
     }
-
-    const clientId = editing.id;
-    if (!clientId) return;
-
-    setDraft((prev) =>
-      prev.map((t) =>
-        t.clientId === clientId
-          ? {
-              ...t,
-              name,
-              description: String(editing.description ?? ""),
-              priceCents: nonNegInt(editing.priceCents),
-              stockQty: editing.stockQty == null ? null : nonNegInt(editing.stockQty),
-              createsAttendees: Boolean(editing.createsAttendees),
-              attendeesPerUnit: posInt(editing.attendeesPerUnit),
-              isActive: Boolean(editing.isActive),
-              isGatekeeper: Boolean(editing.isGatekeeper),
-              closeEventWhenSoldOut: Boolean(editing.closeEventWhenSoldOut),
-            }
-          : t
-      )
-    );
-
-    markDirty();
-    closeEditor();
   }
 
-  function resetLocalChanges() {
-  setDraft(initialDraftRef.current);
-  setDeletedIds(new Set());
-  setSaveAllError(null);
-  setIsDirty(false);
-  setEditing(null);
-  setCreating(false);
-  cancelClosingIfAny();
-}
+  async function movePersisted(clientId: string, dir: -1 | 1) {
+    if (isSaving || isFiltering) return;
 
-  async function saveAll() {
-    if (!eventId) return;
-    if (isSaving) return;
+    const sortedNow = sortBySortOrder(draft);
 
-    setIsSavingAll(true);
-    setSaveAllError(null);
+    const idx = sortedNow.findIndex((x) => x.clientId === clientId);
+    if (idx < 0) return;
+
+    const nextIdx = idx + dir;
+    if (nextIdx < 0 || nextIdx >= sortedNow.length) return;
+
+    const current = sortedNow[idx];
+    const target = sortedNow[nextIdx];
+
+    if (!current?.id || !target?.id) return;
+
+    const currentOrder = nonNegInt(current.sortOrder);
+    const targetOrder = nonNegInt(target.sortOrder);
 
     try {
-      const initial = initialDraftRef.current;
+      clearError();
 
-      const initialById = new Map(
-        initial.filter((t) => t.id).map((t) => [String(t.id), t])
-      );
+      await onUpdate({
+        productId: current.id,
+        patch: { sortOrder: targetOrder },
+      });
 
-      const normalized = normalizeContiguousSortOrder(draft);
+      await onUpdate({
+        productId: target.id,
+        patch: { sortOrder: currentOrder },
+      });
 
-      let created = 0;
-      let updated = 0;
-      let activated = 0;
-      let deactivated = 0;
-      let reordered = false;
+      armMoveFx({
+        aId: current.clientId,
+        bId: target.clientId,
+        dir,
+        nonce: Date.now(),
+      });
 
-      const deleted = deletedIds.size;
-
-      if (onRemove) {
-        const toDelete = Array.from(deletedIds);
-        for (const id of toDelete) {
-          await onRemove(id);
-        }
-      }
-
-      for (const t of normalized) {
-        const base: CreateEventProductInput = {
-          eventId,
-          name: String(t.name ?? "").trim(),
-          description: toNullIfEmpty(String(t.description ?? "")),
-          priceCents: nonNegInt(t.priceCents),
-          currency: "EUR",
-          stockQty: t.stockQty == null ? null : nonNegInt(t.stockQty),
-          sortOrder: nonNegInt(t.sortOrder),
-          createsAttendees: Boolean(t.createsAttendees),
-          attendeesPerUnit: posInt(t.attendeesPerUnit),
-          isActive: Boolean(t.isActive),
-          isGatekeeper: Boolean(t.isGatekeeper),
-          closeEventWhenSoldOut: Boolean(t.closeEventWhenSoldOut),
-        };
-
-        if (!t.id) {
-          await onCreate(base);
-          created += 1;
-          continue;
-        }
-
-        const prev = initialById.get(String(t.id));
-
-        if (prev) {
-          if (prev.isActive !== t.isActive) {
-            if (t.isActive) activated += 1;
-            else deactivated += 1;
-          }
-
-          if (prev.sortOrder !== t.sortOrder) {
-            reordered = true;
-          }
-
-          if (!hasTicketChanged(prev, t)) {
-            continue;
-          }
-        }
-
-        const patch: UpdateEventProductPatch = {
-          name: base.name,
-          description: base.description,
-          priceCents: base.priceCents,
-          currency: base.currency,
-          stockQty: base.stockQty,
-          sortOrder: base.sortOrder,
-          createsAttendees: base.createsAttendees,
-          attendeesPerUnit: base.attendeesPerUnit,
-          isActive: base.isActive,
-          isGatekeeper: base.isGatekeeper,
-          closeEventWhenSoldOut: base.closeEventWhenSoldOut,
-        };
-
-        await onUpdate({ productId: t.id, patch });
-        updated += 1;
-      }
-
-      const summary: SaveAllSummary = {
-        created,
-        updated,
-        deleted,
-        activated,
-        deactivated,
-        reordered,
-      };
-
-      setIsDirty(false);
-      setDeletedIds(new Set());
-      initialDraftRef.current = normalized;
+      onActionSuccess?.("reordered");
       onChanged?.();
-      onSaveSuccess?.(summary);
-    } catch (e: unknown) {
-        const message = e instanceof Error ? e.message : "Erreur inconnue";
-        setSaveAllError(message);
-        onSaveError?.(message); 
-    } finally {
-      setIsSavingAll(false);
+    } catch (e) {
+      handleError(e, "Impossible de réordonner le ticket.");
     }
-}
+  }
 
   const sorted = useMemo(() => sortBySortOrder(draft), [draft]);
 
@@ -506,21 +440,20 @@ export function useEventTicketsEditor({
 
   function formatStockLine(sold: number, stockQty: number | null | undefined) {
     if (stockQty == null) return `${sold} vendus / illimité`;
+
     const stock = nonNegInt(stockQty);
     const remaining = Math.max(0, stock - sold);
+
     return `${remaining} / ${stock}`;
   }
 
   return {
     // state
     draft,
-    deletedIds,
     editing,
     creating,
-    isDirty,
     isSaving,
-    isSavingAll,
-    saveAllError,
+    error,
     moveFx,
     query,
     isFiltering,
@@ -539,12 +472,10 @@ export function useEventTicketsEditor({
     openCreate,
     openEdit,
     closeEditor,
-    moveLocal,
-    toggleLocal,
-    removeLocal,
-    upsertLocalFromEditor,
-    resetLocalChanges,
-    saveAll,
+    saveEditor,
+    togglePersisted,
+    removePersisted,
+    movePersisted,
 
     // helpers
     getSoldQty,

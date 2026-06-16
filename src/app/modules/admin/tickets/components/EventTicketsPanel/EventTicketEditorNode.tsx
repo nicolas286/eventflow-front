@@ -22,7 +22,7 @@ type Props<EditState extends {
   nonNegInt: (v: string) => number;
   posInt: (v: string) => number;
 
-  onApplyLocal: () => void;
+  onSave: () => void;
   onClose: () => void;
 };
 
@@ -44,7 +44,7 @@ export function EventTicketEditorNode<EditState extends {
   isSaving,
   nonNegInt,
   posInt,
-  onApplyLocal,
+  onSave,
   onClose,
 }: Props<EditState>) {
   if (!editing) return null;
@@ -227,14 +227,14 @@ export function EventTicketEditorNode<EditState extends {
       <EditorFormGrid nodes={nodes} />
 
       <div className="adminTicketsEditorFooter adminTicketsEditorFooterInline">
-        <Button onClick={onApplyLocal} disabled={!String(editing.name ?? "").trim() || isSaving}>
-          {creating ? "Ajouter (local)" : "Appliquer (local)"}
+        <Button onClick={onSave} disabled={!String(editing.name ?? "").trim() || isSaving}>
+          {creating ? "Ajouter" : "Enregistrer"}
         </Button>
 
         <Button variant="secondary" onClick={onClose} disabled={isSaving}>
           Fermer
         </Button>
-      </div>
+    </div>
     </div>
   );
 }
