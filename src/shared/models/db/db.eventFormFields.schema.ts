@@ -1,22 +1,12 @@
 import { z } from "zod";
 
-const optionLabelSchema = z.string().min(1).max(80);
-const optionValueSchema = z.string().min(1).max(80);
+const optionLabelSchema = z.string().trim().min(1).max(80);
 
-export const formFieldOptionsSchema = z.union([
-  z.array(optionLabelSchema).min(1).max(100),
-  z.array(
-    z.object({
-      label: optionLabelSchema,
-      value: optionValueSchema,
-    })
-  ).min(1).max(100),
-  z.record(
-    z.string().min(1).max(80),
-    z.any()
-  ),
-  z.null(),
-]);
+export const formFieldOptionsSchema = z
+  .array(optionLabelSchema)
+  .min(1)
+  .max(100)
+  .nullable();
 
 export const eventFormFieldSchema = z.object({
   id: z.uuid(),

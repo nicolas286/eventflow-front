@@ -144,7 +144,7 @@ export function textToSelectOptions(text: string): SelectOption[] {
 }
 
 export function parseOptionsLines(text: string): EventFormFieldOptions {
-  const opts = textToOptions(text, (label) => slugKey(label));
+  const opts = textToLines(text).slice(0, 100);
   return opts.length ? opts : null;
 }
 
