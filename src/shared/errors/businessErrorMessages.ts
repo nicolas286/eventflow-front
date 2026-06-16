@@ -286,6 +286,65 @@ export function humanBusinessMessage(msg: string): string | null {
       /VALIDATION_ERROR:\s*invalid uuid or value type/i,
       "Certaines données envoyées sont invalides.",
     ],
+
+    // ------------------------------------------------------------------
+    // Event products
+    // ------------------------------------------------------------------
+
+    [
+      /VALIDATION_ERROR:\s*product event_id is required/i,
+      "Événement introuvable.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*product name is required/i,
+      "Veuillez indiquer le nom du produit.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*product name too short/i,
+      "Le nom du produit doit contenir au moins 2 caractères.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*product name too long/i,
+      "Le nom du produit ne peut pas dépasser 80 caractères.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*product description too long/i,
+      "La description du produit ne peut pas dépasser 500 caractères.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*product price_cents must be between 0 and 10000000/i,
+      "Le prix doit être compris entre 0 € et 100 000 €.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*product unsupported currency/i,
+      "Cette devise n’est pas prise en charge pour ce produit.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*product stock_qty must be >= 0/i,
+      "Le stock du produit ne peut pas être négatif.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*product sort_order must be between 0 and 1000/i,
+      "L’ordre d’affichage du produit doit être compris entre 0 et 1000.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*product attendees_per_unit must be between 1 and 20/i,
+      "Le nombre de participants par unité doit être compris entre 1 et 20.",
+    ],
+
+    [
+      /VALIDATION_ERROR:\s*product close_event_when_sold_out requires is_gatekeeper=true/i,
+      "La fermeture automatique de l’événement nécessite un produit principal.",
+    ],
   ];
 
   for (const [regex, message] of regexMessages) {

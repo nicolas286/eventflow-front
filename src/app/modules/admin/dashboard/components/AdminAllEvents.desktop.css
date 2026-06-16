@@ -3,7 +3,6 @@
    File: adminAllEvent.desktop.css
    ========================= */
 
-/* ✅ Wrapper centré comme les autres sections */
 .adminAllEventsWrap {
   width: 100%;
   max-width: 1100px;
@@ -20,7 +19,6 @@
   padding: 16px;
 }
 
-/* Header */
 .adminAllEventsHeader {
   display: flex;
   align-items: flex-start;
