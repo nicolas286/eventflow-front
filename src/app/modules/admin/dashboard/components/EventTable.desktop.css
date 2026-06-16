@@ -13,14 +13,12 @@
   width:240px;
 }
 
-/* ✅ single list */
 .eventTable__list{
   display:flex;
   flex-direction:column;
   gap:20px;
 }
 
-/* Card style (desktop base) */
 .eventCard{
   border: 1px solid #f3f4f6;
   border-radius: 14px;
