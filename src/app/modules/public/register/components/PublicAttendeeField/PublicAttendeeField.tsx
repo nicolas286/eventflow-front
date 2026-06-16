@@ -9,6 +9,7 @@ import {
   isCountryField,
   isPhoneField,
 } from "@helpers/fields";
+import { toSelectOptions } from "@shared/helpers/fields";
 
 type Props = {
   field: Field;
@@ -111,7 +112,6 @@ export function PublicAttendeeField({
   }
 
   if (field.fieldType === "select") {
-    const opts = Array.isArray(field.options) ? field.options : [];
     return (
       <div>
         {label}
@@ -122,11 +122,11 @@ export function PublicAttendeeField({
           style={commonStyle}
         >
           <option value="">—</option>
-          {opts.map((o: Record<string, string>, i: number) => (
-            <option key={i} value={String(o.value ?? o)}>
-              {String(o.label ?? o)}
-            </option>
-          ))}
+          {toSelectOptions(field.options).map((o, i) => (
+          <option key={i} value={o.value}>
+            {o.label}
+          </option>
+        ))}
         </select>
         {errorLine}
       </div>

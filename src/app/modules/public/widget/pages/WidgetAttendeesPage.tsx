@@ -16,6 +16,7 @@ import type { PublicFormField as Field } from "../../events/schemas/public.event
 import type { EventProduct } from "@shared/models/db/db.eventProducts.schema";
 import type { EventFormFieldUI } from "@shared/models/db/db.eventFormFields.schema";
 import { WidgetRoot } from "../components/WidgetRoot/WidgetRoot";
+import { toSelectOptions } from "@helpers/fields";
 
 import {
   isBirthDateField,
@@ -365,7 +366,6 @@ export function WidgetAttendeesPage() {
   }
 
   if (f.fieldType === "select") {
-    const opts = Array.isArray(f.options) ? f.options : [];
     return (
       <div key={f.id} className="widgetFieldBlock">
         {label}
@@ -377,9 +377,9 @@ export function WidgetAttendeesPage() {
           style={commonStyle}
         >
           <option value="">—</option>
-          {opts.map((o: Record<string, string>, i: number) => (
-            <option key={i} value={String(o.value ?? o)}>
-              {String(o.label ?? o)}
+          {toSelectOptions(f.options).map((o, i) => (
+            <option key={`${o.value}-${i}`} value={o.value}>
+              {o.label}
             </option>
           ))}
         </select>
