@@ -1,12 +1,21 @@
 import { z } from "zod";
 
 const optionLabelSchema = z.string().trim().min(1).max(80);
+const optionValueSchema = z.string().trim().min(1).max(80);
 
-export const formFieldOptionsSchema = z
-  .array(optionLabelSchema)
-  .min(1)
-  .max(100)
-  .nullable();
+export const formFieldOptionsSchema = z.union([
+  z.array(optionLabelSchema).min(1).max(100),
+
+  // legacy DB
+  z.array(
+    z.object({
+      label: optionLabelSchema,
+      value: optionValueSchema,
+    }).strict()
+  ).min(1).max(100),
+
+  z.null(),
+]);
 
 export const eventFormFieldSchema = z.object({
   id: z.uuid(),
