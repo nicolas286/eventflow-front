@@ -53,12 +53,12 @@ export const eventFormFieldUISchema = eventFormFieldSchema.omit({
 export const eventFormFieldGroupSchema = z.object({
   id: z.uuid(),
   eventId: z.uuid(),
-  label: z.string().min(1, "Le titre du groupe est requis").max(120, "Le titre du groupe est trop long"),
+  label: z.string().min(1, "Le titre du groupe est requis").max(100, "Le titre du groupe est trop long"),
   sortOrder: z
     .number()
     .int()
     .min(0, "L'ordre de tri doit être un entier positif")
-    .max(1000, "L'ordre de tri est trop grand"),
+    .max(10000, "L'ordre de tri est trop grand"),
   isActive: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string(),
