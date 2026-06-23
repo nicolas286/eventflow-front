@@ -1,6 +1,6 @@
-import { useParams } from "react-router-dom";
-import { supabase } from "@gateways/supabase/supabaseClient";
+import { useOutletContext, useParams } from "react-router-dom";
 import { usePublicOrgData } from "../hooks/usePublicOrgData";
+
 
 import Container from "@ui/components/container/Container";
 import Button from "@ui/components/button/Button";
@@ -13,13 +13,13 @@ import { useOrgEventFilters } from "./useOrgEventFilters";
 
 import "./OrgPublicPage.css";
 
+type PublicOrgDataContext = ReturnType<typeof usePublicOrgData>;
+
 export function OrgPublicPage() {
   const { orgSlug } = useParams<{ orgSlug: string }>();
 
-  const { loading, error, org, profile, events } = usePublicOrgData({
-    supabase,
-    orgSlug,
-  });
+    const { loading, error, org, profile, events } =
+    useOutletContext<PublicOrgDataContext>();
 
   const nowTs = useNow();
 
@@ -66,7 +66,7 @@ export function OrgPublicPage() {
   }
 
   const baseUrl = import.meta.env.VITE_PUBLIC_BASE_URL;
-  const url = `${baseUrl}/o/${orgSlug}`;
+  const url = `${baseUrl}/o/${orgSlug ?? ""}`;
   const title = `${profile.displayName} – Eventflow, la billetterie sans commission`;
   const desc = "Réservez vos billets";
 
