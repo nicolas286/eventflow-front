@@ -1,0 +1,1 @@
+revoke execute on function public.consume_mollie_connect_state(text) from public, anon, authenticated;
