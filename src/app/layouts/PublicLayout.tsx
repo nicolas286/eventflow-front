@@ -3,23 +3,23 @@ import { supabase } from "@shared/gateways/supabase/supabaseClient";
 import { usePublicOrgData } from "@modules/public/organization/hooks/usePublicOrgData";
 import OrgThemeSync from "@shared/ui/components/theme/OrgThemeSync";
 
-import "./PublicLayout.css"; 
+import "./PublicLayout.css";
 
 export function PublicLayout() {
   const { orgSlug } = useParams<{ orgSlug: string }>();
 
-  const { profile } = usePublicOrgData({
+  const publicOrgData = usePublicOrgData({
     supabase,
     orgSlug,
   });
 
-  const primaryHex = profile?.primaryColor ?? "#eb9225";
+  const primaryHex = publicOrgData.profile?.primaryColor ?? "#eb9225";
 
   return (
     <div className="publicLayoutRoot">
       <OrgThemeSync primaryColor={primaryHex} />
       <main className="publicLayoutMain">
-        <Outlet />
+        <Outlet context={publicOrgData} />
       </main>
     </div>
   );
