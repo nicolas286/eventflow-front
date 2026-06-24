@@ -25,3 +25,8 @@
   gap: 0.5rem;
   align-items: center;
 }
+
+.eventCard.isPast {
+    border-color: #e5e7eb;
+  background: #fafafa;
+}
