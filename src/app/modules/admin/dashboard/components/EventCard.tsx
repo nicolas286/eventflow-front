@@ -56,7 +56,7 @@ export default function EventCard({
   : undefined;
 
   return (
-    <div className={`eventCard ${isSelected ? "isSelected" : ""}`}>
+    <div className={`eventCard ${isSelected ? "isSelected" : ""} ${isPast ? "isPast" : ""}`}>
       <div className="eventCard__top">
         {canView ? (
           <Link
