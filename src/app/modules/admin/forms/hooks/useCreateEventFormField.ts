@@ -12,6 +12,10 @@ type State = {
   created: EventFormField | null;
 };
 
+type CreateEventFormFieldResult =
+  | { ok: true; data: EventFormField }
+  | { ok: false; error: string };
+
 export function useCreateEventFormField(params: { supabase: SupabaseClient }) {
   const { supabase } = params;
 
@@ -23,22 +27,25 @@ export function useCreateEventFormField(params: { supabase: SupabaseClient }) {
     created: null,
   });
 
-  async function createEventFormField(
-    input: CreateEventFormFieldInput
-  ): Promise<EventFormField | null> {
-    try {
-      setState({ loading: true, error: null, created: null });
+async function createEventFormField(
+  input: CreateEventFormFieldInput
+): Promise<CreateEventFormFieldResult> {
+  try {
+    setState({ loading: true, error: null, created: null });
 
-      const created = await repo.createEventFormField(input);
+    const created = await repo.createEventFormField(input);
 
-      setState({ loading: false, error: null, created });
-      return created;
-    } catch (e: unknown) {
-      const ne = normalizeError(e, "Impossible de créer le champ de formulaire.");
-      setState({ loading: false, error: ne.message, created: null });
-      return null;
-    }
+    setState({ loading: false, error: null, created });
+
+    return { ok: true, data: created };
+  } catch (e: unknown) {
+    const ne = normalizeError(e, "Impossible de créer le champ de formulaire.");
+
+    setState({ loading: false, error: ne.message, created: null });
+
+    return { ok: false, error: ne.message };
   }
+}
 
   function reset() {
     setState({ loading: false, error: null, created: null });

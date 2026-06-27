@@ -1,7 +1,16 @@
 import { z } from "zod";
 
-const optionLabelSchema = z.string().trim().min(1).max(80);
-const optionValueSchema = z.string().trim().min(1).max(80);
+const optionLabelSchema = z
+  .string()
+  .trim()
+  .min(1, "Une option ne peut pas être vide.")
+  .max(80, "Une option ne peut pas dépasser 80 caractères.");
+
+const optionValueSchema = z
+  .string()
+  .trim()
+  .min(1, "La valeur d'une option ne peut pas être vide.")
+  .max(80, "La valeur d'une option ne peut pas dépasser 80 caractères.");
 
 export const formFieldOptionsSchema = z.union([
   z.array(optionLabelSchema).min(1).max(100),
@@ -22,7 +31,12 @@ export const eventFormFieldSchema = z.object({
   eventId: z.uuid(),
   groupId: z.uuid().nullable().optional(),
   label: z.string().min(2, "Le label est trop court").max(120, "Le label est trop long"),
-  fieldKey: z.string().min(2, "La clé est trop courte").max(100, "La clé est trop longue"),
+  fieldKey: z
+  .string()
+  .trim()
+  .min(2)
+  .max(100)
+  .regex(/^[a-z][a-z0-9_]*$/),
   fieldType: z.enum([
     "text",
     "textarea",
