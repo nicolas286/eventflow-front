@@ -18,7 +18,8 @@ export default defineConfig({
       "@errors": path.resolve(__dirname, "src/shared/errors"),
       "@gateways": path.resolve(__dirname, "src/shared/gateways"),
       "@helpers": path.resolve(__dirname, "src/shared/helpers"),
-      "@ui": path.resolve(__dirname, "src/shared/ui")
+      "@ui": path.resolve(__dirname, "src/shared/ui"),
+      "@contracts": path.resolve(__dirname, "contracts"),
     }
   }
 });

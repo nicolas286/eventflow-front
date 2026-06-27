@@ -21,7 +21,8 @@
          "@errors/*" : ["shared/errors/*"],
          "@gateways/*" : ["shared/gateways/*"],
          "@helpers/*" : ["shared/helpers/*"],
-         "@ui/*" : ["shared/ui/*"],      
+         "@ui/*" : ["shared/ui/*"],   
+      "@contracts/*": ["../contracts/*"],    
     },
 
     /* Bundler mode */
