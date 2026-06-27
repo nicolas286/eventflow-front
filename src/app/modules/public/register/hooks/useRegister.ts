@@ -26,15 +26,6 @@ export function useRegister(params: { supabase: SupabaseClient }) {
 
       const result = await registerRepo.register(input);
 
-      // si l’edge renvoie { error: ... }
-      if (result && typeof result === "object" && "error" in result) {
-        throw new Error(
-          typeof (result as any).error === "string"
-            ? (result as any).error
-            : "Erreur register"
-        );
-      }
-
       setState({ loading: false, error: null, result });
       return result;
 
