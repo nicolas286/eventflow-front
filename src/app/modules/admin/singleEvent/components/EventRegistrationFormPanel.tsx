@@ -350,12 +350,18 @@ export function EventRegistrationFormPanel(props: Props) {
   async function moveFieldPersisted(clientId: string, dir: -1 | 1) {
     if (isSaving) return;
 
-    const current = draft.find((f) => f.clientId === clientId);
-    if (!current?.id) return;
+    const sortedDraft = [...draft].sort((a, b) => {
+    const diff = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+    if (diff !== 0) return diff;
+    return String(a.id).localeCompare(String(b.id));
+  });
 
-    const sameGroup = draft.filter(
-      (f) => (f.groupId ?? null) === (current.groupId ?? null)
-    );
+  const current = sortedDraft.find((f) => f.clientId === clientId);
+  if (!current?.id) return;
+
+  const sameGroup = sortedDraft.filter(
+    (f) => (f.groupId ?? null) === (current.groupId ?? null)
+  );
 
     const idx = sameGroup.findIndex((f) => f.clientId === clientId);
     if (idx < 0) return;
@@ -370,6 +376,20 @@ export function EventRegistrationFormPanel(props: Props) {
       const currentSort = clampInt(current.sortOrder, { fallback: 0 });
       const targetSort = clampInt(target.sortOrder, { fallback: 0 });
 
+          setDraft((prev) =>
+      prev.map((f) => {
+        if (f.clientId === current.clientId) {
+          return { ...f, sortOrder: targetSort };
+        }
+
+        if (f.clientId === target.clientId) {
+          return { ...f, sortOrder: currentSort };
+        }
+
+        return f;
+      })
+    );
+
       const aDir: MoveDir = dir === -1 ? "up" : "down";
       const bDir: MoveDir = dir === -1 ? "down" : "up";
 
@@ -378,17 +398,17 @@ export function EventRegistrationFormPanel(props: Props) {
         patch: { sortOrder: targetSort },
       });
 
-      if (!ok1) {
-        throw new Error(update.error || "Erreur de réordonnancement");
-      }
+      if (!ok1.ok) {
+      throw new Error(ok1.error);
+    }
 
       const ok2 = await update.updateEventFormField({
         fieldId: target.id,
         patch: { sortOrder: currentSort },
       });
 
-      if (!ok2) {
-        throw new Error(update.error || "Erreur de réordonnancement");
+      if (!ok2.ok) {
+        throw new Error(ok2.error);
       }
 
       triggerMoveAnim(current.clientId, aDir, target.clientId, bDir);
@@ -400,7 +420,7 @@ export function EventRegistrationFormPanel(props: Props) {
         duration: 2500,
       });
 
-      onChanged?.();
+      // pas de onChanged ici, sinon reload + perte de scroll
     } catch (e) {
       showToast({
         title: "Réordonnancement impossible",
@@ -459,10 +479,10 @@ export function EventRegistrationFormPanel(props: Props) {
         options,
       });
 
-      if (!created) {
+      if (!created.ok) {
         showToast({
           title: "Création impossible",
-          description: create.error || "Impossible de créer le champ.",
+          description: created.error,
           variant: "error",
           duration: 6000,
         });
@@ -484,7 +504,7 @@ export function EventRegistrationFormPanel(props: Props) {
     const current = draft.find((f) => f.clientId === editing.id);
     if (!current?.id) return;
 
-    const updated = await update.updateEventFormField({
+    const result = await update.updateEventFormField({
       fieldId: current.id,
       patch: {
         label,
@@ -496,10 +516,10 @@ export function EventRegistrationFormPanel(props: Props) {
       },
     });
 
-    if (!updated) {
+    if (!result.ok) {
       showToast({
         title: "Modification impossible",
-        description: update.error || "Impossible de modifier le champ.",
+        description: result.error,
         variant: "error",
         duration: 6000,
       });
@@ -751,6 +771,15 @@ export function EventRegistrationFormPanel(props: Props) {
     });
   }, [draft, query]);
 
+    const filteredSorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const diff = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+      if (diff !== 0) return diff;
+      return String(a.id).localeCompare(String(b.id));
+    });
+  }, [filtered]);
+
+
   const groupedSections = useMemo(() => {
     const groupsSorted = [...fieldsGroups].sort(
       (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
@@ -758,15 +787,17 @@ export function EventRegistrationFormPanel(props: Props) {
 
     const groupIds = new Set(groupsSorted.map((g) => g.id));
 
-    const ungrouped = filtered.filter((f) => {
+    const ungrouped = filteredSorted.filter((f) => {
       if (!f.groupId) return true;
       return !groupIds.has(f.groupId);
     });
 
     let grouped = groupsSorted.map((group) => ({
       group,
-      fields: filtered.filter((f) => f.groupId === group.id),
+      fields: filteredSorted.filter((f) => f.groupId === group.id),
     }));
+
+    
 
     if (isFiltering) {
       grouped = grouped.filter((section) => section.fields.length > 0);
@@ -783,7 +814,8 @@ export function EventRegistrationFormPanel(props: Props) {
     }
 
     return grouped;
-  }, [filtered, fieldsGroups, isFiltering]);
+  }, [filteredSorted, fieldsGroups, isFiltering]);
+
 
   const reorderDisabledTitle = isFiltering
     ? "Le réordonnancement est désactivé pendant une recherche."
@@ -998,7 +1030,7 @@ export function EventRegistrationFormPanel(props: Props) {
   const editorNode = editingKind === "group" ? groupEditorNode : fieldEditorNode;
 
   function renderFieldCard(f: DraftField, mobile = false) {
-    const sameGroup = draft.filter(
+    const sameGroup = filteredSorted.filter(
       (x) => (x.groupId ?? null) === (f.groupId ?? null)
     );
 

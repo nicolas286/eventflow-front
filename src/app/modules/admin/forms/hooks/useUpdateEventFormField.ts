@@ -12,6 +12,10 @@ type State = {
   updated: EventFormField | null;
 };
 
+type UpdateEventFormFieldResult =
+  | { ok: true; data: EventFormField }
+  | { ok: false; error: string };
+
 export function useUpdateEventFormField(params: { supabase: SupabaseClient }) {
   const { supabase } = params;
 
@@ -24,25 +28,28 @@ export function useUpdateEventFormField(params: { supabase: SupabaseClient }) {
   });
 
   async function updateEventFormField(input: {
-    fieldId: string;
-    patch: Omit<UpdateEventFormFieldPatch, "id">;
-  }): Promise<EventFormField | null> {
-    try {
-      setState({ loading: true, error: null, updated: null });
+  fieldId: string;
+  patch: Omit<UpdateEventFormFieldPatch, "id">;
+}): Promise<UpdateEventFormFieldResult> {
+  try {
+    setState({ loading: true, error: null, updated: null });
 
-      const updated = await repo.updateEventFormField({
-        fieldId: input.fieldId,
-        patch: input.patch,
-      });
+    const updated = await repo.updateEventFormField({
+      fieldId: input.fieldId,
+      patch: input.patch,
+    });
 
-      setState({ loading: false, error: null, updated });
-      return updated;
-    } catch (e: unknown) {
-      const ne = normalizeError(e, "Impossible de modifier le champ de formulaire.");
-      setState({ loading: false, error: ne.message, updated: null });
-      return null;
-    }
+    setState({ loading: false, error: null, updated });
+
+    return { ok: true, data: updated };
+  } catch (e: unknown) {
+    const ne = normalizeError(e, "Impossible de modifier le champ de formulaire.");
+
+    setState({ loading: false, error: ne.message, updated: null });
+
+    return { ok: false, error: ne.message };
   }
+}
 
   function reset() {
     setState({ loading: false, error: null, updated: null });
