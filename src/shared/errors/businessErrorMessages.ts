@@ -43,6 +43,21 @@ export function humanBusinessMessage(msg: string): string | null {
 
     ORG_ALREADY_EXISTS:
       "Vous avez déjà créé une organisation.",
+    
+      INVALID_REGISTER_PAYLOAD:
+    "Certaines informations de réservation sont invalides. Vérifiez le formulaire puis réessayez.",
+
+    INVALID_PAYLOAD:
+      "Certaines données envoyées sont invalides. Vérifiez le formulaire puis réessayez.",
+
+    BUYER_EMAIL_REQUIRED:
+      "Veuillez indiquer une adresse email pour recevoir la confirmation de réservation.",
+
+    MISSING_CAPTCHA_TOKEN:
+      "La vérification anti-robot n’a pas pu être effectuée. Rechargez la page puis réessayez.",
+
+    INVALID_JSON:
+      "La demande envoyée est invalide. Rechargez la page puis réessayez.",
   };
 
   const exact = exactMessages[m];
