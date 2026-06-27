@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "npm:zod";
 
 /* ------------------------- Primitives ------------------------- */
 
@@ -105,50 +105,6 @@ export const registerPayloadSchema = z
 export type RegisterPayloadInput = z.input<typeof registerPayloadSchema>;
 export type RegisterPayload = z.output<typeof registerPayloadSchema>;
 
-/* ------------------------- Register response ------------------------- */
-
-export const registerSuccessPaidSchema = z
-  .object({
-    ok: z.literal(true),
-    orderId: uuidSchema,
-    status: z.literal("paid"),
-    bookingToken: z.string().nullable().optional(),
-  })
-  .strict();
-
-export const registerSuccessAwaitingPaymentSchema = z
-  .object({
-    ok: z.literal(true),
-    orderId: uuidSchema,
-    status: z.literal("awaiting_payment"),
-    checkoutUrl: z.string().url(),
-    amountDueNowCents: z.number().int().min(1),
-    totalCents: z.number().int().min(0),
-    reusedPayment: z.boolean().optional(),
-    bookingToken: z.string(),
-  })
-  .strict();
-
-export const registerSuccessSchema = z.union([
-  registerSuccessPaidSchema,
-  registerSuccessAwaitingPaymentSchema,
-]);
-
-export const registerErrorSchema = z
-  .object({
-    ok: z.literal(false).optional(),
-    error: z.string(),
-    details: z.unknown().optional(),
-  })
-  .strict();
-
-export const registerResponseSchema = z.union([
-  registerSuccessSchema,
-  registerErrorSchema,
-]);
-
-export type RegisterResponse = z.infer<typeof registerResponseSchema>;
-export type RegisterSuccess = z.infer<typeof registerSuccessSchema>;
 
 /* ------------------------- RPC args ------------------------- */
 
