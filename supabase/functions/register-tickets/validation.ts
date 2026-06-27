@@ -1,4 +1,4 @@
-import { registerPayloadSchema } from "../../../contracts/registerTickets.contracts.ts";
+import { registerPayloadSchema } from "./registerTickets.contracts.ts";
 import { badRequest } from "./errors.ts";
 
 export async function parseRegisterPayload(req: Request) {
