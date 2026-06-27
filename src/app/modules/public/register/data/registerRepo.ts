@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  buyerEmailSchema,
   registerPayloadSchema,
   registerResponseSchema,
   type RegisterResponse,
@@ -8,13 +9,21 @@ import {
 export function createRegisterRepo(supabase: SupabaseClient) {
   return {
     async register(input: unknown): Promise<RegisterResponse> {
-      const parsed = registerPayloadSchema.safeParse(input);
+  console.log("REGISTER REPO HIT");
+  console.log("INPUT BUYER EMAIL", (input as any)?.buyerEmail);
+  console.log("DIRECT EMAIL TEST", buyerEmailSchema.safeParse((input as any)?.buyerEmail));
 
-      if (!parsed.success) {
-        throw new Error("INVALID_REGISTER_PAYLOAD");
-      }
+  const parsed = registerPayloadSchema.safeParse(input);
 
-      const payload = parsed.data;
+  console.log("PAYLOAD PARSED", parsed.success);
+  if (!parsed.success) {
+    console.log(parsed.error.flatten());
+    throw new Error("INVALID_REGISTER_PAYLOAD");
+  }
+
+  const payload = parsed.data;
+
+  console.log("INVOKE EDGE NOW", payload);
 
       const { data, error } = await supabase.functions.invoke("register-tickets", {
         body: payload,
