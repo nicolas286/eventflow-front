@@ -1,21 +1,20 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { type AdminRegisterPayload,
+import {
+  type AdminRegisterPayload,
   type AdminRegisterResponse,
   adminRegisterResponseSchema,
- } from "@app/modules/public/register/schemas/admin.registerPayload.schema";
-
+} from "@app/modules/public/register/schemas/admin.registerPayload.schema";
+import { edgeSafe } from "@shared/gateways/supabase/supabaseEdgeSafe";
 
 export function createAdminRegisterRepo(supabase: SupabaseClient) {
   return {
     async register(input: AdminRegisterPayload): Promise<AdminRegisterResponse> {
-      const { data, error } = await supabase.functions.invoke("admin-register", { body: input });
+      const raw = await edgeSafe(
+        () => supabase.functions.invoke("admin-register", { body: input }),
+        "ADMIN_REGISTER_EMPTY_RESPONSE"
+      );
 
-      if (error) throw error; 
-      if (!data) throw new Error("ADMIN_REGISTER_EMPTY_RESPONSE");
-
-
-      return adminRegisterResponseSchema.parse(data);
+      return adminRegisterResponseSchema.parse(raw);
     },
   };
 }
-

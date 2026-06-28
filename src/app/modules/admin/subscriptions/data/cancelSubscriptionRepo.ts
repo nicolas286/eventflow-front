@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { edgeSafe } from "@shared/gateways/supabase/supabaseEdgeSafe";
 
 import {
   cancelSubscriptionPayloadSchema,
@@ -7,11 +8,6 @@ import {
   type CancelSubscriptionResponse,
 } from "../schemas/admin.cancelSubscription.schema";
 
-/**
- * cancel-subscription (AUTH)
- * - Appelle l'edge function cancel-subscription
- * - Résilie l'abonnement Mollie + repasse l'orga en Free + supprime la row subscriptions
- */
 export function createCancelSubscriptionRepo(supabase: SupabaseClient) {
   return {
     async cancelSubscription(
@@ -19,17 +15,15 @@ export function createCancelSubscriptionRepo(supabase: SupabaseClient) {
     ): Promise<CancelSubscriptionResponse> {
       const payload = cancelSubscriptionPayloadSchema.parse(input);
 
-      const { data, error } = await supabase.functions.invoke("cancel-suscription", {
-        body: payload,
-      });
+      const raw = await edgeSafe(
+        () =>
+          supabase.functions.invoke("cancel-suscription", {
+            body: payload,
+          }),
+        "CANCEL_SUBSCRIPTION_EMPTY_RESPONSE"
+      );
 
-      if (error) throw error;
-
-      if (!data) {
-        throw new Error("CANCEL_SUBSCRIPTION_EMPTY_RESPONSE");
-      }
-
-      return cancelSubscriptionResponseSchema.parse(data);
+      return cancelSubscriptionResponseSchema.parse(raw);
     },
   };
 }

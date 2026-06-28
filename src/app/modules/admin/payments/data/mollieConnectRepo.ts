@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { edgeSafe } from "@shared/gateways/supabase/supabaseEdgeSafe";
 import {
   startMollieConnectInputSchema,
   startMollieConnectResultSchema,
@@ -11,18 +12,15 @@ export function mollieConnectRepo(supabase: SupabaseClient) {
     async startMollieConnect(input: StartMollieConnectInput): Promise<StartMollieConnectResult> {
       const payload = startMollieConnectInputSchema.parse(input);
 
-      const { data, error } = await supabase.functions.invoke("mollie-connect-start", {
-        body: payload,
-      });
+      const raw = await edgeSafe(
+        () =>
+          supabase.functions.invoke("mollie-connect-start", {
+            body: payload,
+          }),
+        "MOLLIE_CONNECT_START_EMPTY_RESPONSE"
+      );
 
-      if (error) throw error;
-      if (!data) throw new Error("MOLLIE_CONNECT_START_EMPTY_RESPONSE");
-
-      if (data.ok === false) {
-        throw new Error(String(data.error ?? "MOLLIE_CONNECT_START_FAILED"));
-      }
-
-      return startMollieConnectResultSchema.parse(data);
+      return startMollieConnectResultSchema.parse(raw);
     },
   };
 }

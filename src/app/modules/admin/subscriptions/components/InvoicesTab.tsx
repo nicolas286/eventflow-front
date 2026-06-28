@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
+import { invoicePdfRepo } from "../data/makeInvoicePdfUrlRepo";
 import { Button, Badge, Card, CardBody, CardHeader } from "@ui/components";
 import { useMakeInvoiceList } from "../hooks/useMakeInvoiceList";
 import { supabase } from "@gateways/supabase/supabaseClient";
@@ -20,24 +21,25 @@ function fmtDateShort(d: string | null | undefined) {
 export function InvoicesTab({ orgId }: { orgId: string }) {
   const invoices = useMakeInvoiceList({ supabase });
 
+  const pdfRepo = useMemo(() => invoicePdfRepo(supabase), []);
+
   useEffect(() => {
     invoices.fetchFirst({ orgId, limit: 25 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId]);
 
-  async function onDownloadPdf(inv: any) {
+    async function onDownloadPdf(inv: any) {
     if (!inv.pdfPath) return;
 
-    const { data, error } = await supabase.functions.invoke("get-invoice-pdf-url", {
-      body: { invoice_id: inv.id },
-    });
+    try {
+      const { url } = await pdfRepo.getPdfUrl({
+        invoiceId: inv.id,
+      });
 
-    if (error || !data?.url) {
-      console.error("PDF download failed", error);
-      return;
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      console.error("PDF download failed", e);
     }
-
-    window.open(data.url, "_blank", "noopener,noreferrer");
   }
 
   const isEmpty = invoices.items.length === 0 && !invoices.loading;
