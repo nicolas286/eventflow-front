@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { edgeSafe } from "@shared/gateways/supabase/supabaseEdgeSafe";
 import {
   deleteAccountInputSchema,
   deleteAccountResultSchema,
@@ -11,18 +12,15 @@ export function deleteAccountRepo(supabase: SupabaseClient) {
     async deleteAccount(input?: DeleteAccountInput): Promise<DeleteAccountResult> {
       const payload = deleteAccountInputSchema.parse(input ?? {});
 
-      const { data, error } = await supabase.functions.invoke("delete-account", {
-        body: payload,
-      });
+      const raw = await edgeSafe(
+        () =>
+          supabase.functions.invoke("delete-account", {
+            body: payload,
+          }),
+        "DELETE_ACCOUNT_EMPTY_RESPONSE"
+      );
 
-      if (error) throw error;
-      if (!data) throw new Error("DELETE_ACCOUNT_EMPTY_RESPONSE");
-
-      if (data.ok === false) {
-        throw new Error(String(data.error ?? "DELETE_ACCOUNT_FAILED"));
-      }
-
-      return deleteAccountResultSchema.parse(data);
+      return deleteAccountResultSchema.parse(raw);
     },
   };
 }

@@ -116,12 +116,20 @@ Deno.serve(async (req)=>{
       bookingToken: order.bookingToken
     });
   } catch (e) {
-    console.error("[register-tickets] unexpected", e);
-    if (e instanceof ResponseError) {
-      return json({
-        error: e.code
-      }, e.status);
+     if (e instanceof ResponseError) {
+      console.warn("[register-tickets] response error", {
+        code: e.code,
+        status: e.status,
+      });
+
+      return json(
+        { error: e.code },
+        e.status,
+      );
     }
+
+    console.error("[register-tickets] unexpected", e);
+
     return json({
       error: "UNEXPECTED_ERROR"
     }, 500);
