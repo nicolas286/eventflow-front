@@ -1,175 +1,51 @@
-// supabase/functions/admin-register/index.ts
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import crypto from "node:crypto";
-/**
- * admin-register (AuthZ via RPC is_org_member)
- * - dashboard orga (utilisateur authentifié)
- * - create_order_intent
- * - optionnel: apply_order_payment en offline
- *
- * ✅ Réponses UNIFIÉES (important pour Zod côté front) :
- * Success: { ok:true, orderId, currency, totalCents, status, dueNowCents, bookingToken, expiresAt, amountAppliedCents?, payment? }
- * Error:   { ok:false, error, details? }
- */ /* ---------------- CORS ---------------- */ function parseAllowedOrigins() {
-  const raw = (Deno.env.get("ALLOWED_ORIGINS") || "").trim();
-  if (!raw) return [];
-  return raw.split(",").map((s)=>s.trim()).filter(Boolean);
-}
-function corsHeadersFor(req) {
-  const origin = req.headers.get("origin") || "";
-  const allowed = parseAllowedOrigins();
-  // Pas configuré -> permissif
-  if (allowed.length === 0) {
-    return {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Max-Age": "86400"
-    };
-  }
-  if (!origin) {
-    return {
-      "Access-Control-Allow-Origin": allowed[0],
-      "Vary": "Origin",
-      "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Max-Age": "86400"
-    };
-  }
-  if (!allowed.includes(origin)) return null;
+import { json, handleCorsAndMethod } from "../_shared/http.ts";
+import { createEdgeLogger, serializeError } from "../_shared/logger.ts";
+import { resolveSupabaseRuntimeConfig } from "../_shared/config.ts";
+import { requireBearer } from "../_shared/auth.ts"; 
+import { parseAdminRegisterPayload } from "./validation.ts";
+import { ResponseError } from "../_shared/errors.ts";
+import {
+  type AdminRegisterPayload,
+} from "./adminRegister.contracts.ts";
+
+
+function buildBuyer(body: AdminRegisterPayload) {
+  const buyer = body.buyer ?? {};
+
   return {
-    "Access-Control-Allow-Origin": origin,
-    "Vary": "Origin",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Max-Age": "86400"
+    email: buyer.email ?? body.buyerEmail ?? null,
+    name: buyer.name ?? null,
+    phone: buyer.phone ?? null,
+    is_attendee:
+      typeof buyer.isAttendee === "boolean" ? buyer.isAttendee : false,
   };
 }
-function json(data, status = 200, corsHeaders) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      ...corsHeaders,
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store"
-    }
-  });
-}
-function jsonErr(corsHeaders, status, error, details) {
-  return json({
-    ok: false,
-    error,
-    ...details !== undefined ? {
-      details
-    } : {}
-  }, status, corsHeaders);
-}
-function jsonOk(corsHeaders, payload) {
-  return json({
-    ok: true,
-    ...payload
-  }, 200, corsHeaders);
-}
-/* ---------------- Utils ---------------- */ function getBearer(req) {
-  const h = req.headers.get("authorization") || "";
-  const m = h.match(/^Bearer\s+(.+)$/i);
-  return m?.[1] ?? null;
-}
-function toPositiveInt(v) {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return null;
-  const i = Math.trunc(n);
-  return i > 0 ? i : null;
-}
-function toNonEmptyString(v) {
-  const s = typeof v === "string" ? v.trim() : String(v ?? "").trim();
-  return s ? s : null;
-}
-function isYYYYMMDD(s) {
-  if (!s) return false;
-  return /^\d{4}-\d{2}-\d{2}$/.test(s);
-}
-function sumQuantities(items) {
-  return items.reduce((acc, it)=>acc + (toPositiveInt(it.quantity) ?? 0), 0);
-}
-function unique(arr) {
-  return Array.from(new Set(arr));
-}
-/**
- * buyer explicite (body.buyer) > buyerEmail legacy > attendee[0]
- */ function buildBuyer(body) {
-  const firstAtt = body.attendees?.[0] ?? null;
-  const explicitEmail = toNonEmptyString(body.buyer?.email);
-  const explicitName = toNonEmptyString(body.buyer?.name);
-  const explicitPhone = toNonEmptyString(body.buyer?.phone);
-  if (explicitEmail || explicitName || explicitPhone) {
-    return {
-      email: explicitEmail,
-      name: explicitName,
-      phone: explicitPhone,
-      is_attendee: typeof body.buyer?.isAttendee === "boolean" ? body.buyer.isAttendee : false
-    };
-  }
-  const legacyEmail = toNonEmptyString(body.buyerEmail);
-  const fallbackEmail = legacyEmail ?? toNonEmptyString(firstAtt?.email) ?? null;
-  const fallbackName = (()=>{
-    const n1 = toNonEmptyString(firstAtt?.firstName);
-    const n2 = toNonEmptyString(firstAtt?.lastName);
-    const full = [
-      n1,
-      n2
-    ].filter(Boolean).join(" ").trim();
-    return full ? full : null;
-  })();
-  const fallbackPhone = toNonEmptyString(firstAtt?.phone);
-  return {
-    email: fallbackEmail,
-    name: fallbackName,
-    phone: fallbackPhone,
-    is_attendee: true
-  };
-}
-/**
- * ✅ EXACTEMENT comme public: on veut un champ "value" jsonb
- * - si value est déjà fourni => on le garde tel quel (object/array inclus)
- * - sinon compat legacy: on reconstruit un value simple
- */ function coerceAnswerValue(a) {
-  if (a.value !== undefined) return a.value ?? null;
-  if (typeof a.valueBool === "boolean") return a.valueBool;
-  if (typeof a.valueInt === "number" && Number.isFinite(a.valueInt)) {
-    return a.valueInt;
-  }
-  if (typeof a.valueDate === "string") {
-    const d = a.valueDate.trim();
-    if (d) return d;
-  }
-  if (typeof a.valueText === "string") {
-    const t = a.valueText.trim();
-    if (t) return t;
-  }
-  return null;
-}
-/* ---------------- Handler ---------------- */ Deno.serve(async (req)=>{
-  const corsHeaders = corsHeadersFor(req);
-  if (!corsHeaders) return new Response("Forbidden origin", {
-    status: 403
-  });
+
+Deno.serve(async (req)=>{
+
+  const logger = createEdgeLogger("admin-register");
+
   try {
-    if (req.method === "OPTIONS") return new Response("ok", {
-      headers: corsHeaders
+
+    logger.info("request_received", {
+      method: req.method,
+      origin: req.headers.get("origin"),
     });
-    if (req.method !== "POST") return jsonErr(corsHeaders, 405, "Method not allowed");
-    const token = getBearer(req);
-    if (!token) return jsonErr(corsHeaders, 401, "Missing Authorization bearer token");
-    const body = await req.json().catch(()=>null);
-    if (!body?.eventId || !Array.isArray(body.items) || body.items.length === 0 || !Array.isArray(body.attendees)) {
-      return jsonErr(corsHeaders, 400, "Invalid payload");
-    }
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-    if (!supabaseUrl || !serviceKey || !anonKey) return jsonErr(corsHeaders, 500, "Server misconfigured");
-    // client user : validation JWT
+
+    const methodResponse = handleCorsAndMethod(req, logger);
+    if (methodResponse) return methodResponse;
+
+    const auth = requireBearer(req, logger);
+    if (auth.response) return auth.response;
+
+    const token = auth.token;
+    
+    const body = await parseAdminRegisterPayload(req, logger);
+
+    const { supabaseUrl, anonKey, serviceKey } = resolveSupabaseRuntimeConfig();
+
     const userClient = createClient(supabaseUrl, anonKey, {
       global: {
         headers: {
@@ -177,79 +53,106 @@ function unique(arr) {
         }
       }
     });
+
     const { data: userData, error: userErr } = await userClient.auth.getUser();
-    if (userErr || !userData?.user) return jsonErr(corsHeaders, 401, "Invalid session");
-    // service role
+
+    if (userErr || !userData?.user) {
+        logger.warn("invalid_session");
+        return json({
+          error: "INVALID_SESSION"
+        }, 401);
+      }
+
     const admin = createClient(supabaseUrl, serviceKey);
-    /* -------------------------------------------------
-     * 0) Validations items/attendees
-     * ------------------------------------------------- */ const cleanedItems = body.items.map((it)=>({
-        eventProductId: toNonEmptyString(it.eventProductId),
-        quantity: toPositiveInt(it.quantity)
-      }));
-    if (cleanedItems.some((it)=>!it.eventProductId || !it.quantity)) {
-      return jsonErr(corsHeaders, 400, "Invalid items (eventProductId/quantity)");
+
+    const { data: ev, error: evErr } = await admin.from("events").select("id, org_id").eq("id", body.eventId).maybeSingle();
+    
+    if (evErr || !ev) {
+      logger.warn("event_not_found");
+        return json(
+            {
+              error: "EVENT_NOT_FOUND",
+            },
+            404,
+          );
     }
-    const itemProductIds = cleanedItems.map((x)=>x.eventProductId);
-    if (unique(itemProductIds).length !== itemProductIds.length) {
-      return jsonErr(corsHeaders, 400, "Duplicate eventProductId in items");
-    }
-    // ⚠️ règle simple : 1 attendee = 1 qty
-    const expectedAttendees = sumQuantities(cleanedItems);
-    if (body.attendees.length !== expectedAttendees) {
-      return jsonErr(corsHeaders, 400, "Attendees count mismatch", {
-        expectedAttendees,
-        receivedAttendees: body.attendees.length
-      });
-    }
-    for (const a of body.attendees){
-      const pid = toNonEmptyString(a.eventProductId);
-      if (!pid) return jsonErr(corsHeaders, 400, "Invalid attendee eventProductId");
-      if (!itemProductIds.includes(pid)) {
-        return jsonErr(corsHeaders, 400, "Attendee references product not in items", {
-          eventProductId: pid
-        });
-      }
-      for (const ans of a.answers ?? []){
-        const fid = toNonEmptyString(ans.eventFormFieldId);
-        if (!fid) return jsonErr(corsHeaders, 400, "Invalid answer eventFormFieldId");
-        const d = typeof ans.valueDate === "string" ? ans.valueDate : null;
-        if (d && !isYYYYMMDD(d)) {
-          return jsonErr(corsHeaders, 400, "Invalid answer valueDate (expected YYYY-MM-DD)", {
-            valueDate: d
-          });
-        }
-      }
-    }
-    /* -------------------------------------------------
-     * 1) Load event -> org_id
-     * ------------------------------------------------- */ const { data: ev, error: evErr } = await admin.from("events").select("id, org_id").eq("id", body.eventId).maybeSingle();
-    if (evErr || !ev) return jsonErr(corsHeaders, 404, "Event not found");
-    /* -------------------------------------------------
-     * 2) AuthZ via RPC is_org_member (JWT mandatory)
-     * ------------------------------------------------- */ const { data: isMember, error: memErr } = await userClient.rpc("is_org_member", {
+
+
+    const { data: isMember, error: memErr } = await userClient.rpc("is_org_member", {
       p_org_id: ev.org_id
     });
-    if (memErr) return jsonErr(corsHeaders, 500, "Auth check failed", memErr.message);
-    if (!isMember) return jsonErr(corsHeaders, 403, "Forbidden");
-    /* -------------------------------------------------
-     * 3) Vérifier que les products appartiennent à l'event
-     * ------------------------------------------------- */ const { data: products, error: prodErr } = await admin.from("event_products").select("id, event_id").in("id", itemProductIds);
-    if (prodErr) return jsonErr(corsHeaders, 500, "Product check failed", prodErr.message);
-    if (!products || products.length !== itemProductIds.length) {
-      return jsonErr(corsHeaders, 400, "Unknown event product in items");
+
+    if (memErr) {
+      logger.warn("auth_check_failed");
+      return json(
+          {
+            error: "AUTH_CHECK_FAILED",
+          },
+          500,
+        );
     }
+
+    if (!isMember) {
+      logger.warn("user_not_org_member");
+      return json(
+          {
+            error: "FORBIDDEN",
+          },
+            403,
+        );
+    }
+
+    const itemProductIds = body.items.map((x) => x.eventProductId);
+
+    const { data: products, error: prodErr } = await admin.from("event_products").select("id, event_id").in("id", itemProductIds);
+    
+    if (prodErr) {
+      logger.warn("product_check_failed");
+      return json(
+          {
+            error: "PRODUCT_CHECK_FAILED",
+            details: { 
+              message: prodErr.message,
+            }
+          },
+            500,
+        );
+    }
+
+
+    if (!products || products.length !== itemProductIds.length) {
+      logger.warn("unknown_event_product_in_items");
+      return json(
+          {
+            error: "UNKNOWN_EVENT_PRODUCT_IN_ITEMS",
+            
+          },
+            400,
+        );
+    }
+
     const bad = products.find((p)=>p.event_id !== body.eventId);
-    if (bad) return jsonErr(corsHeaders, 400, "Product does not belong to this event", {
-      eventProductId: bad.id
-    });
-    /* -------------------------------------------------
-     * 4) create_order_intent
-     * ------------------------------------------------- */ const p_items = cleanedItems.map((it)=>({
-        event_product_id: it.eventProductId,
-        quantity: it.quantity
-      }));
-    // ✅ même shape que public
+
+    if (bad) {
+      logger.warn("product_does_not_belong_to_this_event");
+      return json(
+          {
+            error: "PRODUCT_EVENT_MISMATCH",
+            details: {
+              eventProductId: bad.id,
+            }
+            
+          },
+            400,
+        );
+    }
+
+
+    const p_items = body.items.map((it) => ({
+      event_product_id: it.eventProductId,
+      quantity: it.quantity,
+    }));
+
     const p_attendees = body.attendees.map((a)=>({
         event_product_id: a.eventProductId,
         first_name: null,
@@ -258,10 +161,12 @@ function unique(arr) {
         phone: null,
         answers: (a.answers ?? []).map((x)=>({
             event_form_field_id: x.eventFormFieldId,
-            value: coerceAnswerValue(x)
+            value: x.value ?? null
           }))
       }));
+
     const p_buyer = buildBuyer(body);
+
     const { data: rpcRes, error: rpcErr } = await admin.rpc("create_order_intent", {
       p_event_id: body.eventId,
       p_items,
@@ -269,40 +174,74 @@ function unique(arr) {
       p_buyer,
       p_rate_key: null
     });
-    if (rpcErr) return jsonErr(corsHeaders, 400, "RPC create_order_intent failed", rpcErr.message);
+
+    if (rpcErr) {
+      logger.warn("rpc_create_order_intent_failed");
+      return json(
+          {
+            error: "RPC_CREATE_ORDER_INTENT_FAILED",
+            details: {
+              message: rpcErr.message,
+            }
+          },
+            400,
+        );
+    }
+
     const orderId = rpcRes?.order_id;
     const totalCents = rpcRes?.total_cents;
     const dueNowCentsRaw = rpcRes?.amount_due_now_cents;
     const currency = rpcRes?.currency;
     const paymentRequired = Boolean(rpcRes?.payment_required);
+
     if (!orderId || typeof totalCents !== "number" || !currency) {
-      return jsonErr(corsHeaders, 500, "Order creation failed (unexpected RPC result)");
+      logger.warn("order_creation_failed");
+      return json(
+          {
+            error: "ORDER_CREATION_FAILED",
+            details: {
+              reason: "unexpected_rpc_result",
+            }
+          },
+            500,
+        );
     }
+
     const baseStatus = rpcRes?.status ?? (paymentRequired ? "awaiting_payment" : "paid");
-    /* -------------------------------------------------
-     * 5) Optionnel: paiement offline
-     * ------------------------------------------------- */ if (body.markPaid) {
+
+    if (body.markPaid) {
+
       const mode = body.payMode ?? "deposit";
       let amountCents;
+
       if (mode === "deposit") {
         amountCents = typeof dueNowCentsRaw === "number" ? dueNowCentsRaw : totalCents;
       } else if (mode === "full") {
         amountCents = totalCents;
       } else {
-        const x = toPositiveInt(body.customAmountCents);
-        if (!x) return jsonErr(corsHeaders, 400, "Invalid customAmountCents");
-        amountCents = x;
+        amountCents = body.customAmountCents ?? 0;
       }
-      if (amountCents <= 0) return jsonErr(corsHeaders, 400, "Invalid payment amount");
+
       if (amountCents > totalCents) {
-        return jsonErr(corsHeaders, 400, "Payment amount cannot exceed total", {
-          amountCents,
-          totalCents
-        });
+        logger.warn("payment_amount_cannot_exceed_total");
+            return json(
+                {
+                  error: "PAYMENT_AMOUNT_EXCEEDS_TOTAL",
+                  details: { amountCents, totalCents },
+                },
+                  400,
+              );  
       }
-      // pas de paiement requis -> on renvoie quand même shape complète
+
       if (!paymentRequired || totalCents === 0) {
-        return jsonOk(corsHeaders, {
+        logger.info("completed", {
+          orderId,
+          status: "paid",
+          markPaid: Boolean(body.markPaid),
+        });
+
+        return json({
+          ok: true,
           orderId,
           currency: String(currency).toUpperCase(),
           totalCents,
@@ -311,15 +250,23 @@ function unique(arr) {
           dueNowCents: 0,
           bookingToken: null,
           expiresAt: null,
-          payment: null
+          payment: null,
         });
       }
+
+      if (amountCents <= 0) {
+        logger.warn("invalid_payment_amount");
+        return json({ error: "INVALID_PAYMENT_AMOUNT" }, 400);
+      }
+
       const offlineRef = `offline:${crypto.randomUUID()}`;
+
       const metaNote = [
         body.paymentMethod ? `method=${body.paymentMethod}` : null,
         body.note ? `note=${body.note}` : null,
         `by=${userData.user.id}`
       ].filter(Boolean).join(" | ");
+
       const { data: payRes, error: payErr } = await admin.rpc("apply_order_payment", {
         p_order_id: orderId,
         p_provider: "offline",
@@ -329,10 +276,33 @@ function unique(arr) {
         p_raw: null,
         p_note: metaNote || null
       });
+
       if (payErr) {
-        return jsonErr(corsHeaders, 400, "apply_order_payment_failed", payErr.message);
+        logger.warn("apply_order_payment_failed");
+        return json(
+            {
+              error: "APPLY_ORDER_PAYMENT_FAILED",
+              details: {
+                message: payErr.message,
+              }  
+            },
+              400,
+          );
       }
-      return jsonOk(corsHeaders, {
+
+      logger.info("offline_payment_applied", {
+        orderId,
+        amountCents,
+      });
+
+      logger.info("completed", {
+        orderId,
+        status: "paid",
+        markPaid: true,
+      });
+
+      return json({
+        ok: true,
         orderId,
         currency: String(currency).toUpperCase(),
         totalCents,
@@ -344,26 +314,49 @@ function unique(arr) {
         payment: payRes ?? null
       });
     }
-    /* -------------------------------------------------
-     * 6) Paiement online / intent simple
-     * ------------------------------------------------- */ return jsonOk(corsHeaders, {
+
+     logger.info("completed", {
       orderId,
-      currency: String(currency).toUpperCase(),
-      totalCents,
       status: baseStatus,
-      dueNowCents: typeof dueNowCentsRaw === "number" ? dueNowCentsRaw : null,
-      bookingToken: rpcRes?.booking_token ?? null,
-      expiresAt: rpcRes?.expires_at ?? null,
-      amountAppliedCents: null,
-      payment: null
+      markPaid: false,
     });
+
+      return json({
+        ok: true,
+        orderId,
+        currency: String(currency).toUpperCase(),
+        totalCents,
+        status: baseStatus,
+        dueNowCents: typeof dueNowCentsRaw === "number" ? dueNowCentsRaw : null,
+        bookingToken: rpcRes?.booking_token ?? null,
+        expiresAt: rpcRes?.expires_at ?? null,
+        amountAppliedCents: null,
+        payment: null
+      });
+
   } catch (e) {
-    const fallbackCors = corsHeadersFor(req) ?? {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Max-Age": "86400"
-    };
-    return jsonErr(fallbackCors, 500, "Unexpected error", String(e));
+  if (e instanceof ResponseError) {
+    logger.warn("response_error", {
+      code: e.code,
+      status: e.status,
+    });
+
+    return json(
+      {
+        error: e.code,
+        ...(e.details ? { details: e.details } : {}),
+      },
+      e.status,
+    );
   }
+
+  logger.error("unexpected_error", serializeError(e));
+
+  return json(
+    {
+      error: "UNEXPECTED_ERROR",
+    },
+    500,
+  );
+}
 });

@@ -105,11 +105,13 @@ Deno.serve(async (req)=>{
     const clientId = (Deno.env.get("MOLLIE_CONNECT_CLIENT_ID") ?? "").trim();
     const redirectUri = (Deno.env.get("MOLLIE_CONNECT_REDIRECT_URI") ?? "").trim();
     const scopes = (Deno.env.get("MOLLIE_CONNECT_SCOPES") ?? "").trim().replace(/\s+/g, " ");
+
     if (!supabaseUrl || !anonKey || !clientId || !redirectUri || !scopes) {
       return json(req, {
         error: "UNKNOWN: missing_env"
       }, 500);
     }
+    
     const userClient = createClient(supabaseUrl, anonKey, {
       global: {
         headers: {

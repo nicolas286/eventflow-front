@@ -1,5 +1,5 @@
-import { json, corsHeaders } from "./http.ts";
-import { ResponseError } from "./errors.ts";
+import { json, handleCorsAndMethod } from "../_shared/http.ts";
+import { ResponseError } from "../_shared/errors.ts";
 import { parseRegisterPayload } from "./validation.ts";
 import { resolveRuntimeConfig } from "./config.ts";
 import { createAdminClient, createOrderIntentOrThrow, getEventPaymentContextOrThrow, getOrgPlanOrThrow, issueFreeOrderTicketsOrThrow } from "./db.ts";
@@ -9,30 +9,55 @@ import { resolveCheckoutContextOrThrow } from "./checkout.ts";
 import { getValidOrgMollieAccessOrThrow } from "./mollie-auth.ts";
 import { findReusablePayment, createMolliePayment, insertPaymentOrRollback } from "./mollie-payments.ts";
 import { sendConfirmationEmailForOrderSafe } from "./emails.ts";
+import { createEdgeLogger, serializeError } from "../_shared/logger.ts";
+
 Deno.serve(async (req)=>{
+
+  const logger = createEdgeLogger("register-tickets");
+
   try {
-    if (req.method === "OPTIONS") {
-      return new Response("ok", {
-        headers: corsHeaders
-      });
-    }
-    if (req.method !== "POST") {
-      return json({
-        error: "METHOD_NOT_ALLOWED"
-      }, 405);
-    }
+
+    logger.info("request_received", {
+      method: req.method,
+      origin: req.headers.get("origin"),
+    });
+    
+    const methodResponse = handleCorsAndMethod(req, logger);
+    if (methodResponse) return methodResponse;
+
     const body = await parseRegisterPayload(req);
+
+    logger.info("payload_parsed", {
+    eventId: body.eventId,
+    itemsCount: body.items.length,
+    attendeesCount: body.attendees.length,
+    checkoutSource: body.checkoutSource ?? null,
+    hasBuyerEmail: Boolean(body.buyer?.email ?? body.buyerEmail),
+  });
+
     const config = resolveRuntimeConfig(req);
     const admin = createAdminClient(config);
     const ip = getClientIp(req);
+
     await verifyCaptchaOrThrow({
       token: body.turnstileToken,
       ip,
       turnstileSecret: config.turnstileSecret,
       turnstileBypass: config.turnstileBypass
     });
+
+    logger.info("captcha_verified", {
+      turnstileBypass: config.turnstileBypass,
+    });
+
     const checkout = resolveCheckoutContextOrThrow(body, config);
+
+    logger.info("checkout_resolved", {
+      checkoutSource: checkout.checkoutSource,
+    });
+
     const buyer = buildBuyer(body);
+
     const order = await createOrderIntentOrThrow({
       admin,
       eventId: body.eventId,
@@ -42,14 +67,38 @@ Deno.serve(async (req)=>{
       ip,
       rateLimitPer10Min: config.registerRateLimitPer10Min
     });
+
+    logger.info("order_created", {
+        orderId: order.orderId,
+        paymentRequired: order.paymentRequired,
+        totalCents: order.totalCents,
+        dueNowCents: order.dueNowCents,
+        currency: order.currency,
+      });
+
     if (!order.paymentRequired || order.totalCents === 0) {
+
+      logger.info("free_order_start", {
+        orderId: order.orderId,
+      });
+
       await issueFreeOrderTicketsOrThrow(admin, order.orderId);
+
+      logger.info("free_tickets_issued", {
+        orderId: order.orderId,
+      });
+
       await sendConfirmationEmailForOrderSafe({
         admin,
         orderId: order.orderId,
         functionsBase: config.functionsBase,
         edgeServiceToken: config.edgeServiceToken
       });
+
+      logger.info("free_order_completed", {
+        orderId: order.orderId,
+      });
+
       return json({
         ok: true,
         orderId: order.orderId,
@@ -58,17 +107,48 @@ Deno.serve(async (req)=>{
       });
     }
     const { orgId, eventTitle } = await getEventPaymentContextOrThrow(admin, body.eventId);
+
+    logger.info("payment_context_loaded", {
+      orderId: order.orderId,
+      orgId,
+      eventTitle,
+    });
+
     if (checkout.checkoutSource === "widget") {
       const orgPlan = await getOrgPlanOrThrow(admin, orgId);
+
+      logger.info("widget_plan_checked", {
+        orgId,
+        orgPlan,
+      });
+
       if (orgPlan === "free") {
+
+        logger.warn("widget_blocked_free_plan", {
+          orgId,
+          orderId: order.orderId,
+        });
+
         return json({
           error: "WIDGET_NOT_AVAILABLE_FOR_FREE_PLAN"
         }, 403);
       }
     }
     const mollieAuth = await getValidOrgMollieAccessOrThrow(admin, orgId, config);
+
+    logger.info("mollie_auth_loaded", {
+      orgId,
+      isTest: mollieAuth.isTest,
+      hasProfileId: Boolean(mollieAuth.profileId),
+    });
+
     const reusable = await findReusablePayment(admin, order.orderId);
     if (reusable) {
+
+      logger.info("reusable_payment_found", {
+        orderId: order.orderId,
+      });
+
       return json({
         ok: true,
         orderId: order.orderId,
@@ -80,6 +160,15 @@ Deno.serve(async (req)=>{
         bookingToken: order.bookingToken
       });
     }
+
+    logger.info("mollie_payment_create_start", {
+      orderId: order.orderId,
+      orgId,
+      dueNowCents: order.dueNowCents,
+      totalCents: order.totalCents,
+      currency: order.currency,
+    });
+
     const payment = await createMolliePayment({
       accessToken: mollieAuth.accessToken,
       profileId: mollieAuth.profileId,
@@ -95,6 +184,12 @@ Deno.serve(async (req)=>{
       eventTitle,
       buyerEmail: buyer.email
     });
+
+    logger.info("mollie_payment_created", {
+      orderId: order.orderId,
+      providerPaymentId: payment.providerPaymentId,
+    });
+
     await insertPaymentOrRollback({
       admin,
       accessToken: mollieAuth.accessToken,
@@ -105,6 +200,17 @@ Deno.serve(async (req)=>{
       molliePayment: payment.raw,
       providerPaymentId: payment.providerPaymentId
     });
+
+    logger.info("payment_inserted", {
+      orderId: order.orderId,
+      providerPaymentId: payment.providerPaymentId,
+    });
+
+    logger.info("completed_awaiting_payment", {
+      orderId: order.orderId,
+      reusedPayment: false,
+    });
+
     return json({
       ok: true,
       orderId: order.orderId,
@@ -117,7 +223,7 @@ Deno.serve(async (req)=>{
     });
   } catch (e) {
      if (e instanceof ResponseError) {
-      console.warn("[register-tickets] response error", {
+       logger.warn("response_error", {
         code: e.code,
         status: e.status,
       });
@@ -128,7 +234,7 @@ Deno.serve(async (req)=>{
       );
     }
 
-    console.error("[register-tickets] unexpected", e);
+    logger.error("unexpected_error", serializeError(e));
 
     return json({
       error: "UNEXPECTED_ERROR"

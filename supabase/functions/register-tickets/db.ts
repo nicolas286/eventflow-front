@@ -1,8 +1,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { internal, ResponseError } from "./errors.ts";
+
 export function createAdminClient(config) {
   return createClient(config.supabaseUrl, config.serviceKey);
 }
+
 function mapRpcError(msg) {
   const m = String(msg ?? "");
   if (m.includes("EVENT_REGISTRATION_CLOSED")) return new ResponseError(409, "EVENT_REGISTRATION_CLOSED");
@@ -23,6 +25,7 @@ function mapRpcError(msg) {
   }
   return new ResponseError(400, "FAILED");
 }
+
 export async function createOrderIntentOrThrow(opts) {
   const rateLimitKey = `register:${opts.eventId}:${opts.ip}`;
   const { error: rlErr } = await opts.admin.rpc("assert_rate_limit", {
