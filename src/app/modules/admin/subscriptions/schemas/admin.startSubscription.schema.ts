@@ -18,7 +18,7 @@ export type StartSubscriptionPayload = z.infer<typeof startSubscriptionPayloadSc
 
 const sharedPricingFields = {
   promoApplied: z.boolean().optional(),
-  discountPercent: z.number().int().min(0).max(100).optional(),
+  discountPercent: z.number().int().min(0).max(100).nullable().optional(),
   billingPriceValue: z.string().optional(),
 };
 
@@ -68,11 +68,6 @@ export const startSubscriptionResponseSchema = z.union([
     canceledPrevious: z.boolean().optional(),
   }),
 
-  z.object({
-    ok: z.literal(true),
-    reused: z.boolean().optional(),
-    reason: z.string().optional(),
-  }),
 ]);
 
 export type StartSubscriptionResponse = z.infer<typeof startSubscriptionResponseSchema>;
