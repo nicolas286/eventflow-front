@@ -15,20 +15,31 @@ type ProductRow = EventDetailAdmin["products"][number];
 export type OrderMeta = {
   orderNumber: string;
   createdAt?: string | undefined;
-  status: "pending" | "awaiting_payment" | "partially_paid" | "expired" | "canceled" | "paid";
+  status:
+    | "pending"
+    | "awaiting_payment"
+    | "partially_paid"
+    | "expired"
+    | "canceled"
+    | "paid";
+
   currency: string;
+
   totalCents: number;
   paidCents: number;
-  dueCents: number;
-  buyerEmail?: string | undefined;
-  discountCents?: number;
-  promoRedemption?: {
-  id: string;
-  promoCodeId: string;
-  code: string | null;
   discountCents: number;
-  createdAt: string;
-} | null;
+  dueCents: number;
+
+  buyerEmail?: string | undefined;
+
+  promoRedemption?: {
+    id: string;
+    promoCodeId: string;
+    code: string | null;
+    discountCents: number;
+    createdAt: string;
+  } | null;
+
   nonAttendeeItems?: {
     id: string;
     name: string;
@@ -110,37 +121,54 @@ export function buildParticipantsViewModel(params: BuildParticipantsViewModelPar
   const orderMetaById = new Map<string, OrderMeta>();
 
   for (const o of localOrders) {
-    const total = o.totalCents ?? 0;
-    const paid = o.paidCents ?? 0;
-    const due = Math.max(0, total - paid);
+  const total = o.totalCents ?? 0;
+  const paid = o.paidCents ?? 0;
 
-    const orderItems = itemsByOrderId.get(o.id) ?? [];
+  const discount =
+    o.discountCents ??
+    o.promoRedemption?.discountCents ??
+    0;
 
-    const nonAttendeeItems = orderItems
-      .filter((item) => {
-        const createsAttendees =
-          item.productId ? (createsAttendeesByProductId.get(item.productId) ?? true) : true;
-        const quantity = Number(item.quantity ?? 0);
-        return !createsAttendees && quantity > 0;
-      })
-      .map((item) => ({
-        id: item.id,
-        name: item.productNameSnapshot || "Billet",
-        quantity: Number(item.quantity ?? 0),
-      }));
+  const due =
+    typeof o.dueCents === "number"
+      ? o.dueCents
+      : Math.max(0, total - discount - paid);
 
-    orderMetaById.set(o.id, {
-      orderNumber: o.id.slice(0, 8),
-      createdAt: o.createdAt,
-      status: o.status,
-      currency: o.currency,
-      totalCents: total,
-      paidCents: paid,
-      dueCents: due,
-      buyerEmail: o.buyerEmail ?? undefined,
-      nonAttendeeItems,
-    });
-  }
+  const orderItems = itemsByOrderId.get(o.id) ?? [];
+
+  const nonAttendeeItems = orderItems
+    .filter((item) => {
+      const createsAttendees =
+        item.productId
+          ? createsAttendeesByProductId.get(item.productId) ?? true
+          : true;
+
+      const quantity = Number(item.quantity ?? 0);
+      return !createsAttendees && quantity > 0;
+    })
+    .map((item) => ({
+      id: item.id,
+      name: item.productNameSnapshot || "Billet",
+      quantity: Number(item.quantity ?? 0),
+    }));
+
+  orderMetaById.set(o.id, {
+    orderNumber: o.id.slice(0, 8),
+    createdAt: o.createdAt,
+    status: o.status,
+    currency: o.currency ?? "EUR",
+
+    totalCents: total,
+    paidCents: paid,
+    discountCents: discount,
+    dueCents: due,
+
+    promoRedemption: o.promoRedemption ?? null,
+
+    buyerEmail: o.buyerEmail ?? undefined,
+    nonAttendeeItems,
+  });
+}
 
   /* -------------------- ANSWERS BY ATTENDEE (FILLED) -------------------- */
   const filledFieldsByAttendeeId = new Map<string, FilledField[]>();
