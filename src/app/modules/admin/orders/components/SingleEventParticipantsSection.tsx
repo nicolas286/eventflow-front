@@ -13,7 +13,7 @@ import type { EventFormField, EventFormFieldGroup } from "@shared/models/db/db.e
 import type { EventProducts } from "@shared/models/db/db.eventProducts.schema";
 
 import "./attendees.css";
-import type { ParticipantsTabKey } from "../../singleEvent/pages/AdminSingleEventPage";
+import type { ParticipantsTabKey } from "../../singleEvent/hooks/useAdminSingleEventPageParams";
 
 type SubView = "orders" | "tickets";
 
