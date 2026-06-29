@@ -1,9 +1,11 @@
-import { forbidden, internal } from "./errors.ts";
+import { forbidden, internal } from "../_shared/errors.ts";
+
 export function getClientIp(req) {
   const xff = req.headers.get("x-forwarded-for") || "";
   const ip = xff.split(",")[0]?.trim();
   return ip || "unknown";
 }
+
 export async function verifyTurnstile(opts) {
   const form = new URLSearchParams();
   form.set("secret", opts.secret);

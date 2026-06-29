@@ -1,74 +1,42 @@
-import { useEffect, useMemo, useState } from "react";
-import { useOutletContext, useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { useMemo } from "react";
+import { useOutletContext, useParams, useNavigate } from "react-router-dom";
 
 import type { AdminOutletContext } from "../../dashboard/components/AdminDashboard";
 import { supabase } from "@gateways/supabase/supabaseClient";
 
 import { useAdminSingleEventCoreData } from "../hooks/useAdminSingleEventCoreData";
+import { useAdminSingleEventPageParams } from "../hooks/useAdminSingleEventPageParams";
 import { useUpdateEvent } from "../hooks/useUpdateEvent";
 
 import type { UpdateEventFullPatch } from "../schemas/admin.updateEventFullPatch.schema";
 
 import { uploadOrgAssetsRepo } from "@gateways/supabase/repositories/dashboard/uploadOrgAssets.repo";
-import Button from "@ui/components/button/Button";
+import type { UploadResult } from "@gateways/supabase/repositories/dashboard/uploadOrgAssets.repo";
 
 import { SingleEventDetailsSection } from "../components/SingleEventDetailsTab";
 import { SingleEventTicketsSection } from "../../tickets/components/SingleEventTicketsSection";
 import { SingleEventFormSection } from "../../forms/components/SingleEventFormTab";
 import { SingleEventParticipantsSection } from "../../orders/components/SingleEventParticipantsSection";
-import type { UploadResult } from "@gateways/supabase/repositories/dashboard/uploadOrgAssets.repo";
-
-type TabKey = "details" | "tickets" | "form" | "participants";
-export type ParticipantsTabKey = "participants" | "tickets";
-
-const TAB_KEYS: TabKey[] = ["details", "tickets", "form", "participants"];
-const PARTICIPANTS_TAB_KEYS: ParticipantsTabKey[] = ["participants", "tickets"];
-
-function isTabKey(v: string | null): v is TabKey {
-  return !!v && (TAB_KEYS as string[]).includes(v);
-}
-
-function isParticipantsTabKey(v: string | null): v is ParticipantsTabKey {
-  return !!v && (PARTICIPANTS_TAB_KEYS as string[]).includes(v);
-}
+import { AdminSingleEventTabs } from "../components/AdminSingleEventTabs";
+import { SingleEventPromoCodesSection } from "../../promoCodes/components/SingleEventPromoCodesTabs";
 
 export function AdminSingleEventPage() {
   const { eventSlug } = useParams<{ eventSlug: string }>();
-  const { orgId, refetch: refetchDashboard } = useOutletContext<AdminOutletContext>();
+  const { orgId, refetch: refetchDashboard } =
+    useOutletContext<AdminOutletContext>();
 
-  const storageRepo = useMemo(() => uploadOrgAssetsRepo(supabase), []);
-
-  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const tabFromUrl: TabKey = isTabKey(searchParams.get("tab"))
-    ? (searchParams.get("tab") as TabKey)
-    : "details";
+  const {
+    tab,
+    setTab,
+    participantsTab,
+    shouldOpenScanner,
+    consumeScannerFlag,
+    searchParams,
+  } = useAdminSingleEventPageParams();
 
-  const participantsTabFromUrl: ParticipantsTabKey = isParticipantsTabKey(searchParams.get("participantsTab"))
-    ? (searchParams.get("participantsTab") as ParticipantsTabKey)
-    : "participants";
-
-  const shouldOpenScanner = searchParams.get("openScanner") === "1";
-
-  const [tab, setTab] = useState<TabKey>(tabFromUrl);
-
-  useEffect(() => {
-    if (tab !== tabFromUrl) setTab(tabFromUrl);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tabFromUrl]);
-
-  function setTabAndUrl(next: TabKey) {
-    setTab(next);
-    setSearchParams(
-      (prev) => {
-        const sp = new URLSearchParams(prev);
-        sp.set("tab", next);
-        return sp;
-      },
-      { replace: true }
-    );
-  }
+  const storageRepo = useMemo(() => uploadOrgAssetsRepo(supabase), []);
 
   const core = useAdminSingleEventCoreData({
     supabase,
@@ -105,33 +73,37 @@ export function AdminSingleEventPage() {
     }
   }
 
-  async function handleConfirmFullPatch(patch: UpdateEventFullPatch): Promise<void> {
-  if (!event?.id) return;
+  async function handleConfirmFullPatch(
+    patch: UpdateEventFullPatch
+  ): Promise<void> {
+    if (!event?.id) return;
 
-  const normalizedPatch: UpdateEventFullPatch = {
-    ...patch,
-    endsAt:
-      typeof patch.endsAt === "string" && patch.endsAt.trim() === ""
-        ? null
-        : patch.endsAt,
-  };
+    const normalizedPatch: UpdateEventFullPatch = {
+      ...patch,
+      endsAt:
+        typeof patch.endsAt === "string" && patch.endsAt.trim() === ""
+          ? null
+          : patch.endsAt,
+    };
 
-  const next = await update.updateEvent({
-    eventId: event.id,
-    patch: normalizedPatch,
-  });
+    const next = await update.updateEvent({
+      eventId: event.id,
+      patch: normalizedPatch,
+    });
 
-  if (!next) return;
+    if (!next) return;
 
-  const nextSlug = (next.slug ?? "").trim();
-  if (nextSlug && nextSlug !== eventSlug) {
-    const sp = new URLSearchParams(searchParams);
-    navigate(`/admin/events/${nextSlug}?${sp.toString()}`, { replace: true });
-    return;
+    const nextSlug = (next.slug ?? "").trim();
+
+    if (nextSlug && nextSlug !== eventSlug) {
+      navigate(`/admin/events/${nextSlug}?${searchParams.toString()}`, {
+        replace: true,
+      });
+      return;
+    }
+
+    await refreshAll();
   }
-
-  await refreshAll();
-}
 
   async function uploadEventBanner(file: File): Promise<UploadResult> {
     if (!orgId) throw new Error("ORG_ID_MISSING");
@@ -144,17 +116,6 @@ export function AdminSingleEventPage() {
     });
   }
 
-  function handleScannerConsumed() {
-    setSearchParams(
-      (prev) => {
-        const sp = new URLSearchParams(prev);
-        sp.delete("openScanner");
-        return sp;
-      },
-      { replace: true }
-    );
-  }
-
   const showCoreLoading = core.loading;
   const showCoreError = core.error;
 
@@ -162,25 +123,7 @@ export function AdminSingleEventPage() {
     <div className="adminCard">
       <h2 className="adminEventTitle">{headerTitle}</h2>
 
-      <div className="adminEventTabs">
-        <div className="adminEventTabsInner">
-          <TabButton active={tab === "details"} onClick={() => setTabAndUrl("details")}>
-            Détails
-          </TabButton>
-
-          <TabButton active={tab === "tickets"} onClick={() => setTabAndUrl("tickets")}>
-            Tickets
-          </TabButton>
-
-          <TabButton active={tab === "form"} onClick={() => setTabAndUrl("form")}>
-            Formulaire d&apos;inscription
-          </TabButton>
-
-          <TabButton active={tab === "participants"} onClick={() => setTabAndUrl("participants")}>
-            Participants
-          </TabButton>
-        </div>
-      </div>
+      <AdminSingleEventTabs activeTab={tab} onChange={setTab} />
 
       <div style={{ marginTop: 16 }}>
         {showCoreLoading && <p>Chargement…</p>}
@@ -215,9 +158,19 @@ export function AdminSingleEventPage() {
               />
             )}
 
+            {tab === "promoCodes" && (
+            <SingleEventPromoCodesSection
+              orgId={orgId}
+              event={event}
+              onChanged={refreshAll}
+            />
+          )}
+
             {tab === "participants" && (
               <SingleEventParticipantsSection
-                key={`${eventSlug}-${shouldOpenScanner ? "scanner" : participantsTabFromUrl}`}
+                key={`${eventSlug}-${
+                  shouldOpenScanner ? "scanner" : participantsTab
+                }`}
                 orgId={orgId}
                 eventSlug={eventSlug}
                 event={event}
@@ -225,24 +178,14 @@ export function AdminSingleEventPage() {
                 formFields={core.data.formFields}
                 formFieldsGroups={core.data.formFieldsGroups}
                 onChanged={refreshAll}
-                initialTab={shouldOpenScanner ? "tickets" : participantsTabFromUrl}
+                initialTab={shouldOpenScanner ? "tickets" : participantsTab}
                 autoOpenScanner={shouldOpenScanner}
-                onScannerAutoOpened={handleScannerConsumed}
+                onScannerAutoOpened={consumeScannerFlag}
               />
             )}
           </>
         )}
       </div>
     </div>
-  );
-}
-
-function TabButton(props: { active?: boolean; onClick: () => void; children: React.ReactNode }) {
-  const { active = false, onClick, children } = props;
-
-  return (
-    <Button type="button" onClick={onClick} className={`adminEventTab${active ? " isActive" : ""}`}>
-      {children}
-    </Button>
   );
 }

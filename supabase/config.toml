@@ -391,3 +391,12 @@ verify_jwt = false
 
 [functions.start-subscription]
 verify_jwt = false
+
+[functions.admin-register]
+verify_jwt = false
+
+[functions.send-confirmation-mail]
+verify_jwt = false
+
+[functions.send-confirmation-mail-tickets]
+verify_jwt = false

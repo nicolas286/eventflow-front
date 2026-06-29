@@ -8,6 +8,14 @@ export const buyerEmailSchema = z.email().trim().max(254);
 export const buyerNameSchema = z.string().trim().min(2).max(120);
 export const buyerPhoneSchema = z.string().trim().min(6).max(20);
 
+/* ------------------------------- Promo Codes ------------------------------ */
+
+export const promoCodeSchema = z
+  .string()
+  .trim()
+  .max(20)
+  .transform((v) => v || null);
+
 /* ------------------------- JSONB value ------------------------- */
 
 export const jsonValueSchema: z.ZodType<unknown> = z.union([
@@ -76,6 +84,7 @@ export const registerPayloadSchema = z
 
     widgetReturnUrl: z.string().trim().min(1).max(2048).optional(),
     checkoutSource: z.enum(["widget", "public"]).optional(),
+    promoCode: promoCodeSchema.optional().nullable(),
   })
   .strict()
   .superRefine((body, ctx) => {
@@ -152,6 +161,7 @@ export const createOrderIntentArgsSchema = z
     p_attendees: z.array(createOrderIntentAttendeeArgSchema).max(500),
     p_buyer: createOrderIntentBuyerArgSchema,
     p_rate_key: z.string().min(1),
+    p_promo_code: promoCodeSchema.nullable().optional(),
   })
   .strict();
 
@@ -193,6 +203,8 @@ export function toCreateOrderIntentArgs(
       is_attendee:
         typeof buyer.isAttendee === "boolean" ? buyer.isAttendee : null,
     },
+
+    p_promo_code: payload.promoCode ?? null,
 
     p_rate_key: rateKey,
   };
