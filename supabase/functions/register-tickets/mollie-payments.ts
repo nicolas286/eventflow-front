@@ -1,4 +1,4 @@
-import { badGateway, internal } from "./errors.ts";
+import { badGateway, internal } from "../_shared/errors.ts";
 import { toNonEmptyString } from "./buyer.ts";
 function getCheckoutUrlFromRaw(raw) {
   const href = raw?._links?.checkout?.href;

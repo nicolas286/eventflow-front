@@ -20,10 +20,18 @@ export function forbidden(code = "FORBIDDEN", details?: unknown) {
   return new ResponseError(403, code, details);
 }
 
+export function conflict(code: string, details?: unknown) {
+  return new ResponseError(409, code, details);
+}
+
 export function notFound(code: string, details?: unknown) {
   return new ResponseError(404, code, details);
 }
 
 export function internal(code: string, details?: unknown) {
   return new ResponseError(500, code, details);
+}
+
+export function badGateway(code: string, details?: unknown) {
+  return new ResponseError(502, code, details);
 }

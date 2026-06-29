@@ -1,5 +1,5 @@
 import { registerPayloadSchema } from "./registerTickets.contracts.ts";
-import { badRequest } from "./errors.ts";
+import { badRequest } from "../_shared/errors.ts";
 
 export async function parseRegisterPayload(req: Request) {
   const body = await req.json().catch(() => {

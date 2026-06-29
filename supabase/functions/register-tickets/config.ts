@@ -1,6 +1,9 @@
 import { internal } from "../_shared/errors.ts";
 import { envTrim, resolveSupabaseRuntimeConfig } from "../_shared/config.ts";
-import { parseAllowedOrigins, resolveAppBaseUrlFromRequest } from "./origins.ts";
+import {
+  parseAllowedOrigins,
+  resolveAppBaseUrlFromRequest,
+} from "../_shared/url.ts";
 
 export function resolveRuntimeConfig(req: Request) {
   const supabase = resolveSupabaseRuntimeConfig();

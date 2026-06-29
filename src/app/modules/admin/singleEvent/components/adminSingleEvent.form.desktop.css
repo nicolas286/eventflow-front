@@ -509,3 +509,269 @@
 .adminRegCheckRowSpacer {
   margin: 0;
 }
+
+/* =========================
+   Admin Single Event - Promo Codes
+   ========================= */
+
+.adminSingleEventPromoCodes {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(0,0,0,0.06);
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 14px 32px rgba(0,0,0,0.06);
+  min-width: 0;
+}
+
+.adminSingleEventPromoCodes .adminSectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.adminSingleEventPromoCodes .adminSectionHeader h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+  color: #111827;
+}
+
+.adminSingleEventPromoCodes .adminSectionHeader p {
+  margin: 6px 0 0;
+  color: #4b5563;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+/* ---------- Create card ---------- */
+
+.adminPromoCreateCard {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.05);
+  margin-bottom: 16px;
+  min-width: 0;
+}
+
+.adminPromoCreateCard h4 {
+  margin: 0 0 14px;
+  font-size: 16px;
+  font-weight: 950;
+  letter-spacing: -0.01em;
+  color: #111827;
+}
+
+.adminPromoFormGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+.adminPromoField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #374151;
+}
+
+.adminPromoField input,
+.adminPromoField select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.adminPromoCheckRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  line-height: 1;
+  font-weight: 800;
+  color: #374151;
+}
+
+.adminPromoCheckRow input[type="checkbox"] {
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.adminPromoCreateActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+/* ---------- List / table ---------- */
+
+.adminPromoListCard {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.05);
+  overflow: hidden;
+  min-width: 0;
+}
+
+.adminPromoTableWrap {
+  width: 100%;
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.adminPromoTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.adminPromoTable th,
+.adminPromoTable td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  vertical-align: middle;
+}
+
+.adminPromoTable th {
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+  background: rgba(249,250,251,0.92);
+}
+
+.adminPromoTable td {
+  font-size: 0.92rem;
+  color: #111827;
+}
+
+.adminPromoTable tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.adminPromoCodeText {
+  font-weight: 950;
+  letter-spacing: 0.02em;
+  color: #111827;
+}
+
+.adminPromoMuted {
+  color: #6b7280;
+  font-size: 0.88rem;
+}
+
+.adminPromoActions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Pills ---------- */
+
+.adminPromoPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 950;
+  white-space: nowrap;
+  background: rgba(17,24,39,0.04);
+  border: 1px solid rgba(17,24,39,0.10);
+  color: #111827;
+}
+
+.adminPromoPill.isActive {
+  background: rgba(16, 185, 129, 0.10);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: #065f46;
+}
+
+.adminPromoPill.isInactive {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.22);
+  color: #7f1d1d;
+}
+
+.adminPromoPill.isDiscount {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.22);
+  color: #1e3a8a;
+}
+
+.adminPromoPill.isLimit {
+  background: rgba(245, 158, 11, 0.10);
+  border-color: rgba(245, 158, 11, 0.25);
+  color: #7c2d12;
+}
+
+/* ---------- Empty / error ---------- */
+
+.adminPromoEmpty {
+  padding: 18px;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.adminPromoError {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.18);
+  color: #7f1d1d;
+  font-weight: 800;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 950px) {
+  .adminPromoFormGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .adminSingleEventPromoCodes {
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .adminSingleEventPromoCodes .adminSectionHeader {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .adminPromoFormGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .adminPromoCreateCard {
+    padding: 14px;
+  }
+
+  .adminPromoActions {
+    justify-content: flex-start;
+  }
+}

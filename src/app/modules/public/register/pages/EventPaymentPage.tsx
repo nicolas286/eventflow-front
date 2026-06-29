@@ -61,6 +61,7 @@ export function EventPaymentPage() {
   }, [orgSlug, eventSlug, tick]);
 
   const [buyerEmail, setBuyerEmail] = useState("");
+  const [promoCode, setPromoCode] = useState("");
 
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileError, setTurnstileError] = useState<string | null>(null);
@@ -143,14 +144,18 @@ export function EventPaymentPage() {
 
   const attendeesMismatch = attendeesCount !== (draft.attendees?.length ?? 0);
 
+  const hasPromoCode = promoCode.trim().length > 0;
+
   const stickyCtaLabel =
-  totalCents === 0
-    ? registering || pendingPay
-      ? "Validation…"
-      : "Confirmer la réservation"
-    : registering || pendingPay
-      ? "Redirection vers le paiement…"
-      : `Payer ${formatMoney(dueNowCentsUi, currency)}`;
+    totalCents === 0
+      ? registering || pendingPay
+        ? "Validation…"
+        : "Confirmer la réservation"
+      : registering || pendingPay
+        ? "Validation du paiement…"
+        : hasPromoCode
+          ? "Valider le code et continuer"
+          : `Payer ${formatMoney(dueNowCentsUi, currency)}`;
 
   function setAccepted(next: boolean) {
     if (!orgSlug || !eventSlug) return;
@@ -204,13 +209,16 @@ export function EventPaymentPage() {
       quantity: qty,
     }));
 
+    const normalizedPromoCode = promoCode.trim();
+
     const payload = {
       eventId: event.id,
       items,
       attendees: buildAttendeesPayload(),
       buyerEmail: buyerEmail.trim(),
+      promoCode: normalizedPromoCode ? normalizedPromoCode : null,
       turnstileToken: withToken,
-      checkoutSource: "public", 
+      checkoutSource: "public",
     };
 
     return register(payload as any);
@@ -365,6 +373,32 @@ export function EventPaymentPage() {
 
                     <div className="publicDivider" />
 
+                    <div>
+                      <div style={{ fontWeight: 800, marginBottom: 6 }}>Code promo</div>
+
+                      <input
+                        value={promoCode}
+                        onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                        placeholder="ex: CLUB10"
+                        maxLength={20}
+                        style={{
+                          width: "100%",
+                          padding: "10px 12px",
+                          borderRadius: 12,
+                          border: "1px solid rgba(0,0,0,0.10)",
+                          outline: "none",
+                          textTransform: "uppercase",
+                        }}
+                        disabled={registering || pendingPay}
+                      />
+
+                      <div className="publicSubtitle" style={{ marginTop: 6 }}>
+                        Si le code est valide, la réduction sera appliquée à la validation.
+                      </div>
+                    </div>
+
+                    <div className="publicDivider" />
+
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                         <div style={{ fontWeight: 800 }}>{hasDeposit ? "À payer maintenant" : "Total"}</div>
                         <div style={{ fontWeight: 800 }}>{formatMoney(dueNowCentsUi, currency)}</div>
@@ -477,7 +511,9 @@ export function EventPaymentPage() {
                         <span style={{ fontWeight: 700 }}>J’accepte les conditions et je confirme l’achat.</span>
                       </label>
 
-                      {registerError ? <div className="publicEmpty">Erreur : {registerError}</div> : null}
+                      {registerError ? (
+                        <div className="publicEmpty">Erreur : {formatRegisterError(registerError)}</div>
+                      ) : null}
                     </div>
                   </CardBody>
                 </Card>
@@ -524,4 +560,25 @@ export function EventPaymentPage() {
     ) : null}
     </div>
   );
+}
+
+function formatRegisterError(error: string): string {
+  switch (error) {
+    case "PROMO_CODE_NOT_FOUND":
+      return "Ce code promo n’existe pas pour cet événement.";
+    case "PROMO_CODE_INACTIVE":
+      return "Ce code promo n’est pas actif.";
+    case "PROMO_CODE_NOT_STARTED":
+      return "Ce code promo n’est pas encore valable.";
+    case "PROMO_CODE_EXPIRED":
+      return "Ce code promo a expiré.";
+    case "PROMO_CODE_USAGE_LIMIT_REACHED":
+      return "Ce code promo a déjà atteint sa limite d’utilisation.";
+    case "PROMO_CODE_NOT_APPLICABLE":
+      return "Ce code promo ne peut pas être appliqué à cette commande.";
+    case "PROMO_CODE_INVALID":
+      return "Ce code promo est invalide.";
+    default:
+      return error;
+  }
 }
