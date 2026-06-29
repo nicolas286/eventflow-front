@@ -21,6 +21,14 @@ export type OrderMeta = {
   paidCents: number;
   dueCents: number;
   buyerEmail?: string | undefined;
+  discountCents?: number;
+  promoRedemption?: {
+  id: string;
+  promoCodeId: string;
+  code: string | null;
+  discountCents: number;
+  createdAt: string;
+} | null;
   nonAttendeeItems?: {
     id: string;
     name: string;

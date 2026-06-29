@@ -124,9 +124,12 @@ export function OrdersPeopleList(props: OrdersPeopleListProps) {
 
           const total = meta?.totalCents ?? 0;
           const paid = meta?.paidCents ?? 0;
-          const due = meta?.dueCents ?? Math.max(0, total - paid);
+          const discount = meta?.discountCents ?? 0;
+          const due = meta?.dueCents ?? Math.max(0, total - discount - paid);
           const currency = meta?.currency ?? "EUR";
           const isFree = total === 0;
+          const hasDiscount = discount > 0;
+          const promoCode = meta?.promoRedemption?.code?.trim() || null;
           const nonAttendeeItems = meta?.nonAttendeeItems ?? [];
 
           return (
@@ -148,6 +151,17 @@ export function OrdersPeopleList(props: OrdersPeopleListProps) {
                       <span>
                         <b>Total</b> {formatMoney(total, currency)}
                       </span>
+
+                      {hasDiscount ? (
+                        <>
+                          <span className="adminDot">•</span>
+
+                          <span>
+                            <b>{promoCode ? `Code ${promoCode}` : "Réduction"}</b>{" "}
+                            -{formatMoney(discount, currency)}
+                          </span>
+                        </>
+                      ) : null}
 
                       <span className="adminDot">•</span>
 
