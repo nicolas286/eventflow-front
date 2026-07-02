@@ -3,7 +3,7 @@ import { issueFreeOrderTicketsOrThrow } from "./db.ts";
 import { sendConfirmationEmailForOrderSafe } from "./emails.ts";
 
 export async function completeFreeOrderOrThrow(opts) {
-  const { admin, order, config, logger } = opts;
+  const { admin, order, logger, config } = opts;
 
   logger.info("free_order_start", {
     orderId: order.orderId,
@@ -18,7 +18,7 @@ export async function completeFreeOrderOrThrow(opts) {
     orderId: order.orderId,
   });
 
-  await sendConfirmationEmailForOrderSafe({
+    await sendConfirmationEmailForOrderSafe({
     admin,
     orderId: order.orderId,
     functionsBase: config.functionsBase,

@@ -1,9 +1,9 @@
-import { escapeHtml } from "../_shared/text.ts";
-import { markdownToSafeHtml } from "../_shared/markdown.ts";
+import { escapeHtml } from "../../_shared/text.ts";
+import { markdownToSafeHtml } from "../../_shared/markdown.ts";
 import {
   formatDateTimeBrussels,
   formatMoney,
-} from "../_shared/format.ts";
+} from "../../_shared/format.ts";
 
 export function buildOrderConfirmationHtml(p) {
   const title = escapeHtml(p.eventTitle);
@@ -14,9 +14,14 @@ export function buildOrderConfirmationHtml(p) {
     maxLength: 1200,
   });
 
+  
   const total = Math.max(0, Number(p.totalCents ?? 0));
+  const discount = Math.max(0, Number(p.discountCents ?? 0));
   const paid = Math.max(0, Number(p.paidCents ?? 0));
-  const due = Math.max(0, total - paid);
+
+  const due = Number.isFinite(Number(p.dueCents))
+    ? Math.max(0, Number(p.dueCents ?? 0))
+    : Math.max(0, total - discount - paid);
 
   const itemsRows = p.items
     .filter((x) => x.qty > 0)
@@ -76,6 +81,15 @@ ${
 <strong>${escapeHtml(formatMoney(total, p.currency))}</strong>
 </div>
 
+${
+  discount > 0
+    ? `<div style="margin:4px 0">
+<span style="opacity:.75">Remise :</span>
+<strong>- ${escapeHtml(formatMoney(discount, p.currency))}</strong>
+</div>`
+    : ""
+}
+
 <div style="margin:4px 0">
 <span style="opacity:.75">Payé :</span>
 <strong>${escapeHtml(formatMoney(paid, p.currency))}</strong>
@@ -134,6 +148,19 @@ ${
 </div>
 
 ${itemsTable}
+
+${
+  p.orderUrl
+    ? `
+<div style="text-align:center;margin:18px 0">
+  <a href="${escapeHtml(p.orderUrl)}"
+     style="display:inline-block;background:#111;color:#fff;text-decoration:none;font-weight:800;padding:12px 18px;border-radius:999px">
+    Voir ma commande
+  </a>
+</div>
+`
+    : ""
+}
 
 ${
   descHtml
