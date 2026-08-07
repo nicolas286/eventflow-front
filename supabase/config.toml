@@ -400,3 +400,9 @@ verify_jwt = false
 
 [functions.send-confirmation-mail-tickets]
 verify_jwt = false
+
+[functions.send-reminder-mail]
+verify_jwt = false
+
+[functions.mollie-webhook-tickets]
+verify_jwt = false

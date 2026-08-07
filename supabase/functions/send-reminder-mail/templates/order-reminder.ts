@@ -1,24 +1,34 @@
-import { escapeHtml } from "../_shared/text.ts";
-import { markdownToSafeHtml } from "../_shared/markdown.ts";
+import { escapeHtml } from "../../_shared/text.ts";
+import { markdownToSafeHtml } from "../../_shared/markdown.ts";
 import {
   formatDateTimeBrussels,
   formatMoney,
-} from "../_shared/format.ts";
+} from "../../_shared/format.ts";
 
-export function buildOrderConfirmationHtml(p) {
+function toInt(value: unknown, fallback: number) {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.trunc(n) : fallback;
+}
+
+export function buildOrderReminderHtml(p) {
   const title = escapeHtml(p.eventTitle);
   const when = formatDateTimeBrussels(p.startsAt ?? null);
   const location = String(p.location ?? "").trim();
+  const days = Math.max(0, toInt(p.reminderDays, 0));
 
   const descHtml = markdownToSafeHtml(p.description, {
-    maxLength: 1200,
+    maxLength: 900,
   });
 
   const total = Math.max(0, Number(p.totalCents ?? 0));
+  const discount = Math.max(0, Number(p.discountCents ?? 0));
   const paid = Math.max(0, Number(p.paidCents ?? 0));
-  const due = Math.max(0, total - paid);
 
-  const itemsRows = p.items
+  const due = Number.isFinite(Number(p.dueCents))
+    ? Math.max(0, Number(p.dueCents ?? 0))
+    : Math.max(0, total - discount - paid);
+
+  const itemsRows = (p.items ?? [])
     .filter((x) => x.qty > 0)
     .map((x) => {
       return `
@@ -27,15 +37,15 @@ export function buildOrderConfirmationHtml(p) {
 <div style="font-weight:700">${escapeHtml(x.name)}</div>
 </td>
 
-<td style="padding:10px 12px;border-top:1px solid #eee;text-align:center;">
+<td style="padding:10px 12px;border-top:1px solid #eee;text-align:center;white-space:nowrap;">
 ${x.qty}
 </td>
 
-<td style="padding:10px 12px;border-top:1px solid #eee;text-align:right;">
+<td style="padding:10px 12px;border-top:1px solid #eee;text-align:right;white-space:nowrap;">
 ${escapeHtml(formatMoney(x.unitCents, p.currency))}
 </td>
 
-<td style="padding:10px 12px;border-top:1px solid #eee;text-align:right;font-weight:700;">
+<td style="padding:10px 12px;border-top:1px solid #eee;text-align:right;white-space:nowrap;font-weight:700;">
 ${escapeHtml(formatMoney(x.lineCents, p.currency))}
 </td>
 </tr>
@@ -43,9 +53,9 @@ ${escapeHtml(formatMoney(x.lineCents, p.currency))}
     })
     .join("");
 
-  const itemsTable = p.items.length
+  const itemsTable = (p.items?.length ?? 0) > 0
     ? `
-<div style="margin:14px 0 6px;font-weight:800">Billets</div>
+<div style="margin:14px 0 6px;font-weight:800">Votre réservation</div>
 
 <div style="border:1px solid #eee;border-radius:14px;overflow:hidden;background:#fff">
 <table style="width:100%;border-collapse:collapse;font-size:14px">
@@ -61,9 +71,9 @@ ${escapeHtml(formatMoney(x.lineCents, p.currency))}
 
 <tbody>
 ${
-  itemsRows ||
-  `<tr><td colspan="4" style="padding:12px;color:#666">Aucun billet trouvé.</td></tr>`
-}
+      itemsRows ||
+      `<tr><td colspan="4" style="padding:12px;color:#666">Aucun billet trouvé.</td></tr>`
+    }
 </tbody>
 
 </table>
@@ -76,23 +86,37 @@ ${
 <strong>${escapeHtml(formatMoney(total, p.currency))}</strong>
 </div>
 
+${
+      discount > 0
+        ? `<div style="margin:4px 0">
+<span style="opacity:.75">Remise :</span>
+<strong>- ${escapeHtml(formatMoney(discount, p.currency))}</strong>
+</div>`
+        : ""
+    }
+
 <div style="margin:4px 0">
 <span style="opacity:.75">Payé :</span>
 <strong>${escapeHtml(formatMoney(paid, p.currency))}</strong>
 </div>
 
 ${
-  due > 0
-    ? `<div style="margin:4px 0">
+      due > 0
+        ? `<div style="margin:4px 0">
 <span style="opacity:.75">Reste à payer :</span>
 <strong>${escapeHtml(formatMoney(due, p.currency))}</strong>
 </div>`
-    : ""
-}
+        : ""
+    }
 
 </div>
 `
-    : ``;
+    : `
+<div style="margin:14px 0 6px;font-weight:800">Votre réservation</div>
+<div style="padding:12px 14px;border:1px solid #eee;border-radius:14px;background:#fff;color:#444;font-size:14px">
+Aucun billet trouvé.
+</div>
+`;
 
   return `
 <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;line-height:1.6;color:#111;background:#fafafa;padding:24px">
@@ -102,11 +126,11 @@ ${
 <div style="background:#fff;border:1px solid #eee;border-radius:16px;padding:20px">
 
 <div style="font-size:18px;font-weight:900;margin:0 0 10px">
-🎟️ Inscription confirmée
+⏰ Rappel d’événement
 </div>
 
 <div style="margin:0 0 14px;color:#333">
-Vous êtes bien inscrit·e à l’événement :
+Petit rappel : l’événement arrive dans <strong>${days} jour${days > 1 ? "s" : ""}</strong>.
 </div>
 
 <div style="background:#f6f6f7;border-radius:14px;padding:14px 16px;margin:0 0 14px">
@@ -116,36 +140,44 @@ ${title}
 </div>
 
 ${
-  when
-    ? `<div style="margin:6px 0;font-size:13px;opacity:.85">
+    when
+      ? `<div style="margin:6px 0;font-size:13px;opacity:.85">
 <span style="font-weight:800">🗓️ Date</span> : ${escapeHtml(when)}
 </div>`
-    : ""
-}
+      : ""
+  }
 
 ${
-  location
-    ? `<div style="margin:6px 0;font-size:13px;opacity:.85">
+    location
+      ? `<div style="margin:6px 0;font-size:13px;opacity:.85">
 <span style="font-weight:800">📍 Lieu</span> : ${escapeHtml(location)}
 </div>`
-    : ""
-}
+      : ""
+  }
 
 </div>
 
 ${itemsTable}
 
 ${
-  descHtml
-    ? `
-<div style="margin:16px 0 8px;font-weight:900">Détails</div>
+    p.orderUrl
+      ? `<div style="text-align:center;margin:18px 0">
+<a href="${escapeHtml(p.orderUrl)}"
+   style="display:inline-block;background:#111;color:#fff;text-decoration:none;font-weight:800;padding:12px 18px;border-radius:999px">
+Voir ma commande
+</a>
+</div>`
+      : ""
+  }
 
+${
+    descHtml
+      ? `<div style="margin:16px 0 8px;font-weight:900">Détails</div>
 <div style="font-size:14px;color:#333;opacity:.95">
 ${descHtml}
-</div>
-`
-    : ""
-}
+</div>`
+      : ""
+  }
 
 </div>
 
