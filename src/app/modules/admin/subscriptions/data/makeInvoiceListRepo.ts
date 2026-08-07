@@ -31,26 +31,7 @@ export function makeInvoiceListRepo(supabase: SupabaseClient) {
 
       const raw = await supabaseSafe<unknown>(() => supabase.rpc("rpc_list_invoices", payload));
 
-      const parsed =
-  invoicesListResponseSchema.safeParse(
-    raw,
-  );
-
-if (!parsed.success) {
-  console.error(
-    "INVOICE LIST ZOD ERROR",
-    parsed.error.issues,
-  );
-
-  console.error(
-    "INVOICE LIST RAW",
-    raw,
-  );
-
-  throw parsed.error;
-}
-
-return parsed.data;
+      return invoicesListResponseSchema.parse(raw);
     },
   };
 }
