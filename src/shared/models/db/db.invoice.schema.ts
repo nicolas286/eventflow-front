@@ -25,7 +25,12 @@ export const invoiceSchema = z.object({
   vatCents: z.number().int().min(0, "La TVA doit être positive ou nulle").max(100000000, "Montant trop élevé"),
   totalCents: z.number().int().min(0, "Le total doit être positif ou nul").max(100000000, "Montant trop élevé"),
 
-  vatRate: z.number().min(0).max(1).optional().nullable(),
+  vatRate: z
+  .number()
+  .min(0)
+  .max(100)
+  .optional()
+  .nullable(),
 
   provider: z.string().max(30, "Provider trop long").optional().nullable(),
   molliePaymentId: z.string().max(80, "Id Mollie trop long").optional().nullable(),
